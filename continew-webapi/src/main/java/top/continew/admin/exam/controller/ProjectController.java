@@ -42,6 +42,7 @@ import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 项目管理 API
@@ -52,7 +53,7 @@ import java.util.List;
 @Tag(name = "项目管理 API")
 @RestController
 @CrudRequestMapping(value = "/exam/project", api = {Api.PAGE, Api.LIST, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
-    Api.EXPORT})
+        Api.EXPORT})
 public class ProjectController extends BaseController<ProjectService, ProjectResp, ProjectDetailResp, ProjectQuery, ProjectReq> {
 
     @Operation(summary = "查询所有有考场的考试项目")
@@ -110,10 +111,17 @@ public class ProjectController extends BaseController<ProjectService, ProjectRes
         return baseService.getLocationSelect(projectId);
     }
 
-    @Operation(summary = "根据地点ID查询考场_下拉框")
-    @GetMapping("/classroom/select/{locationId}/{examType}")
-    public List<ProjectVo> getClassRoomSelect(@PathVariable Long locationId,@PathVariable Integer examType) {
-        return baseService.getClassRoomSelect(locationId,examType);
+//    @Operation(summary = "根据项目ID查询地点-考场_下拉框")
+//    @GetMapping("/classroom/select/{projectId}")
+//    public List<ProjectVo> getClassRoomSelect(@PathVariable Long projectId) {
+//        return baseService.getClassRoomSelect(projectId);
+//    }
+
+    @Operation(summary = "根据项目ID查询地点-考场_下拉框")
+    @GetMapping("/classroom/select/{projectId}")
+    public List<Map<String, Object>> getClassRoomSelect(@PathVariable Long projectId) {
+        System.out.println(222);
+        return baseService.getClassRoomSelect(projectId);
     }
 
     @Operation(summary = "获取项目下拉框")

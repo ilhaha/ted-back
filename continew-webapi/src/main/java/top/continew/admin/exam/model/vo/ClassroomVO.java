@@ -21,10 +21,14 @@ import lombok.Data;
 @Data
 public class ClassroomVO {
 
+    /**
+     * 考场id
+     */
     private Long classroomId;
 
+    /**
+     * 考场名称
+     */
     private String classroomName;
-
-    private Integer examType;
 
 }

@@ -95,6 +95,12 @@ public class ProjectResp extends BaseResp {
     @Schema(description = "展示图")
     private String imageUrl;
 
+    /**
+     * 项目类型（0-理论考试 1-实操考试）
+     */
+    @Schema(description = "项目类型")
+    private Integer projectType;
+
     //    /**
     //     * 删除标记
     //     */

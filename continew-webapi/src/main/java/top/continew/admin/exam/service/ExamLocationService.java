@@ -16,11 +16,14 @@
 
 package top.continew.admin.exam.service;
 
+import top.continew.admin.exam.model.vo.PlanLocationAndRoomVO;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.ExamLocationQuery;
 import top.continew.admin.exam.model.req.ExamLocationReq;
 import top.continew.admin.exam.model.resp.ExamLocationDetailResp;
 import top.continew.admin.exam.model.resp.ExamLocationResp;
+
+import java.util.List;
 
 /**
  * 考试地点业务接口
@@ -29,6 +32,13 @@ import top.continew.admin.exam.model.resp.ExamLocationResp;
  * @since 2025/03/11 15:04
  */
 public interface ExamLocationService extends BaseService<ExamLocationResp, ExamLocationDetailResp, ExamLocationQuery, ExamLocationReq> {
+
+    /**
+     * 根据计划id获取计划对应的考试地点和考场信息
+     * @param planId
+     * @return
+     */
+    List<PlanLocationAndRoomVO> getPlanLocationAndRoomByPlanId(Long planId);
 
     /**
      * 分页查询

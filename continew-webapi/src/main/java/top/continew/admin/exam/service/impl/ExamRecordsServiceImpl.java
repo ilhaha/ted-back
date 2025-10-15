@@ -94,7 +94,7 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
 
         // 执行分页查询
         IPage<ExamRecordsDO> page = baseMapper.getexamRecords(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
 
         // 将查询结果转换成 PageResp 对象
         PageResp<ExamRecordsResp> pageResp = PageResp.build(page, super.getListClass());
@@ -133,27 +133,28 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         ValidationUtils.throwIf(ObjectUtils.isEmpty(userDO), "无考试内容");
         // 根据考生ID获取考生的所有考试考场
         List<ExamRecordsDO> examRecordsDOS = baseMapper.selectList(new LambdaQueryWrapper<ExamRecordsDO>()
-            .eq(ExamRecordsDO::getCandidateId, userDO.getId())
-            .eq(ExamRecordsDO::getReviewStatus, ExamRecordsReviewStatusEnum.WAITING_EXAMINATION.getValue())
-            .eq(ExamRecordsDO::getRegistrationProgress, ExamRecordsRegisterationProgressEnum.REVIEWED.getValue()));
+                .eq(ExamRecordsDO::getCandidateId, userDO.getId())
+                .eq(ExamRecordsDO::getReviewStatus, ExamRecordsReviewStatusEnum.WAITING_EXAMINATION.getValue())
+                .eq(ExamRecordsDO::getRegistrationProgress, ExamRecordsRegisterationProgressEnum.REVIEWED.getValue()));
         ValidationUtils.throwIf(ObjectUtils.isEmpty(examRecordsDOS), "无考试内容");
         // 根据计划ID查询考场地址
         List<Long> planIds = examRecordsDOS.stream().map(item -> {
             return item.getPlanId();
         }).collect(Collectors.toList());
-        List<ExamPlanDO> examPlanDOS = examPlanMapper.selectList(new LambdaQueryWrapper<ExamPlanDO>()
-            .in(ExamPlanDO::getId, planIds));
-        List<Long> locationIds = examPlanDOS.stream().map(item -> {
-            return item.getLocationId();
-        }).collect(Collectors.toList());
+//        List<ExamPlanDO> examPlanDOS = examPlanMapper.selectList(new LambdaQueryWrapper<ExamPlanDO>()
+//            .in(ExamPlanDO::getId, planIds));
+//        List<Long> locationIds = examPlanDOS.stream().map(item -> {
+//            return item.getLocationId();
+//        }).collect(Collectors.toList());
+        List<Long> locationIds = examPlanMapper.getPlanLocationIdsById(planIds);
         List<LocationClassroomDO> locationClassroomDOS = locationClassroomMapper
-            .selectList(new LambdaQueryWrapper<LocationClassroomDO>()
-                .in(LocationClassroomDO::getLocationId, locationIds));
+                .selectList(new LambdaQueryWrapper<LocationClassroomDO>()
+                        .in(LocationClassroomDO::getLocationId, locationIds));
         List<Integer> roomIds = locationClassroomDOS.stream().map(item -> {
             return item.getClassroomId();
         }).collect(Collectors.toList());
         List<ClassroomDO> classroomDOS = classroomMapper.selectList(new LambdaQueryWrapper<ClassroomDO>()
-            .in(ClassroomDO::getId, roomIds));
+                .in(ClassroomDO::getId, roomIds));
         return Collections.emptyList();
     }
 
@@ -163,9 +164,9 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         // 修改考生对应的考试计划状态
         LambdaUpdateWrapper<EnrollDO> enrollDOLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
         enrollDOLambdaUpdateWrapper.set(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
-            .set(EnrollDO::getExamStatus, EnrollStatusConstant.SUBMITTED)
-            .eq(EnrollDO::getUserId, examRecordsDO.getCandidateId())
-            .eq(EnrollDO::getExamPlanId, examRecordsDO.getPlanId());
+                .set(EnrollDO::getExamStatus, EnrollStatusConstant.SUBMITTED)
+                .eq(EnrollDO::getUserId, examRecordsDO.getCandidateId())
+                .eq(EnrollDO::getExamPlanId, examRecordsDO.getPlanId());
         enrollMapper.update(enrollDOLambdaUpdateWrapper);
         // 插入考试记录
         baseMapper.insert(examRecordsDO);

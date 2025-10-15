@@ -75,10 +75,4 @@ public class ExamPlanQuery implements Serializable {
     @Query(type = QueryType.EQ, columns = "tep.status")
     private Integer status;
 
-    /**
-     * 考试类型：0-理论考试，1-实操考试
-     */
-    @Query(type = QueryType.EQ, columns = "tep.exam_type")
-    private Integer examType;
-
 }

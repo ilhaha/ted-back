@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service;
 
+import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -37,7 +38,7 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 保存考试计划
-     * 
+     *
      * @param examPlanSaveReq
      */
     void save(ExamPlanSaveReq examPlanSaveReq);
@@ -48,7 +49,7 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 获取考试计划考场
-     * 
+     *
      * @param planId
      * @return
      */
@@ -56,7 +57,7 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 修改考试计划考场
-     * 
+     *
      * @param planId
      * @param classroomId
      * @return
@@ -65,7 +66,7 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 查找考场id
-     * 
+     *
      * @param planId
      * @return
      */
@@ -73,7 +74,7 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 结束考试计划
-     * 
+     *
      * @param planId
      * @return
      */
@@ -81,8 +82,14 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 获取考试记录下拉框
-     * 
+     *
      * @return
      */
     List<ProjectVo> getSelectOptions();
+
+    /**
+     * 批量导入考试计划
+     * @param file
+     */
+    void importExcel(MultipartFile file);
 }

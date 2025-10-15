@@ -14,6 +14,7 @@ public class ProjectClassroomFlatVO {
     private String projectCode;
     private String categoryName;
     private Long classroomId;
+    private String locationName;
     private String classroomName;
-    private Integer examType;
+    private Integer projectType;
 }

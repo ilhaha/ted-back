@@ -48,7 +48,7 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
 
     /**
      * 通过部门id获取所有项目信息
-     * 
+     *
      * @param deptId
      * @return
      */
@@ -63,7 +63,7 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
 
     /**
      * 通过项目id获取绑定的资料类型信息
-     * 
+     *
      * @param projectId
      * @return
      */
@@ -96,5 +96,7 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
     Long selectIdByProjectName(@Param("projectName") String projectName);
 
     List<ProjectClassroomFlatVO> getProjectsWithClassrooms();
+
+    List<Long> getProjectRoomByProjectId(@Param("projectId") Long projectId);
 
 }

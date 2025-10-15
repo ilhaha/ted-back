@@ -31,10 +31,10 @@
                t3.district as city_name,
                t4.district as street_name
         FROM ted_exam_location as t1
-        LEFT JOIN ted_rc_district as t2 on t1.province_id = t2.district_id
-        LEFT JOIN ted_rc_district as t3 on t1.city_id = t3.district_id
-        LEFT JOIN ted_rc_district as t4 on t1.street_id = t4.district_id
-        ${ew.customSqlSegment}
+                 LEFT JOIN ted_rc_district as t2 on t1.province_id = t2.district_id
+                 LEFT JOIN ted_rc_district as t3 on t1.city_id = t3.district_id
+                 LEFT JOIN ted_rc_district as t4 on t1.street_id = t4.district_id
+            ${ew.customSqlSegment}
     </select>
 
     <select id="getExamLocationDetail" resultType="top.continew.admin.exam.model.resp.ExamLocationDetailResp">
@@ -48,18 +48,19 @@
                t1.update_time,
                t1.province_id,
                t1.city_id,
-               t2.district as province_name,
-               t3.district as city_name,
-               t4.name as createUserString,
-               t4.name as updateUserString,
-               t5.district as street_name,
+               t2.district    as province_name,
+               t3.district    as city_name,
+               t4.name        as createUserString,
+               t4.name        as updateUserString,
+               t5.district    as street_name,
                t5.district_id as street_id
         FROM ted_exam_location as t1
                  LEFT JOIN ted_rc_district AS t2 ON t1.province_id = t2.district_id
                  LEFT JOIN ted_rc_district AS t3 ON t1.city_id = t3.district_id
                  LEFT JOIN ted_rc_district AS t5 ON t1.street_id = t5.district_id
                  LEFT JOIN sys_role AS t4 ON t1.create_user = t4.id
-        WHERE t1.is_deleted = 0 and t1.id = #{id}
+        WHERE t1.is_deleted = 0
+          and t1.id = #{id}
     </select>
     <select id="getLocationSelect" resultType="top.continew.admin.exam.model.vo.ProjectVo">
         SELECT el.id AS `value`, el.location_name AS `label` FROM ted_exam_location AS el
@@ -72,13 +73,64 @@
         AND el.operational_status = 0
     </select>
     <select id="getClassRoomSelect" resultType="top.continew.admin.exam.model.vo.ProjectVo">
-        select c.id as `value`,
+        select c.id             as `value`,
                c.classroom_name as `label`
         from ted_classroom c
-            left join ted_location_classroom lc
-                on c.id = lc.classroom_id
+                 left join ted_location_classroom lc
+                           on c.id = lc.classroom_id
+                 left join ted_proj_loc_assoc tpjla
+                           on lc.location_id = tpjla.location_id
         where c.is_deleted = 0
-          and lc.location_id = #{locationId}
-          and c.exam_type = #{examType}
+          and lc.is_deleted = 0
+          and tpjla.is_deleted = 0
+          and tpjla.project_id = #{projectId}
     </select>
+    <select id="selectClassroomList" resultType="java.util.Map">
+        select c.id             as `value`,
+               c.classroom_name as `label`,
+               tel.location_name,
+               tel.id           as location_id
+        from ted_classroom c
+                 left join ted_location_classroom lc
+                           on c.id = lc.classroom_id
+                 left join ted_proj_loc_assoc tpjla
+                           on lc.location_id = tpjla.location_id
+                 left join ted_exam_location tel
+                           on tpjla.location_id = tel.id
+        where c.is_deleted = 0
+          and lc.is_deleted = 0
+          and tpjla.is_deleted = 0
+          and tel.is_deleted = 0
+          and tpjla.project_id = #{projectId}
+    </select>
+    <select id="getPlanLocationAndRoom" resultType="top.continew.admin.exam.model.vo.PlanLocationAndRoomVO">
+        SELECT
+            tel.id AS location_id,
+            tel.location_name,
+            CONCAT(
+                    COALESCE(t1.district, ''),
+                    COALESCE(t2.district, ''),
+                    COALESCE(t3.district, ''),
+                    COALESCE(tel.detailed_address, '')
+            ) AS full_address,
+            tc.id AS classroom_id,
+            tc.classroom_name,
+            tc.max_candidates
+        FROM ted_exam_plan tep
+                 LEFT JOIN ted_plan_classroom tpc ON tep.id = tpc.plan_id
+                 LEFT JOIN ted_location_classroom tlc ON tpc.classroom_id = tlc.classroom_id
+                 LEFT JOIN ted_exam_location tel ON tlc.location_id = tel.id
+                 LEFT JOIN ted_classroom tc ON tlc.classroom_id = tc.id
+                 LEFT JOIN ted_rc_district t1 ON tel.province_id = t1.district_id
+                 LEFT JOIN ted_rc_district t2 ON tel.city_id = t2.district_id
+                 LEFT JOIN ted_rc_district t3 ON tel.street_id = t3.district_id
+        WHERE tep.id = #{planId}
+          AND tep.is_deleted = 0
+          AND tlc.is_deleted = 0
+          AND tel.is_deleted = 0
+          AND tc.is_deleted = 0
+        ORDER BY tel.id, tc.classroom_name
+    </select>
+
+
 </mapper>

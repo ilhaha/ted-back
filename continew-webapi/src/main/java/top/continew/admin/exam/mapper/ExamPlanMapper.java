@@ -68,4 +68,6 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
     List<UserNamesDO> selectUserNames();
 
     Integer hasClassroomTimeConflict(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime, @Param("classroomId") List<Long> classroomId);
+
+    List<Long> getPlanLocationIdsById(@Param("planIds") List<Long> planIds);
 }

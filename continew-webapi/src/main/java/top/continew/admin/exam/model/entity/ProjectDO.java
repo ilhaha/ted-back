@@ -76,4 +76,9 @@ public class ProjectDO extends BaseDO {
      * 展示图
      */
     private String imageUrl;
+
+    /**
+     * 项目类型（0-理论考试 1-实操考试）
+     */
+    private Integer projectType;
 }

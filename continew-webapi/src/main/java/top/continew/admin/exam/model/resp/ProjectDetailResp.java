@@ -90,6 +90,13 @@ public class ProjectDetailResp extends BaseDetailResp {
     @Schema(description = "项目状态")
     @ExcelProperty(value = "项目状态")
     private Long projectStatus;
+
+    /**
+     * 项目类型（0-理论考试 1-实操考试）
+     */
+    @Schema(description = "项目类型（0-理论考试 1-实操考试）")
+    @ExcelProperty(value = "项目类型（0-理论考试 1-实操考试）")
+    private Integer projectType;
     /**
      * 描述
      */

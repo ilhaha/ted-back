@@ -30,6 +30,7 @@ import top.continew.admin.exam.model.resp.ProjectDetailResp;
 import top.continew.admin.exam.model.resp.ProjectResp;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 项目业务接口
@@ -41,7 +42,7 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
 
     /**
      * 分页查询
-     * 
+     *
      * @return
      */
     //    Page<ProjectDO> pageQuery(ProjectReq query, PageQuery pageQuery);
@@ -52,7 +53,8 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
 
     List<ProjectVo> getLocationSelect(Long projectId);
 
-    List<ProjectVo> getClassRoomSelect(Long locationId, Integer examType);
+    //    List<ProjectVo> getClassRoomSelect(Long locationId);
+    List<Map<String, Object>> getClassRoomSelect(Long locationId);
 
     List<ProjectVo> getDeptProject();
 
@@ -69,7 +71,7 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
 
     /**
      * 获取项目没有绑定的资料列表 label、value
-     * 
+     *
      * @param id
      * @return
      */
@@ -77,7 +79,7 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
 
     /**
      * 根据项目id与资料id集合插入关联表
-     * 
+     *
      * @param projectId
      * @param documentList
      * @return
@@ -96,7 +98,7 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
 
     /**
      * 考生端分页获取项目数据
-     * 
+     *
      * @return
      */
     PageResp<ProjectResp> getAllProject(ProjectQuery query, PageQuery pageQuery);
@@ -105,7 +107,7 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
 
     /**
      * 考生端根据项目id查询项目详情
-     * 
+     *
      * @param ProjectReq req,Long projectId
      * @return
      */

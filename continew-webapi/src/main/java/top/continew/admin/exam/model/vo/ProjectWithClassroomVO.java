@@ -19,6 +19,8 @@ public class ProjectWithClassroomVO {
     private String projectCode;
     /** 分类名称 */
     private String categoryName;
-    /** 关联的考场列表 */
-    private List<ClassroomVO> classrooms;
+    /** 项目类型 */
+    private Integer projectType;
+    /** 关联的考场地点列表 */
+    private List<LocationVO> locations;
 }

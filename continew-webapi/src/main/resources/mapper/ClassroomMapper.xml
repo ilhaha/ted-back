@@ -18,8 +18,7 @@
                tc.classroom_name as classroomName,
                tc.max_candidates as maxCandidates,
                tlc.id            as examLocationId,
-               tc.id             as classroomId,
-               tc.exam_type as examType
+               tc.id             as classroomId
         FROM ted_classroom as tc
                  LEFT JOIN ted_location_classroom as tlc ON tlc.classroom_id = tc.id
                  LEFT JOIN ted_exam_location as tel on tel.id = tlc.location_id
@@ -38,8 +37,7 @@
                tel.id            as examLocationId,
                tel.location_name as examLocation,
                tc.classroom_name as classroomName,
-               tc.max_candidates as maxCandidates,
-               tc.exam_type as examType
+               tc.max_candidates as maxCandidates
         FROM ted_classroom as tc
                  LEFT JOIN ted_location_classroom as tlc ON tlc.classroom_id = tc.id
                  LEFT JOIN ted_exam_location as tel on tel.id = tlc.location_id

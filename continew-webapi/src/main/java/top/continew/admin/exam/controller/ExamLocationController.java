@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.controller;
 
+import top.continew.admin.exam.model.vo.PlanLocationAndRoomVO;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +31,8 @@ import top.continew.admin.exam.model.resp.ExamLocationDetailResp;
 import top.continew.admin.exam.model.resp.ExamLocationResp;
 import top.continew.admin.exam.service.ExamLocationService;
 
+import java.util.List;
+
 /**
  * 考试地点管理 API
  *
@@ -39,7 +42,17 @@ import top.continew.admin.exam.service.ExamLocationService;
 @Tag(name = "考试地点管理 API")
 @RestController
 @CrudRequestMapping(value = "/exam/examLocation", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
-    Api.EXPORT})
+        Api.EXPORT})
 public class ExamLocationController extends BaseController<ExamLocationService, ExamLocationResp, ExamLocationDetailResp, ExamLocationQuery, ExamLocationReq> {
 
+
+    /**
+     * 根据计划id获取计划对应的考试地点和考场信息
+     * @param planId
+     * @return
+     */
+    @GetMapping("/room/{planId}")
+    public List<PlanLocationAndRoomVO> getPlanLocationAndRoomByPlanId(@PathVariable("planId") Long planId) {
+        return baseService.getPlanLocationAndRoomByPlanId(planId);
+    }
 }

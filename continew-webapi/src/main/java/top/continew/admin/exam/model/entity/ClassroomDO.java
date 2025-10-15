@@ -43,11 +43,6 @@ public class ClassroomDO extends BaseDO {
     private String classroomName;
 
     /**
-     * 考试类型：0-理论考试，1-实操考试
-     */
-    private Integer examType;
-
-    /**
      * 逻辑删除
      */
     private Integer isDeleted;

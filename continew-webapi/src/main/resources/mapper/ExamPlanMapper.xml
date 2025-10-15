@@ -16,7 +16,6 @@
             tep.approval_time,
             tep.create_user,
             tep.update_user,
-            tep.exam_type,
             CASE
                 WHEN tep.update_user IS NOT NULL THEN su.nickname
                 ELSE NULL
@@ -106,5 +105,17 @@
         </foreach>
         AND #{startTime} &lt; DATE_SUB(tep.end_time, INTERVAL 30 MINUTE)
         AND #{endTime} &gt; DATE_ADD(tep.start_time, INTERVAL 30 MINUTE)
+    </select>
+    <select id="getPlanLocationIdsById" resultType="java.lang.Long">
+        SELECT DISTINCT tlc.location_id
+        FROM ted_exam_plan tep
+        LEFT JOIN ted_plan_classroom tpc ON tep.id = tpc.plan_id
+        LEFT JOIN ted_location_classroom tlc ON tpc.classroom_id = tlc.classroom_id
+        WHERE tep.id IN
+        <foreach collection="planIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND tep.is_deleted = 0
+        AND tlc.is_deleted = 0
     </select>
 </mapper>

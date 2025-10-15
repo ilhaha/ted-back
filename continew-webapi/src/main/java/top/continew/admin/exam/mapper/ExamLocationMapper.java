@@ -22,11 +22,13 @@ import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 import top.continew.admin.exam.model.resp.ExamLocationDetailResp;
+import top.continew.admin.exam.model.vo.PlanLocationAndRoomVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamLocationDO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 考试地点 Mapper
@@ -44,7 +46,7 @@ public interface ExamLocationMapper extends BaseMapper<ExamLocationDO> {
 
     /**
      * 通过项目id获取地址id、地址名称
-     * 
+     *
      * @param projectId
      * @return
      */
@@ -55,5 +57,14 @@ public interface ExamLocationMapper extends BaseMapper<ExamLocationDO> {
     //            "AND el.operational_status = 0")
     List<ProjectVo> getLocationSelect(@Param("projectId") Long projectId);
 
-    List<ProjectVo> getClassRoomSelect(@Param("locationId") Long locationId, @Param("examType") Integer examType);
+    List<ProjectVo> getClassRoomSelect(@Param("projectId") Long projectId);
+
+    List<Map<String, Object>> selectClassroomList (@Param("projectId") Long projectId);
+
+    /**
+     * 根据计划id获取考试计划考试地点-考场详细信息
+     * @param planId
+     * @return
+     */
+    List<PlanLocationAndRoomVO> getPlanLocationAndRoom(@Param("planId") Long planId);
 }

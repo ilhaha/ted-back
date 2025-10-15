@@ -19,6 +19,7 @@ package top.continew.admin.exam.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -56,6 +57,13 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     @Resource
     private ExamPlanService examPlanService;
 
+    @Operation(summary = "批量导入考试计划")
+    @PostMapping("/import/excel")
+    public Boolean importExcel(@RequestPart("file") MultipartFile file) {
+        baseService.importExcel(file);
+        return true;
+    }
+
     @Operation(summary = "结束考试计划")
     @PostMapping("/end/{planId}")
     public Boolean endExam(@PathVariable("planId") Long planId) {
@@ -76,7 +84,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     /**
      * 获取部门项目
-     * 
+     *
      * @return
      */
     @Operation(summary = "根据部门ID获取项目列表")
@@ -87,7 +95,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     /**
      * 发布考试计划
-     * 
+     *
      * @param examPlanSaveReq
      * @return
      */

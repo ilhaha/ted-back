@@ -64,13 +64,6 @@ public class ClassroomDetailResp extends BaseDetailResp {
     private Long maxCandidates;
 
     /**
-     * 考试类型
-     */
-    @Schema(description = "考试类型")
-    @ExcelProperty(value = "考试类型")
-    private Long examType;
-
-    /**
      * 考试地点ID
      */
     @Schema(description = "考试地点ID")

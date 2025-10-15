@@ -72,4 +72,9 @@ public class ProjectReq implements Serializable {
      */
     private Long projectStatus;
 
+    /**
+     * 项目类型（0-理论考试 1-实操考试）
+     */
+    private Integer projectType;
+
 }

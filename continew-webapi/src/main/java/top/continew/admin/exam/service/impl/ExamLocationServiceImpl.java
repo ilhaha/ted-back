@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
 
+import top.continew.admin.exam.model.vo.PlanLocationAndRoomVO;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
@@ -34,6 +35,8 @@ import top.continew.admin.exam.model.req.ExamLocationReq;
 import top.continew.admin.exam.model.resp.ExamLocationDetailResp;
 import top.continew.admin.exam.model.resp.ExamLocationResp;
 import top.continew.admin.exam.service.ExamLocationService;
+
+import java.util.List;
 
 /**
  * 考试地点业务实现
@@ -56,7 +59,7 @@ public class ExamLocationServiceImpl extends BaseServiceImpl<ExamLocationMapper,
         super.sort(queryWrapper, pageQuery);
 
         IPage<ExamLocationDetailResp> page = baseMapper.selectExamLocationPage(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
 
         PageResp<ExamLocationResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
@@ -69,6 +72,16 @@ public class ExamLocationServiceImpl extends BaseServiceImpl<ExamLocationMapper,
     @Override
     public ExamLocationDetailResp get(Long id) {
         return examLocationMapper.getExamLocationDetail(id);
+    }
+
+    /**
+     * 根据计划id获取计划对应的考试地点和考场信息
+     * @param planId
+     * @return
+     */
+    @Override
+    public List<PlanLocationAndRoomVO> getPlanLocationAndRoomByPlanId(Long planId) {
+        return baseMapper.getPlanLocationAndRoom(planId);
     }
 
     //    @Override

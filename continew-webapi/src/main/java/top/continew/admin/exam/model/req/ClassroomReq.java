@@ -49,8 +49,4 @@ public class ClassroomReq implements Serializable {
 
     private String maxCandidates;
 
-    /**
-     * 考试类型：0-理论考试，1-实操考试
-     */
-    private Integer examType;
 }

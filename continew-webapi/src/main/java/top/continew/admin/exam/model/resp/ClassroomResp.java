@@ -51,9 +51,6 @@ public class ClassroomResp extends BaseResp {
     private Long classroomId;
     private Long examLocationId;
 
-    @Schema(description = "考试类型：0-理论考试，1-实操考试")
-    private Integer examType;
-
     /**
      * 更新时间
      */
