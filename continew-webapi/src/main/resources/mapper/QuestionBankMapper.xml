@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.examconnect.mapper.QuestionBankMapper">
+    <sql id="selectQuestionBankPageSql">
+        SELECT
+            t1.id,
+            t2.`name` AS category_name,
+            t3.project_name AS project_name,
+            t4.`name` AS knowledge_type_name,
+            t1.question_type,
+            t1.question,
+            t1.attachment,
+            t1.create_user,
+            t1.update_user,
+            t1.create_time,
+            t1.update_time
+        FROM
+            ted_question_bank AS t1
+        LEFT JOIN ted_category AS t2 ON t1.category_id = t2.id
+        LEFT JOIN ted_project AS t3 ON t1.sub_category_id = t3.id
+        LEFT JOIN ted_knowledge_type AS t4 ON t1.knowledge_type_id = t4.id
+    </sql>
+
+
+    <select id="selectQuestionBankPage"
+            resultType="top.continew.admin.examconnect.model.resp.QuestionBankResp">
+        <include refid="selectQuestionBankPageSql"/>
+        ${ew.customSqlSegment}
+    </select>
+
+
+    <!--按分类导出全部题目 -->
+    <select id="selectByCategory" resultType="top.continew.admin.examconnect.model.resp.QuestionBankResp">
+        SELECT
+            t1.id,
+            t1.question,
+            t1.question_type,
+            t1.attachment,
+            t1.category_id,
+            t1.sub_category_id,
+            t1.knowledge_type_id,
+            t2.name AS category_name,
+            t3.project_name AS project_name,
+            t4.name AS knowledge_type_name
+        FROM ted_question_bank AS t1
+                 LEFT JOIN ted_category AS t2 ON t1.category_id = t2.id
+                 LEFT JOIN ted_project AS t3 ON t1.sub_category_id = t3.id
+                 LEFT JOIN ted_knowledge_type AS t4 ON t1.knowledge_type_id = t4.id
+        WHERE t1.is_deleted = 0
+          AND t1.category_id = #{categoryId}
+          AND t1.sub_category_id = #{subCategoryId}
+          AND t1.knowledge_type_id = #{knowledgeTypeId}
+    </select>
+
+    <select id="selectExistingQuestions" resultType="map">
+        SELECT
+        qb.id AS id,
+        qb.question AS question,
+        COALESCE(
+        GROUP_CONCAT(CONCAT(TRIM(s.question), '[', s.is_correct_answer, ']') ORDER BY s.id SEPARATOR '、'),
+        ''
+        ) AS allOptions
+        FROM ted_question_bank qb
+        LEFT JOIN ted_step s
+        ON qb.id = s.question_bank_id
+        AND s.is_deleted = 0
+        WHERE qb.is_deleted = 0
+        AND qb.category_id = #{categoryId}
+        AND qb.sub_category_id = #{projectId}
+        AND qb.knowledge_type_id = #{knowledgeTypeId}
+        <if test="questionTexts != null and questionTexts.size() > 0">
+            AND qb.question IN
+            <foreach collection="questionTexts" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        GROUP BY qb.id, qb.question
+    </select>
+
+
+
+
+</mapper>

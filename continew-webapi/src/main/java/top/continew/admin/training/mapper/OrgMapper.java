@@ -1,0 +1,87 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package top.continew.admin.training.mapper;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.apache.ibatis.annotations.*;
+import top.continew.admin.system.model.req.user.UserOrgDTO;
+import top.continew.admin.training.model.dto.OrgDTO;
+import top.continew.admin.training.model.resp.OrgCandidatesResp;
+import top.continew.admin.training.model.resp.OrgDetailResp;
+import top.continew.admin.training.model.resp.OrgResp;
+import top.continew.admin.training.model.vo.UserVO;
+import top.continew.starter.data.mp.base.BaseMapper;
+import top.continew.admin.training.model.entity.OrgDO;
+
+import java.util.List;
+
+/**
+ * 机构信息 Mapper
+ *
+ * @author Anton
+ * @since 2025/04/07 10:53
+ */
+public interface OrgMapper extends BaseMapper<OrgDO> {
+
+    List<String> getStudentInfo(@Param("orgId") Long orgId);
+
+    @Insert("INSERT INTO sys_user (username, password, nickname) " + "VALUES (#{username}, #{password}, #{nickname})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    Long orgSignUp(UserOrgDTO userOrgDTO);
+
+    /*
+     * 插入关联表
+     */
+    @Insert("INSERT INTO ted_org_candidate (candidate_id, org_id) " + "VALUES (#{candidateId}, #{orgId})")
+    Long linkCandidateWithOrg(@Param("candidateUserId") Long candidateUserId, @Param("orgId") Long orgId);
+
+    OrgDTO getOrgId(@Param("userId") Long userId);
+
+    public IPage<OrgCandidatesResp> getCandidatesList(@Param("page") Page<OrgDO> page,
+                                                      @Param(Constants.WRAPPER) QueryWrapper<OrgDO> queryWrapper);
+
+    IPage<OrgResp> getOrgList(@Param("page") Page<OrgDO> page,
+                              @Param(Constants.WRAPPER) QueryWrapper<OrgDO> qw,
+                              @Param("userId") Long userId,
+                              @Param("bool") boolean bool);
+
+    OrgDetailResp getOrgDetail(@Param("orgId") Long orgId);
+
+    Integer getAgencyStatus(@Param("orgId") Long orgId, @Param("userId") Long userId);
+
+    @Insert("insert into ted_org_candidate values (null, #{orgId}, #{userId}, 1, 1, now(), now(), 1, 0)")
+    Integer studentAddAgency(@Param("orgId") Long orgId, @Param("userId") Long userId);
+
+    @Select("select count(1) " + "from ted_org_candidate " + "where is_deleted = 0 " + "and status = 1 " + "and org_id = #{orgId} " + "and candidate_id = #{userId}")
+    Integer findAgency(@Param("orgId") Long orgId, @Param("userId") Long userId);
+
+    @Delete("update ted_org_candidate set is_deleted = 1 where org_id = #{orgId}")
+    Integer studentDelAgency(@Param("orgId") Long orgId, @Param("userId") Long userId);
+
+    Integer approveStudent(@Param("orgId") Long orgId, @Param("userId") Long userId);
+
+    Integer refuseStudent(@Param("orgId") Long orgId, @Param("userId") Long userId);
+
+    OrgDetailResp selectByUserId(Long userId);
+
+    List<String> getAcountInfo(String id);
+
+    List<UserVO> getBindableUsers(@Param("candidatesId") Long candidatesId);
+}

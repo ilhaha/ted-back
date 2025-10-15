@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.file.mapper.PersonFileMapper">
+    <select id="selectPersonFilePage" resultType="top.continew.admin.file.model.resp.PersonFileResp">
+        select tep.exam_plan_name,su.nickname,ter.exam_scores,ter.exam_paper,su.id as candidateId
+        from ted_exam_plan tep
+        inner join ted_exam_records ter on tep.id = ter.plan_id
+        inner join sys_user su on ter.candidate_id = su.id
+        ${ew.customSqlSegment}
+    </select>
+</mapper>

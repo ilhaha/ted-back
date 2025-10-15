@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.system.mapper.UserMapper">
+
+    <sql id="selectUser">
+        SELECT
+            t1.id,
+            t1.create_user,
+            t1.create_time,
+            t1.update_user,
+            t1.update_time,
+            t1.username,
+            t1.nickname,
+            t1.password,
+            t1.gender,
+            t1.email,
+            t1.phone,
+            t1.avatar,
+            t1.description,
+            t1.status,
+            t1.is_system,
+            t1.pwd_reset_time,
+            t1.dept_id,
+            t2.name AS deptName
+        FROM sys_user AS t1
+                 LEFT JOIN sys_dept AS t2 ON t2.id = t1.dept_id
+    </sql>
+    <update id="examBegins">
+        UPDATE ted_exam_plan
+        set status = #{status}
+        WHERE id = #{planId}
+    </update>
+    <delete id="deleteOrgUser">
+        DELETE FROM ted_org_user
+        WHERE user_id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+    <delete id="deleteOrgCandidate">
+        DELETE FROM ted_org_candidate
+        WHERE candidate_id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="selectUserPage" resultType="top.continew.admin.system.model.resp.user.UserDetailResp">
+        <include refid="selectUser" />
+        ${ew.customSqlSegment}
+    </select>
+
+    <select id="selectUserList" resultType="top.continew.admin.system.model.resp.user.UserDetailResp">
+        <include refid="selectUser" />
+        ${ew.customSqlSegment}
+    </select>
+
+    <select id="selectCountByEmail" resultType="java.lang.Long">
+        SELECT count(*)
+        FROM sys_user
+        WHERE email = #{email}
+        <if test="id != null">
+            AND id != #{id}
+        </if>
+    </select>
+
+    <select id="selectCountByPhone" resultType="java.lang.Long">
+        SELECT count(*)
+        FROM sys_user
+        WHERE phone = #{phone}
+        <if test="id != null">
+            AND id != #{id}
+        </if>
+    </select>
+
+    <resultMap id="invigilateTimeMap" type="top.continew.admin.system.model.vo.InvigilatorTimeVO">
+        <result column="planId" property="planId" />
+        <result column="planName" property="planName" />
+        <result column="startTime" property="startTime" />
+        <result column="endTime" property="endTime" />
+        <result column="classroomId" property="classroomId" />
+        <result column="classroomName" property="classroomName" />
+    </resultMap>
+    <resultMap id="invigilateMap" type="top.continew.admin.system.model.vo.InvigilatorVO">
+        <id column="userId" property="id" />
+        <result column="nickname" property="nickname" />
+        <!-- 关联属性 -->
+        <association property="invigilateTime" resultMap="invigilateTimeMap" />
+    </resultMap>
+    <select id="getInvigilatesAndTime" resultMap="invigilateMap">
+        select
+            u.id                as userId,
+            u.nickname,
+            ep.id               as planId,
+            ep.exam_plan_name   as planName,
+            c.id                as classroomId,
+            c.classroom_name    as classroomName,
+            ep.start_time       as startTime,
+            ep.end_time         as endTime
+        from sys_user as u
+            join sys_user_role as ur
+                on u.id = ur.user_id
+            join sys_role as r
+                on ur.role_id = r.id
+            join ted_plan_invigilate as pi
+                on pi.invigilator_id = u.id
+            join ted_exam_plan as ep
+                on ep.id = pi.exam_plan_id and ep.is_deleted = 0
+            join ted_project as p
+                on ep.exam_project_id = p.id
+            join ted_classroom as c
+                on pi.classroom_id = c.id
+        where r.id = #{ invigilatorId }
+          and u.dept_id = #{ deptId }
+          and (ep.status = #{ examPlanStatusInForce }
+        <if test="classroomId != null and classroomId != ''">
+            and #{ classroomId }
+        </if>
+          or ep.status = #{ examPlanStatusEnded })
+        <if test="invigilateIds != null and invigilateIds != ''">
+            and u.id in
+            <foreach collection="invigilateIds" item="id" open="(" separator="," close=")">
+                #{ id }
+            </foreach>
+        </if>
+    </select>
+
+    <select id="getInvigilates" resultType="top.continew.admin.system.model.vo.InvigilatorVO">
+        select u.id,
+               u.nickname
+        from sys_user as u
+            left join sys_user_role as ur
+                on u.id = ur.user_id
+            left join sys_role as r
+                on ur.role_id = r.id
+        ${ew.customSqlSegment}
+    </select>
+    <select id="getStudentList" resultType="top.continew.admin.system.model.resp.user.UserResp">
+        select *
+        from sys_user as u
+            left join sys_user_role as ur
+                on u.id = ur.user_id
+            left join ted_org_candidate as oc
+                on u.id = oc.candidate_id
+            left join ted_org as o
+                on oc.org_id = o.id
+        ${ew.customSqlSegment}
+    </select>
+
+    <resultMap id="studentDocumentTypeMap" type="top.continew.admin.system.model.vo.StudentDocumentTypeVO">
+        <result column="userId" property="studentId" />
+        <collection property="documentTypeList" ofType="string">
+            <result column="typeName" />
+        </collection>
+    </resultMap>
+    <select id="getStudentDocumentType" resultMap="studentDocumentTypeMap">
+        select u.id         as userId,
+               dt.type_name as typeName
+        from ted_document_type as dt
+            join ted_document as d
+                on dt.id = d.type_id
+            join ted_examinee_document as ed
+                on d.id = ed.document_id
+            join sys_user as u
+                on ed.examinee_id = u.id
+            join sys_user_role as ur
+                on u.id = ur.user_id
+            join ted_org_candidate as oc
+                on u.id = oc.candidate_id
+        where d.status = 1
+          and ur.role_id = #{ candidatesId }
+          and oc.is_deleted = 0
+          and oc.status = 2
+          and oc.org_id = #{orgId}
+        order by dt.id asc
+    </select>
+    <select id="getPlanInfoByExamPassword" resultType="top.continew.admin.auth.model.dto.InvigilatorPlanDTO">
+        SELECT
+            DISTINCT ted_exam_plan.id AS planId,ted_exam_plan.exam_plan_name AS examPlanName,
+                     ted_exam_plan.start_time AS startTime,ted_exam_plan.end_time AS endTime,
+                     ted_exam_plan.status AS status,
+                     ted_plan_invigilate.invigilator_id AS invigilatorId,ted_plan_invigilate.classroom_id AS classroomId
+        FROM ted_exam_plan
+                 JOIN ted_plan_invigilate
+                      ON ted_exam_plan.id = ted_plan_invigilate.exam_plan_id
+        WHERE ted_plan_invigilate.exam_password = #{examPassword}
+        AND ted_exam_plan.is_deleted = 0
+    </select>
+    <select id="getExamRecord" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM ted_exam_records
+        WHERE plan_id = #{planId}
+        AND candidate_id = #{candidateId}
+        AND is_deleted = 0
+    </select>
+    <select id="getClassroomInfo" resultType="top.continew.admin.auth.model.dto.ClassroomDTO">
+        SELECT id AS classroomId,classroom_name AS classroomName
+        FROM ted_classroom
+        WHERE id = #{classroomId}
+        AND is_deleted = 0
+    </select>
+
+    <resultMap id="verifyInvigilateMap" type="top.continew.admin.system.model.vo.InvigilatorVO">
+        <result column="userId" property="id" />
+        <result column="nickname" property="nickname" />
+        <collection property="invigilateTime" ofType="top.continew.admin.system.model.vo.InvigilatorTimeVO">
+            <result column="classroomId" property="classroomId" />
+        </collection>
+    </resultMap>
+    <select id="verifyInvigilate" resultMap="verifyInvigilateMap">
+        select u.id as userId,
+               u.nickname,
+               pi.classroom_id as classroomId
+        from sys_user as u
+            join ted_plan_invigilate as pi
+                on pi.invigilator_id = u.id
+        where pi.exam_plan_id = #{ examPlanId }
+          and pi.classroom_id = #{ classroomId }
+          and pi.invigilate_status != 3
+          and u.id in
+        <foreach collection="invigilatorIds" item="id" open="(" separator="," close=")">
+            #{ id }
+        </foreach>
+    </select>
+
+    <insert id="addInvigilatesTime">
+        insert into ted_plan_invigilate
+        (exam_plan_id, invigilator_id, classroom_id, invigilate_status)
+        values
+        <foreach collection="invigilatorIds" item="invigilatorId" separator=",">
+            (#{examPlanId}, #{invigilatorId}, #{classroomId}, 0)
+        </foreach>
+    </insert>
+
+</mapper>

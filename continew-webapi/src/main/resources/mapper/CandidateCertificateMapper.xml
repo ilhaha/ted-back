@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.certificate.mapper.CandidateCertificateMapper">
+
+    <select id="selectPage" resultType="top.continew.admin.certificate.model.resp.CandidateCertificateResp">
+        SELECT tcc.*, p.project_name AS projectName, tct.certificate_name AS certificateTypeName, su.nickname AS IssuerName
+        FROM ted_candidate_certificate tcc
+                 LEFT JOIN ted_certificate_type tct ON tcc.certificate_type_id = tct.id
+                 LEFT JOIN ted_certificate_project cp ON tct.id = cp.certificate_type_id
+                 LEFT JOIN ted_project p ON cp.project_id = p.id
+                 Left JOIN sys_user su ON tcc.issuer_id = su.id
+        WHERE tct.is_deleted = 0 and tcc.candidate_id = #{id}
+            ${ew.customSqlSegment}
+    </select>
+    <select id="selectDeptPage" resultType="top.continew.admin.certificate.model.resp.CandidateCertificateResp">
+        SELECT tcc.*, p.project_name AS projectName, tct.certificate_name AS certificateTypeName, su.nickname AS IssuerName,su.nickname AS candidateName
+        FROM ted_candidate_certificate tcc
+                 LEFT JOIN ted_certificate_type tct ON tcc.certificate_type_id = tct.id
+                 LEFT JOIN ted_certificate_project cp ON tct.id = cp.certificate_type_id
+                 LEFT JOIN ted_project p ON cp.project_id = p.id
+                 Left JOIN sys_user su ON tcc.candidate_id = su.id
+                 Left JOIN sys_user su1 ON tcc.issuer_id = su1.id
+                    ${ew.customSqlSegment}
+
+    </select>
+    <select id="selectAllPage" resultType="top.continew.admin.certificate.model.resp.CandidateCertificateResp">
+        SELECT tcc.*, p.project_name AS projectName, tct.certificate_name AS certificateName, su.nickname AS IssuerName,su.nickname AS candidateName
+        FROM ted_candidate_certificate tcc
+                 LEFT JOIN ted_certificate_type tct ON tcc.certificate_type_id = tct.id
+                 LEFT JOIN ted_certificate_project cp ON tct.id = cp.certificate_type_id
+                 LEFT JOIN ted_project p ON cp.project_id = p.id
+                 Left JOIN sys_user su ON tcc.candidate_id = su.id
+                 Left JOIN sys_user su1 ON tcc.issuer_id = su1.id
+            ${ew.customSqlSegment}
+    </select>
+
+    <select id="getCandidateCertificateList" resultType="top.continew.admin.certificate.model.resp.CandidateCertificateResp">
+    select tct.certificate_name as certificateTypeName,tcc.certificate_number,tcc.certificate_type_id, tcc.holding_date,tcc.expiry_date,tcc.certificate_status,tct.image_url
+    from ted_candidate_certificate tcc
+             left join sys_user su on tcc.candidate_id = su.id
+             left join ted_certificate_type tct on tcc.certificate_type_id  = tct.id
+        ${ew.customSqlSegment}
+    </select>
+
+    <select id="getUserCertificate" resultType="top.continew.admin.certificate.model.resp.CandidateCertificateResp">
+        select tct.certificate_name as certificateTypeName,tcc.certificate_number,tcc.holding_date,tcc.expiry_date,tcc.certificate_status,tct.image_url
+        from ted_candidate_certificate tcc
+                 left join sys_user su on tcc.candidate_id = su.id
+                 left join ted_certificate_type tct on tcc.certificate_type_id = tct.id
+        where tcc.candidate_id = #{userId} and tcc.certificate_status != 0 and tcc.is_deleted!=1;
+    </select>
+
+
+</mapper>

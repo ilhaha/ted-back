@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.common.mapper.CarouselMapper">
+
+    <sql id="selectUser">
+        SELECT
+            t1.id,
+            t1.image_min_url,
+            t1.image_url,
+            t1.announcement_id,
+            t1.description,
+            t1.sort_order,
+            t1.status,
+            t1.create_user,
+            t1.update_user,
+            t1.create_time,
+            t1.update_time,
+            t2.nickname as create_user_string,
+            t3.nickname as update_user_string
+        FROM ted_carousel AS t1
+        LEFT JOIN sys_user AS t2 ON t1.create_user = t2.id
+        LEFT JOIN sys_user AS t3 ON t1.update_user = t3.id
+    </sql>
+
+    <select id="selectCarousePage" resultType="top.continew.admin.common.model.resp.CarouselDetailResp">
+        <include refid="selectUser" />
+        ${ew.customSqlSegment}
+    </select>
+    <select id="getContainAnnouncement" resultType="top.continew.admin.common.model.resp.CarouselDetailResp">
+        select
+            t1.id,
+            t1.image_min_url,
+            t1.image_url,
+            t1.announcement_id,
+            t1.description,
+            t1.sort_order,
+            t1.`status`,
+            t1.create_user,
+            t1.update_user,
+            t1.update_time,
+            t1.create_time,
+            t2.title AS announcement_title,
+            t3.nickname AS create_user_string,
+            t4.nickname AS update_user_string
+        FROM ted_carousel AS t1
+        LEFT JOIN ted_announcement AS t2 ON t1.announcement_id = t2.id
+        LEFT JOIN sys_user AS t3 ON t1.create_user = t3.id
+        LEFT JOIN sys_user AS t4 ON t1.update_user = t4.id
+        WHERE t1.is_deleted = 0 AND t2.is_deleted = 0 AND t1.id = #{id};
+    </select>
+
+</mapper>

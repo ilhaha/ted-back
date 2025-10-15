@@ -1,0 +1,86 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package top.continew.admin.exam.model.resp;
+
+import com.alibaba.excel.annotation.ExcelProperty;
+import lombok.Data;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import top.continew.admin.common.model.resp.BaseResp;
+
+import java.io.Serial;
+import java.time.*;
+
+/**
+ * 考场信息
+ *
+ * @author Anton
+ * @since 2025/05/14 16:34
+ */
+@Data
+@Schema(description = "考场信息")
+public class ClassroomResp extends BaseResp {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    @Schema(description = "考场ID")
+    @ExcelProperty(value = "考场ID", order = Integer.MAX_VALUE - 1)
+    private Long id;
+    /**
+     * 考场名称
+     */
+    @Schema(description = "考场名称")
+    private String classroomName;
+
+    private Long classroomId;
+    private Long examLocationId;
+
+    @Schema(description = "考试类型：0-理论考试，1-实操考试")
+    private Integer examType;
+
+    /**
+     * 更新时间
+     */
+    @Schema(description = "更新时间")
+    private LocalDateTime updateTime;
+
+    /**
+     * 更新人
+     */
+    @Schema(description = "更新人")
+    private Long updateUser;
+
+    /**
+     * 逻辑删除
+     */
+    @Schema(description = "逻辑删除")
+    private Integer isDeleted;
+
+    /**
+     * 最大容纳人数
+     */
+    @Schema(description = "最大容纳人数")
+    private Long maxCandidates;
+    /**
+     * 考试地点
+     */
+    @Schema(description = "考试地点")
+    private String examLocation;
+
+}

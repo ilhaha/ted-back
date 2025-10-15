@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.invigilate.mapper.PlanInvigilateMapper">
+
+    <!--
+    batchInsertOrUpdateGrades: 批量插入或更新成绩记录
+    - 当主键冲突时（记录已存在），仅当review_status != 1时更新字段
+    -->
+    <insert id="batchInsertOrUpdateGrades" parameterType="java.util.List">
+        INSERT INTO ted_exam_records
+        (plan_id, candidate_id, exam_scores, answer_sheet_url, registration_progress)
+        VALUES
+        <!-- 遍历List，生成批量插入的VALUES子句 -->
+        <foreach collection="list" item="item" separator=",">
+            (
+            #{item.planId},
+            #{item.candidateId},
+            #{item.examScores},
+            #{item.answerSheetUrl},
+            2 <!-- registration_progress固定为3 -->
+            )
+        </foreach>
+        <!-- 主键冲突时，执行以下更新逻辑 -->
+        ON DUPLICATE KEY UPDATE
+        exam_scores = IF(review_status != 1, VALUES(exam_scores), exam_scores),
+        answer_sheet_url = IF(review_status != 1, VALUES(answer_sheet_url), answer_sheet_url),
+        registration_progress = IF(review_status != 1, VALUES(registration_progress), registration_progress);
+    </insert>
+</mapper>

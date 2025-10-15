@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.auth.mapper.RcDistrictMapper">
+
+    <select id="ilhahaProvinces" resultType="top.continew.admin.auth.model.entity.RcDistrictDO">
+        WITH RECURSIVE DistrictTree AS (
+            -- 获取顶级地区（省级）
+            SELECT district_id, pid, district, level
+            FROM ted_rc_district
+            WHERE level = 1
+
+            UNION ALL
+
+            -- 获取市级、区级及子级地区
+            SELECT d.district_id, d.pid, d.district, d.level
+            FROM ted_rc_district d
+                     INNER JOIN DistrictTree dt ON d.pid = dt.district_id
+        )
+        SELECT * FROM DistrictTree ORDER BY level, pid, district_id;
+    </select>
+</mapper>

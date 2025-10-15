@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.document.mapper.DocumentMapper">
+    <insert id="uploadDocument" parameterType="top.continew.admin.document.model.entity.DocumentDO"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ted_document (doc_path, type_id, create_user, status)
+        VALUES (#{docPath}, #{typeId}, #{createUser}, #{status})
+    </insert>
+    <select id="getUserInfoList" resultType="top.continew.admin.document.model.dto.UserDTO">
+        SELECT su.id,
+               su.username,
+               su.nickname,
+               td.id as document_id
+            From ted_document as td
+        INNER JOIN ted_examinee_document as ed on td.id = ed.document_id
+        INNER JOIN sys_user as su on ed.examinee_id = su.id
+        WHERE td.is_deleted=0
+</select>
+    <select id="getUserInfo" resultType="top.continew.admin.document.model.dto.UserDTO">
+        SELECT su.id,
+               su.username,
+               su.nickname,
+               td.id as document_id
+        From ted_document as td
+                 INNER JOIN ted_examinee_document as ed on td.id = ed.document_id
+                 INNER JOIN sys_user as su on ed.examinee_id = su.id
+        WHERE td.is_deleted=0 and td.id=#{id}
+    </select>
+
+    <select id="getDocumentList" resultType="top.continew.admin.document.model.resp.DocumentCandidatesResp">
+        SELECT tdt.type_name,td.status,td.doc_path as documentUrl,td.update_time as ReviewTime,su.nickname as Reviewer
+            FROM ted_examinee_document as ed
+        LEFT JOIN ted_document as td on ed.document_id=td.id
+        LEFT JOIN ted_document_type as tdt on tdt.id=td.type_id
+        LEFT JOIN sys_user as su on td.update_user=su.id
+                ${ew.customSqlSegment}
+    </select>
+    <select id="selectId" resultType="java.lang.Long">
+        SELECT id FROM ted_document
+        WHERE create_user=#{certificateId}
+          AND type_id=#{typeId}
+    </select>
+
+</mapper>

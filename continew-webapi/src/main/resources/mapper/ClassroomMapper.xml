@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.exam.mapper.ClassroomMapper">
+    <update id="incrementEnrolledCount">
+        UPDATE ted_plan_classroom tpc
+            INNER JOIN ted_classroom tc
+        ON tpc.classroom_id = tc.id
+            SET tpc.enrolled_count = tpc.enrolled_count + 1
+        WHERE
+            tpc.plan_id = #{planId}
+          AND tpc.classroom_id = #{classroomId}
+          AND tpc.enrolled_count
+         &lt; tc.max_candidates
+    </update>
+    <select id="selectExamLocation" resultType="top.continew.admin.exam.model.resp.ClassroomResp">
+        SELECT tc.id,
+               tel.location_name as examLocation,
+               tc.classroom_name as classroomName,
+               tc.max_candidates as maxCandidates,
+               tlc.id            as examLocationId,
+               tc.id             as classroomId,
+               tc.exam_type as examType
+        FROM ted_classroom as tc
+                 LEFT JOIN ted_location_classroom as tlc ON tlc.classroom_id = tc.id
+                 LEFT JOIN ted_exam_location as tel on tel.id = tlc.location_id
+            ${ew.customSqlSegment}
+    </select>
+    <select id="getMaxCandidates" resultType="java.lang.Long">
+        SELECT max_candidates
+        FROM ted_classroom
+        WHERE id IN
+        <foreach item="id" collection="classroomId" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+    <select id="getClassroomDeteil" resultType="top.continew.admin.exam.model.resp.ClassroomDetailResp">
+        SELECT tc.id,
+               tel.id            as examLocationId,
+               tel.location_name as examLocation,
+               tc.classroom_name as classroomName,
+               tc.max_candidates as maxCandidates,
+               tc.exam_type as examType
+        FROM ted_classroom as tc
+                 LEFT JOIN ted_location_classroom as tlc ON tlc.classroom_id = tc.id
+                 LEFT JOIN ted_exam_location as tel on tel.id = tlc.location_id
+        where tc.id = #{id}
+          and tc.is_deleted = 0
+    </select>
+</mapper>

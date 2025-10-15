@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.training.mapper.OrgMapper">
+    <select id="getStudentInfo" resultType="java.lang.String">
+        select su.nickname as candidate_name
+        from ted_org as o
+                 left join ted_org_candidate as oc
+                           on oc.org_id = o.id
+                 left join sys_user as su
+                           on oc.candidate_id = su.id
+        where oc.is_deleted = 0
+          and oc.status = 2
+          and o.id = #{orgId}
+    </select>
+
+    <select id="getOrgId" resultType="top.continew.admin.training.model.dto.OrgDTO">
+        SELECT tou.org_id as id,
+               tedo.code
+        FROM ted_org_user tou
+                 LEFT JOIN ted_org tedo on tou.org_id = tedo.id
+        WHERE tou.user_id = #{userId}
+    </select>
+    <select id="getCandidatesList" resultType="top.continew.admin.training.model.resp.OrgCandidatesResp">
+        SELECT su.nickname     as nickName
+             , oc.candidate_id as candidate_id
+             , su.phone        as phoneNumber
+             , su.email        as email
+             , oc.org_id       as org_id
+        FROM ted.ted_org_user as tou
+                 LEFT JOIN ted_org_candidate as oc on oc.org_id = tou.org_id
+                 LEFT JOIN ted.sys_user su on oc.candidate_id = su.id
+                 left join sys_user_role sur on sur.user_id = su.id
+            ${ew.customSqlSegment}
+    </select>
+
+    <select id="getOrgList" resultType="top.continew.admin.training.model.resp.OrgResp">
+        select
+        distinct
+        o.id as id,
+        o.code as code,
+        o.name as name,
+        o.social_code as socialCode,
+        o.location as location,
+        o.legal_person as legalPerson,
+        o.scale as scale,
+        o.business_license as businessLicense,
+        o.create_time as createTime,
+        o.update_user as updateUser,
+        o.update_time as updateTime,
+        o.is_deleted as asisDeleted
+        from ted_org as o
+        <if test="bool == true">
+            join ted_org_candidate as c
+            on o.id = c.org_id
+        </if>
+        ${ew.customSqlSegment}
+    </select>
+
+    <select id="getOrgDetail" resultType="top.continew.admin.training.model.resp.OrgDetailResp">
+        select distinct o.id               as id,
+                        o.code             as code,
+                        o.name             as name,
+                        o.social_code      as socialCode,
+                        o.location         as location,
+                        o.legal_person     as legalPerson,
+                        o.scale            as scale,
+                        o.business_license as businessLicense,
+                        o.is_deleted       as isDeleted
+        from ted_org as o
+        where o.id = #{orgId}
+    </select>
+
+    <select id="getAgencyStatus" resultType="java.lang.Integer">
+        select status
+        from ted_org_candidate
+        where is_deleted = 0
+          and org_id = #{orgId}
+          and candidate_id = #{userId}
+    </select>
+    <select id="selectByUserId" resultType="top.continew.admin.training.model.resp.OrgDetailResp">
+        SELECT org.*, -- 改用org代替to
+               su.nickname,
+               su.phone
+        FROM ted_org_user tou
+                 LEFT JOIN
+             ted_org org ON tou.org_id = org.id -- 别名改为org
+                 LEFT JOIN
+             sys_user su ON tou.user_id = su.id
+        WHERE tou.user_id = #{userId}
+    </select>
+    <select id="getAcountInfo" resultType="java.lang.String">
+        select su.nickname
+        from ted_org as o
+                 left join ted_org_user as ou
+                           on ou.org_id = o.id
+                 left join sys_user as su
+                           on ou.user_id = su.id
+        where ou.is_deleted = 0
+          and o.id = #{orgId}
+    </select>
+    <select id="getBindableUsers" resultType="top.continew.admin.training.model.vo.UserVO">
+        select su.id,
+               su.nickname
+        from sys_user as su
+                 left join sys_user_role as sur
+                           on sur.user_id = su.id
+                 left join sys_role as sr
+                           on sur.role_id = sr.id
+        where sr.id=#{candidatesId}
+    </select>
+
+
+    <update id="approveStudent" parameterType="java.lang.Long">
+        update ted_org_candidate
+        set status = 2
+        where is_deleted = 0
+          and org_id = #{orgId}
+          and candidate_id = #{userId}
+    </update>
+
+    <update id="refuseStudent" parameterType="java.lang.Long">
+        update ted_org_candidate
+        set status = -1
+        where is_deleted = 0
+          and org_id = #{orgId}
+          and candidate_id = #{userId}
+    </update>
+</mapper>

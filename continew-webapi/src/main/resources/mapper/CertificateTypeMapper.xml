@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.certificate.mapper.CertificateTypeMapper">
+    <select id="selectPageWithProjectName" resultType="top.continew.admin.certificate.model.resp.CertificateTypeResp">
+        SELECT tct.*, p.project_name AS project_name
+        FROM ted_certificate_type tct
+                 LEFT JOIN ted_certificate_project cp ON tct.id = cp.certificate_type_id
+                 LEFT JOIN ted_project p ON cp.project_id = p.id
+        ${ew.customSqlSegment}
+    </select>
+    <select id="selectType" resultType="top.continew.admin.certificate.model.entity.CertificateTypeDO">
+        SELECT tct.id,certificate_name,tct.is_deleted,image_url,project_id
+        FROM ted_certificate_type tct
+            LEFT JOIN ted_certificate_project  tcp ON tct.id = tcp.certificate_type_id
+                 ${ew.customSqlSegment}
+    </select>
+
+    <select id="getCertificateTypeDetail" resultType="top.continew.admin.certificate.model.resp.CertificateTypeDetailResp">
+        select ct.*,
+               p.id as belongingProjectId,
+               p.project_name as belongingProjectName
+        from ted_certificate_type as ct
+            join ted_certificate_project as cp
+                on ct.id = cp.certificate_type_id
+            join ted_project as p
+                on cp.project_id = p.id
+        where ct.id = #{ id }
+          and cp.is_deleted = 0
+          and p.project_status = #{ maintenance }
+    </select>
+</mapper>

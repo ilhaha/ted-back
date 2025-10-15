@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.training.mapper.ProjectTrainingMapper">
+    <select id="selectTrainingIds" resultType="java.lang.Long">
+        SELECT training_id from ted_project_training where project_id IN
+        <foreach collection="projectIds" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </select>
+</mapper>

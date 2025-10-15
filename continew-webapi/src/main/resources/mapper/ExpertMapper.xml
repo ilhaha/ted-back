@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.training.mapper.ExpertMapper">
+
+    <select id="getExpertList" resultType="top.continew.admin.training.model.resp.ExpertResp">
+        select e.*,
+               o.name as organization
+        from ted_expert as e
+            join ted_org_expert as oe
+                on e.id = oe.expert_id
+            join ted_org as o
+                on oe.org_id = o.id
+        ${ ew.customSqlSegment }
+    </select>
+
+</mapper>

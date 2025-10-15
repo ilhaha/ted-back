@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.exam.mapper.EnrollMapper">
+
+    <select id="getEnrollList" resultType="top.continew.admin.exam.model.resp.EnrollStatusResp">
+        SELECT tep.id                        as examPlanId,
+               tep.image_url                 as imageUrl,
+               tep.start_time                as examStartTime,
+               tep.exam_plan_name            as examPlanName,
+               tep.enroll_end_time           as enrollEndTime,
+               COALESCE(te.enroll_status, 0) AS enroll_status
+        FROM ted_exam_plan AS tep
+                 LEFT JOIN
+             ted_enroll AS te ON te.exam_plan_id = tep.id and user_id = #{userId} ${ew.customSqlSegment}
+
+
+    </select>
+    <select id="getAllDetailEnrollList" resultType="top.continew.admin.exam.model.resp.EnrollDetailResp">
+
+        SELECT tp.id                         AS projectId,
+               tp.project_name,
+               tel.location_name             AS examPlace,
+               tep.image_url AS imageUrl,
+               TIMESTAMPDIFF(HOUR, start_time, end_time) AS exam_duration,
+            tep.exam_fee,
+               tep.enroll_end_time,
+               tep.exam_plan_name,
+               tep.start_time                AS exam_start_time,
+               tep.redeme,
+               COALESCE(te.enroll_status, 0) AS enroll_status
+
+               -- 优化后的证书聚合（增加用户关联条件）
+        FROM ted_exam_plan as tep
+                 LEFT JOIN ted_project AS tp
+                           ON tep.exam_project_id = tp.id
+            -- ⭐ 核心过滤条件
+                 left join ted_enroll as te on te.exam_plan_id = tep.id and te.user_id = #{userId}
+                 LEFT JOIN ted.ted_exam_location AS tel
+                           ON tep.location_id = tel.id
+
+        WHERE tep.is_deleted = 0
+          AND tep.id = #{examPlanId}
+    </select>
+
+    <select id="getCertificateList" resultType="top.continew.admin.certificate.model.dto.CertificateInfoDTO">
+        select tct.certificate_name, tc.certificate_number
+        from ted_certificate_project as tpc
+                 left join ted.ted_candidate_certificate as tc on tpc.certificate_type_id = tc.certificate_type_id
+                 left join ted.ted_certificate_type tct on tpc.certificate_type_id = tct.id
+                 left join ted.ted_exam_plan tep on tep.exam_project_id = tpc.project_id
+        where tpc.is_deleted = 0
+          and tep.id = #{examPlanId}
+    </select>
+    <select id="getDocumentList" resultType="String">
+
+        SELECT type_name, project_id
+        FROM ted.ted_document_type as ted
+                 left join ted_project_document_type as tpdt on ted.id = tpdt.document_type_id
+                 left join ted.ted_exam_plan tep on tep.exam_project_id = tpdt.project_id
+
+        WHERE ted.is_deleted = 0
+          and tpdt.is_deleted = 0
+          AND tep.id = #{examPlanId};
+    </select>
+    <select id="getDetailEnroll" resultType="top.continew.admin.exam.model.resp.EnrollStatusDetailResp">
+        SELECT tp.id             AS projectId,
+               tp.project_name,
+               tel.location_name AS examPlace,
+               tp.exam_duration,
+               tp.exam_fee,
+               tep.enroll_end_time,
+               tep.exam_plan_name,
+               tep.start_time    AS exam_start_time,
+               tep.redeme,
+               te.enroll_status
+               -- 优化后的证书聚合（增加用户关联条件）
+        FROM ted_exam_plan as tep
+                 LEFT JOIN ted_enroll AS te
+                           ON te.exam_plan_id = tep.id
+                               AND tep.is_deleted = 0
+                 LEFT JOIN ted_project AS tp
+                           ON tep.exam_project_id = tp.id
+            -- ⭐ 核心过滤条件
+                 LEFT JOIN ted.ted_exam_location AS tel
+                           ON tep.location_id = tel.id
+        WHERE te.is_deleted = 0
+          AND tep.id = #{examPlanId}
+    </select>
+    <select id="getEnrollInfo" resultType="top.continew.admin.exam.model.resp.EnrollInfoResp">
+        SELECT su.nickname,
+               su.phone AS phoneNumber,
+               su.email,
+               sd.name AS deptName,
+               su.avatar
+        FROM sys_user su
+        LEFT JOIN sys_dept sd on su.dept_id = sd.id
+        WHERE su.id = #{userId}
+    </select>
+    <select id="getStudentDocumentList" resultType="java.lang.String">
+        select DISTINCT type_name
+        from ted_examinee_document
+                 Left join ted_document on ted_document.id = ted_examinee_document.document_id
+                 Left join ted_document_type on ted_document.type_id = ted_document_type.id
+        where examinee_id = #{userId}
+          and ted_document.status = 1
+    </select>
+
+    <resultMap id="scoreMap" type="map">
+        <result column="name" property="key"/>
+        <result column="score" property="value"/>
+    </resultMap>
+    <select id="getScore" resultMap="scoreMap">
+        select pl.exam_plan_name as name,
+               re.exam_scores    as score
+        from ted_exam_plan as pl
+                 left join
+             ted_exam_records as re
+             on pl.id = re.plan_id
+        where pl.is_deleted = 0
+          and re.registration_progress = 3
+          and re.review_status = 1
+          and re.is_deleted = 0
+          and pl.id =
+              (select en.id
+               from ted_enroll as en
+               where en.is_deleted = 0
+                 and en.enroll_status = 2
+                 and en.exam_number = #{identity})
+    </select>
+    <select id="getEnrolledPlan" resultType="top.continew.admin.exam.model.resp.EnrollResp">
+        select start_time as examStartTime,
+               end_time   as examEndTime,
+               ted_exam_plan.id
+        from ted_exam_plan
+                 left join ted.ted_enroll on ted_enroll.exam_plan_id = ted_exam_plan.id
+        where ted_enroll.enroll_status = 1
+          and ted_enroll.user_id = #{userId}
+          and ted_exam_plan.is_deleted = 0
+    </select>
+
+    <select id="viewIdentityCardInfo" resultType="top.continew.admin.exam.model.vo.IdentityCardExamInfoVO">
+        select ep.exam_plan_name as examPlanName,
+               e.exam_number     as examNumber,
+               ep.start_time     as startTime,
+               ep.end_time       as endTime
+        from ted_enroll as e
+            left join ted_exam_plan as ep
+                on e.exam_plan_id = ep.id
+        where e.user_id = #{userId}
+          and e.exam_plan_id = #{examPlanId}
+          and e.enroll_status != 3
+    </select>
+    <select id="getEnrollPage" resultType="top.continew.admin.exam.model.resp.EnrollResp">
+        select te.id as id,
+            su.nickname        as nickName,
+               tep.exam_plan_name as examPlanName,
+               tc.classroom_name  as classroomName,
+               te.seat_id,
+               te.exam_number
+        From ted_enroll as te
+                 Left Join ted_exam_plan as tep on te.exam_plan_id = tep.id
+                 Left join sys_user as su on te.user_id = su.id
+                 Left Join ted.ted_classroom as tc on te.classroom_id = tc.id
+            ${ew.customSqlSegment}
+    </select>
+    <select id="getExamCandidates" resultType="top.continew.admin.exam.model.vo.ExamCandidateVO">
+        SELECT sys_user.id, sys_user.username, sys_user.nickname, ted_enroll.exam_number, ted_enroll.exam_status
+        FROM ted_enroll
+                 LEFT JOIN sys_user
+                           ON ted_enroll.user_id = sys_user.id
+            ${ew.customSqlSegment}
+    </select>
+</mapper>

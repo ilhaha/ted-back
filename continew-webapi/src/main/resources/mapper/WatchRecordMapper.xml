@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.training.mapper.WatchRecordMapper">
+
+    <update id="batchUpdateByUniqueKey" parameterType="java.util.List">
+        UPDATE ted_watch_record
+        SET watched_duration = CASE
+        <foreach collection="list" item="item">
+            WHEN student_id = #{item.studentId} AND video_id = #{item.videoId}
+            THEN #{item.watchedDuration}
+        </foreach>
+        ELSE watched_duration
+        END
+        WHERE (student_id, video_id) IN
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            (#{item.studentId}, #{item.videoId})
+        </foreach>
+    </update>
+
+    <select id="findExistingRecords" resultType="WatchRecordDO">
+        SELECT * FROM ted_watch_record
+        WHERE (student_id, video_id) IN
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            (#{item.studentId}, #{item.videoId})
+        </foreach>
+    </select>
+    <select id="getWatchRecord" resultType="top.continew.admin.training.model.resp.WatchRecordResp">
+        SELECT twr.*,tv.title AS videoName,ts.nickname AS studentName
+        FROM ted_watch_record twr
+        LEFT JOIN ted_video tv ON twr.video_id = tv.id
+        LEFT JOIN sys_user ts ON twr.student_id = ts.id
+        ${ew.customSqlSegment}
+
+    </select>
+    <select id="watchRecordById" resultType="top.continew.admin.training.model.entity.WatchRecordDO">
+        SELECT twr.*,tv.title AS videoName,ts.nickname AS studentName
+        FROM ted_watch_record twr
+                 LEFT JOIN ted_video tv ON twr.video_id = tv.id
+                 LEFT JOIN sys_user ts ON twr.student_id = ts.id
+        WHERE twr.id = #{id}
+    </select>
+
+</mapper>

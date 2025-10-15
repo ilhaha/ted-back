@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.common.mapper.AnnouncementMapper">
+
+    <sql id="selectAnnouncement">
+        SELECT
+            t1.id,
+            t1.title,
+            t1.status,
+            t1.create_user,
+            t1.update_user,
+            t1.create_time,
+            t1.update_time,
+            t1.is_deleted
+        FROM ted_announcement AS t1
+    </sql>
+    <select id="selectAnnouncementPage"
+            resultType="top.continew.admin.common.model.resp.AnnouncementDetailResp">
+        <include refid="selectAnnouncement" />
+        ${ew.customSqlSegment}
+    </select>
+
+
+</mapper>
