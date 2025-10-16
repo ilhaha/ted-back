@@ -19,6 +19,7 @@
         FROM ted_org_user tou
                  LEFT JOIN ted_org tedo on tou.org_id = tedo.id
         WHERE tou.user_id = #{userId}
+        AND tou.is_deleted = 0
     </select>
     <select id="getCandidatesList" resultType="top.continew.admin.training.model.resp.OrgCandidatesResp">
         SELECT su.nickname     as nickName
@@ -87,6 +88,7 @@
                  LEFT JOIN
              sys_user su ON tou.user_id = su.id
         WHERE tou.user_id = #{userId}
+        AND tou.is_deleted = 0
     </select>
     <select id="getAcountInfo" resultType="java.lang.String">
         select su.nickname
@@ -99,14 +101,14 @@
           and o.id = #{orgId}
     </select>
     <select id="getBindableUsers" resultType="top.continew.admin.training.model.vo.UserVO">
-        select su.id,
-               su.nickname
-        from sys_user as su
-                 left join sys_user_role as sur
-                           on sur.user_id = su.id
-                 left join sys_role as sr
-                           on sur.role_id = sr.id
-        where sr.id=#{candidatesId}
+        SELECT su.id, su.nickname,su.username
+        FROM sys_user AS su
+                 LEFT JOIN sys_user_role AS sur ON sur.user_id = su.id
+                 LEFT JOIN sys_role AS sr ON sur.role_id = sr.id
+                 LEFT JOIN ted_org_user AS tou
+                           ON tou.user_id = su.id AND tou.is_deleted = 0
+        WHERE sr.id = #{organizationId}
+          AND tou.user_id IS NULL;
     </select>
 
 

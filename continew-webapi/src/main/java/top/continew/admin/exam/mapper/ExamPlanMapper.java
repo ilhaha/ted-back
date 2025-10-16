@@ -23,7 +23,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import top.continew.admin.exam.model.entity.UserNamesDO;
+import top.continew.admin.exam.model.resp.EnrollStatusResp;
 import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
+import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
@@ -70,4 +72,8 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
     Integer hasClassroomTimeConflict(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime, @Param("classroomId") List<Long> classroomId);
 
     List<Long> getPlanLocationIdsById(@Param("planIds") List<Long> planIds);
+
+    IPage<OrgExamPlanVO> orgGetPlanList(@Param("page") Page<Object> objectPage,
+                                        @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper,
+                                        @Param("userId") Long userId);
 }

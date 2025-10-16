@@ -33,18 +33,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.PlanConstant;
+import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.DateUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.ExcelParseResult;
 import top.continew.admin.exam.model.dto.ExamPlanExcelRowDTO;
 import top.continew.admin.exam.model.dto.TimeRangeDTO;
-import top.continew.admin.exam.model.entity.ClassroomDO;
-import top.continew.admin.exam.model.entity.PlancalssroomDO;
-import top.continew.admin.exam.model.entity.ProjectDO;
+import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.dto.QuestionDTO;
 import top.continew.admin.exam.model.req.dto.SheetInfoDTO;
+import top.continew.admin.exam.model.resp.EnrollStatusResp;
+import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
 import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
@@ -54,7 +55,6 @@ import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
-import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.query.ExamPlanQuery;
 import top.continew.admin.exam.model.req.ExamPlanReq;
 import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
@@ -524,139 +524,28 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         }
     }
 
+    /**
+     * 机构获取符合自身八大类的考试计划
+     * @param pageQuery
+     * @param examPlanQuery
+     * @return
+     */
+    @Override
+    public PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery,PageQuery pageQuery) {
+        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+        QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(examPlanQuery);
+        queryWrapper.eq("tep.is_deleted", 0);
+        // 执行分页查询
+        IPage<OrgExamPlanVO> page = baseMapper.orgGetPlanList(new Page<>(pageQuery.getPage(), pageQuery
+                .getSize()), queryWrapper, userTokenDo.getUserId());
 
+        // 将查询结果转换成 PageResp 对象
+        PageResp<OrgExamPlanVO> pageResp = PageResp.build(page, OrgExamPlanVO.class);
+        // 遍历查询结果列表，调用 fill 方法填充额外字段或处理数据
+        pageResp.getList().forEach(this::fill);
 
-
-
-
-
-//    public void importExcel(MultipartFile file) {
-//        // 文件校验
-//        if (file.isEmpty()) {
-//            throw new BusinessException("文件不能为空");
-//        }
-//
-//        // 文件类型白名单校验
-//        String filename = file.getOriginalFilename();
-//        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
-//            throw new BusinessException("仅支持Excel文件(.xlsx/.xls)");
-//        }
-//
-//        try (InputStream is = file.getInputStream()) {
-//            Workbook workbook = WorkbookFactory.create(is);
-//            Sheet sheet = workbook.getSheetAt(0);
-//            if (sheet == null) {
-//                throw new BusinessException("Excel中未找到有效工作表");
-//            }
-//
-//            //  跳过前4行说明，第5行为空，第6行为表头
-//            int headerRowIndex = 3;
-//            Row headerRow = sheet.getRow(headerRowIndex);
-//            if (headerRow == null) {
-//                throw new BusinessException("Excel表头不存在或模板结构错误（请使用系统提供的模板）");
-//            }
-//
-//            // 校验表头
-//            String[] expectedHeaders = {"计划名称", "考试项目代码", "考试考场编号", "报名开始时间", "报名结束时间", "考试开始时间"};
-//            for (int i = 0; i < expectedHeaders.length; i++) {
-//                Cell cell = headerRow.getCell(i);
-//                String actual = (cell == null) ? "" : cell.getStringCellValue().trim();
-//                if (!expectedHeaders[i].equals(actual)) {
-//                    throw new BusinessException("模板错误：第 " + (i + 1) + " 列应为 [" + expectedHeaders[i] + "]，实际为 [" + actual + "]");
-//                }
-//            }
-//
-//
-//            for (int i = headerRowIndex + 2; i <= sheet.getLastRowNum(); i++) {
-//                Row row = sheet.getRow(i);
-//                if (row == null) continue; // 跳过空行
-//                String planName = getCellString(row.getCell(0));
-//                String projectCode = getCellString(row.getCell(1));
-//                String classroomIds = getCellString(row.getCell(2));
-//                String signupStart = getCellString(row.getCell(3));
-//                String signupEnd = getCellString(row.getCell(4));
-//                String examStart = getCellString(row.getCell(5));
-//                if (planName.isEmpty() && projectCode.isEmpty()) continue;
-//                // 基础校验
-//                if (planName.isEmpty()) throw new BusinessException("第" + (i + 1) + "行：计划名称不能为空");
-//                if (projectCode.isEmpty()) throw new BusinessException("第" + (i + 1) + "行：考试项目代码不能为空");
-//                if (classroomIds.isEmpty()) throw new BusinessException("第" + (i + 1) + "行：考试考场编号不能为空");
-//                // 禁止计划重名
-//                ExamPlanDO examPlanDO = baseMapper.selectOne(new QueryWrapper<ExamPlanDO>()
-//                        .eq("exam_plan_name", planName)
-//                        .eq("is_deleted", 0));
-//                ValidationUtils.throwIfNotNull(examPlanDO, "第" + (i + 1) + "行：计划名称已存在");
-//                // 禁止项目编号不存在
-//                ProjectDO projectDO = projectMapper.selectOne(new LambdaQueryWrapper<ProjectDO>().eq(ProjectDO::getProjectCode, projectCode));
-//                ValidationUtils.throwIfNull(projectDO, "第" + (i + 1) + "行：考试项目代码 [ " + projectCode + " ] 不存在，请对照《考试项目参照数据》文件进行填写");
-//                // 时间格式与逻辑校验
-//                // 校验数据行（第7行开始）
-//                DateTimeFormatter formatter = new DateTimeFormatterBuilder()
-//                        .parseStrict()
-//                        .appendPattern("uuuu-MM-dd HH:mm")
-//                        .toFormatter()
-//                        .withResolverStyle(ResolverStyle.STRICT);
-//                LocalDateTime signupStartTime, signupEndTime, examStartTime,examEndTime;
-//                try {
-//                    signupStartTime = parseDate(signupStart, "报名开始时间", i, formatter);
-//                    signupEndTime = parseDate(signupEnd, "报名结束时间", i, formatter);
-//                    examStartTime = parseDate(examStart, "考试开始时间", i, formatter);
-//                } catch (BusinessException e) {
-//                    throw e;
-//                }
-//                LocalDateTime now = LocalDateTime.now();
-//                // 如果任一时间早于当前时间，就抛出异常
-//                if (signupStartTime.isBefore(now) || signupEndTime.isBefore(now) || examStartTime.isBefore(now)) {
-//                    throw new BusinessException("第" + (i + 1) + "行：报名开始时间、报名结束时间、考试开始时间必须晚于当前时间");
-//                }
-//                // 逻辑校验放在
-//                if (!signupStartTime.isBefore(signupEndTime)) {
-//                    throw new BusinessException("第" + (i + 1) + "行：报名开始时间必须早于报名结束时间");
-//                }
-//                if (!signupEndTime.isBefore(examStartTime)) {
-//                    throw new BusinessException("第" + (i + 1) + "行：报名结束时间必须早于考试开始时间");
-//                }
-//                final int rowIndex = i + 1;
-//                // 拆分并校验 ID 格式
-//                List<Long> classroomIdList = Arrays.stream(classroomIds.split(","))
-//                        .map(String::trim)
-//                        .filter(s -> !s.isEmpty())
-//                        .map(id -> {
-//                            try {
-//                                return Long.parseLong(id);
-//                            } catch (NumberFormatException e) {
-//                                throw new BusinessException("第" + rowIndex + "行：考场编号 [ " + id + " ] 不存在，请对照《考试项目参照数据》文件进行填写");
-//                            }
-//                        })
-//                        .collect(Collectors.toList());
-//
-//                // 2. 批量查询考场，减少数据库 IO
-//                List<ClassroomDO> classroomList = classroomMapper.selectBatchIds(classroomIdList);
-//                Set<Long> foundIds = classroomList.stream()
-//                        .map(ClassroomDO::getId)
-//                        .collect(Collectors.toSet());
-//
-//                //  校验是否存在不存在的考场
-//                List<Long> missingIds = classroomIdList.stream()
-//                        .filter(id -> !foundIds.contains(id))
-//                        .collect(Collectors.toList());
-//                ValidationUtils.throwIf(!missingIds.isEmpty(),
-//                        "第" + (i + 1) + "行：考场编号 " + missingIds + " 不存在，请对照《考试项目参照数据》文件进行填写");
-//
-//                // 计算考试结束时间
-//                examEndTime = examStartTime.plusMinutes(projectDO.getExamDuration());
-//
-//                // 校验时间冲突
-//                boolean hasConflict = hasClassroomTimeConflict(examStartTime, examEndTime, classroomIdList) > 0;
-//                ValidationUtils.throwIf(hasConflict,
-//                        "第" + (i + 1) + "行：所选考场在所选时间段前后30分钟内已有考试计划，请调整考试时间或更换考场。");
-//            }
-//        } catch (EncryptedDocumentException e) {
-//            throw new BusinessException("文件加密无法读取");
-//        } catch (IOException e) {
-//            throw new BusinessException("文件读取失败");
-//        }
-//    }
+        return pageResp;
+    }
 
     /**
      * 解析日期

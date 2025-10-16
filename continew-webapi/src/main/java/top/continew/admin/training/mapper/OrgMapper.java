@@ -83,5 +83,5 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
 
     List<String> getAcountInfo(String id);
 
-    List<UserVO> getBindableUsers(@Param("candidatesId") Long candidatesId);
+    List<UserVO> getBindableUsers(@Param("organizationId") Long organizationId);
 }

@@ -222,7 +222,7 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
 
     void deleteOrgCandidate(List<Long> ids);
 
-    @Select("select u.* from sys_user as u " + "join sys_user_role ur on u.id = ur.user_id " + "join ted_org_user ou on u.id = ou.user_id " + "where ur.role_id = #{ organizationId } " + "and u.id = #{ userId }")
+    @Select("select u.* from sys_user as u " + "join sys_user_role ur on u.id = ur.user_id " + "join ted_org_user ou on u.id = ou.user_id " + "where ur.role_id = #{ organizationId } " + "and u.id = #{ userId } and ou.is_deleted = 0")
     UserDO getOrg(@Param("userId") Long userId, @Param("organizationId") Long organizationId);
 
     @Select("SELECT COUNT(1) FROM ted_org_user WHERE user_id = #{id}")

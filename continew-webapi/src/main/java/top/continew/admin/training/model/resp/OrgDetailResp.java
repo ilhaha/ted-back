@@ -66,6 +66,12 @@ public class OrgDetailResp extends BaseDetailResp {
     private String categoryNames;
 
     /**
+     * 机构八大类归属
+     */
+    @Schema(description = "机构八大类归属")
+    @ExcelProperty(value = "机构八大类归属")
+    private List<Long> categoryIds;
+    /**
      * 社会统一代码
      */
     @Schema(description = "社会统一代码")

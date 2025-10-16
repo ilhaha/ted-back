@@ -36,7 +36,7 @@ public interface OrgCategoryRelationMapper extends BaseMapper<OrgCategoryRelatio
             "AND c.is_deleted = 0",
             "</script>"
     })
-    List<Map<String, Object>> listCategoryNamesByOrgIds(@Param("orgIds") List<Long> orgIds);
+    List<Map<String, Object>> listCategoryInfoByOrgIds(@Param("orgIds") List<Long> orgIds);
 
     @Select("""
     SELECT c.name

@@ -116,4 +116,10 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     List<UserVO> getBindableUsers();
 
+    /**
+     * 解绑机构用户
+     * @param orgId
+     * @return
+     */
+    Boolean unbindUserToOrg(Long orgId);
 }

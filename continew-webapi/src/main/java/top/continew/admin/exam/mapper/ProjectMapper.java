@@ -99,4 +99,7 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
 
     List<Long> getProjectRoomByProjectId(@Param("projectId") Long projectId);
 
+    IPage<ProjectResp> orgGetAllProject(@Param("page") Page<ProjectDO> page,
+                                        @Param(Constants.WRAPPER) QueryWrapper<ProjectDO> queryWrapper,
+                                        @Param("userId") Long userId);
 }

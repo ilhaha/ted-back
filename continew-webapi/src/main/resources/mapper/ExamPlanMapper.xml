@@ -3,30 +3,29 @@
 <mapper namespace="top.continew.admin.exam.mapper.ExamPlanMapper">
 
     <sql id="selectPlanPage">
-        SELECT
-            tep.id,
-            tep.plan_year,
-            tep.exam_plan_name,
-            tep.start_time,
-            tep.image_url,
-            tep.end_time,
-            tep.max_candidates,
-            tep.actual_candidates,
-            tep.status,
-            tep.approval_time,
-            tep.create_user,
-            tep.update_user,
-            CASE
-                WHEN tep.update_user IS NOT NULL THEN su.nickname
-                ELSE NULL
-                END AS approvedUser,
-            tep.create_time,
-            tep.update_time,
-            tep.exam_fee,
-            tel.location_name,
-            tp.project_name,
-            tep.exam_project_id,
-            tep.location_id
+        SELECT tep.id,
+               tep.plan_year,
+               tep.exam_plan_name,
+               tep.start_time,
+               tep.image_url,
+               tep.end_time,
+               tep.max_candidates,
+               tep.actual_candidates,
+               tep.status,
+               tep.approval_time,
+               tep.create_user,
+               tep.update_user,
+               CASE
+                   WHEN tep.update_user IS NOT NULL THEN su.nickname
+                   ELSE NULL
+                   END AS approvedUser,
+               tep.create_time,
+               tep.update_time,
+               tep.exam_fee,
+               tel.location_name,
+               tp.project_name,
+               tep.exam_project_id,
+               tep.location_id
         FROM ted_exam_plan tep
                  LEFT JOIN ted_exam_location tel ON tel.id = tep.location_id
                  LEFT JOIN ted_project tp ON tp.id = tep.exam_project_id
@@ -40,47 +39,49 @@
         </foreach>
     </insert>
     <delete id="deletePLanExamClassroom">
-        DELETE FROM ted_plan_classroom
+        DELETE
+        FROM ted_plan_classroom
         WHERE plan_id = #{planId}
     </delete>
 
     <select id="selectExamPlanPage" resultType="top.continew.admin.exam.model.resp.ExamPlanDetailResp">
-        <include refid="selectPlanPage" />
+        <include refid="selectPlanPage"/>
         ${ew.customSqlSegment}
     </select>
 
     <select id="selectDetailById" resultType="top.continew.admin.exam.model.resp.ExamPlanDetailResp">
-        SELECT
-            tep.id,
-            tep.plan_year,
-            tep.start_time,
-            tep.image_url,
-            tep.exam_plan_name,
-            tep.end_time,
-            tep.max_candidates,
-            tep.actual_candidates,
-            tep.enroll_start_time,
-            tep.enroll_end_time,
-            tep.status,
-            tep.approval_time,
-            tep.create_user,
-            tep.update_user,
-            tep.create_time,
-            tep.update_time,
-            tel.location_name,
-            tp.project_name,
-            tep.exam_project_id,
-            tep.location_id,
-            tp.exam_duration
+        SELECT tep.id,
+               tep.plan_year,
+               tep.start_time,
+               tep.image_url,
+               tep.exam_plan_name,
+               tep.end_time,
+               tep.max_candidates,
+               tep.actual_candidates,
+               tep.enroll_start_time,
+               tep.enroll_end_time,
+               tep.status,
+               tep.approval_time,
+               tep.create_user,
+               tep.update_user,
+               tep.create_time,
+               tep.update_time,
+               tel.location_name,
+               tp.project_name,
+               tep.exam_project_id,
+               tep.location_id,
+               tp.exam_duration
         FROM ted_exam_plan tep
                  LEFT JOIN ted_exam_location as tel ON tel.id = tep.location_id
                  LEFT JOIN ted_project as tp ON tp.id = tep.exam_project_id
-        WHERE tep.is_deleted = 0 and tep.id = #{id}
+        WHERE tep.is_deleted = 0
+          and tep.id = #{id}
     </select>
     <select id="selectAllList" resultType="top.continew.admin.exam.model.entity.ExamPlanDO">
         SELECT *
         FROM ted_exam_plan
-        WHERE is_deleted = 0 and status = 3
+        WHERE is_deleted = 0
+          and status = 3
     </select>
     <select id="getPlanExamClassroom" resultType="java.lang.Long">
         SELECT classroom_id
@@ -88,10 +89,9 @@
         WHERE plan_id = #{planId}
     </select>
     <select id="getInfo" resultType="top.continew.admin.exam.model.vo.ExamPlanVO">
-        SELECT
-            tep.id,
-            tep.plan_year,
-            tep.start_time,
+        SELECT tep.id,
+               tep.plan_year,
+               tep.start_time,
     </select>
     <select id="hasClassroomTimeConflict" resultType="java.lang.Integer">
         SELECT COUNT(tep.id)
@@ -117,5 +117,19 @@
         </foreach>
         AND tep.is_deleted = 0
         AND tlc.is_deleted = 0
+    </select>
+    <select id="orgGetPlanList" resultType="top.continew.admin.exam.model.vo.OrgExamPlanVO">
+        SELECT tep.*
+        FROM ted_exam_plan tep
+                 LEFT JOIN ted_project tp
+                           ON tep.exam_project_id = tp.id
+                 LEFT JOIN ted_org_category_relation tocr
+                           ON tp.category_id = tocr.category_id
+                 LEFT JOIN ted_org_user tou
+                           ON tocr.org_id = tou.org_id ${ew.customSqlSegment}
+          AND tou.user_id = #{userId}
+            AND tp.is_deleted = 0
+            AND tocr.is_deleted = 0
+            AND tou.is_deleted = 0
     </select>
 </mapper>

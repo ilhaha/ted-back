@@ -178,6 +178,12 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
         return orgService.getBindableUsers();
     }
 
+
+    // 解绑机构用户
+    @PostMapping("/unbind-user/{orgId}")
+    public Boolean unbindUserToOrg(@PathVariable("orgId") Long orgId) {
+        return orgService.unbindUserToOrg(orgId);
+    }
     // 绑定用户到机构
     @PostMapping("/bind-user")
     public void bindUserToOrg(@RequestBody BindUserReq req) {

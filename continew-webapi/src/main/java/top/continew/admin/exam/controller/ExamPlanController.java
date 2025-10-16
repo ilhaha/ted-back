@@ -19,9 +19,13 @@ package top.continew.admin.exam.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.query.EnrollQuery;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
+import top.continew.admin.exam.model.resp.EnrollStatusResp;
+import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.service.ProjectService;
 import top.continew.starter.extension.crud.enums.Api;
@@ -37,6 +41,8 @@ import top.continew.admin.exam.model.req.ExamPlanReq;
 import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
 import top.continew.admin.exam.model.resp.ExamPlanResp;
 import top.continew.admin.exam.service.ExamPlanService;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 
 import java.util.List;
 
@@ -56,6 +62,20 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     @Resource
     private ExamPlanService examPlanService;
+
+    /**
+     * 机构获取符合自身八大类的考试计划
+     *
+     * @param examPlanQuery 考试计划查询参数
+     * @param pageQuery    分页参数
+     * @return 分页结果
+     */
+    @GetMapping({"/org/page"})
+    public PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery,
+                                                  @Validated PageQuery pageQuery) {
+        System.out.println(examPlanQuery);
+        return examPlanService.orgGetPlanList(examPlanQuery,pageQuery);
+    }
 
     @Operation(summary = "批量导入考试计划")
     @PostMapping("/import/excel")

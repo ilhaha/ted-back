@@ -3,10 +3,9 @@
 <mapper namespace="top.continew.admin.exam.mapper.ProjectMapper">
 
     <sql id="projectPageSql">
-        SELECT
-            tp.*,
-            tc.name as category_name,
-            sd.name as dept_name
+        SELECT tp.*,
+               tc.name as category_name,
+               sd.name as dept_name
         FROM ted_project AS tp
                  LEFT JOIN ted_category as tc ON tp.category_id = tc.id
                  LEFT JOIN sys_dept as sd ON sd.id = tp.dept_id
@@ -30,8 +29,7 @@
     </select>
 
     <select id="selectBindingLocationByIds" resultType="java.lang.Long">
-        SELECT
-            tpla.location_id
+        SELECT tpla.location_id
         FROM ted_project AS tp
                  LEFT JOIN ted_proj_loc_assoc AS tpla ON tpla.project_id = tp.id
         WHERE tp.is_deleted = 0
@@ -40,8 +38,7 @@
     </select>
 
     <select id="selectBindingDocumentByIds" resultType="java.lang.Long">
-        SELECT
-            tpdt.document_type_id
+        SELECT tpdt.document_type_id
         FROM ted_project AS tp
                  LEFT JOIN ted_project_document_type AS tpdt ON tpdt.project_id = tp.id
         WHERE tp.is_deleted = 0
@@ -50,9 +47,8 @@
     </select>
 
     <select id="getBindingDocumentByIds" resultType="top.continew.admin.document.model.resp.DocumentTypeResp">
-        SELECT
-            t3.id as id,
-            t3.type_name as type_name
+        SELECT t3.id        as id,
+               t3.type_name as type_name
         FROM ted_project AS t1
                  LEFT JOIN ted_project_document_type AS t2 ON t1.id = t2.project_id
                  LEFT JOIN ted_document_type AS t3 ON t2.document_type_id = t3.id
@@ -62,14 +58,21 @@
           AND t1.id = #{projectId}
     </select>
     <select id="getAllProject" resultType="top.continew.admin.exam.model.resp.ProjectResp">
-        SELECT tp.id,tp.project_name,tp.dept_id,tp.exam_duration,tp.project_code,tp.redeme,td.name as deptName,tp.project_status,tp.image_url
+        SELECT tp.id,
+               tp.project_name,
+               tp.dept_id,
+               tp.exam_duration,
+               tp.project_code,
+               tp.redeme,
+               td.name as deptName,
+               tp.project_status,
+               tp.image_url
         FROM ted_project AS tp
                  LEFT join ted.sys_dept as td on td.id = tp.dept_id
             ${ew.customSqlSegment}
     </select>
     <select id="getDocumentList" resultType="String">
-        SELECT
-            t3.type_name
+        SELECT t3.type_name
         FROM ted_project AS t1
                  LEFT JOIN ted_project_document_type AS t2 ON t1.id = t2.project_id
                  LEFT JOIN ted_document_type AS t3 ON t2.document_type_id = t3.id
@@ -79,8 +82,7 @@
           AND t1.id = #{projectId}
     </select>
     <select id="getLocationList" resultType="String">
-        SELECT
-            t3.location_name
+        SELECT t3.location_name
         FROM ted_project AS t1
                  LEFT JOIN ted_proj_loc_assoc AS t2 ON t1.id = t2.project_id
                  LEFT JOIN ted_exam_location AS t3 ON t2.location_id = t3.id
@@ -101,17 +103,17 @@
         where tp.id = #{projectId}
     </select>
     <select id="selectOptions" resultType="top.continew.admin.exam.model.vo.ProjectVo">
-        SELECT ted.ted_project.id AS `value`,ted_project.project_name AS label
+        SELECT ted.ted_project.id AS `value`, ted_project.project_name AS label
         FROM ted_project
         WHERE project_status = 2;
     </select>
     <select id="getProjectsWithClassrooms"
             resultType="top.continew.admin.exam.model.vo.ProjectClassroomFlatVO">
-        SELECT tp.id AS project_id,
+        SELECT tp.id     AS project_id,
                tp.project_name,
                tp.project_code,
                tc.`name` AS category_name,
-               tcl.id AS classroom_id,
+               tcl.id    AS classroom_id,
                tel.location_name,
                tcl.classroom_name,
                tp.project_type
@@ -153,5 +155,26 @@
           AND tel.is_deleted = 0
           AND tp.id = #{projectId}
           AND tcl.classroom_name IS NOT NULL;
+    </select>
+    <select id="orgGetAllProject" resultType="top.continew.admin.exam.model.resp.ProjectResp">
+        SELECT tp.id,
+               tp.project_name,
+               tp.dept_id,
+               tp.exam_duration,
+               tp.project_code,
+               tp.redeme,
+               td.name as deptName,
+               tp.project_status,
+               tp.image_url
+        FROM ted_project AS tp
+                 LEFT JOIN ted.sys_dept AS td
+                           ON td.id = tp.dept_id
+                 LEFT JOIN ted_org_category_relation tocr
+                           ON tp.category_id = tocr.category_id
+                 LEFT JOIN ted_org_user tou
+                           ON tocr.org_id = tou.org_id ${ew.customSqlSegment}
+        AND tou.user_id = #{userId}
+        AND tocr.is_deleted = 0
+        AND tou.is_deleted = 0
     </select>
 </mapper>

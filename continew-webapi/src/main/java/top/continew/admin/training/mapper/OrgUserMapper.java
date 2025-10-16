@@ -17,9 +17,13 @@
 package top.continew.admin.training.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.starter.data.mp.base.BaseMapper;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Anton
@@ -27,7 +31,25 @@ import top.continew.starter.data.mp.base.BaseMapper;
  */
 @Mapper
 public interface OrgUserMapper extends BaseMapper<TedOrgUser> {
-    @Select("select tou.org_id  from ted_org_user as tou  where tou.user_id = #{userId}")
+    @Select("select tou.org_id  from ted_org_user as tou  where tou.user_id = #{userId} and tou.is_deleted = 0")
     Long selectByUserId(String userId);
+
+    @Select("""
+    <script>
+        SELECT 
+            tou.org_id,
+            su.username,
+            su.nickname
+        FROM ted_org_user tou
+        LEFT JOIN sys_user su ON su.id = tou.user_id
+        WHERE tou.is_deleted = 0
+          AND tou.org_id IN 
+          <foreach collection='orgIds' item='id' open='(' separator=',' close=')'>
+            #{id}
+          </foreach>
+    </script>
+""")
+    List<Map<String, Object>> listAccountNamesByOrgIds(@Param("orgIds") List<Long> orgIds);
+
 
 }

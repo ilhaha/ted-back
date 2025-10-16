@@ -129,4 +129,11 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
      */
     List<ProjectWithClassroomVO> getProjectsWithClassrooms();
 
+    /**
+     * 机构获取所属全部项目
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    PageResp<ProjectResp> orgGetAllProject(ProjectQuery query, PageQuery pageQuery);
 }

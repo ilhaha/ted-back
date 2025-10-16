@@ -24,6 +24,7 @@ import top.continew.admin.common.model.resp.BaseResp;
 
 import java.io.Serial;
 import java.time.*;
+import java.util.List;
 
 /**
  * 机构信息信息
@@ -75,6 +76,12 @@ public class OrgResp extends BaseResp {
     private String location;
 
     /**
+     * 绑定的账号信息
+     */
+    @Schema(description = "绑定的账号信息")
+    private String accountName;
+
+    /**
      * 法人
      */
     @Schema(description = "法人")
@@ -115,5 +122,7 @@ public class OrgResp extends BaseResp {
      */
     @Schema(description = "是否删除（0-未删除，1-已删除）")
     private Boolean isDeleted;
+
+
 
 }

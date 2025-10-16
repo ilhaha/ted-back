@@ -41,6 +41,20 @@ public class OrgQuery implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 机构名称
+     */
+    @Schema(description = "机构名称")
+    @Query(type = QueryType.LIKE)
+    private String name;
+
+    /**
+     * 社会统一代码
+     */
+    @Schema(description = "社会统一代码")
+    @Query(type = QueryType.LIKE)
+    private String socialCode;
+
+    /**
      * 机构代号
      */
     @Schema(description = "机构代号")
