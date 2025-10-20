@@ -171,10 +171,24 @@
                            ON td.id = tp.dept_id
                  LEFT JOIN ted_org_category_relation tocr
                            ON tp.category_id = tocr.category_id
+                           AND tocr.is_deleted = 0
                  LEFT JOIN ted_org_user tou
-                           ON tocr.org_id = tou.org_id ${ew.customSqlSegment}
+                           ON tocr.org_id = tou.org_id
+                           AND tou.is_deleted = 0
+            ${ew.customSqlSegment}
         AND tou.user_id = #{userId}
-        AND tocr.is_deleted = 0
-        AND tou.is_deleted = 0
     </select>
+    <select id="getSelectCategoryProject" resultType="top.continew.admin.training.model.vo.ProjectCategoryVO">
+        SELECT
+        category_id AS parent_id,
+        id AS `value`,
+        project_name AS `label`
+        FROM ted_project
+        WHERE category_id IN
+        <foreach collection="parentIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND is_deleted = 0
+    </select>
+
 </mapper>

@@ -585,7 +585,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     public PageResp<ProjectResp> orgGetAllProject(ProjectQuery query, PageQuery pageQuery) {
         QueryWrapper<ProjectDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tp.is_deleted", 0);
-        queryWrapper.and(wrapper -> wrapper.eq("tp.project_status", 2).or().eq("tp.project_status", 1));
+        queryWrapper.and(wrapper -> wrapper.eq("tp.project_status", 2));
         // 根据 pageQuery 里的排序参数，对查询结果进行排序
         super.sort(queryWrapper, pageQuery);
 

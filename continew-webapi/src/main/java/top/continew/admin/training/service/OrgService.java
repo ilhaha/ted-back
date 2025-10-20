@@ -18,6 +18,7 @@ package top.continew.admin.training.service;
 
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
+import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.UserVO;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -122,4 +123,11 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      * @return
      */
     Boolean unbindUserToOrg(Long orgId);
+
+    /**
+     * 获取机构对应的分类-项目级联选择
+     * @return
+     */
+    List<ProjectCategoryVO> getSelectCategoryProject();
+
 }

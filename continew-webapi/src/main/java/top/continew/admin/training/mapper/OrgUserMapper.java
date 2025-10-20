@@ -19,6 +19,7 @@ package top.continew.admin.training.mapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import top.continew.admin.training.model.entity.OrgDO;
 import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.starter.data.mp.base.BaseMapper;
 
@@ -52,4 +53,19 @@ public interface OrgUserMapper extends BaseMapper<TedOrgUser> {
     List<Map<String, Object>> listAccountNamesByOrgIds(@Param("orgIds") List<Long> orgIds);
 
 
+    /**
+     * 根据用户id获取机构信息
+     * @param userId
+     * @return
+     */
+    @Select("""
+    <script>
+       SELECT org.*
+       FROM ted_org org
+       LEFT JOIN ted_org_user tou
+       ON org.id = tou.org_id AND tou.user_id = #{userId} AND tou.is_deleted = 0
+       WHERE org.is_deleted = 0
+    </script>
+""")
+    OrgDO selectOrgByUserId(@Param("userId") Long userId);
 }

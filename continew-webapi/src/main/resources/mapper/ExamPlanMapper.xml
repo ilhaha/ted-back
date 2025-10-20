@@ -110,26 +110,35 @@
         SELECT DISTINCT tlc.location_id
         FROM ted_exam_plan tep
         LEFT JOIN ted_plan_classroom tpc ON tep.id = tpc.plan_id
-        LEFT JOIN ted_location_classroom tlc ON tpc.classroom_id = tlc.classroom_id
+        LEFT JOIN ted_location_classroom tlc ON tpc.classroom_id = tlc.classroom_id AND tlc.is_deleted = 0
         WHERE tep.id IN
         <foreach collection="planIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
         AND tep.is_deleted = 0
-        AND tlc.is_deleted = 0
     </select>
     <select id="orgGetPlanList" resultType="top.continew.admin.exam.model.vo.OrgExamPlanVO">
-        SELECT tep.*
+        SELECT tep.id                                       AS exam_plan_id,
+               tep.*,
+               tp.id AS project_id,
+               tp.project_name,
+               tp.project_code,
+               tp.exam_duration,
+               tc.`name`                                    AS category_name,
+               (tep.max_candidates - COUNT(DISTINCT te.id)) AS remaining_slots
         FROM ted_exam_plan tep
                  LEFT JOIN ted_project tp
-                           ON tep.exam_project_id = tp.id
+                           ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN ted_category tc
+                           ON tp.category_id = tc.id AND tc.is_deleted = 0
                  LEFT JOIN ted_org_category_relation tocr
-                           ON tp.category_id = tocr.category_id
+                           ON tp.category_id = tocr.category_id AND tocr.is_deleted = 0
                  LEFT JOIN ted_org_user tou
-                           ON tocr.org_id = tou.org_id ${ew.customSqlSegment}
+                           ON tocr.org_id = tou.org_id AND tou.is_deleted = 0
+                 LEFT JOIN ted_enroll te
+                           ON tep.id = te.exam_plan_id AND te.enroll_status = 1 AND te.is_deleted = 0 ${ew.customSqlSegment}
+          AND tep.is_deleted = 0
           AND tou.user_id = #{userId}
-            AND tp.is_deleted = 0
-            AND tocr.is_deleted = 0
-            AND tou.is_deleted = 0
+        GROUP BY tep.id;
     </select>
 </mapper>

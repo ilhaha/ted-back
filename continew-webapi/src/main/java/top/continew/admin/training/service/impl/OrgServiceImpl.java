@@ -41,6 +41,8 @@ import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.exam.mapper.ProjectMapper;
+import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.mapper.OrgCategoryRelationMapper;
 import top.continew.admin.training.mapper.OrgUserMapper;
@@ -48,6 +50,7 @@ import top.continew.admin.training.model.dto.OrgDTO;
 import top.continew.admin.training.model.entity.OrgCategoryRelationDO;
 import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
+import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.UserVO;
 import top.continew.admin.training.service.OrgCategoryRelationService;
 import top.continew.admin.util.RedisUtil;
@@ -89,6 +92,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Resource
     private AESWithHMAC aesWithHMAC;
 
+    @Resource
+    private ProjectMapper projectMapper;
 
     @Resource
     private RedisUtil redisUtil;
@@ -544,6 +549,40 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     public Boolean unbindUserToOrg(Long orgId) {
         return orgUserMapper.delete(new LambdaQueryWrapper<TedOrgUser>().eq(TedOrgUser::getOrgId, orgId)) > 0;
     }
+
+    /**
+     * 获取机构对应的分类-项目级联选择
+     * @return
+     */
+    @Override
+    public List<ProjectCategoryVO> getSelectCategoryProject() {
+        // 获取当前登录的用户信息
+        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+
+        // 查询所有父级分类
+        List<ProjectCategoryVO> parentList = baseMapper.getSelectCategoryProject(userTokenDo.getUserId());
+        if (parentList.isEmpty()) {
+            return parentList;
+        }
+
+        // 提取父级 ID
+        List<Long> parentIds = parentList.stream()
+                .map(ProjectCategoryVO::getValue)
+                .toList();
+
+        // 查询子级分类
+        List<ProjectCategoryVO> childrenList = projectMapper.getSelectCategoryProject(parentIds);
+
+        // 构建父子关系
+        for (ProjectCategoryVO parent : parentList) {
+            List<ProjectCategoryVO> children = childrenList.stream()
+                    .filter(child -> Objects.equals(child.getParentId(), parent.getValue()))
+                    .collect(Collectors.toList());
+            parent.setChildren(children);
+        }
+        return parentList;
+    }
+
 
     /**
      * 校验解析的数据

@@ -191,7 +191,7 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
     IPage<UserResp> getStudentList(@Param("page") Page<UserDO> page,
                                    @Param(Constants.WRAPPER) QueryWrapper<UserDO> queryWrapper);
 
-    @Select("select org_id from ted_org_user where user_id = #{userId}")
+    @Select("select org_id from ted_org_user where user_id = #{userId} and is_deleted = 0")
     Long getUserOrgId(Long userId);
 
     List<StudentDocumentTypeVO> getStudentDocumentType(@Param("orgId") Long orgId,

@@ -73,7 +73,6 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     @GetMapping({"/org/page"})
     public PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery,
                                                   @Validated PageQuery pageQuery) {
-        System.out.println(examPlanQuery);
         return examPlanService.orgGetPlanList(examPlanQuery,pageQuery);
     }
 

@@ -25,6 +25,7 @@ import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.listen.StudentDataListener;
 import top.continew.admin.training.model.req.BindUserReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
+import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.UserVO;
 import top.continew.admin.util.Result;
 import top.continew.starter.extension.crud.enums.Api;
@@ -65,6 +66,15 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
 
     @Value("${examine.userRole.invigilatorId}")
     private Long invigilatorId;
+
+    /**
+     * 获取机构对应的分类-项目级联选择
+     * @return
+     */
+    @GetMapping("/select/category/project")
+    public List<ProjectCategoryVO> getSelectCategoryProject(){
+        return orgService.getSelectCategoryProject();
+    }
 
     // ExcelController.java
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
