@@ -109,12 +109,15 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
      * @param enrollStatus 报名状态（可选）
      * @return 分页结果
      */
-    @GetMapping({"/getEnrollStatusList", "/getEnrollStatusList/{enrollStatus}"})
-    public PageResp<EnrollStatusResp> getEnrollStatusList(@Validated EnrollQuery query,
-                                                          @Validated PageQuery pageQuery,
-                                                          @PathVariable(required = false) Long enrollStatus) {
+    @GetMapping("/getEnrollStatusList")
+    public PageResp<EnrollStatusResp> getEnrollStatusList(
+            @Validated EnrollQuery query,
+            @Validated PageQuery pageQuery,
+            @RequestParam(required = false) Long enrollStatus
+    ) {
         return enrollService.getEnrollStatusList(query, pageQuery, enrollStatus);
     }
+
 
     @GetMapping("/getEnrollInfo")
     public EnrollInfoResp getEnrollInfo() {

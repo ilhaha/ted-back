@@ -416,8 +416,8 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             }
 
             super.update(req, id);
-            // 审核退回 -> 报名状态改为审核中
-            enrollMapper.updateEnrollStatus(applicantDO.getPlanId(), applicantDO.getCandidatesId(), 4L);
+            // 审核退回 -> 报名状态改为补正中
+            enrollMapper.updateEnrollStatus(applicantDO.getPlanId(), applicantDO.getCandidatesId(), 5L);
             sms(examPlanName, phone, "审核未通过，原因：" + req.getRemark());
             return R.status(true, "退回补正成功");
         }

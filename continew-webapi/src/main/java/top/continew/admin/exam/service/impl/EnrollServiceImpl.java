@@ -101,38 +101,51 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     //获取带有状态的报名列表
     @Override
     public PageResp<EnrollStatusResp> getEnrollStatusList(EnrollQuery query, PageQuery pageQuery, Long enrollStatus) {
+        // 1️ 获取登录用户
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+
+        // 2⃣ 构建基础查询
         QueryWrapper<EnrollDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tep.is_deleted", 0);
-        if (enrollStatus == null) {
-            //只查询已经生效的考试计划
-            queryWrapper.eq("tep.status", 3);
-        }
-        //     如果提供了 enrollStatus，则添加状态条件
-        if (enrollStatus != null) {
-            if (enrollStatus == 2) {
-                queryWrapper.eq("te.enroll_status", 2).eq("tep.status", 6).eq("tep.is_deleted", 0);
-            } else if (enrollStatus == 0) {
-                queryWrapper.eq("te.enroll_status", enrollStatus)
-                    .or()
-                    .isNull("te.enroll_Status")
-                    .eq("tep.status", 3)
-                    .eq("tep.is_deleted", 0);
-            } else if (enrollStatus == 1) {
-                queryWrapper.eq("te.enroll_status", enrollStatus).eq("tep.status", 3).eq("tep.is_deleted", 0);
+        queryWrapper.eq("tep.status", 3); // 默认查有效考试计划
 
+        // 3️ 按状态过滤
+        if (enrollStatus != null) {
+            switch (enrollStatus.intValue()) {
+                case 0: // 未报名
+                    queryWrapper.nested(qw -> qw.eq("te.enroll_status", 0).or().isNull("te.enroll_status"));
+                    break;
+                case 1: // 已报名
+                    queryWrapper.eq("te.enroll_status", 1);
+                    break;
+                case 2: // 已完成
+                    queryWrapper.eq("te.enroll_status", 2).eq("tep.status", 6);
+                    break;
+                case 4: // 审核中
+                    queryWrapper.eq("te.enroll_status", 4);
+                    break;
+                case 6: // 已过期
+                    queryWrapper.eq("tep.status", 6);
+                    break;
+                default:
+                    break;
             }
         }
-        // 根据 pageQuery 里的排序参数，对查询结果进行排序
+
+        // 4️ 排序
         super.sort(queryWrapper, pageQuery);
 
-        // 执行分页查询
-        IPage<EnrollStatusResp> page = baseMapper.getEnrollList(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper, userTokenDo.getUserId());
+        // 5️ 执行分页查询
+        IPage<EnrollStatusResp> page = baseMapper.getEnrollList(
+                new Page<>(pageQuery.getPage(), pageQuery.getSize()),
+                queryWrapper,
+                userTokenDo.getUserId()
+        );
 
-        // 将查询结果转换成 PageResp 对象
+        // 6️ 封装返回结果
         PageResp<EnrollStatusResp> pageResp = PageResp.build(page, EnrollStatusResp.class);
-        // 遍历查询结果列表，调用 fill 方法填充额外字段或处理数据
+
+        // 7️ 填充扩展字段
         pageResp.getList().forEach(this::fill);
 
         return pageResp;

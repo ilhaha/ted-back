@@ -91,7 +91,7 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
     /**
      * 更新报名状态
      */
-    @Update("UPDATE ted.ted_enroll SET enroll_status = #{status}, update_time = NOW() WHERE exam_plan_id = #{examPlanId} AND user_id = #{userId}")
+    @Update("UPDATE ted.ted_enroll SET enroll_status = #{status}, update_time = NOW() WHERE exam_plan_id = #{examPlanId} AND user_id = #{userId} AND is_deleted = 0")
     void updateEnrollStatus(@Param("examPlanId") Long examPlanId,
                             @Param("userId") Long userId,
                             @Param("status") Long status);
