@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service.impl;
 
+import cn.crane4j.core.util.StringUtils;
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.fastjson.JSON;
 import com.aliyun.sdk.service.dysmsapi20170525.AsyncClient;
@@ -45,21 +46,21 @@ import top.continew.admin.common.util.TokenLocalThreadUtil;
 
 import top.continew.admin.config.ali.AliYunConfig;
 import top.continew.admin.constant.SmsConstants;
-import top.continew.admin.exam.mapper.ClassroomMapper;
-import top.continew.admin.exam.mapper.ExamPlanMapper;
-import top.continew.admin.exam.mapper.PlanClassroomMapper;
+import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.BatchAuditSpecialCertificationApplicantDTO;
+import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.EnrollReq;
 import top.continew.admin.exam.model.req.SpecialCertificationApplicantListReq;
+import top.continew.admin.exam.model.resp.EnrollDetailResp;
 import top.continew.admin.exam.service.EnrollService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
-import top.continew.admin.exam.mapper.SpecialCertificationApplicantMapper;
 import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
 import top.continew.admin.exam.model.query.SpecialCertificationApplicantQuery;
 import top.continew.admin.exam.model.req.SpecialCertificationApplicantReq;
@@ -67,6 +68,7 @@ import top.continew.admin.exam.model.resp.SpecialCertificationApplicantDetailRes
 import top.continew.admin.exam.model.resp.SpecialCertificationApplicantResp;
 import top.continew.admin.exam.service.SpecialCertificationApplicantService;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -106,32 +108,121 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     @Resource
     private SpecialCertificationApplicantMapper scMapper;
 
+    @Resource
+    private EnrollMapper enrollMapper;
+
+/**
+ * 根据考生和计划ID查询申报记录
+ *
+ * @param planId 计划ID
+ * @param applySource 申报来源（0机构 / 1个人 / null不区分）
+ */
     @Override
-    public SpecialCertificationApplicantResp getByCandidates(Long planId) {
+    public SpecialCertificationApplicantResp getByCandidates(Long planId, Integer applySource) {
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
-        LambdaQueryWrapper<SpecialCertificationApplicantDO> specialCertificationApplicantDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        specialCertificationApplicantDOLambdaQueryWrapper
-            .eq(SpecialCertificationApplicantDO::getCandidatesId, userTokenDo.getUserId());
-        specialCertificationApplicantDOLambdaQueryWrapper.eq(SpecialCertificationApplicantDO::getPlanId, planId);
-        specialCertificationApplicantDOLambdaQueryWrapper.eq(SpecialCertificationApplicantDO::getStatus, 0);
-        SpecialCertificationApplicantDO specialCertificationApplicantDO = baseMapper
-            .selectOne(specialCertificationApplicantDOLambdaQueryWrapper);
-        SpecialCertificationApplicantResp specialCertificationApplicantResp = new SpecialCertificationApplicantResp();
-        if (ObjectUtils.isEmpty(specialCertificationApplicantDO)) {
+        Long candidateId = userTokenDo.getUserId();
+
+        LambdaQueryWrapper<SpecialCertificationApplicantDO> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SpecialCertificationApplicantDO::getCandidatesId, candidateId)
+                .eq(SpecialCertificationApplicantDO::getPlanId, planId)
+                .eq(SpecialCertificationApplicantDO::getIsDeleted, false)
+                .eq(SpecialCertificationApplicantDO::getUpdateUser, candidateId)
+                .eq(applySource != null, SpecialCertificationApplicantDO::getApplySource, applySource)
+                .orderByDesc(SpecialCertificationApplicantDO::getCreateTime)
+                .last("LIMIT 1");
+
+        SpecialCertificationApplicantDO applicantDO = baseMapper.selectOne(queryWrapper);
+        if (applicantDO == null) {
             return null;
         }
-        BeanUtils.copyProperties(specialCertificationApplicantDO, specialCertificationApplicantResp);
-        return specialCertificationApplicantResp;
+
+        SpecialCertificationApplicantResp resp = new SpecialCertificationApplicantResp();
+        BeanUtils.copyProperties(applicantDO, resp);
+        return resp;
     }
 
-    @Transactional
+
+
+    @Transactional(rollbackFor = Exception.class)
     @Override
-    public Boolean candidatesUpload(SpecialCertificationApplicantReq specialCertificationApplicantReq) {
-        SpecialCertificationApplicantDO specialCertificationApplicantDO = new SpecialCertificationApplicantDO();
-        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
-        specialCertificationApplicantDO.setCandidatesId(userTokenDo.getUserId());
-        BeanUtils.copyProperties(specialCertificationApplicantReq, specialCertificationApplicantDO);
-        return this.baseMapper.insert(specialCertificationApplicantDO) > 0;
+    public Boolean candidatesUpload(SpecialCertificationApplicantReq req) {
+        UserTokenDo user = TokenLocalThreadUtil.get();
+
+        // 1. 查询该考生在该计划下是否已存在申报记录
+        LambdaQueryWrapper<SpecialCertificationApplicantDO> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(SpecialCertificationApplicantDO::getCandidatesId, user.getUserId())
+                .eq(SpecialCertificationApplicantDO::getPlanId, req.getPlanId())
+                .eq(SpecialCertificationApplicantDO::getApplySource, 1)
+                .eq(SpecialCertificationApplicantDO::getIsDeleted, false)
+                .last("LIMIT 1");
+
+        SpecialCertificationApplicantDO existing = baseMapper.selectOne(queryWrapper);
+
+        // 2. 若存在虚假资料记录（status=3），禁止再次申报
+        ValidationUtils.throwIf(!ObjectUtils.isEmpty(existing) && existing.getStatus() == 3,
+                "您的申报被标记为虚假资料，禁止再次申报该考试。如有疑问，请联系管理员。");
+
+        // 3. 校验是否距离考试不足 5 天
+        EnrollDetailResp detail = enrollMapper.getAllDetailEnrollList(req.getPlanId(), user.getUserId());
+        if (detail == null || detail.getExamStartTime() == null) {
+            throw new BusinessException("未找到考试计划或考试时间信息，无法上传资料。");
+        }
+
+        LocalDateTime examStartTime = detail.getExamStartTime();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime fiveDaysBeforeExam = examStartTime.minusDays(5);
+
+        if (now.isAfter(fiveDaysBeforeExam)) {
+            throw new BusinessException("距离考试不足5天，无法重新上传资料。");
+        }
+
+        // 4. 插入或更新申请信息
+        SpecialCertificationApplicantDO entity = new SpecialCertificationApplicantDO();
+        BeanUtils.copyProperties(req, entity);
+        entity.setCandidatesId(user.getUserId());
+        entity.setCreateUser(user.getUserId());
+        entity.setUpdateUser(user.getUserId());
+        entity.setCreateTime(LocalDateTime.now());
+        entity.setUpdateTime(LocalDateTime.now());
+        entity.setApplySource(1);
+        entity.setIsDeleted(false);
+        entity.setStatus(0); // 上传后待审核
+
+        if (existing != null && (existing.getStatus() == 0 || existing.getStatus() == 2)) {
+            existing.setImageUrl(req.getImageUrl());
+            existing.setStatus(0);
+            baseMapper.updateById(existing);
+        } else {
+            baseMapper.insert(entity);
+        }
+
+        // 5. 同步插入报名表（状态 = 4 审核中）
+        EnrollDO existingEnroll = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
+                .eq(EnrollDO::getExamPlanId, req.getPlanId())
+                .eq(EnrollDO::getUserId, user.getUserId())
+                .eq(EnrollDO::getIsDeleted, false)
+                .last("LIMIT 1"));
+
+        if (existingEnroll == null) {
+            EnrollDO enroll = new EnrollDO();
+            enroll.setExamPlanId(req.getPlanId());
+            enroll.setUserId(user.getUserId());
+            enroll.setEnrollStatus(4L); // 审核中
+            enroll.setIsDeleted(false);
+            enroll.setCreateUser(user.getUserId());
+            enroll.setUpdateUser(user.getUserId());
+            enroll.setCreateTime(LocalDateTime.now());
+            enroll.setUpdateTime(LocalDateTime.now());
+            enrollMapper.insert(enroll);
+            log.info("上传资料时插入报名表记录: planId={}, userId={}, status=审核中(4)", req.getPlanId(), user.getUserId());
+        } else {
+            existingEnroll.setEnrollStatus(4L);
+            existingEnroll.setUpdateTime(LocalDateTime.now());
+            enrollMapper.updateById(existingEnroll);
+            log.info("更新报名表状态为审核中: planId={}, userId={}", req.getPlanId(), user.getUserId());
+        }
+
+        return true;
     }
 
     @Override
@@ -283,58 +374,72 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
      * @param req 修改参数
      * @param id  ID
      */
+
     @Override
     public R updateResult(SpecialCertificationApplicantReq req, Long id) {
-
-        SpecialCertificationApplicantDO specialCertificationApplicantDO = baseMapper.selectById(id);
+        SpecialCertificationApplicantDO applicantDO = baseMapper.selectById(id);
         EnrollReq enrollReq = new EnrollReq();
         enrollReq.setEnrollStatus(1L);
-        enrollReq.setExamPlanId(specialCertificationApplicantDO.getPlanId());
-        UserDO userDO = userMapper.selectById(specialCertificationApplicantDO.getCandidatesId());
-        //3.2 获取手机号
+        enrollReq.setExamPlanId(applicantDO.getPlanId());
+
+        UserDO userDO = userMapper.selectById(applicantDO.getCandidatesId());
         String phone = userDO.getPhone();
-        //2.1获取考试名称和通过（默认）
-        ExamPlanDO examPlanDO = examPlanMapper.selectById(specialCertificationApplicantDO.getPlanId());
+
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(applicantDO.getPlanId());
         String examPlanName = examPlanDO.getExamPlanName();
 
-        if (req.getStatus() == 1)//如果审核通过
-        {
-            //进入这个函数前确保不超过最大人数
-            //            PlancalssroomDO seatNumber = planClassroomMapper.getSeatNumber(req.getPlanId());
-            //            Long seatNumber = planClassroomMapper.getSeatNumber(req.getPlanId());
-            //            ClassroomDO classroomDO = classroomMapper.selectById(seatNumber.getClassroomId());
-            // 获取当前计划clasroom考场最大座位数
-            long enrolledCount = classroomMapper.getPlanCount(req.getPlanId());//获取当前计划已经报名人数
+        Integer status = req.getStatus();
 
+        // === 审核通过 ===
+        if (status == 1) {
+            long enrolledCount = classroomMapper.getPlanCount(req.getPlanId());
             if (enrolledCount >= examPlanDO.getMaxCandidates()) {
-                String reason = "审核不通过,原因是:该考试计划报名人数已满!";
-                //发送短信+赋值失败
+                String reason = "审核不通过，原因是：该考试计划报名人数已满！";
                 smsList(examPlanName, String.valueOf(req.getPlanId()), reason);
                 batchRejectApplications(req.getPlanId());
-                return R.status(false, "该考试计划报名人数已满，已自动改为审核不通过!");
-
-            } else {
-
-                if (enrollService.singUp(enrollReq, specialCertificationApplicantDO
-                    .getCandidatesId(), specialCertificationApplicantDO.getStatus())) {
-                    // 更新报名表状态,发送短信显示报名成功
-                    super.update(req, id);
-                    sms(examPlanName, phone, "已经审核通过!");
-                    return R.status(true, "报名成功");
-                }
+                return R.status(false, "该考试计划报名人数已满，已自动改为审核不通过！");
             }
-        } else//审核未通过（直接把原因转发过去）
-        {
-            //发送短信
-            String reason = req.getReason();
 
-            sms(examPlanName, phone, "审核不通过,原因是:" + reason + "!");
-            //更新报名表状态
-            super.update(req, id);
-            return R.status(true, "审核成功");
+            if (enrollService.singUp(enrollReq, applicantDO.getCandidatesId(), applicantDO.getStatus())) {
+                super.update(req, id);
+                // 审核通过 -> 报名状态改为已报名
+                enrollMapper.updateEnrollStatus(applicantDO.getPlanId(), applicantDO.getCandidatesId(), 1L);
+                sms(examPlanName, phone, "审核通过，报名成功！");
+                return R.status(true, "报名成功");
+            }
         }
-        return R.status(true, "审核成功");
 
+        // === 退回补正 ===
+        else if (status == 2) {
+            if (StringUtils.isBlank(req.getRemark())) {
+                return R.status(false, "退回补正必须填写退回原因！");
+            }
+
+            super.update(req, id);
+            // 审核退回 -> 报名状态改为审核中
+            enrollMapper.updateEnrollStatus(applicantDO.getPlanId(), applicantDO.getCandidatesId(), 4L);
+            sms(examPlanName, phone, "审核未通过，原因：" + req.getRemark());
+            return R.status(true, "退回补正成功");
+        }
+
+        // === 虚假资料 ===
+        else if (status == 3) {
+            if (StringUtils.isBlank(req.getRemark())) {
+                return R.status(false, "标记为虚假资料时必须填写原因！");
+            }
+
+            super.update(req, id);
+            sms(examPlanName, phone, "您的申报被标记为虚假资料，原因：" + req.getRemark() + "。您将无法再次申报该考试。");
+            return R.status(true, "已标记为虚假资料并禁止再次申报");
+        }
+
+        // === 其他状态 ===
+        else {
+            super.update(req, id);
+            return R.status(true, "审核状态已更新");
+        }
+
+        return R.status(true, "审核处理完成");
     }
 
     public void batchRejectApplications(Long planId) {
@@ -440,6 +545,8 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     public SpecialCertificationApplicantDetailResp get(Long id) {
         SpecialCertificationApplicantDO entity = super.getById(id, false);
         SpecialCertificationApplicantDetailResp detail = BeanUtil.toBean(entity, this.getDetailClass());
+        detail.setBatchId(entity.getBatchId());
+        detail.setRemark(entity.getRemark());
         detail.setCandidatesName(userMapper.selectNicknameById(entity.getCandidatesId()));
         this.fill(detail);
         return detail;

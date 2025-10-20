@@ -39,29 +39,17 @@ public class SpecialCertificationApplicantReq implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 申请表图片url
-     */
-    @Schema(description = "申请表")
-    @NotBlank(message = "申请表")
-    private String imageUrl;
-
-    /**
-     * 考试计划id
-     */
-    @Schema(description = "考试计划id")
-    @NotNull(message = "考试计划id")
+    @Schema(description = "考试计划ID")
+    @NotNull(message = "考试计划ID不能为空")
     private Long planId;
 
-    /**
-     * 审核状态
-     */
-    @Schema(description = "审核状态")
+    @Schema(description = "申请表电子资料URL")
+    @NotBlank(message = "申请表文件URL不能为空")
+    private String imageUrl;
+
+    @Schema(description = "审核状态（0：未审核，1：审核通过，2：退回补正，3：虚假资料）")
     private Integer status;
 
-    /**
-     * 审核原因
-     */
-    @Schema(description = "审核原因")
-    private String reason;
+    @Schema(description = "审核意见或退回原因（选填）")
+    private String remark;
 }

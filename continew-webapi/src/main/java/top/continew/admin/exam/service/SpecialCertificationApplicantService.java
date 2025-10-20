@@ -34,11 +34,12 @@ import top.continew.admin.exam.model.resp.SpecialCertificationApplicantResp;
 public interface SpecialCertificationApplicantService extends BaseService<SpecialCertificationApplicantResp, SpecialCertificationApplicantDetailResp, SpecialCertificationApplicantQuery, SpecialCertificationApplicantReq> {
 
     /**
-     * 根据当前登录的考生获取特种设备人员资格申请表
-     * 
-     * @return
+     * 根据考生和计划ID查询申报记录
+     *
+     * @param planId 计划ID
+     * @param applySource 申报来源（0机构 / 1个人 / null不区分）
      */
-    SpecialCertificationApplicantResp getByCandidates(Long planId);
+    SpecialCertificationApplicantResp getByCandidates(Long planId, Integer applySource);
 
     /**
      * 考生上传特种设备人员资格申请表

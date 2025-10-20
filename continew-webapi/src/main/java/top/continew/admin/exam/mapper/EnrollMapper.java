@@ -84,5 +84,17 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
      * 取消报名
      */
     @Update("update ted.ted_special_certification_applicant set is_deleted = 1 where plan_id = #{examPlanId} and candidates_id = #{userId}")
-    void cancelEnroll(@Param("examPlanId") Long examPlanId, @Param("userId") Long userId);
+    void deleteFromApplicant(@Param("examPlanId") Long examPlanId, @Param("userId") Long userId);
+
+    @Update("UPDATE ted.ted_enroll SET enroll_status = 0, is_deleted = 1 WHERE exam_plan_id = #{examPlanId} AND user_id = #{userId}")
+    void deleteFromEnroll(@Param("examPlanId") Long examPlanId, @Param("userId") Long userId);
+    /**
+     * 更新报名状态
+     */
+    @Update("UPDATE ted.ted_enroll SET enroll_status = #{status}, update_time = NOW() WHERE exam_plan_id = #{examPlanId} AND user_id = #{userId}")
+    void updateEnrollStatus(@Param("examPlanId") Long examPlanId,
+                            @Param("userId") Long userId,
+                            @Param("status") Long status);
+
+
 }

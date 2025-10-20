@@ -71,6 +71,20 @@ public class SpecialCertificationApplicantDetailResp extends BaseDetailResp {
     private String imageUrl;
 
     /**
+     * 班级批次ID（机构批量上传时关联，个人报名时为空）
+     */
+    @Schema(description = "班级批次ID（机构批量上传时关联，个人报名时为空）")
+    @ExcelProperty(value = "班级批次ID（机构批量上传时关联，个人报名时为空）")
+    private Long batchId;
+
+    /**
+     * 审核意见或退回原因
+     */
+    @Schema(description = "审核意见或退回原因")
+    @ExcelProperty(value = "审核意见或退回原因")
+    private String remark;
+
+    /**
      * 是否删除（0: 否, 1: 是）
      */
     @Schema(description = "是否删除（0: 否, 1: 是）")

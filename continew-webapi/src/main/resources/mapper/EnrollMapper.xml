@@ -3,17 +3,19 @@
 <mapper namespace="top.continew.admin.exam.mapper.EnrollMapper">
 
     <select id="getEnrollList" resultType="top.continew.admin.exam.model.resp.EnrollStatusResp">
-        SELECT tep.id                        as examPlanId,
-               tep.image_url                 as imageUrl,
-               tep.start_time                as examStartTime,
-               tep.exam_plan_name            as examPlanName,
-               tep.enroll_end_time           as enrollEndTime,
-               COALESCE(te.enroll_status, 0) AS enroll_status
+        SELECT
+            tep.id                        AS examPlanId,
+            tep.image_url                 AS imageUrl,
+            tep.start_time                AS examStartTime,
+            tep.exam_plan_name            AS examPlanName,
+            tep.enroll_end_time           AS enrollEndTime,
+            COALESCE(te.enroll_status, 0) AS enroll_status
         FROM ted_exam_plan AS tep
-                 LEFT JOIN
-             ted_enroll AS te ON te.exam_plan_id = tep.id and user_id = #{userId} ${ew.customSqlSegment}
-
-
+                 LEFT JOIN ted_enroll AS te
+                           ON te.exam_plan_id = tep.id
+                               AND te.user_id = #{userId}
+                               AND te.is_deleted = 0
+            ${ew.customSqlSegment}
     </select>
     <select id="getAllDetailEnrollList" resultType="top.continew.admin.exam.model.resp.EnrollDetailResp">
 
@@ -34,9 +36,9 @@
                  LEFT JOIN ted_project AS tp
                            ON tep.exam_project_id = tp.id
             -- ⭐ 核心过滤条件
-                 left join ted_enroll as te on te.exam_plan_id = tep.id and te.user_id = #{userId}
+                 left join ted_enroll as te on te.exam_plan_id = tep.id and te.user_id = #{userId} and te.is_deleted = 0
                  LEFT JOIN ted.ted_exam_location AS tel
-                           ON tep.location_id = tel.id
+                           ON tep.location_id = tel.id and tel.is_deleted = 0
 
         WHERE tep.is_deleted = 0
           AND tep.id = #{examPlanId}

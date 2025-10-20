@@ -67,6 +67,25 @@ public class SpecialCertificationApplicantResp extends BaseResp {
     private String imageUrl;
 
     /**
+     * 申请来源（0：培训机构批量上传，1：考生个人单独报名）
+     */
+    @Schema(description = "申请来源（0：培训机构批量上传，1：考生个人单独报名）")
+    private Integer applySource;
+
+
+    /**
+     * 班级批次id
+     */
+    @Schema(description = "班级批次id")
+    private Long batchId;
+
+    /**
+     * 审核意见或退回原因
+     */
+    @Schema(description = "审核意见或退回原因")
+    private String remark;
+
+    /**
      * 更新人
      */
     @Schema(description = "更新人")

@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -158,24 +159,20 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         return enrollInfoResp;
     }
 
-    @Transactional
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean singUp(EnrollReq enrollReq, Long userId, Integer status) {
         synchronized (this) {
-
-            //获取本场考试信息
             Long planId = enrollReq.getExamPlanId();
             ExamPlanDO examPlanDO = examPlanMapper.selectById(planId);
             ExamPlanVO examPlanVO = new ExamPlanVO();
             BeanUtils.copyProperties(examPlanDO, examPlanVO);
             examPlanVO.setClassroomList(examPlanMapper.getPlanExamClassroom(planId));
 
-            //使用安全随机数生成器
             SecureRandom random = new SecureRandom();
-            //获取考场列表
             List<Long> classroomList = examPlanVO.getClassroomList();
-            Collections.shuffle(classroomList); // 随机打乱避免热点
-            //尝试分配考场座位
+            Collections.shuffle(classroomList);
+
             Long assignedClassroomId = null;
             for (Long classroomId : classroomList) {
                 int updated = classroomMapper.incrementEnrolledCount(classroomId, examPlanDO.getId());
@@ -184,32 +181,49 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                     break;
                 }
             }
+
             if (status != 2) {
                 if (assignedClassroomId == null) {
                     throw new BusinessException("当前考试已满员，已自动将该计划剩余审核改为不通过");
                 }
 
-                //拼接准考证号
-                //获取考场id
+                // 准考证号
                 String classroomId = String.format("%03d", assignedClassroomId);
-                //获取考试年份
                 String planYear = examPlanVO.getPlanYear();
-                //获取对应考场的最大容纳人数
-                String seatPart = String.format("%03d", classroomMapper.getSeatNumber(assignedClassroomId, examPlanDO
-                    .getId()));
-                //生成四位随机数字 转化为字符串
+                String seatPart = String.format("%03d", classroomMapper.getSeatNumber(assignedClassroomId, examPlanDO.getId()));
                 String randomPart = String.format("%04d", random.nextInt(10000));
-                //生成准考证号
                 String examNumber = planYear + randomPart + classroomId + seatPart;
-                //存入数据库
-                EnrollDO enrollDO = new EnrollDO();
-                // 补充报名表信息
-                BeanUtils.copyProperties(enrollReq, enrollDO);
-                enrollDO.setUserId(userId);
-                enrollDO.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
-                enrollDO.setSeatId(Long.valueOf(seatPart));
-                enrollDO.setClassroomId(Long.valueOf(classroomId));
-                return enrollMapper.insert(enrollDO) > 0;
+
+                // 检查报名表是否已存在
+                EnrollDO existing = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
+                        .eq(EnrollDO::getExamPlanId, planId)
+                        .eq(EnrollDO::getUserId, userId)
+                        .eq(EnrollDO::getIsDeleted, false)
+                        .last("LIMIT 1"));
+
+                if (existing != null) {
+                    // 如果之前有记录（比如上传资料时插入的状态=4），则只更新状态为已报名
+                    existing.setEnrollStatus(1L);
+                    existing.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
+                    existing.setSeatId(Long.valueOf(seatPart));
+                    existing.setClassroomId(Long.valueOf(classroomId));
+                    existing.setUpdateTime(LocalDateTime.now());
+                    enrollMapper.updateById(existing);
+                    return true;
+                } else {
+                    // 如果之前没有记录，则插入新报名
+                    EnrollDO enrollDO = new EnrollDO();
+                    BeanUtils.copyProperties(enrollReq, enrollDO);
+                    enrollDO.setUserId(userId);
+                    enrollDO.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
+                    enrollDO.setSeatId(Long.valueOf(seatPart));
+                    enrollDO.setClassroomId(Long.valueOf(classroomId));
+                    enrollDO.setEnrollStatus(1L); // 已报名
+                    enrollDO.setIsDeleted(false);
+                    enrollDO.setCreateTime(LocalDateTime.now());
+                    enrollDO.setUpdateTime(LocalDateTime.now());
+                    return enrollMapper.insert(enrollDO) > 0;
+                }
             }
         }
         return false;
@@ -311,9 +325,33 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void cancelEnroll(Long examPlanId) {
         Long userId = TokenLocalThreadUtil.get().getUserId();
-        enrollMapper.cancelEnroll(examPlanId, userId);
+
+        // 获取报名详情
+        EnrollDetailResp detailEnroll = enrollMapper.getAllDetailEnrollList(examPlanId, userId);
+
+        if (detailEnroll == null) {
+            throw new BusinessException("未找到考试计划信息，无法取消报名");
+        }
+
+        LocalDateTime examStartTime = detailEnroll.getExamStartTime();
+        if (examStartTime == null) {
+            throw new BusinessException("考试开始时间为空，无法取消报名");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime fiveDaysBeforeExam = examStartTime.minusDays(5);
+
+        // 允许取消：当前时间 <= 考试开始时间 - 5天
+        if (!now.isAfter(fiveDaysBeforeExam)) {
+            enrollMapper.deleteFromApplicant(examPlanId, userId);
+            enrollMapper.deleteFromEnroll(examPlanId, userId);
+        } else {
+            // 禁止取消
+            throw new BusinessException("距离考试不足5天，无法取消报名");
+        }
     }
 
     //重写后台管理端分页
