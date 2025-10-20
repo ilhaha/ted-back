@@ -60,7 +60,7 @@ public class IdCardRecognition {
     @Value("${aliyun.region}")
     private String REGION;
 
-    @Value("${aliyun.endpoint}")
+    @Value("${aliyun.ocr.endpoint}")
     private String ENDPOINT;
 
     private String ACCESS_KEY;
@@ -71,30 +71,31 @@ public class IdCardRecognition {
     private void createAliClient() {
         try {
             if (ACCESS_KEY == null || SECRET_ACCESS_KEY == null) {
-                // 读取本地文件
                 Properties properties = new Properties();
-                // 加载 properties 文件
                 assert ACCESS_KEY_PATH != null;
                 FileInputStream fis = new FileInputStream(ACCESS_KEY_PATH);
                 properties.load(fis);
                 ACCESS_KEY = properties.getProperty(KEY_ID);
                 SECRET_ACCESS_KEY = properties.getProperty(KEY_SECRET);
+                fis.close();
             }
 
             StaticCredentialProvider provider = StaticCredentialProvider.create(Credential.builder()
-                .accessKeyId(ACCESS_KEY)
-                .accessKeySecret(SECRET_ACCESS_KEY)
-                .build());
+                    .accessKeyId(ACCESS_KEY)
+                    .accessKeySecret(SECRET_ACCESS_KEY)
+                    .build());
 
             this.client = AsyncClient.builder()
-                .region(REGION)
-                .credentialsProvider(provider)
-                .overrideConfiguration(ClientOverrideConfiguration.create().setEndpointOverride(ENDPOINT))
-                .build();
+                    .region(REGION)
+                    .credentialsProvider(provider)
+                    .overrideConfiguration(ClientOverrideConfiguration.create()
+                            .setEndpointOverride(ENDPOINT))
+                    .build();
         } catch (Exception e) {
+            e.printStackTrace();
         }
-
     }
+
 
     public IdCardDo uploadIdCard(InputStream is, boolean flag) throws Exception {
         return uploadIdCard(is, flag, null);
@@ -119,18 +120,18 @@ public class IdCardRecognition {
             resp = response.get();
             new Gson().toJson(resp);
         } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             client.close();
             assert is != null;
             is.close();
         }
-
         return getIdCardDo(resp, flag, idCardDo);
     }
 
     /**
      * 上传身份证返回
-     * 
+     *
      * @param resp false反面
      * @param flag 正反面 true正面
      * @return

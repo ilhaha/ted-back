@@ -17,6 +17,7 @@
 package top.continew.admin.controller.system;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaIgnore;
 import cn.hutool.core.util.ReUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.controller.BaseController;
 import top.continew.admin.common.constant.RegexConstants;
+import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -53,6 +55,7 @@ import top.continew.admin.system.model.vo.StudentDocumentTypeVO;
 import top.continew.admin.system.service.UserService;
 import top.continew.admin.training.service.OrgService;
 import top.continew.starter.core.util.ExceptionUtils;
+import top.continew.starter.core.validation.CheckUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.annotation.CrudRequestMapping;
 import top.continew.starter.extension.crud.enums.Api;
@@ -87,6 +90,13 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
 
     @Resource
     private AESWithHMAC aesWithHMAC;
+
+    @SaIgnore
+    @GetMapping("/isPhoneExists")
+    @Operation(summary = "判断手机是否已被绑定", description = "判断手机是否已被绑定")
+    public Boolean isPhoneExists(String phone) {
+        return userService.isPhoneExists(phone,null);
+    }
 
     @GetMapping("/getUserByUserName")
     public UserDO getUserByUserName(String username) {

@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
+import top.continew.admin.system.model.resp.IdCardFileInfoResp;
 import top.continew.admin.system.service.FileService;
 import top.continew.admin.system.service.UploadService;
 
@@ -43,6 +44,17 @@ public class UploadServiceImpl implements UploadService {
     @Override
     public FileInfoResp upload(MultipartFile file, GeneralFileReq fileReq) {
         return fileService.upload(file, fileReq);
+    }
+
+    /**
+     * 上传身份证
+     * @param file
+     * @param frontOrBack
+     * @return
+     */
+    @Override
+    public IdCardFileInfoResp uploadIdCard(MultipartFile file, Integer frontOrBack) {
+        return fileService.uploadIdCard(file, frontOrBack);
     }
 
 }

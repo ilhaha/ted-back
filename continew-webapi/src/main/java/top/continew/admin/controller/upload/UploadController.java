@@ -16,12 +16,14 @@
 
 package top.continew.admin.controller.upload;
 
+import cn.dev33.satoken.annotation.SaIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
+import top.continew.admin.system.model.resp.IdCardFileInfoResp;
 import top.continew.admin.system.model.resp.file.FileUploadResp;
 import top.continew.admin.system.service.UploadService;
 import top.continew.starter.core.validation.ValidationUtils;
@@ -38,18 +40,26 @@ public class UploadController {
     @Resource
     private UploadService uploadService;
 
+
     @Operation(summary = "上传文件", description = "上传文件")
     @PostMapping("/file")
     public FileUploadResp upload(MultipartFile file, GeneralFileReq fileReq) {
-
         ValidationUtils.throwIf(file::isEmpty, "文件不能为空");
         FileInfoResp fileInfo = uploadService.upload(file, fileReq);
         return FileUploadResp.builder()
-            .id(fileInfo.getId())
-            .url(fileInfo.getUrl())
-            .thUrl(fileInfo.getThUrl())
-            .duration(fileInfo.getDuration())
-            .metadata(fileInfo.getMetadata())
-            .build();
+                .id(fileInfo.getId())
+                .url(fileInfo.getUrl())
+                .thUrl(fileInfo.getThUrl())
+                .duration(fileInfo.getDuration())
+                .metadata(fileInfo.getMetadata())
+                .build();
+    }
+
+    @SaIgnore
+    @Operation(summary = "上传身份证", description = "上传身份证")
+    @PostMapping("/file/idCard/{frontOrBack}")
+    public IdCardFileInfoResp idCard(MultipartFile file, @PathVariable("frontOrBack") Integer frontOrBack) {
+        ValidationUtils.throwIf(file::isEmpty, "文件不能为空");
+        return uploadService.uploadIdCard(file, frontOrBack);
     }
 }

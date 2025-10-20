@@ -23,6 +23,7 @@ import top.continew.admin.system.model.query.FileQuery;
 import top.continew.admin.system.model.req.FileReq;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
+import top.continew.admin.system.model.resp.IdCardFileInfoResp;
 import top.continew.admin.system.model.resp.file.FileResp;
 import top.continew.admin.system.model.resp.file.FileStatisticsResp;
 import top.continew.starter.data.mp.service.IService;
@@ -80,4 +81,12 @@ public interface FileService extends BaseService<FileResp, FileResp, FileQuery, 
      * @return
      */
     FileInfoResp upload(MultipartFile file, GeneralFileReq fileReq);
+
+    /**
+     * 上传身份证
+     * @param file
+     * @param frontOrBack
+     * @return
+     */
+    IdCardFileInfoResp uploadIdCard(MultipartFile file, Integer frontOrBack);
 }

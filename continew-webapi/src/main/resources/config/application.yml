@@ -311,5 +311,7 @@ aliyun:
     enrollNotice: SMS_481035129
     phoneConnectedCode: SMS_486145105
   endpoint: dysmsapi.aliyuncs.com
+  ocr:
+    endpoint: ocr-api.cn-hangzhou.aliyuncs.com
 
 
