@@ -19,6 +19,7 @@ package top.continew.admin.training.service.impl;
 import cn.crane4j.core.util.StringUtils;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.excel.support.cglib.beans.BeanMap;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -29,6 +30,7 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import me.zhyd.oauth.exception.AuthException;
+import net.dreamlu.mica.core.utils.AesUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -37,7 +39,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.model.entity.UserTokenDo;
+import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.exam.mapper.ProjectMapper;
+import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.mapper.OrgCategoryRelationMapper;
 import top.continew.admin.training.mapper.OrgUserMapper;
@@ -45,6 +50,7 @@ import top.continew.admin.training.model.dto.OrgDTO;
 import top.continew.admin.training.model.entity.OrgCategoryRelationDO;
 import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
+import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.UserVO;
 import top.continew.admin.training.service.OrgCategoryRelationService;
 import top.continew.admin.util.RedisUtil;
@@ -63,6 +69,7 @@ import top.continew.admin.training.service.OrgService;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -82,6 +89,11 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Resource
     private OrgCategoryRelationMapper orgCategoryRelMapper;
 
+    @Resource
+    private AESWithHMAC aesWithHMAC;
+
+    @Resource
+    private ProjectMapper projectMapper;
 
     @Resource
     private RedisUtil redisUtil;
@@ -106,23 +118,42 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Override
     public PageResp<OrgResp> page(OrgQuery query, PageQuery pageQuery) {
         PageResp<OrgResp> page = super.page(query, pageQuery);
-
         List<OrgResp> list = page.getList();
+
         if (list != null && !list.isEmpty()) {
+            // 1 提取 orgIds
             List<Long> orgIds = list.stream().map(OrgResp::getId).toList();
 
-
-            List<Map<String, Object>> rows = orgCategoryRelMapper.listCategoryNamesByOrgIds(orgIds);
-
-            Map<Long, List<String>> relationMap = rows.stream()
+            // 2查询机构分类信息
+            List<Map<String, Object>> categoryRows = orgCategoryRelMapper.listCategoryInfoByOrgIds(orgIds);
+            Map<Long, String> categoryMap = categoryRows.stream()
                     .collect(Collectors.groupingBy(
                             r -> ((Number) r.get("org_id")).longValue(),
-                            Collectors.mapping(r -> (String) r.get("name"), Collectors.toList())
+                            Collectors.mapping(
+                                    r -> (String) r.get("name"),
+                                    Collectors.joining("、")
+                            )
                     ));
 
+            // 3 查询机构账号信息（每个机构一个账号）
+            List<Map<String, Object>> accountRows = orgUserMapper.listAccountNamesByOrgIds(orgIds);
+
+            Map<Long, String> accountMap = accountRows.stream()
+                    .collect(Collectors.toMap(
+                            r -> ((Number) r.get("org_id")).longValue(),
+                            r -> {
+                                String nickname = (String) r.get("nickname");
+                                String username = (String) r.get("username");
+                                String decryptedUsername = aesWithHMAC.verifyAndDecrypt(username);
+                                return nickname + " [ " + decryptedUsername + " ] ";
+                            },
+                            (v1, v2) -> v1
+                    ));
+
+            // 4 设置分类名和账号名
             list.forEach(org -> {
-                List<String> names = relationMap.get(org.getId());
-                org.setCategoryNames(names == null ? "" : String.join(",", names));
+                org.setCategoryNames(categoryMap.getOrDefault(org.getId(), ""));
+                org.setAccountName(accountMap.getOrDefault(org.getId(), ""));
             });
         }
 
@@ -130,17 +161,23 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
 
+
+
     @Override
     public OrgDetailResp get(Long id) {
         OrgDetailResp orgDetailResp = super.get(id);
         //获取机构下的考生信息（有可能为空）
-        List<String> studentInfo = orgMapper.getStudentInfo(id);
+//        List<String> studentInfo = orgMapper.getStudentInfo(id);
 
-        ValidationUtils.throwIfNull(studentInfo, "机构信息不存在");
-        orgDetailResp.setCandidateName(studentInfo);
+//        ValidationUtils.throwIfNull(studentInfo, "机构信息不存在");
+//        orgDetailResp.setCandidateName(studentInfo);
 
-        List<String> categoryNames = orgCategoryRelMapper.listCategoryNamesByOrgId(id);
-        orgDetailResp.setCategoryNames(categoryNames == null ? "" : String.join(",", categoryNames));
+        // 获取八大类id
+        List<OrgCategoryRelationDO> orgCategoryRelationDOS = orgCategoryRelMapper.selectList(new LambdaQueryWrapper<OrgCategoryRelationDO>().eq(OrgCategoryRelationDO::getOrgId, id));
+        orgDetailResp.setCategoryIds(orgCategoryRelationDOS.stream().map(OrgCategoryRelationDO::getCategoryId).collect(Collectors.toList()));
+//
+//        List<String> categoryNames = orgCategoryRelMapper.listCategoryNamesByOrgId(id);
+//        orgDetailResp.setCategoryNames(categoryNames == null ? "" : String.join(",", categoryNames));
 
         return orgDetailResp;
     }
@@ -148,6 +185,13 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Override
     @Transactional // 添加事务保证原子性
     public Long add(OrgReq req) {
+        // 社会代号、机构名称、机构信用代码不可重复
+        List<OrgDO> orgDOList = baseMapper.selectList(new LambdaQueryWrapper<OrgDO>().eq(OrgDO::getName, req.getName())
+                .or()
+                .eq(OrgDO::getCode, req.getCode())
+                .or()
+                .eq(OrgDO::getSocialCode, req.getSocialCode()));
+        ValidationUtils.throwIfNotEmpty(orgDOList,"机构代号、机构名称、机构信用代码已存在");
         Long orgId = super.add(req);
         List<Long> categoryIds = req.getCategoryIds();
 
@@ -174,8 +218,21 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
  @Override
  @Transactional // 确保事务性
  public void update(OrgReq req, Long id) {
-     super.update(req, id);
+     List<OrgDO> orgDOList = baseMapper.selectList(new LambdaQueryWrapper<OrgDO>()
+             .ne(OrgDO::getId,id)
+                     .and(new Consumer<LambdaQueryWrapper<OrgDO>>() {
+                         @Override
+                         public void accept(LambdaQueryWrapper<OrgDO> orgDOLambdaQueryWrapper) {
+                             orgDOLambdaQueryWrapper.eq(OrgDO::getName, req.getName())
+                                     .or()
+                                     .eq(OrgDO::getCode, req.getCode())
+                                     .or()
+                                     .eq(OrgDO::getSocialCode, req.getSocialCode());
+                         }
+                     }));
+     ValidationUtils.throwIfNotEmpty(orgDOList,"机构代号、机构名称、机构信用代码已存在");
 
+     super.update(req, id);
      List<Long> newCategoryIds = req.getCategoryIds();
      if (CollectionUtil.isNotEmpty(newCategoryIds)) {
          orgCategoryRelMapper.deleteByOrgId(id);
@@ -207,6 +264,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 new LambdaQueryWrapper<OrgCategoryRelationDO>()
                         .in(OrgCategoryRelationDO::getOrgId, ids)
         );
+
+        orgUserMapper.delete(new LambdaQueryWrapper<TedOrgUser>().in(TedOrgUser::getOrgId, ids));
 
         redisTemplate.delete(RedisConstant.EXAM_ORGANIZATION_QUERY);
     }
@@ -339,7 +398,6 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         super.sort(queryWrapper, pageQuery);
         IPage<OrgCandidatesResp> page = baseMapper.getCandidatesList(new Page<>(pageQuery.getPage(), pageQuery
             .getSize()), queryWrapper);
-        System.out.printf(page.toString());
         PageResp<OrgCandidatesResp> pageResp = PageResp.build(page, OrgCandidatesResp.class);
         pageResp.getList().forEach(this::fill);
         return pageResp;
@@ -363,12 +421,14 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         return PageResp.build(iPage, OrgResp.class);
     }
 
+
     @Override
     public OrgDetailResp getOrgDetail(Long orgId) {
         if (orgId == null)
             throw new BusinessException("请选择机构");
         // 调用orgMapper的getOrgDetail方法，传入项目id，获取机构详情
         OrgDetailResp orgDetailResp = orgMapper.getOrgDetail(orgId);
+
         // 返回所有考生名称
         // orgDetailResp.setCandidateName(orgMapper.getStudentInfo(orgId));
         return orgDetailResp;
@@ -470,9 +530,59 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Override
     public List<UserVO> getBindableUsers() {
         List<UserVO> userVOList = orgMapper.getBindableUsers(organizationId);
-        ValidationUtils.throwIfNull(userVOList, "用户信息不存在");
+        if(!ObjectUtil.isEmpty(userVOList)){
+            userVOList.stream().map(item -> {
+                item.setNickname(item.getNickname() + " [ " + aesWithHMAC.verifyAndDecrypt(item.getUsername()) + " ] ");
+                return item;
+            }).collect(Collectors.toList());
+        }
+        //ValidationUtils.throwIfNull(userVOList, "用户信息不存在");
         return userVOList;
     }
+
+    /**
+     * 解绑机构用户
+     * @param orgId
+     * @return
+     */
+    @Override
+    public Boolean unbindUserToOrg(Long orgId) {
+        return orgUserMapper.delete(new LambdaQueryWrapper<TedOrgUser>().eq(TedOrgUser::getOrgId, orgId)) > 0;
+    }
+
+    /**
+     * 获取机构对应的分类-项目级联选择
+     * @return
+     */
+    @Override
+    public List<ProjectCategoryVO> getSelectCategoryProject() {
+        // 获取当前登录的用户信息
+        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+
+        // 查询所有父级分类
+        List<ProjectCategoryVO> parentList = baseMapper.getSelectCategoryProject(userTokenDo.getUserId());
+        if (parentList.isEmpty()) {
+            return parentList;
+        }
+
+        // 提取父级 ID
+        List<Long> parentIds = parentList.stream()
+                .map(ProjectCategoryVO::getValue)
+                .toList();
+
+        // 查询子级分类
+        List<ProjectCategoryVO> childrenList = projectMapper.getSelectCategoryProject(parentIds);
+
+        // 构建父子关系
+        for (ProjectCategoryVO parent : parentList) {
+            List<ProjectCategoryVO> children = childrenList.stream()
+                    .filter(child -> Objects.equals(child.getParentId(), parent.getValue()))
+                    .collect(Collectors.toList());
+            parent.setChildren(children);
+        }
+        return parentList;
+    }
+
 
     /**
      * 校验解析的数据

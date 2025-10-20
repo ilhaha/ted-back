@@ -16,10 +16,13 @@
 
 package top.continew.admin.training.model.vo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 @Data
 public class UserVO {
     private String id;
     private String nickname;
+    @JsonIgnore
+    private String username;
 }

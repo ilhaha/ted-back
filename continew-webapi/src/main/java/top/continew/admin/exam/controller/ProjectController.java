@@ -56,6 +56,17 @@ import java.util.Map;
         Api.EXPORT})
 public class ProjectController extends BaseController<ProjectService, ProjectResp, ProjectDetailResp, ProjectQuery, ProjectReq> {
 
+    /**
+     * 机构获取所属全部项目
+     *
+     * @return
+     */
+    @Operation(summary = "机构获取所属全部项目")
+    @GetMapping("/org/getAllProject")
+    public PageResp<ProjectResp> orgGetAllProject(@Validated ProjectQuery query, @Validated PageQuery pageQuery) {
+        return baseService.orgGetAllProject(query, pageQuery);
+    }
+
     @Operation(summary = "查询所有有考场的考试项目")
     @GetMapping("/with-classrooms")
     public List<ProjectWithClassroomVO> getProjectsWithClassrooms() {
@@ -120,7 +131,6 @@ public class ProjectController extends BaseController<ProjectService, ProjectRes
     @Operation(summary = "根据项目ID查询地点-考场_下拉框")
     @GetMapping("/classroom/select/{projectId}")
     public List<Map<String, Object>> getClassRoomSelect(@PathVariable Long projectId) {
-        System.out.println(222);
         return baseService.getClassRoomSelect(projectId);
     }
 

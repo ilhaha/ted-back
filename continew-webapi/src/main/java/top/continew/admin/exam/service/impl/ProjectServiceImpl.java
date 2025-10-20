@@ -575,6 +575,35 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
         return new ArrayList<>(projectMap.values());
     }
 
+    /**
+     * 机构获取所属全部项目
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @Override
+    public PageResp<ProjectResp> orgGetAllProject(ProjectQuery query, PageQuery pageQuery) {
+        QueryWrapper<ProjectDO> queryWrapper = this.buildQueryWrapper(query);
+        queryWrapper.eq("tp.is_deleted", 0);
+        queryWrapper.and(wrapper -> wrapper.eq("tp.project_status", 2));
+        // 根据 pageQuery 里的排序参数，对查询结果进行排序
+        super.sort(queryWrapper, pageQuery);
+
+        // 执行分页查询，获取 TrainingResp 类型的分页数据
+        IPage<ProjectResp> page = baseMapper.orgGetAllProject(new Page<ProjectDO>(pageQuery.getPage(), pageQuery
+                        .getSize()), // 创建分页对象，指定当前页和每页大小
+                queryWrapper,// 查询条件
+                TokenLocalThreadUtil.get().getUserId()
+        );
+        // 将查询结果转换成 PageResp 对象，方便前端处理
+        PageResp<ProjectResp> pageResp = PageResp.build(page, super.getListClass());
+        // 遍历查询结果列表，调用 fill 方法填充额外字段或处理数据
+        pageResp.getList().forEach(this::fill);
+
+        // 返回分页查询结果
+        return pageResp;
+    }
+
 
     /**
      * 检查用户是否有审核权限

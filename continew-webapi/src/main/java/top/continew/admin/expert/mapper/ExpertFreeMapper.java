@@ -71,7 +71,7 @@ public interface ExpertFreeMapper extends BaseMapper<TedExpertFree> {
      * @param userId
      * @return
      */
-    @Select("select org_id from ted_org_user where user_id = #{userId}")
+    @Select("select org_id from ted_org_user where user_id = #{userId} and is_deleted=0 ")
     Long queryOrganizetionId(Long userId);
 
     //    @Select("SELECT te.name  expertName,SUM(tef.free) free " +

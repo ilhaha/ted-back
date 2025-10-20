@@ -55,6 +55,7 @@ public class ContiNewAdminApplication {
         SpringApplication.run(ContiNewAdminApplication.class, args);
     }
 
+
     @Hidden
     @SaIgnore
     @GetMapping("/")

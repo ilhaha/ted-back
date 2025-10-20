@@ -19,7 +19,11 @@ package top.continew.admin.exam.service;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
+import top.continew.admin.exam.model.resp.EnrollStatusResp;
+import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.ExamPlanQuery;
 import top.continew.admin.exam.model.req.ExamPlanReq;
@@ -92,4 +96,11 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @param file
      */
     void importExcel(MultipartFile file);
+
+    /**
+     * 机构获取符合自身八大类的考试计划
+     * @param pageQuery
+     * @return
+     */
+    PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery,PageQuery pageQuery);
 }

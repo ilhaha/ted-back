@@ -30,6 +30,7 @@ import top.continew.admin.exam.model.resp.StudentProjectDetailResp;
 import top.continew.admin.exam.model.vo.ProjectClassroomFlatVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.model.vo.ProjectWithClassroomVO;
+import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ProjectDO;
 
@@ -99,4 +100,9 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
 
     List<Long> getProjectRoomByProjectId(@Param("projectId") Long projectId);
 
+    IPage<ProjectResp> orgGetAllProject(@Param("page") Page<ProjectDO> page,
+                                        @Param(Constants.WRAPPER) QueryWrapper<ProjectDO> queryWrapper,
+                                        @Param("userId") Long userId);
+
+    List<ProjectCategoryVO> getSelectCategoryProject(@Param("parentIds") List<Long> parentIds);
 }

@@ -21,11 +21,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Param;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.model.dto.OrgDTO;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.resp.OrgDetailResp;
 import top.continew.admin.training.model.resp.OrgResp;
+import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.UserVO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.training.model.entity.OrgDO;
@@ -83,5 +85,7 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
 
     List<String> getAcountInfo(String id);
 
-    List<UserVO> getBindableUsers(@Param("candidatesId") Long candidatesId);
+    List<UserVO> getBindableUsers(@Param("organizationId") Long organizationId);
+
+    List<ProjectCategoryVO> getSelectCategoryProject(@Param("userId") Long userId);
 }

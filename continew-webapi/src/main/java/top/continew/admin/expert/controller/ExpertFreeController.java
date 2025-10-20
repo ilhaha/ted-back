@@ -41,7 +41,7 @@ public class ExpertFreeController {
      * 
      * @return
      */
-    @GetMapping("")
+    @GetMapping("/org")
     public ExpertFreeRespTotalResp getExpertFree(@RequestParam("current") Integer current, // 使用标准命名
                                                  @RequestParam("size") Integer size) {
         return expertFreeService.queryExpertFree(size, current);
