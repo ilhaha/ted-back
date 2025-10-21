@@ -190,7 +190,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
 
         if (existing != null && (existing.getStatus() == 0 || existing.getStatus() == 2)) {
             existing.setImageUrl(req.getImageUrl());
-            existing.setStatus(0);
+            existing.setStatus(4);
             baseMapper.updateById(existing);
         } else {
             baseMapper.insert(entity);
@@ -214,12 +214,10 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             enroll.setCreateTime(LocalDateTime.now());
             enroll.setUpdateTime(LocalDateTime.now());
             enrollMapper.insert(enroll);
-            log.info("上传资料时插入报名表记录: planId={}, userId={}, status=审核中(4)", req.getPlanId(), user.getUserId());
         } else {
             existingEnroll.setEnrollStatus(4L);
             existingEnroll.setUpdateTime(LocalDateTime.now());
             enrollMapper.updateById(existingEnroll);
-            log.info("更新报名表状态为审核中: planId={}, userId={}", req.getPlanId(), user.getUserId());
         }
 
         return true;
@@ -416,7 +414,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             }
 
             super.update(req, id);
-            // 审核退回 -> 报名状态改为补正中
+            // 审核退回 -> 报名状态改为待补正
             enrollMapper.updateEnrollStatus(applicantDO.getPlanId(), applicantDO.getCandidatesId(), 5L);
             sms(examPlanName, phone, "审核未通过，原因：" + req.getRemark());
             return R.status(true, "退回补正成功");
@@ -429,6 +427,8 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             }
 
             super.update(req, id);
+            // 标记虚假资料 -> 报名状态改为禁止申报
+            enrollMapper.updateEnrollStatus(applicantDO.getPlanId(), applicantDO.getCandidatesId(), 6L);
             sms(examPlanName, phone, "您的申报被标记为虚假资料，原因：" + req.getRemark() + "。您将无法再次申报该考试。");
             return R.status(true, "已标记为虚假资料并禁止再次申报");
         }

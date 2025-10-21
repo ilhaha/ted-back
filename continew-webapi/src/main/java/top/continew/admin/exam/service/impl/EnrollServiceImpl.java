@@ -124,6 +124,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                 case 4: // 审核中
                     queryWrapper.eq("te.enroll_status", 4);
                     break;
+                case 5: // 虚假信息
+                    queryWrapper.eq("te.enroll_status", 5);
+                    break;
                 case 6: // 已过期
                     queryWrapper.eq("tep.status", 6);
                     break;
@@ -337,7 +340,6 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         return pageResp;
     }
 
-    @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelEnroll(Long examPlanId) {
         Long userId = TokenLocalThreadUtil.get().getUserId();
@@ -347,6 +349,11 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         if (detailEnroll == null) {
             throw new BusinessException("未找到考试计划信息，无法取消报名");
+        }
+
+        // 如果状态为5，禁止取消报名
+        if (detailEnroll.getEnrollStatus() != null && detailEnroll.getEnrollStatus() == 5) {
+            throw new BusinessException("当前状态禁止报名，无法取消报名");
         }
 
         LocalDateTime examStartTime = detailEnroll.getExamStartTime();

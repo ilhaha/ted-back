@@ -103,5 +103,5 @@ public class EnrollDetailResp extends BaseDetailResp {
      * 考试状态
      */
     @Schema(description = "考试状态")
-    private String enrollStatus;
+    private Integer enrollStatus;
 }
