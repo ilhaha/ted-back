@@ -309,6 +309,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         ValidationUtils.throwIfNull(examPlanId, "请选择考试计划");
         Long userId = TokenLocalThreadUtil.get().getUserId();
         IdentityCardExamInfoVO identityCardExamInfoVO = enrollMapper.viewIdentityCardInfo(examPlanId, userId);
+//        identityCardExamInfoVO.setUserId(userId);
         identityCardExamInfoVO.setExamNumber(aesWithHMAC.verifyAndDecrypt(identityCardExamInfoVO.getExamNumber()));
         return identityCardExamInfoVO;
     }

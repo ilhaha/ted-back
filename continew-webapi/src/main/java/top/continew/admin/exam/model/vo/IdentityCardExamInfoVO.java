@@ -28,6 +28,8 @@ public class IdentityCardExamInfoVO {
 
     private String examPlanName;
 
+    private Long userId;
+
     private String examNumber;
 
     private Date startTime;

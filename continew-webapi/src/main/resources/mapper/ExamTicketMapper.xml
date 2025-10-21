@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="top.continew.admin.exam.mapper.ExamTicketMapper">
+
+    <resultMap id="CandidateTicketResultMap" type="top.continew.admin.exam.model.dto.CandidateTicketDTO">
+        <result column="nickname" property="name"/>
+        <result column="username" property="idCard"/>
+        <result column="exam_number" property="ticketId"/>
+        <result column="dept_id" property="classCode"/>
+        <result column="dept_name" property="className"/>
+        <result column="category_name" property="examType"/>
+        <result column="project_name" property="examItem"/>
+        <result column="classroom_id" property="examRoom"/>
+        <result column="exam_time" property="examTime"/>
+    </resultMap>
+
+    <!-- 根据 userId + examNumber 查询 -->
+    <select id="findTicketByUserAndExamNumber" resultMap="CandidateTicketResultMap">
+        SELECT
+            u.nickname,
+            u.username,
+            u.dept_id,
+            d.name AS dept_name,
+            e.exam_number,
+            e.classroom_id,
+            c.name AS category_name,
+            p.project_name,
+            CONCAT(
+                    DATE_FORMAT(ep.start_time, '%Y-%m-%d %H:%i'),
+                    ' ~ ',
+                    DATE_FORMAT(ep.end_time, '%H:%i')
+            ) AS exam_time
+        FROM sys_user u
+                 INNER JOIN ted_enroll e ON e.user_id = u.id
+                 INNER JOIN ted_exam_plan ep ON e.exam_plan_id = ep.id
+                 INNER JOIN ted_project p ON ep.exam_project_id = p.id
+                 INNER JOIN ted_category c ON p.category_id = c.id
+                 LEFT JOIN sys_dept d ON u.dept_id = d.id
+        WHERE u.id = #{userId}
+          AND e.exam_number = #{examNumber}
+          AND e.is_deleted = 0
+            LIMIT 1
+    </select>
+
+</mapper>
