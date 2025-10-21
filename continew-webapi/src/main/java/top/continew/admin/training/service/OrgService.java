@@ -130,4 +130,19 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      */
     List<ProjectCategoryVO> getSelectCategoryProject(Long orgId);
 
+    /**
+     * 删除机构与用户关联信息
+     *
+     * @param orgId 机构ID
+     * @return Boolean 删除是否成功
+     */
+    Boolean deleteOrgUserRelation(Long orgId);
+
+    /**
+     * 删除机构及其关联的用户信息（级联删除）
+     *
+     * @param orgId 机构ID
+     */
+    void removeOrgWithRelations(Long orgId);
+
 }

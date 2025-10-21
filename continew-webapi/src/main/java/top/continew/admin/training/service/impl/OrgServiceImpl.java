@@ -585,6 +585,43 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         return parentList;
     }
 
+    /**
+     * 删除机构与用户关联信息
+     *
+     * @param orgId 机构ID
+     * @return Boolean 删除是否成功
+     */
+    @Override
+    public Boolean deleteOrgUserRelation(Long orgId) {
+        int deletedCount = orgUserMapper.delete(
+                new LambdaQueryWrapper<TedOrgUser>()
+                        .eq(TedOrgUser::getOrgId, orgId)
+        );
+        return deletedCount > 0;
+    }
+
+    /**
+     * 删除机构及其关联的用户信息
+     *
+     * @param  ids 机构ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void removeOrgWithRelations(Long ids) {
+        // 删除机构信息
+        this.removeById(ids);
+
+        // 删除机构与用户关联信息
+        orgUserMapper.delete(
+                new LambdaQueryWrapper<TedOrgUser>()
+                        .eq(TedOrgUser::getOrgId, ids)
+        );
+        // 删除机构与分类关联信息
+        orgCategoryRelMapper.delete(
+                new LambdaQueryWrapper<OrgCategoryRelationDO>()
+                        .eq(OrgCategoryRelationDO::getOrgId, ids)
+        );
+
+    }
 
     /**
      * 校验解析的数据

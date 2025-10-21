@@ -17,6 +17,7 @@
 package top.continew.admin.training.controller;
 
 import com.alibaba.excel.EasyExcel;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.validation.annotation.Validated;
@@ -43,11 +44,13 @@ import top.continew.admin.training.model.resp.OrgResp;
 import top.continew.admin.training.service.OrgService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
+import top.continew.starter.web.model.R;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -199,5 +202,13 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     public void bindUserToOrg(@RequestBody BindUserReq req) {
         orgService.bindUserToOrg(req.getOrgId(), req.getUserId());
     }
+
+    // 删除机构及关联用户信息
+    @DeleteMapping("/remove/{orgId}")
+    public R<Void> removeOrgWithRelations(@PathVariable Long orgId) {
+        orgService.removeOrgWithRelations(orgId);
+        return R.ok("删除机构及关联信息成功");
+    }
+
 
 }
