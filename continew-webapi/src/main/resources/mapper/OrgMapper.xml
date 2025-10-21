@@ -114,12 +114,17 @@
         SELECT tc.id AS `value`,tc.name AS `label`
         FROM ted_org org
                  LEFT JOIN ted_org_user tou
-                           ON org.id = tou.org_id AND tou.user_id = #{userId} AND tou.is_deleted = 0
+                           ON org.id = tou.org_id AND tou.is_deleted = 0
                  LEFT JOIN ted_org_category_relation tocr
                            ON org.id = tocr.org_id AND tocr.is_deleted = 0
                  LEFT JOIN ted_category tc
                            ON tocr.category_id = tc.id AND tc.is_deleted = 0
         WHERE org.is_deleted = 0
+        AND tou.user_id = #{userId}
+    </select>
+    <select id="getSelectCategoryProjectBy"
+            resultType="top.continew.admin.training.model.vo.ProjectCategoryVO">
+
     </select>
 
 

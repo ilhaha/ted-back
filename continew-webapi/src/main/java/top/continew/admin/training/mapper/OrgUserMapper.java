@@ -63,8 +63,9 @@ public interface OrgUserMapper extends BaseMapper<TedOrgUser> {
        SELECT org.*
        FROM ted_org org
        LEFT JOIN ted_org_user tou
-       ON org.id = tou.org_id AND tou.user_id = #{userId} AND tou.is_deleted = 0
+       ON org.id = tou.org_id AND tou.is_deleted = 0
        WHERE org.is_deleted = 0
+       AND tou.user_id = #{userId}
     </script>
 """)
     OrgDO selectOrgByUserId(@Param("userId") Long userId);

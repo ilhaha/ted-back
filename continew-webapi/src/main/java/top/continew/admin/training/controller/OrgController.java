@@ -72,8 +72,8 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
      * @return
      */
     @GetMapping("/select/category/project")
-    public List<ProjectCategoryVO> getSelectCategoryProject(){
-        return orgService.getSelectCategoryProject();
+    public List<ProjectCategoryVO> getSelectCategoryProject(@RequestParam(required = false) Long orgId){
+        return orgService.getSelectCategoryProject(orgId);
     }
 
     // ExcelController.java

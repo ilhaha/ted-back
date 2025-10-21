@@ -88,4 +88,6 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
     List<UserVO> getBindableUsers(@Param("organizationId") Long organizationId);
 
     List<ProjectCategoryVO> getSelectCategoryProject(@Param("userId") Long userId);
+
+    List<ProjectCategoryVO> getSelectCategoryProjectBy(@Param("orgId") Long orgId);
 }

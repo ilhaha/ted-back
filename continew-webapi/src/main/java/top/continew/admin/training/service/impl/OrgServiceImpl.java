@@ -17,7 +17,6 @@
 package top.continew.admin.training.service.impl;
 
 import cn.crane4j.core.util.StringUtils;
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.excel.support.cglib.beans.BeanMap;
@@ -30,7 +29,6 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import me.zhyd.oauth.exception.AuthException;
-import net.dreamlu.mica.core.utils.AesUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -42,7 +40,6 @@ import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ProjectMapper;
-import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.mapper.OrgCategoryRelationMapper;
 import top.continew.admin.training.mapper.OrgUserMapper;
@@ -52,7 +49,6 @@ import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.UserVO;
-import top.continew.admin.training.service.OrgCategoryRelationService;
 import top.continew.admin.util.RedisUtil;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
@@ -555,12 +551,18 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @return
      */
     @Override
-    public List<ProjectCategoryVO> getSelectCategoryProject() {
-        // 获取当前登录的用户信息
-        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+    public List<ProjectCategoryVO> getSelectCategoryProject(Long orgId) {
+        List<ProjectCategoryVO> parentList = Collections.emptyList();
+        if (ObjectUtil.isEmpty(orgId)) {
+            // 获取当前登录的用户信息
+            UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+            // 查询所有父级分类
+           parentList = baseMapper.getSelectCategoryProject(userTokenDo.getUserId());
+        }else {
+            // 查询所有父级分类
+            parentList = baseMapper.getSelectCategoryProjectBy(orgId);
+        }
 
-        // 查询所有父级分类
-        List<ProjectCategoryVO> parentList = baseMapper.getSelectCategoryProject(userTokenDo.getUserId());
         if (parentList.isEmpty()) {
             return parentList;
         }

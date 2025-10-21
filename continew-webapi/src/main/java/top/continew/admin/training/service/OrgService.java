@@ -128,6 +128,6 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      * 获取机构对应的分类-项目级联选择
      * @return
      */
-    List<ProjectCategoryVO> getSelectCategoryProject();
+    List<ProjectCategoryVO> getSelectCategoryProject(Long orgId);
 
 }
