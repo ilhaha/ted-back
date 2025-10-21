@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.training.mapper.OrgCandidateMapper">
+
+    <select id="getCandidatesList" resultType="top.continew.admin.training.model.resp.OrgCandidateResp">
+        SELECT toc.id,toc.status,toc.create_time,tei.real_name AS nickName, toc.candidate_id AS candidate_id, su.phone AS phoneNumber, toc.org_id AS org_id,
+               tp.id AS project_id,tp.project_name,tei.gender,CONCAT_WS(',', tei.id_card_photo_front, tei.id_card_photo_back) AS id_card_photos
+        FROM ted_org_candidate toc
+                 LEFT JOIN ted_project tp
+                           ON toc.project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN sys_user su
+                           ON toc.candidate_id = su.id
+                 LEFT JOIN ted_exam_idcard tei
+                           ON su.username = tei.id_card_number AND tei.is_deleted = 0
+            ${ew.customSqlSegment}
+    </select>
+</mapper>

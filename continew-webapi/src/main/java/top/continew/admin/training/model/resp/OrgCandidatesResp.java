@@ -24,17 +24,19 @@ import top.continew.starter.security.crypto.annotation.FieldEncrypt;
 public class OrgCandidatesResp {
     @Schema(description = "考生id")
     private Long candidateId;
-    @Schema(description = "考生账号")
-    private String userName;
     @FieldEncrypt
     @Schema(description = "考生手机号")
     private String phoneNumber;
     @Schema(description = "考生昵称")
     private String nickName;
-    @FieldEncrypt
-    @Schema(description = "考生邮箱")
-    private String email;
     @Schema(description = "机构id")
-    private Integer orgId;
-
+    private Long orgId;
+    @Schema(description = "项目id")
+    private Long projectId;
+    @Schema(description = "项目名称")
+    private String projectName;
+    @Schema(description = "身份证正面")
+    private String idCardPhotoFront;
+    @Schema(description = "身份证反面")
+    private String idCardPhotoBack;
 }

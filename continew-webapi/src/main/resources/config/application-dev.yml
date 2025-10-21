@@ -340,3 +340,6 @@ aes:
   cipher: AES/CBC/PKCS5Padding
   algorithm: AES
   hmac-sign: HmacSHA256
+
+qrcode:
+  url: http://localhost:5174/org/apply/upload

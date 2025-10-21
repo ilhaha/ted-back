@@ -87,6 +87,7 @@ import top.continew.admin.system.model.resp.user.UserResp;
 import top.continew.admin.system.model.vo.InvigilatorTimeVO;
 import top.continew.admin.system.model.vo.InvigilatorVO;
 import top.continew.admin.system.model.vo.StudentDocumentTypeVO;
+import top.continew.admin.system.model.vo.UploadWhenUserInfoVO;
 import top.continew.admin.system.service.*;
 import top.continew.starter.cache.redisson.util.RedisUtils;
 import top.continew.starter.core.constant.StringConstants;
@@ -924,6 +925,23 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     public boolean checkOrg(Long id) {
         boolean b = baseMapper.checkOrgUser(id);
         return b;
+    }
+
+    /**
+     * 考生扫码上传资料时获取个人信息
+     *
+     * @param candidateId
+     * @param orClassId
+     * @return
+     */
+    @Override
+    public UploadWhenUserInfoVO uploadWhenInfo(String candidateId, String orClassId) {
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(candidateId) || ObjectUtil.isEmpty(orClassId), "二维码错误");
+        UserDO userDO = baseMapper.selectById(candidateId);
+        ValidationUtils.throwIfNull(userDO, "二维码错误");
+        UploadWhenUserInfoVO uploadWhenUserInfoVO = new UploadWhenUserInfoVO();
+        uploadWhenUserInfoVO.setNickname(userDO.getNickname());
+        return uploadWhenUserInfoVO;
     }
 
     /**
