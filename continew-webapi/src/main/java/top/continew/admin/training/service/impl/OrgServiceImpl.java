@@ -42,6 +42,7 @@ import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ProjectMapper;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.mapper.OrgCategoryRelationMapper;
+import top.continew.admin.training.mapper.OrgClassMapper;
 import top.continew.admin.training.mapper.OrgUserMapper;
 import top.continew.admin.training.model.dto.OrgDTO;
 import top.continew.admin.training.model.entity.OrgCategoryRelationDO;
@@ -92,7 +93,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     private ProjectMapper projectMapper;
 
     @Resource
-    private RedisUtil redisUtil;
+    private OrgClassMapper orgClassMapper;
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
@@ -383,14 +384,13 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         Long orgId = getOrgId(userTokenDo.getUserId());
         QueryWrapper<OrgDO> queryWrapper = this.buildQueryWrapper(query);
-        queryWrapper.eq("oc.org_id", orgId);
-        queryWrapper.eq("oc.is_deleted", 0);
+        queryWrapper.eq("toc.org_id", orgId);
+        queryWrapper.eq("toc.is_deleted", 0);
         if ("add".equals(type)) {
-            queryWrapper.eq("oc.status", 1);
+            queryWrapper.eq("toc.status", 1);
         } else {
-            queryWrapper.eq("oc.status", 2);
+            queryWrapper.eq("toc.status", 2);
         }
-        queryWrapper.eq("sur.role_id", candidatesId);
         super.sort(queryWrapper, pageQuery);
         IPage<OrgCandidatesResp> page = baseMapper.getCandidatesList(new Page<>(pageQuery.getPage(), pageQuery
             .getSize()), queryWrapper);
@@ -398,6 +398,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         pageResp.getList().forEach(this::fill);
         return pageResp;
     }
+
 
     @Override
     public PageResp<OrgResp> getAllOrgInfo(OrgQuery orgQuery, PageQuery pageQuery, String orgStatus) {
@@ -439,7 +440,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
     @Override
-    public Integer studentAddAgency(Long orgId) {
+    public Integer studentAddAgency(Long orgId, Long projectId) {
         if (orgId == null)
             throw new BusinessException("请选择机构");
         Long userId = TokenLocalThreadUtil.get().getUserId();
@@ -448,7 +449,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         if (agencyStatus > 0) {
             return -1;
         }
-        return orgMapper.studentAddAgency(orgId, userId);
+        return orgMapper.studentAddAgency(orgId, userId,projectId);
     }
 
     @Override
@@ -560,7 +561,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
            parentList = baseMapper.getSelectCategoryProject(userTokenDo.getUserId());
         }else {
             // 查询所有父级分类
-            parentList = baseMapper.getSelectCategoryProjectBy(orgId);
+            parentList = baseMapper.getSelectCategoryProjectByOrgId(orgId);
         }
 
         if (parentList.isEmpty()) {
@@ -623,11 +624,62 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     }
 
+
     /**
-     * 校验解析的数据
-     * 
-     * @param userOrgDTOS
+     * 获取机构对应的分类-项目-班级级联选择
+     * @param orgId
      * @return
      */
+    @Override
+    public List<ProjectCategoryVO> getSelectCategoryProjectClass(Long orgId) {
+        List<ProjectCategoryVO> parentList = Collections.emptyList();
 
+        // 1 获取一级分类（机构对应的分类）
+        if (ObjectUtil.isEmpty(orgId)) {
+            UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+            parentList = baseMapper.getSelectCategoryProject(userTokenDo.getUserId());
+        } else {
+            parentList = baseMapper.getSelectCategoryProjectByOrgId(orgId);
+        }
+
+        if (parentList.isEmpty()) {
+            return parentList;
+        }
+
+        // 2️ 获取所有父级ID（一级分类ID）
+        List<Long> parentIds = parentList.stream()
+                .map(ProjectCategoryVO::getValue)
+                .toList();
+
+        // 3️ 查询第二层（项目）
+        List<ProjectCategoryVO> projectList = projectMapper.getSelectCategoryProject(parentIds);
+
+        // 4️ 查询第三层（班级）—— 用项目ID查询
+        if (!projectList.isEmpty()) {
+            List<Long> projectIds = projectList.stream()
+                    .map(ProjectCategoryVO::getValue)
+                    .toList();
+
+            // 调用专门的查询班级方法
+            List<ProjectCategoryVO> classList = orgClassMapper.getSelectClassByProjectIds(projectIds);
+
+            // 5️ 绑定第三层到第二层
+            for (ProjectCategoryVO project : projectList) {
+                List<ProjectCategoryVO> classes = classList.stream()
+                        .filter(c -> Objects.equals(c.getParentId(), project.getValue()))
+                        .collect(Collectors.toList());
+                project.setChildren(classes);
+            }
+        }
+
+        // 6️ 绑定第二层到第一层
+        for (ProjectCategoryVO parent : parentList) {
+            List<ProjectCategoryVO> children = projectList.stream()
+                    .filter(child -> Objects.equals(child.getParentId(), parent.getValue()))
+                    .collect(Collectors.toList());
+            parent.setChildren(children);
+        }
+
+        return parentList;
+    }
 }

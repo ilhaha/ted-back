@@ -71,6 +71,15 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     private Long invigilatorId;
 
     /**
+     * 获取机构对应的分类-项目-班级级联选择
+     * @return
+     */
+    @GetMapping("/select/category/project/class")
+    public List<ProjectCategoryVO> getSelectCategoryProjectClass(@RequestParam(required = false) Long orgId){
+        return orgService.getSelectCategoryProjectClass(orgId);
+    }
+
+    /**
      * 获取机构对应的分类-项目级联选择
      * @return
      */
@@ -154,9 +163,9 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
         return orgService.getAgencyStatus(orgId);
     }
 
-    @GetMapping("/studentAddAgency/{orgId}")
-    public Integer studentAddAgency(@PathVariable Long orgId) {
-        return orgService.studentAddAgency(orgId);
+    @GetMapping("/studentAddAgency/{orgId}/{projectId}")
+    public Integer studentAddAgency(@PathVariable Long orgId,@PathVariable Long projectId) {
+        return orgService.studentAddAgency(orgId,projectId);
     }
 
     @GetMapping("/studentDelAgency/{orgId}")

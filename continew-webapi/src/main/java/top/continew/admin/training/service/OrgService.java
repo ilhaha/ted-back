@@ -74,7 +74,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      * 
      * @return Integer
      */
-    Integer studentAddAgency(Long orgId);
+    Integer studentAddAgency(Long orgId, Long projectId);
 
     /**
      * 学生取消报名
@@ -145,4 +145,10 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      */
     void removeOrgWithRelations(Long orgId);
 
+    /**
+     * 获取机构对应的分类-项目-班级级联选择
+     * @param orgId
+     * @return
+     */
+    List<ProjectCategoryVO> getSelectCategoryProjectClass(Long orgId);
 }

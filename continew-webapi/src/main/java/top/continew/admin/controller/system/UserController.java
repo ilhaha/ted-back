@@ -34,7 +34,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.controller.BaseController;
 import top.continew.admin.common.constant.RegexConstants;
-import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -52,10 +51,10 @@ import top.continew.admin.system.model.resp.user.UserResp;
 import top.continew.admin.system.model.req.InvigilatorParameterReq;
 import top.continew.admin.system.model.vo.InvigilatorVO;
 import top.continew.admin.system.model.vo.StudentDocumentTypeVO;
+import top.continew.admin.system.model.vo.UploadWhenUserInfoVO;
 import top.continew.admin.system.service.UserService;
 import top.continew.admin.training.service.OrgService;
 import top.continew.starter.core.util.ExceptionUtils;
-import top.continew.starter.core.validation.CheckUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.annotation.CrudRequestMapping;
 import top.continew.starter.extension.crud.enums.Api;
@@ -90,6 +89,13 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
 
     @Resource
     private AESWithHMAC aesWithHMAC;
+
+    @SaIgnore
+    @GetMapping("/upload/when/info")
+    @Operation(summary = "考生扫码上传资料时获取个人信息", description = "考生扫码上传资料时获取个人信息")
+    public UploadWhenUserInfoVO uploadWhenInfo(@RequestParam("candidateId") String candidateId,@RequestParam("orClassId") String orClassId) {
+        return userService.uploadWhenInfo(aesWithHMAC.verifyAndDecrypt(candidateId),aesWithHMAC.verifyAndDecrypt(orClassId));
+    }
 
     @SaIgnore
     @GetMapping("/isPhoneExists")

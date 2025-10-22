@@ -9,4 +9,16 @@
                            ON toc.project_id = tp.id AND tp.is_deleted = 0
             ${ew.customSqlSegment}
     </select>
+    <select id="getSelectClassByProjectIds"
+            resultType="top.continew.admin.training.model.vo.ProjectCategoryVO">
+        SELECT toc.id AS `value`,
+        toc.class_name AS `label`,
+        toc.project_id AS `parentId`
+        FROM ted_org_class toc
+        WHERE toc.is_deleted = 0
+        AND toc.project_id IN
+        <foreach collection="list" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
 </mapper>

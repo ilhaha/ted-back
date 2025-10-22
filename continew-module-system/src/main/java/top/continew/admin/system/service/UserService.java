@@ -32,6 +32,7 @@ import top.continew.admin.system.model.resp.user.UserImportResp;
 import top.continew.admin.system.model.resp.user.UserResp;
 import top.continew.admin.system.model.vo.InvigilatorVO;
 import top.continew.admin.system.model.vo.StudentDocumentTypeVO;
+import top.continew.admin.system.model.vo.UploadWhenUserInfoVO;
 import top.continew.starter.data.mp.service.IService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -301,4 +302,14 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      * @param id
      */
     boolean checkOrg(Long id);
+
+    /**
+     * 考生扫码上传资料时获取个人信息
+     *
+     * @param candidateId
+     * @param orClassId
+     * @return
+     */
+    UploadWhenUserInfoVO uploadWhenInfo(String candidateId, String orClassId);
+
 }

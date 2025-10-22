@@ -1,0 +1,43 @@
+package top.continew.admin.training.model.entity;
+
+import lombok.Data;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+
+import top.continew.admin.common.model.entity.BaseDO;
+
+import java.io.Serial;
+
+/**
+ * 机构班级与考生关联表实体
+ *
+ * @author ilhaha
+ * @since 2025/10/21 16:48
+ */
+@Data
+@TableName("ted_org_class_candidate")
+public class OrgClassCandidateDO extends BaseDO {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 班级id
+     */
+    private Long classId;
+
+    /**
+     * 考生id
+     */
+    private Long candidateId;
+
+    /**
+     * 上传资料二维码
+     */
+    private String uploadQrCode;
+
+    /**
+     * 删除标记
+     */
+    private Integer isDeleted;
+}
