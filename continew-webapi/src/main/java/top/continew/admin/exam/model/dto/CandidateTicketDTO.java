@@ -39,9 +39,12 @@ public class CandidateTicketDTO implements Serializable {
     /** 考核项目 */
     private String examItem;
 
-    /** 考场 */
+    /** 考场名 */
     private String examRoom;
 
     /** 考试时间段（如 2025-05-20 09:00-11:00） */
     private String examTime;
+
+    /** 考生照片 */
+    private String photo;
 }

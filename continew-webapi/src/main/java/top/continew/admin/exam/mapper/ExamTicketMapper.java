@@ -1,23 +1,15 @@
 package top.continew.admin.exam.mapper;
 
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import top.continew.admin.exam.model.dto.CandidateTicketDTO;
 
 /**
- * ExamTicketMapper —— 准考证联合查询 Mapper
+ * 准考证数据访问层
  */
-@Mapper
-public interface ExamTicketMapper {
+public interface ExamTicketMapper extends BaseMapper<CandidateTicketDTO> {
 
     /**
-     * 根据用户ID + 准考证号查询准考证信息
-     *
-     * @param userId 用户ID
-     * @param examNumber 准考证号
-     * @return CandidateTicketDTO
+     * 根据用户ID和准考证号查询考生信息
      */
-    CandidateTicketDTO findTicketByUserAndExamNumber(
-            @Param("userId") Long userId,
-            @Param("examNumber") String examNumber);
+    CandidateTicketDTO findTicketByUserAndExamNumber(Long userId, String examNumber);
 }

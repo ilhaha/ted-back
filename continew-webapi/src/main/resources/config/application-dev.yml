@@ -341,5 +341,11 @@ aes:
   algorithm: AES
   hmac-sign: HmacSHA256
 
+
+# Excel 模板配置
+excel:
+  template:
+    url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/10/22/68f8c4095814e0d894c63935.xlsx
+
 qrcode:
   url: http://localhost:5174/org/apply/upload

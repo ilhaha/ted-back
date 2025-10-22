@@ -1,52 +1,46 @@
 package top.continew.admin.exam.controller;
 
-
-import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.Test;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import top.continew.admin.common.util.AESWithHMAC;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import top.continew.admin.exam.service.CandidateTicketService;
 
-/**
- * <p>
- * CandidateTicketController —— 准考证生成接口控制层
- * </p>
- *
- * @since 2025-10-21
- */
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
 @Slf4j
-@RestController
+@Controller
 @RequestMapping("/api/exam/ticket")
 @RequiredArgsConstructor
 public class CandidateTicketController {
 
     private final CandidateTicketService candidateTicketService;
 
-
-    /**
-     * 【接口】根据用户ID + 准考证号生成准考证 PDF
-     *
-     * 调用示例：
-     * GET /api/exam/ticket/generate?userId=10001&examNumber=T20251021
-     *
-     * @param userId 用户ID（sys_user.id）
-     * @param examNumber 准考证号（ted_enroll.exam_number）
-     * @return PDF 文件路径
-     */
-    @GetMapping("/generate")
-    public ResponseEntity<?> generateTicket(
-            @RequestParam("userId") Long userId,
-            @RequestParam("examNumber") String examNumber) {
+    @PostMapping("/download")
+    public void downloadTicket(@RequestBody Map<String, Object> params,
+                               HttpServletResponse response) {
         try {
-            String pdfPath = candidateTicketService.generateTicket(userId, examNumber);
-            return ResponseEntity.ok("✅ 准考证生成成功，PDF 路径：" + pdfPath);
+            Long userId = Long.valueOf(params.get("userId").toString());
+            String examNumber = params.get("examNumber").toString();
+
+            candidateTicketService.generateTicket(userId, examNumber, response);
         } catch (Exception e) {
-            log.error(" 准考证生成失败", e);
-            return ResponseEntity.internalServerError()
-                    .body("生成准考证失败：" + e.getMessage());
+            log.error("下载准考证失败", e);
+            try {
+                response.reset();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.setContentType("text/plain;charset=UTF-8");
+                try (OutputStream os = response.getOutputStream()) {
+                    os.write(("下载失败：" + e.getMessage()).getBytes(StandardCharsets.UTF_8));
+                }
+            } catch (Exception ex) {
+                log.error("响应错误信息失败", ex);
+            }
         }
     }
 }
