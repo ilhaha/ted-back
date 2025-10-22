@@ -225,6 +225,12 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         return fileInfoResp;
     }
 
+    /**
+     * 上传身份证（用于登录实名验证）
+     * @param file
+     * @param frontOrBack
+     * @return
+     */
     @Override
     public IdCardFileInfoResp uploadIdCard(MultipartFile file, Integer frontOrBack) {
         String storageCode = UploadStorageTypeEnum.OSS.getValue();
@@ -292,6 +298,62 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        return fileInfoResp;
+    }
+
+    /**
+     * 上传文件（用于机构报名考试补充报考资料）
+     * @param file
+     * @return
+     */
+    @Override
+    public FileInfoResp applyUpload(MultipartFile file) {
+        String storageCode = UploadStorageTypeEnum.OSS.getValue();
+        StorageDO storage;
+        if (StrUtil.isBlank(storageCode)) {
+            storage = storageService.getDefaultStorage();
+            CheckUtils.throwIfNull(storage, "请先指定默认存储");
+        } else {
+            storage = storageService.getByCode(storageCode);
+            CheckUtils.throwIfNotExists(storage, "StorageDO", "Code", storageCode);
+        }
+        LocalDate today = LocalDate.now();
+        String path = today.getYear() + StringConstants.SLASH + today.getMonthValue() + StringConstants.SLASH + today
+                .getDayOfMonth() + StringConstants.SLASH;
+
+        UploadPretreatment uploadPretreatment = fileStorageService.of(file)
+                .setPlatform(storage.getCode())
+                .setHashCalculatorMd5(true)
+                .putAttr(ClassUtil.getClassName(StorageDO.class, false), storage)
+                .setPath(path);
+
+        // 图片文件生成缩略图
+        if (FileTypeEnum.IMAGE.getExtensions().contains(FileNameUtil.extName(file.getOriginalFilename()))) {
+            uploadPretreatment.thumbnail(img -> img.size(100, 100));
+        }
+        uploadPretreatment.setProgressMonitor(new ProgressListener() {
+            @Override
+            public void start() {
+                log.info("开始上传");
+            }
+
+            @Override
+            public void progress(long progressSize, Long allSize) {
+                log.info("已上传 [{}]，总大小 [{}]", progressSize, allSize);
+            }
+
+            @Override
+            public void finish() {
+                log.info("上传结束");
+            }
+        });
+        // 处理本地存储文件 URL
+        FileInfo fileInfo = uploadPretreatment.upload();
+        String domain = StrUtil.appendIfMissing(storage.getDomain(), StringConstants.SLASH);
+        fileInfo.setUrl(URLUtil.normalize(domain + fileInfo.getPath() + fileInfo.getFilename()));
+        fileInfo.setThUrl(URLUtil.normalize(domain + fileInfo.getPath() + fileInfo.getThFilename()));
+        FileInfoResp fileInfoResp = new FileInfoResp();
+        BeanUtils.copyProperties(fileInfo, fileInfoResp);
         return fileInfoResp;
     }
 

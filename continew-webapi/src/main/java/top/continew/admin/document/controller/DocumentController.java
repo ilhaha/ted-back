@@ -16,8 +16,12 @@
 
 package top.continew.admin.document.controller;
 
+import cn.dev33.satoken.annotation.SaIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.document.model.req.QrcodeUploadReq;
 import top.continew.admin.document.model.resp.DocumentTypeAddResp;
 import top.continew.admin.document.model.vo.DocumentTypeNameVO;
 import top.continew.admin.document.service.DocumentTypeService;
@@ -34,6 +38,7 @@ import top.continew.admin.document.model.req.DocumentReq;
 import top.continew.admin.document.model.resp.DocumentDetailResp;
 import top.continew.admin.document.model.resp.DocumentResp;
 import top.continew.admin.document.service.DocumentService;
+import top.continew.starter.web.model.R;
 
 import java.util.List;
 
@@ -52,6 +57,17 @@ public class DocumentController extends BaseController<DocumentService, Document
     private DocumentTypeService documentTypeService;
     @Resource
     private DocumentService documentService;
+
+    /**
+     * 通过二维码上传上传考生资料
+     *
+     * @return
+     */
+    @SaIgnore
+    @PostMapping("/qrcode/upload")
+    public Boolean qrcodeUpload(@Validated @RequestBody QrcodeUploadReq qrcodeUploadReq) {
+        return baseService.qrcodeUpload(qrcodeUploadReq);
+    }
 
     @GetMapping("/typeName")
     @Operation(summary = "获取资料种类名称列表")

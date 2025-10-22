@@ -16,6 +16,7 @@
 
 package top.continew.admin.document.service;
 
+import top.continew.admin.document.model.req.QrcodeUploadReq;
 import top.continew.admin.document.model.resp.*;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -45,5 +46,12 @@ public interface DocumentService extends BaseService<DocumentResp, DocumentDetai
      * @return PageResp<DocumentCandidatesResp>
      */
     public PageResp<DocumentCandidatesResp> listDocument(DocumentQuery query, PageQuery pageQuery);
+
+    /**
+     * 通过二维码上传上传考生资料
+     *
+     * @return
+     */
+    Boolean qrcodeUpload(QrcodeUploadReq qrcodeUploadReq);
 
 }

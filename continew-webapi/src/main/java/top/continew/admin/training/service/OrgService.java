@@ -17,7 +17,9 @@
 package top.continew.admin.training.service;
 
 import top.continew.admin.system.model.req.user.UserOrgDTO;
+import top.continew.admin.training.model.req.OrgApplyPreReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
+import top.continew.admin.training.model.vo.OrgProjectClassCandidateVO;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.UserVO;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -151,4 +153,24 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      * @return
      */
     List<ProjectCategoryVO> getSelectCategoryProjectClass(Long orgId);
+
+    /**
+     * 获取机构对应的项目-班级级联选择
+     * @return
+     */
+    List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId);
+
+    /**
+     * 根据报考状态获取机构对应的项目-班级-考生级联选择 （预报名）
+     * @param projectId 项目id
+     * @return
+     */
+    List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId);
+
+    /**
+     * 机构预报名
+     * @return
+     */
+    Boolean applyPre(OrgApplyPreReq orgApplyPreReq);
+
 }

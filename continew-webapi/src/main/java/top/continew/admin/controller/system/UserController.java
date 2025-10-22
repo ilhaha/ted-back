@@ -93,8 +93,8 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @SaIgnore
     @GetMapping("/upload/when/info")
     @Operation(summary = "考生扫码上传资料时获取个人信息", description = "考生扫码上传资料时获取个人信息")
-    public UploadWhenUserInfoVO uploadWhenInfo(@RequestParam("candidateId") String candidateId,@RequestParam("orClassId") String orClassId) {
-        return userService.uploadWhenInfo(aesWithHMAC.verifyAndDecrypt(candidateId),aesWithHMAC.verifyAndDecrypt(orClassId));
+    public UploadWhenUserInfoVO uploadWhenInfo(@RequestParam("candidateId") String candidateId,@RequestParam("planId") String planId) {
+        return userService.uploadWhenInfo(aesWithHMAC.verifyAndDecrypt(candidateId),aesWithHMAC.verifyAndDecrypt(planId));
     }
 
     @SaIgnore

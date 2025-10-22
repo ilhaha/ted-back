@@ -18,6 +18,7 @@ package top.continew.admin.document.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.model.entity.UserTokenDo;
+import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.document.mapper.DocumentTypeMapper;
 // import top.continew.admin.document.model.dto.DocumentTypeDTO;
@@ -37,6 +39,7 @@ import top.continew.admin.document.model.dto.DocumentTypeDTO;
 import top.continew.admin.document.model.dto.UserDTO;
 import top.continew.admin.document.model.entity.DocumentTypeDO;
 // import top.continew.admin.document.service.cache.DocumentTypeCache;
+import top.continew.admin.document.model.req.QrcodeUploadReq;
 import top.continew.admin.document.model.resp.*;
 import top.continew.admin.document.service.cache.DocumentTypeCache;
 import top.continew.starter.core.validation.ValidationUtils;
@@ -66,9 +69,9 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
     @Resource
     private DocumentTypeMapper documentTypeMapper;
     @Resource
-    private RedisTemplate<String, Object> redisTemplate;
-    @Resource
     private DocumentTypeCache documentTypeCache;
+    @Resource
+    private AESWithHMAC aesWithHMAC;
 
     @Override
     public PageResp<DocumentResp> page(DocumentQuery query, PageQuery pageQuery) {
@@ -76,14 +79,14 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         QueryWrapper<DocumentDO> queryWrapper = buildQueryWrapper(query);
         super.sort(queryWrapper, pageQuery);
         IPage<DocumentDO> page = baseMapper.selectPage(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
         PageResp<DocumentResp> result = PageResp.build(page, super.getListClass());
 
         //2. 缓存获取所有的资料类型
         List<DocumentTypeDTO> documentTypeDOS = documentTypeCache.getDocumentTypeCache();
         //2.1 将documentTypeDOS转换为Map<ID, TypeName>，提升查找效率
         Map<Long, String> typeIdToNameMap = documentTypeDOS.stream()
-            .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
+                .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
         //2.2 获取用户信息
         List<UserDTO> userDTOList = documentMapper.getUserInfoList();
 
@@ -122,7 +125,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         if (dtos != null) {
             //2.1 将documentTypeDOS转换为Map<ID, TypeName>，提升查找效率
             Map<Long, String> typeIdToNameMap = dtos.stream()
-                .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
+                    .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
 
             //缓存命中
             detail.setTypeName(typeIdToNameMap.get(detail.getTypeId()));
@@ -186,7 +189,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
 
     /**
      * 考生端分页获取资料接口
-     * 
+     *
      * @param query
      * @param pageQuery
      * @return PageResp<DocumentResp>
@@ -201,12 +204,45 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
 
         // 执行分页查询
         IPage<DocumentCandidatesResp> page = baseMapper.getDocumentList(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
 
         // 将查询结果转换成 PageResp 对象
         PageResp<DocumentCandidatesResp> pageResp = PageResp.build(page, DocumentCandidatesResp.class);
         // 遍历查询结果列表，调用 fill 方法填充额外字段或处理数据
         pageResp.getList().forEach(this::fill);
         return pageResp;
+    }
+
+    /**
+     * 通过二维码上传上传考生资料
+     *
+     * @return
+     */
+    @Override
+    public Boolean qrcodeUpload(QrcodeUploadReq qrcodeUploadReq) {
+        // 首先判断是否是本人扫码
+        String aesPlanId = aesWithHMAC.verifyAndDecrypt(qrcodeUploadReq.getPlanId());
+        String aesCandidateId = aesWithHMAC.verifyAndDecrypt(qrcodeUploadReq.getCandidateId());
+
+        // 校验二维码有效性
+        ValidationUtils.throwIf(
+                ObjectUtil.isEmpty(aesPlanId) || ObjectUtil.isEmpty(aesCandidateId),
+                "二维码信息已失效，请重新获取"
+        );
+
+        Long planId = Long.valueOf(aesPlanId);
+        Long candidateId = Long.valueOf(aesCandidateId);
+
+        // 获取用户信息并验证身份证
+        UserDTO userInfo = baseMapper.getUserInfo(candidateId);
+        String aesUsername = aesWithHMAC.verifyAndDecrypt(userInfo.getUsername());
+        String idLastSix = aesUsername.substring(aesUsername.length() - 6);
+
+        // 身份验证
+        ValidationUtils.throwIf(
+                !qrcodeUploadReq.getIdLastSix().equals(idLastSix),
+                "身份证后六位验证不通过，请确认信息后重新输入"
+        );
+        return null;
     }
 }

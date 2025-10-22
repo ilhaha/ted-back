@@ -83,10 +83,17 @@ public interface FileService extends BaseService<FileResp, FileResp, FileQuery, 
     FileInfoResp upload(MultipartFile file, GeneralFileReq fileReq);
 
     /**
-     * 上传身份证
+     * 上传身份证（用于登录实名验证）
      * @param file
      * @param frontOrBack
      * @return
      */
     IdCardFileInfoResp uploadIdCard(MultipartFile file, Integer frontOrBack);
+
+    /**
+     * 上传文件（用于机构报名考试补充报考资料）
+     * @param file
+     * @return
+     */
+    FileInfoResp applyUpload(MultipartFile file);
 }

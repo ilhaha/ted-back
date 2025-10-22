@@ -931,16 +931,20 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
      * 考生扫码上传资料时获取个人信息
      *
      * @param candidateId
-     * @param orClassId
+     * @param planId
      * @return
      */
     @Override
-    public UploadWhenUserInfoVO uploadWhenInfo(String candidateId, String orClassId) {
-        ValidationUtils.throwIf(ObjectUtil.isEmpty(candidateId) || ObjectUtil.isEmpty(orClassId), "二维码错误");
+    public UploadWhenUserInfoVO uploadWhenInfo(String candidateId, String planId) {
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(candidateId) || ObjectUtil.isEmpty(planId), "二维码错误");
         UserDO userDO = baseMapper.selectById(candidateId);
         ValidationUtils.throwIfNull(userDO, "二维码错误");
         UploadWhenUserInfoVO uploadWhenUserInfoVO = new UploadWhenUserInfoVO();
         uploadWhenUserInfoVO.setNickname(userDO.getNickname());
+        // 获取考生未上传的资料类型
+        uploadWhenUserInfoVO.setUnuploadedDocumentTypes(baseMapper.getUnuploadedDocumentTypes(candidateId,planId));
+        // 获取考生报考的计划名称和八大类信息
+        uploadWhenUserInfoVO.setPlanInfoVO(baseMapper.getPlanInfoByPlanId(planId));
         return uploadWhenUserInfoVO;
     }
 

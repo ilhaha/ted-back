@@ -61,15 +61,6 @@ public class OrgCandidateServiceImpl extends BaseServiceImpl<OrgCandidateMapper,
     @Resource
     private OrgClassCandidateMapper orgClassCandidateMapper;
 
-    @Value("${qrcode.url}")
-    private String qrcodeUrl;
-
-    @Resource
-    private UploadService uploadService;
-
-    @Resource
-    private AESWithHMAC aesWithHMAC;
-
     /**
      * 重写分页
      * @param query
@@ -109,54 +100,15 @@ public class OrgCandidateServiceImpl extends BaseServiceImpl<OrgCandidateMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean review(OrgCandidateReq orgCandidateReq) {
+        // 1. 更新考生申请表
+        super.update(orgCandidateReq, orgCandidateReq.getId());
+        // 2. 审核通过添加机构下班级-考生关联表
         if (orgCandidateReq.getStatus().equals(2)) {
-            try {
-                // 1. 生成二维码内容
-                String encryptedCandidateId = URLEncoder.encode(
-                        aesWithHMAC.encryptAndSign(String.valueOf(orgCandidateReq.getCandidateId())), "UTF-8"
-                );
-                String encodedOrClassId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String.valueOf(orgCandidateReq.getOrClassId())), "UTF-8");
-
-                String qrContent = qrcodeUrl + "?candidateId=" + encryptedCandidateId + "&orClassId=" + encodedOrClassId;
-
-
-                // 2. 生成二维码图片
-                BufferedImage bufferedImage = QrCodeUtil.generate(qrContent, 300, 300);
-
-                // 3. 将 BufferedImage 转为字节数组
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ImageIO.write(bufferedImage, "png", baos);
-                byte[] bytes = baos.toByteArray();
-
-                // 4. 创建 MultipartFile（不依赖 spring-test）
-                MultipartFile multipartFile = new InMemoryMultipartFile(
-                        "file",
-                        orgCandidateReq.getCandidateId() + ".png",
-                        "image/png",
-                        bytes
-                );
-
-                // 5. 组织上传参数
-                GeneralFileReq fileReq = new GeneralFileReq();
-                fileReq.setType("pic");  // 模块名
-
-                // 6. 上传到文件服务器
-                FileInfoResp fileInfo = uploadService.upload(multipartFile, fileReq);
-
-                // 7. 保存二维码URL到数据库
-                OrgClassCandidateDO orgClassCandidateDO = new OrgClassCandidateDO();
-                orgClassCandidateDO.setCandidateId(orgCandidateReq.getCandidateId());
-                orgClassCandidateDO.setClassId(orgCandidateReq.getOrClassId());
-                orgClassCandidateDO.setUploadQrCode(fileInfo.getUrl());
-//                orgClassCandidateMapper.insert(orgClassCandidateDO);
-                System.out.println(fileInfo.getUrl());
-            } catch (Exception e) {
-                throw new RuntimeException("二维码生成或上传失败", e);
-            }
+            OrgClassCandidateDO orgClassCandidateDO = new OrgClassCandidateDO();
+            orgClassCandidateDO.setCandidateId(orgCandidateReq.getCandidateId());
+            orgClassCandidateDO.setClassId(orgCandidateReq.getOrClassId());
+            orgClassCandidateMapper.insert(orgClassCandidateDO);
         }
-
-        // 8. 更新考生申请表
-//        super.update(orgCandidateReq, orgCandidateReq.getId());
         return true;
     }
 

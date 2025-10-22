@@ -27,12 +27,15 @@ import top.continew.admin.training.model.dto.OrgDTO;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.resp.OrgDetailResp;
 import top.continew.admin.training.model.resp.OrgResp;
+import top.continew.admin.training.model.vo.OrgProjectClassCandidateVO;
+import top.continew.admin.training.model.vo.OrgProjectClassVO;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.UserVO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.training.model.entity.OrgDO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 机构信息 Mapper
@@ -68,8 +71,8 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
 
     Integer getAgencyStatus(@Param("orgId") Long orgId, @Param("userId") Long userId);
 
-    @Insert("insert into ted_org_candidate values (null, #{orgId}, #{userId}, #{projectId}, 1, 1, now(), now(), 1, 0)")
-    Integer studentAddAgency(@Param("orgId") Long orgId, @Param("userId") Long userId,@Param("projectId")Long projectId);
+    @Insert("insert into ted_org_candidate values (null, #{orgId}, #{userId}, #{projectId}, 1, null,1,1, now(), now() 0)")
+    Integer studentAddAgency(@Param("orgId") Long orgId, @Param("userId") Long userId, @Param("projectId") Long projectId);
 
     @Select("select count(1) " + "from ted_org_candidate " + "where is_deleted = 0 " + "and status = 1 " + "and org_id = #{orgId} " + "and candidate_id = #{userId}")
     Integer findAgency(@Param("orgId") Long orgId, @Param("userId") Long userId);
@@ -94,4 +97,9 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
     List<ProjectCategoryVO> getAllCategoryByUserId(@Param("userId") Long userId);
 
     List<ProjectCategoryVO> getAllCategoryByOrgId(@Param("orgId") Long orgId);
+
+    List<OrgProjectClassVO> getSelectProjectClass(@Param("orgId") Long orgId, @Param("projectId") Long projectId);
+
+    List<OrgProjectClassCandidateVO> getSelectProjectClassCandidate(@Param("orgId") Long orgId,
+                                                                    @Param("projectId") Long projectId);
 }

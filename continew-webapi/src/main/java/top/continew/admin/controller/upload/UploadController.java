@@ -40,6 +40,21 @@ public class UploadController {
     @Resource
     private UploadService uploadService;
 
+    @SaIgnore
+    @Operation(summary = "上传文件（用于机构报名考试补充报考资料）", description = "上传文件")
+    @PostMapping("/apply/file")
+    public FileUploadResp applyUpload(MultipartFile file) {
+        ValidationUtils.throwIf(file::isEmpty, "文件不能为空");
+        FileInfoResp fileInfo = uploadService.applyUpload(file);
+        return FileUploadResp.builder()
+                .id(fileInfo.getId())
+                .url(fileInfo.getUrl())
+                .thUrl(fileInfo.getThUrl())
+                .duration(fileInfo.getDuration())
+                .metadata(fileInfo.getMetadata())
+                .build();
+    }
+
 
     @Operation(summary = "上传文件", description = "上传文件")
     @PostMapping("/file")
@@ -56,7 +71,7 @@ public class UploadController {
     }
 
     @SaIgnore
-    @Operation(summary = "上传身份证", description = "上传身份证")
+    @Operation(summary = "上传身份证（用于登录实名验证）", description = "（用于登录实名验证）")
     @PostMapping("/file/idCard/{frontOrBack}")
     public IdCardFileInfoResp idCard(MultipartFile file, @PathVariable("frontOrBack") Integer frontOrBack) {
         ValidationUtils.throwIf(file::isEmpty, "文件不能为空");

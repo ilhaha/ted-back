@@ -19,6 +19,7 @@ package top.continew.admin.training.service.impl;
 import cn.crane4j.core.util.StringUtils;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.extra.qrcode.QrCodeUtil;
 import com.alibaba.excel.support.cglib.beans.BeanMap;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -35,35 +36,45 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ProjectMapper;
+import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
-import top.continew.admin.training.mapper.OrgCategoryRelationMapper;
-import top.continew.admin.training.mapper.OrgClassMapper;
-import top.continew.admin.training.mapper.OrgUserMapper;
+import top.continew.admin.system.model.resp.FileInfoResp;
+import top.continew.admin.system.service.UploadService;
+import top.continew.admin.training.mapper.*;
 import top.continew.admin.training.model.dto.OrgDTO;
-import top.continew.admin.training.model.entity.OrgCategoryRelationDO;
-import top.continew.admin.training.model.entity.TedOrgUser;
+import top.continew.admin.training.model.entity.*;
+import top.continew.admin.training.model.req.OrgApplyPreReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
+import top.continew.admin.training.model.vo.OrgProjectClassCandidateVO;
+import top.continew.admin.training.model.vo.OrgProjectClassVO;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.UserVO;
+import top.continew.admin.util.InMemoryMultipartFile;
 import top.continew.admin.util.RedisUtil;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
-import top.continew.admin.training.mapper.OrgMapper;
-import top.continew.admin.training.model.entity.OrgDO;
 import top.continew.admin.training.model.query.OrgQuery;
 import top.continew.admin.training.model.req.OrgReq;
 import top.continew.admin.training.model.resp.OrgDetailResp;
 import top.continew.admin.training.model.resp.OrgResp;
 import top.continew.admin.training.service.OrgService;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -98,6 +109,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Resource
+    private OrgCandidateMapper orgCandidateMapper;
+
     @Value("${examine.userRole.organizationId}")
     private Long organizationId;
 
@@ -109,6 +123,15 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Resource
     private OrgUserMapper orgUserMapper;
+
+    @Value("${qrcode.url}")
+    private String qrcodeUrl;
+
+    @Resource
+    private UploadService uploadService;
+
+    @Resource
+    private EnrollPreMapper enrollPreMapper;
 
     private static final long EXPIRE_TIME = 7;  // 过期时间（天）
 
@@ -158,8 +181,6 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
 
-
-
     @Override
     public OrgDetailResp get(Long id) {
         OrgDetailResp orgDetailResp = super.get(id);
@@ -188,7 +209,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 .eq(OrgDO::getCode, req.getCode())
                 .or()
                 .eq(OrgDO::getSocialCode, req.getSocialCode()));
-        ValidationUtils.throwIfNotEmpty(orgDOList,"机构代号、机构名称、机构信用代码已存在");
+        ValidationUtils.throwIfNotEmpty(orgDOList, "机构代号、机构名称、机构信用代码已存在");
         Long orgId = super.add(req);
         List<Long> categoryIds = req.getCategoryIds();
 
@@ -212,45 +233,45 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         return orgId;
     }
 
- @Override
- @Transactional // 确保事务性
- public void update(OrgReq req, Long id) {
-     List<OrgDO> orgDOList = baseMapper.selectList(new LambdaQueryWrapper<OrgDO>()
-             .ne(OrgDO::getId,id)
-                     .and(new Consumer<LambdaQueryWrapper<OrgDO>>() {
-                         @Override
-                         public void accept(LambdaQueryWrapper<OrgDO> orgDOLambdaQueryWrapper) {
-                             orgDOLambdaQueryWrapper.eq(OrgDO::getName, req.getName())
-                                     .or()
-                                     .eq(OrgDO::getCode, req.getCode())
-                                     .or()
-                                     .eq(OrgDO::getSocialCode, req.getSocialCode());
-                         }
-                     }));
-     ValidationUtils.throwIfNotEmpty(orgDOList,"机构代号、机构名称、机构信用代码已存在");
+    @Override
+    @Transactional // 确保事务性
+    public void update(OrgReq req, Long id) {
+        List<OrgDO> orgDOList = baseMapper.selectList(new LambdaQueryWrapper<OrgDO>()
+                .ne(OrgDO::getId, id)
+                .and(new Consumer<LambdaQueryWrapper<OrgDO>>() {
+                    @Override
+                    public void accept(LambdaQueryWrapper<OrgDO> orgDOLambdaQueryWrapper) {
+                        orgDOLambdaQueryWrapper.eq(OrgDO::getName, req.getName())
+                                .or()
+                                .eq(OrgDO::getCode, req.getCode())
+                                .or()
+                                .eq(OrgDO::getSocialCode, req.getSocialCode());
+                    }
+                }));
+        ValidationUtils.throwIfNotEmpty(orgDOList, "机构代号、机构名称、机构信用代码已存在");
 
-     super.update(req, id);
-     List<Long> newCategoryIds = req.getCategoryIds();
-     if (CollectionUtil.isNotEmpty(newCategoryIds)) {
-         orgCategoryRelMapper.deleteByOrgId(id);
+        super.update(req, id);
+        List<Long> newCategoryIds = req.getCategoryIds();
+        if (CollectionUtil.isNotEmpty(newCategoryIds)) {
+            orgCategoryRelMapper.deleteByOrgId(id);
 
-         // 插入新的关系
-         List<OrgCategoryRelationDO> relations = newCategoryIds.stream()
-                 .map(categoryId -> {
-                     OrgCategoryRelationDO relation = new OrgCategoryRelationDO();
-                     relation.setOrgId(id);
-                     relation.setCategoryId(categoryId);
-                     relation.setCreateUser(TokenLocalThreadUtil.get().getUserId());
-                     relation.setIsDeleted(false); // 设置未删除状态
-                     return relation;
-                 })
-                 .collect(Collectors.toList());
-         orgCategoryRelMapper.insertBatch(relations);
-     }
+            // 插入新的关系
+            List<OrgCategoryRelationDO> relations = newCategoryIds.stream()
+                    .map(categoryId -> {
+                        OrgCategoryRelationDO relation = new OrgCategoryRelationDO();
+                        relation.setOrgId(id);
+                        relation.setCategoryId(categoryId);
+                        relation.setCreateUser(TokenLocalThreadUtil.get().getUserId());
+                        relation.setIsDeleted(false); // 设置未删除状态
+                        return relation;
+                    })
+                    .collect(Collectors.toList());
+            orgCategoryRelMapper.insertBatch(relations);
+        }
 
-     // 清理缓存
-     redisTemplate.delete(RedisConstant.EXAM_ORGANIZATION_QUERY);
- }
+        // 清理缓存
+        redisTemplate.delete(RedisConstant.EXAM_ORGANIZATION_QUERY);
+    }
 
     @Override
     public void delete(List<Long> ids) {
@@ -285,8 +306,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     public List<UserOrgDTO> processUserCredentials(List<UserOrgDTO> userDTOList) {
         // 1. 前置校验强化
         final Long userId = Optional.ofNullable(TokenLocalThreadUtil.get())
-            .orElseThrow(() -> new AuthException("用户未登录"))
-            .getUserId();
+                .orElseThrow(() -> new AuthException("用户未登录"))
+                .getUserId();
 
         OrgDTO orgInfo = orgMapper.getOrgId(userId);
         if (orgInfo == null) {
@@ -300,24 +321,24 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         // 2. 并行流处理提升效率
         return userDTOList.parallelStream()
-            .filter(Objects::nonNull) // 过滤空对象
-            .peek(userDTO -> {
-                try {
-                    // 3. 密码生成逻辑修正
-                    String username = validateUsername(userDTO.getUsername());
-                    String rawPassword = generatePassword(orgInfo.getCode(), username);
-                    validatePhone(userDTO.getPhone());
-                    // 4. 加密存储
-                    userDTO.setPassword(rawPassword);
-                    userDTO.setOrgId(orgInfo.getId());
-                    userDTO.setDeptId(examCenterId);
-                    userDTO.setRoleId(candidatesId);
-                } catch (Exception e) {
-                    log.warn("用户数据校验失败 ");
-                    throw e; // 触发异常处理
-                }
-            })
-            .collect(Collectors.toList());
+                .filter(Objects::nonNull) // 过滤空对象
+                .peek(userDTO -> {
+                    try {
+                        // 3. 密码生成逻辑修正
+                        String username = validateUsername(userDTO.getUsername());
+                        String rawPassword = generatePassword(orgInfo.getCode(), username);
+                        validatePhone(userDTO.getPhone());
+                        // 4. 加密存储
+                        userDTO.setPassword(rawPassword);
+                        userDTO.setOrgId(orgInfo.getId());
+                        userDTO.setDeptId(examCenterId);
+                        userDTO.setRoleId(candidatesId);
+                    } catch (Exception e) {
+                        log.warn("用户数据校验失败 ");
+                        throw e; // 触发异常处理
+                    }
+                })
+                .collect(Collectors.toList());
     }
 
     // 密码生成工具方法
@@ -330,7 +351,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     private String validateUsername(String username) {
         ValidationUtils.throwIfBlank(username, "用户名不能为空");
         ValidationUtils.throwIf(!username
-            .matches("^[1-9]\\d{5}(18|19|20)\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}[0-9Xx]$"), "身份证格式错误");
+                .matches("^[1-9]\\d{5}(18|19|20)\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}[0-9Xx]$"), "身份证格式错误");
         return username.trim();
     }
 
@@ -393,7 +414,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         }
         super.sort(queryWrapper, pageQuery);
         IPage<OrgCandidatesResp> page = baseMapper.getCandidatesList(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
         PageResp<OrgCandidatesResp> pageResp = PageResp.build(page, OrgCandidatesResp.class);
         pageResp.getList().forEach(this::fill);
         return pageResp;
@@ -449,7 +470,12 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         if (agencyStatus > 0) {
             return -1;
         }
-        return orgMapper.studentAddAgency(orgId, userId,projectId);
+        OrgCandidateDO orgCandidateDO = new OrgCandidateDO();
+        orgCandidateDO.setOrgId(orgId);
+        orgCandidateDO.setCandidateId(userId);
+        orgCandidateDO.setProjectId(projectId);
+        orgCandidateDO.setStatus(1);
+        return orgCandidateMapper.insert(orgCandidateDO);
     }
 
     @Override
@@ -501,7 +527,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     /**
      * 绑定用户到机构
-     * 
+     *
      * @param orgId
      * @param userId
      */
@@ -521,13 +547,13 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     /**
      * 获取可绑定的用户列表
-     * 
+     *
      * @return
      */
     @Override
     public List<UserVO> getBindableUsers() {
         List<UserVO> userVOList = orgMapper.getBindableUsers(organizationId);
-        if(!ObjectUtil.isEmpty(userVOList)){
+        if (!ObjectUtil.isEmpty(userVOList)) {
             userVOList.stream().map(item -> {
                 item.setNickname(item.getNickname() + " [ " + aesWithHMAC.verifyAndDecrypt(item.getUsername()) + " ] ");
                 return item;
@@ -539,6 +565,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     /**
      * 解绑机构用户
+     *
      * @param orgId
      * @return
      */
@@ -549,6 +576,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     /**
      * 获取机构对应的分类-项目级联选择
+     *
      * @return
      */
     @Override
@@ -558,8 +586,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             // 获取当前登录的用户信息
             UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
             // 查询所有父级分类
-           parentList = baseMapper.getSelectCategoryProject(userTokenDo.getUserId());
-        }else {
+            parentList = baseMapper.getSelectCategoryProject(userTokenDo.getUserId());
+        } else {
             // 查询所有父级分类
             parentList = baseMapper.getSelectCategoryProjectByOrgId(orgId);
         }
@@ -604,7 +632,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     /**
      * 删除机构及其关联的用户信息
      *
-     * @param  ids 机构ID
+     * @param ids 机构ID
      */
     @Transactional(rollbackFor = Exception.class)
     public void removeOrgWithRelations(Long ids) {
@@ -627,6 +655,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     /**
      * 获取机构对应的分类-项目-班级级联选择
+     *
      * @param orgId
      * @return
      */
@@ -682,4 +711,161 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         return parentList;
     }
+
+    /**
+     * 获取机构对应的项目-班级级联选择
+     *
+     * @return
+     */
+    @Override
+    public List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId) {
+        // 查询原始数据（项目 + 班级）
+        List<OrgProjectClassVO> flatList = baseMapper.getSelectProjectClass(orgId, projectId);
+
+        // 按项目分组
+        Map<Long, ProjectCategoryVO> projectMap = new LinkedHashMap<>();
+
+        for (OrgProjectClassVO item : flatList) {
+            // 如果项目节点不存在，则新建
+            projectMap.computeIfAbsent(item.getProjectId(), id -> {
+                ProjectCategoryVO projectVO = new ProjectCategoryVO();
+                projectVO.setValue(item.getProjectId());
+                projectVO.setLabel(item.getProjectLabel());
+                projectVO.setChildren(new ArrayList<>());
+                return projectVO;
+            });
+
+            // 创建班级节点并挂在对应项目下
+            ProjectCategoryVO classVO = new ProjectCategoryVO();
+            classVO.setValue(item.getClassId());
+            classVO.setLabel(item.getClassLabel());
+
+            projectMap.get(item.getProjectId()).getChildren().add(classVO);
+        }
+
+        return new ArrayList<>(projectMap.values());
+    }
+
+    /**
+     * 根据报考状态获取机构对应的项目-班级-考生级联选择 （预报名）
+     *
+     * @param projectId 项目id
+     * @return
+     */
+    @Override
+    public List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId) {
+        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+        OrgDTO orgDTO = orgMapper.getOrgId(userTokenDo.getUserId());
+        List<OrgProjectClassCandidateVO> flatList = baseMapper.getSelectProjectClassCandidate(orgDTO.getId(), projectId);
+
+        // 组装层级结构
+        Map<Long, ProjectCategoryVO> projectMap = new LinkedHashMap<>();
+
+        for (OrgProjectClassCandidateVO item : flatList) {
+            // 一级：项目
+            ProjectCategoryVO project = projectMap.computeIfAbsent(item.getProjectId(), id -> {
+                ProjectCategoryVO vo = new ProjectCategoryVO();
+                vo.setValue(id);
+                vo.setLabel(item.getProjectLabel());
+                vo.setChildren(new ArrayList<>());
+                return vo;
+            });
+
+            // 二级：班级
+            ProjectCategoryVO clazz = project.getChildren().stream()
+                    .filter(c -> c.getValue().equals(item.getClassId()))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        ProjectCategoryVO vo = new ProjectCategoryVO();
+                        vo.setValue(item.getClassId());
+                        vo.setLabel(item.getClassLabel());
+                        vo.setChildren(new ArrayList<>());
+                        project.getChildren().add(vo);
+                        return vo;
+                    });
+
+            // 三级：学员
+            if (item.getCandidateId() != null) {
+                ProjectCategoryVO student = new ProjectCategoryVO();
+                student.setValue(item.getCandidateId());
+                student.setLabel(item.getNickname());
+                clazz.getChildren().add(student);
+            }
+        }
+
+        return new ArrayList<>(projectMap.values());
+    }
+
+    /**
+     * 机构预报名
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean applyPre(OrgApplyPreReq orgApplyPreReq) {
+        Long examPlanId = orgApplyPreReq.getExamPlanId();
+        List<Long> candidateIds = orgApplyPreReq.getCandidateIds();
+
+        List<EnrollPreDO> insertPreList = candidateIds.stream()
+                .map(candidateId -> createEnrollPre(candidateId, examPlanId))
+                .toList();
+
+        return enrollPreMapper.insertBatch(insertPreList);
+    }
+
+    /**
+     * 封装创建单个 EnrollPreDO 的逻辑
+     */
+    private EnrollPreDO createEnrollPre(Long candidateId, Long examPlanId) {
+        EnrollPreDO preDO = new EnrollPreDO();
+        preDO.setCandidateId(candidateId);
+        preDO.setPlanId(examPlanId);
+        preDO.setStatus(0);
+        try {
+            // 生成二维码 URL
+            String qrContent = buildQrContent(candidateId, examPlanId);
+
+            // 生成二维码图片并上传
+            String qrUrl = generateAndUploadQr(candidateId, qrContent);
+            // 设置二维码地址
+            preDO.setUploadQrcode(qrUrl);
+        } catch (Exception e) {
+            throw new BusinessException("二维码生成失败，请稍后重试");
+        }
+        return preDO;
+    }
+
+    /**
+     * 生成二维码内容
+     */
+    private String buildQrContent(Long candidateId, Long examPlanId) throws UnsupportedEncodingException {
+        String encryptedCandidateId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String.valueOf(candidateId)), StandardCharsets.UTF_8);
+        String encryptedPlanId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String.valueOf(examPlanId)), StandardCharsets.UTF_8);
+        return qrcodeUrl + "?candidateId=" + encryptedCandidateId + "&planId=" + encryptedPlanId;
+    }
+
+    /**
+     * 生成二维码并上传，返回 URL
+     */
+    private String generateAndUploadQr(Long candidateId, String qrContent) throws IOException {
+        BufferedImage image = QrCodeUtil.generate(qrContent, 300, 300);
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ImageIO.write(image, "png", baos);
+            byte[] bytes = baos.toByteArray();
+
+            MultipartFile file = new InMemoryMultipartFile(
+                    "file",
+                    candidateId + ".png",
+                    "image/png",
+                    bytes
+            );
+
+            GeneralFileReq fileReq = new GeneralFileReq();
+            fileReq.setType("pic");
+
+            FileInfoResp fileInfo = uploadService.upload(file, fileReq);
+            return fileInfo.getUrl();
+        }
+    }
+
 }

@@ -19,11 +19,18 @@
         FROM ted_org_user tou
                  LEFT JOIN ted_org tedo on tou.org_id = tedo.id
         WHERE tou.user_id = #{userId}
-        AND tou.is_deleted = 0
+          AND tou.is_deleted = 0
     </select>
     <select id="getCandidatesList" resultType="top.continew.admin.training.model.resp.OrgCandidatesResp">
-        SELECT tei.real_name AS nickName, toc.candidate_id AS candidate_id, su.phone AS phoneNumber, toc.org_id AS org_id,
-               tp.id AS project_id,tp.project_name,tei.gender,tei.id_card_photo_front,tei.id_card_photo_back
+        SELECT tei.real_name    AS nickName,
+               toc.candidate_id AS candidate_id,
+               su.phone         AS phoneNumber,
+               toc.org_id       AS org_id,
+               tp.id            AS project_id,
+               tp.project_name,
+               tei.gender,
+               tei.id_card_photo_front,
+               tei.id_card_photo_back
         FROM ted_org_candidate toc
                  LEFT JOIN ted_project tp
                            ON toc.project_id = tp.id AND tp.is_deleted = 0
@@ -88,7 +95,7 @@
                  LEFT JOIN
              sys_user su ON tou.user_id = su.id
         WHERE tou.user_id = #{userId}
-        AND tou.is_deleted = 0
+          AND tou.is_deleted = 0
     </select>
     <select id="getAcountInfo" resultType="java.lang.String">
         select su.nickname
@@ -101,7 +108,7 @@
           and o.id = #{orgId}
     </select>
     <select id="getBindableUsers" resultType="top.continew.admin.training.model.vo.UserVO">
-        SELECT su.id, su.nickname,su.username
+        SELECT su.id, su.nickname, su.username
         FROM sys_user AS su
                  LEFT JOIN sys_user_role AS sur ON sur.user_id = su.id
                  LEFT JOIN sys_role AS sr ON sur.role_id = sr.id
@@ -111,7 +118,7 @@
           AND tou.user_id IS NULL;
     </select>
     <select id="getSelectCategoryProject" resultType="top.continew.admin.training.model.vo.ProjectCategoryVO">
-        SELECT tc.id AS `value`,tc.name AS `label`
+        SELECT tc.id AS `value`, tc.name AS `label`
         FROM ted_org org
                  LEFT JOIN ted_org_user tou
                            ON org.id = tou.org_id AND tou.is_deleted = 0
@@ -120,11 +127,11 @@
                  LEFT JOIN ted_category tc
                            ON tocr.category_id = tc.id AND tc.is_deleted = 0
         WHERE org.is_deleted = 0
-        AND tou.user_id = #{userId}
+          AND tou.user_id = #{userId}
     </select>
     <select id="getSelectCategoryProjectByOrgId"
             resultType="top.continew.admin.training.model.vo.ProjectCategoryVO">
-        SELECT tc.id AS `value`,tc.name AS `label`
+        SELECT tc.id AS `value`, tc.name AS `label`
         FROM ted_org org
                  LEFT JOIN ted_org_category_relation tocr
                            ON org.id = tocr.org_id AND tocr.is_deleted = 0
@@ -135,10 +142,9 @@
     </select>
 
     <select id="getAllCategoryByUserId" resultType="top.continew.admin.training.model.vo.ProjectCategoryVO">
-        SELECT
-            tc.id AS `value`,
-            tc.name AS `label`,
-            tc.parent_id AS `parentId`
+        SELECT tc.id        AS `value`,
+               tc.name      AS `label`,
+               tc.parent_id AS `parentId`
         FROM ted_org org
                  LEFT JOIN ted_org_user tou ON org.id = tou.org_id AND tou.is_deleted = 0
                  LEFT JOIN ted_org_category_relation tocr ON org.id = tocr.org_id AND tocr.is_deleted = 0
@@ -148,17 +154,51 @@
     </select>
 
     <select id="getAllCategoryByOrgId" resultType="top.continew.admin.training.model.vo.ProjectCategoryVO">
-        SELECT
-            tc.id AS `value`,
-            tc.name AS `label`,
-            tc.parent_id AS `parentId`
+        SELECT tc.id        AS `value`,
+               tc.name      AS `label`,
+               tc.parent_id AS `parentId`
         FROM ted_org org
                  LEFT JOIN ted_org_category_relation tocr ON org.id = tocr.org_id AND tocr.is_deleted = 0
                  LEFT JOIN ted_category tc ON tocr.category_id = tc.id AND tc.is_deleted = 0
         WHERE org.is_deleted = 0
           AND org.id = #{orgId}
     </select>
-
+    <select id="getSelectProjectClass" resultType="top.continew.admin.training.model.vo.OrgProjectClassVO">
+        SELECT p.id           AS projectId,
+               p.project_name AS projectLabel,
+               c.id           AS classId,
+               c.class_name   AS classLabel
+        FROM ted_org_class c
+                 JOIN ted_project p
+                      ON c.project_id = p.id
+                          AND p.is_deleted = 0
+        WHERE c.is_deleted = 0
+          AND c.org_id = #{orgId}
+          AND c.project_id = #{projectId}
+    </select>
+    <select id="getSelectProjectClassCandidate"
+            resultType="top.continew.admin.training.model.vo.OrgProjectClassCandidateVO">
+        SELECT
+        p.id AS projectId,
+        p.project_name AS projectLabel,
+        c.id AS classId,
+        c.class_name AS classLabel,
+        occ.candidate_id AS candidateId,
+        su.nickname
+        FROM ted_org_class c
+        JOIN ted_project p
+        ON c.project_id = p.id AND p.is_deleted = 0
+        LEFT JOIN ted_org_class_candidate occ
+        ON c.id = occ.class_id
+        LEFT JOIN sys_user su
+        ON occ.candidate_id = su.id
+        LEFT JOIN ted_enroll_pre ep
+        ON occ.candidate_id = ep.candidate_id AND ep.is_deleted = 0
+        WHERE c.is_deleted = 0
+        AND c.org_id = #{orgId}
+        AND c.project_id = #{projectId}
+        AND ep.id IS NULL
+    </select>
 
 
     <update id="approveStudent" parameterType="java.lang.Long">
