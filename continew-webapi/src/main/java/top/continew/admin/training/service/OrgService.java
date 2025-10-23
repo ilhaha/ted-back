@@ -17,8 +17,10 @@
 package top.continew.admin.training.service;
 
 import top.continew.admin.system.model.req.user.UserOrgDTO;
+import top.continew.admin.training.model.req.OrgApplyPreReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
+import top.continew.admin.training.model.vo.SelectOrgVO;
 import top.continew.admin.training.model.vo.UserVO;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -48,14 +50,14 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 获取所有机构信息
-     * 
+     *
      * @return List<OrgResp>
      */
     PageResp<OrgResp> getAllOrgInfo(OrgQuery orgQuery, PageQuery pageQuery, String orgStatus);
 
     /**
      * 获取机构详情
-     * 
+     *
      * @param orgId 机构id
      * @return OrgDetailResp
      */
@@ -63,7 +65,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 获取机构状态
-     * 
+     *
      * @param orgId 机构id
      * @return Integer
      */
@@ -71,14 +73,14 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 学生报名
-     * 
+     *
      * @return Integer
      */
     Integer studentAddAgency(Long orgId, Long projectId);
 
     /**
      * 学生取消报名
-     * 
+     *
      * @param orgId 机构id
      * @return Integer
      */
@@ -86,7 +88,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 通过加入申请
-     * 
+     *
      * @param userId 用户id
      * @return Integer
      */
@@ -94,7 +96,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 拒绝加入申请
-     * 
+     *
      * @param orgId  机构id
      * @param userId 用户id
      * @return Integer
@@ -103,7 +105,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 获取机构id
-     * 
+     *
      * @param planId 考试计划id
      * @return Long
      */
@@ -151,4 +153,30 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      * @return
      */
     List<ProjectCategoryVO> getSelectCategoryProjectClass(Long orgId);
+
+    /**
+     * 获取机构对应的项目-班级级联选择
+     * @return
+     */
+    List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId);
+
+    /**
+     * 根据报考状态获取机构对应的项目-班级-考生级联选择 （预报名）
+     * @param projectId 项目id
+     * @return
+     */
+    List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId);
+
+    /**
+     * 机构预报名
+     * @return
+     */
+    Boolean applyPre(OrgApplyPreReq orgApplyPreReq);
+
+    /**
+     * 获取所有的机构作为选择器返回
+     * @return
+     */
+    List<SelectOrgVO> getOrgSelect();
+
 }

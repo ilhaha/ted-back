@@ -40,4 +40,9 @@ public class OrgClassCandidateDO extends BaseDO {
      * 删除标记
      */
     private Integer isDeleted;
+
+    /**
+     * 状态：0 正在班级 1 考试结束之之前转去别的班 2 考试结束之后转去别的班
+     */
+    private Integer status;
 }

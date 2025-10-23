@@ -77,7 +77,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @CrudRequestMapping(value = "/system/user", api = {Api.PAGE, Api.LIST, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
-    Api.EXPORT})
+        Api.EXPORT})
 public class UserController extends BaseController<UserService, UserResp, UserDetailResp, UserQuery, UserReq> {
 
     @Autowired
@@ -93,8 +93,8 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @SaIgnore
     @GetMapping("/upload/when/info")
     @Operation(summary = "考生扫码上传资料时获取个人信息", description = "考生扫码上传资料时获取个人信息")
-    public UploadWhenUserInfoVO uploadWhenInfo(@RequestParam("candidateId") String candidateId,@RequestParam("orClassId") String orClassId) {
-        return userService.uploadWhenInfo(aesWithHMAC.verifyAndDecrypt(candidateId),aesWithHMAC.verifyAndDecrypt(orClassId));
+    public UploadWhenUserInfoVO uploadWhenInfo(@RequestParam("candidateId") String candidateId,@RequestParam("planId") String planId) {
+        return userService.uploadWhenInfo(aesWithHMAC.verifyAndDecrypt(candidateId),aesWithHMAC.verifyAndDecrypt(planId));
     }
 
     @SaIgnore
@@ -119,7 +119,7 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
         String rawPassword = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(req.getPassword()));
         ValidationUtils.throwIfNull(rawPassword, "密码解密失败");
         ValidationUtils.throwIf(!ReUtil
-            .isMatch(RegexConstants.PASSWORD, rawPassword), "密码长度为 8-32 个字符，支持大小写字母、数字、特殊字符，至少包含字母和数字");
+                .isMatch(RegexConstants.PASSWORD, rawPassword), "密码长度为 8-32 个字符，支持大小写字母、数字、特殊字符，至少包含字母和数字");
         req.setPassword(rawPassword);
         req.setUsername(aesWithHMAC.encryptAndSign(username));
         return super.add(req);
@@ -155,7 +155,7 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
         String rawNewPassword = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(req.getNewPassword()));
         ValidationUtils.throwIfNull(rawNewPassword, "新密码解密失败");
         ValidationUtils.throwIf(!ReUtil
-            .isMatch(RegexConstants.PASSWORD, rawNewPassword), "密码长度为 8-32 个字符，支持大小写字母、数字、特殊字符，至少包含字母和数字");
+                .isMatch(RegexConstants.PASSWORD, rawNewPassword), "密码长度为 8-32 个字符，支持大小写字母、数字、特殊字符，至少包含字母和数字");
         req.setNewPassword(rawNewPassword);
         baseService.resetPassword(req, id);
     }
@@ -178,7 +178,7 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @GetMapping("/viewInvigilate")
     public List<InvigilatorVO> viewInvigilate(InvigilatorParameterReq ipo) {
         return userService.viewInvigilate(ipo.getExamPlanId(), ipo.getClassroomId(), ipo.getInvigilateIds(), ipo
-            .getStartTime(), ipo.getEndTime());
+                .getStartTime(), ipo.getEndTime());
     }
 
     @GetMapping("/invigilateTag")

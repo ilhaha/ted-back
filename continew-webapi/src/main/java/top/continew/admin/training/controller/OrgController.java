@@ -25,8 +25,10 @@ import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.listen.StudentDataListener;
 import top.continew.admin.training.model.req.BindUserReq;
+import top.continew.admin.training.model.req.OrgApplyPreReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
+import top.continew.admin.training.model.vo.SelectOrgVO;
 import top.continew.admin.training.model.vo.UserVO;
 import top.continew.admin.util.Result;
 import top.continew.starter.extension.crud.enums.Api;
@@ -67,8 +69,40 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     @Resource
     private OrgService orgService;
 
-    @Value("${examine.userRole.invigilatorId}")
-    private Long invigilatorId;
+    /**
+     * 获取所有的机构作为选择器返回
+     * @return
+     */
+    @GetMapping("/select")
+    public List<SelectOrgVO> getOrgSelect() {
+        return orgService.getOrgSelect();
+    }
+    /**
+     * 机构预报名
+     * @return
+     */
+    @PostMapping("/apply/pre")
+    public Boolean applyPre(@Validated @RequestBody OrgApplyPreReq orgApplyPreReq) {
+        return orgService.applyPre(orgApplyPreReq);
+    }
+    /**
+     * 根据报考状态获取机构对应的项目-班级-考生级联选择 （预报名）
+     * @param projectId 项目id
+     * @return
+     */
+    @GetMapping("/select/project/class/candidate")
+    public List<ProjectCategoryVO> getSelectProjectClassCandidate(@RequestParam Long projectId) {
+        return orgService.getSelectProjectClassCandidate(projectId);
+    }
+
+    /**
+     * 获取机构对应的项目-班级级联选择
+     * @return
+     */
+    @GetMapping("/select/project/class")
+    public List<ProjectCategoryVO> getSelectProjectClass(@RequestParam Long orgId,@RequestParam Long projectId){
+        return orgService.getSelectProjectClass(orgId,projectId);
+    }
 
     /**
      * 获取机构对应的分类-项目-班级级联选择

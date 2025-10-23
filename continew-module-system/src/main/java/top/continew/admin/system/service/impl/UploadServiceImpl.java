@@ -57,4 +57,13 @@ public class UploadServiceImpl implements UploadService {
         return fileService.uploadIdCard(file, frontOrBack);
     }
 
+    /**
+     * 上传文件（用于机构报名考试补充报考资料）
+     * @param file
+     * @return
+     */
+    @Override
+    public FileInfoResp applyUpload(MultipartFile file) {
+        return fileService.applyUpload(file);
+    }
 }
