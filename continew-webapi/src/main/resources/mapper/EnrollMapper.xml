@@ -151,6 +151,7 @@
         where e.user_id = #{userId}
           and e.exam_plan_id = #{examPlanId}
           and e.enroll_status != 3
+          and e.is_deleted = 0
     </select>
     <select id="getEnrollPage" resultType="top.continew.admin.exam.model.resp.EnrollResp">
         select te.id as id,

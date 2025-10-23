@@ -1,22 +1,20 @@
 package top.continew.admin.exam.service.impl;
 
 import com.alibaba.excel.EasyExcel;
-import com.alibaba.excel.write.metadata.fill.FillConfig;
-import com.alibaba.excel.write.metadata.fill.FillWrapper;
 import com.aspose.cells.PdfSaveOptions;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileCopyUtils;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.exam.mapper.ExamTicketMapper;
 import top.continew.admin.exam.model.dto.CandidateTicketDTO;
 import top.continew.admin.exam.service.CandidateTicketService;
-import top.continew.admin.util.ImageSheetWriteHandler;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -25,6 +23,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -38,164 +39,278 @@ public class CandidateTicketServiceImpl implements CandidateTicketService {
     @Value("${excel.template.url}")
     private String excelTemplateUrl;
 
-    private static final String TEMP_DIR = System.getProperty("user.dir") + File.separator + "temp" + File.separator;
+    /** 最大并发生成数量（保护 Aspose / POI 的内存与 CPU 占用） */
+    @Value("${ticket.gen.concurrent:8}")
+    private int maxConcurrentGenerations;
+
+    /** 模板缓存（字节）*/
+    private volatile byte[] templateCache;
+
+    /** 图片缓存（url -> bytes）*/
+    private final Map<String, byte[]> photoCache = new ConcurrentHashMap<>();
+
+    /** 并发控制信号量 */
+    private Semaphore generationSemaphore;
+
+    /** 内部常量：图片插入区域与边距（可按需调整） */
+    private static final int COL_D_INDEX = 3; // D 列 -> index 3
+    private static final int ROW_D2_INDEX = 1; // D2 -> row index 1
+    private static final int ROW_D6_INDEX = 6; // 行结束 (使用 anchor row2)
+    private static final int MARGIN_X = 200; // 左右内缩（0-1023）
+    private static final int MARGIN_Y = 40;  // 上下内缩（0-255）
+
+    // 初始化 semaphore（在构造后或首次使用时）
+    private void ensureSemaphoreInitialized() {
+        if (generationSemaphore == null) {
+            synchronized (this) {
+                if (generationSemaphore == null) {
+                    generationSemaphore = new Semaphore(Math.max(1, maxConcurrentGenerations));
+                    log.info("初始化 ticket generation semaphore, permits={}", maxConcurrentGenerations);
+                }
+            }
+        }
+    }
 
     @Override
     public void generateTicket(Long userId, String examNumber, HttpServletResponse response) throws Exception {
-        File tempDir = new File(TEMP_DIR);
-        if (!tempDir.exists()) tempDir.mkdirs();
+        ensureSemaphoreInitialized();
 
-        String tempExcelPath = null;
-        String tempPdfPath = null;
+        // 查询数据
+        CandidateTicketDTO dto = examTicketMapper.findTicketByUserAndExamNumber(userId, aesWithHMAC.encryptAndSign(examNumber));
+        // 测试或默认赋值（可去掉）
+         dto.setPhoto("https://img.shetu66.com/2023/04/25/1682417792544419.png");
 
+        if (dto == null) {
+            throw new RuntimeException("未找到该用户的准考证数据！");
+        }
+
+        // 解密并设置
+        dto.setTicketId(examNumber);
+        dto.setIdCard(aesWithHMAC.verifyAndDecrypt(dto.getIdCard()));
+        log.info("查询到的准考证数据：{}", dto);
+
+        // 组装填充字段
+        Map<String, Object> dataMap = new HashMap<>();
+        dataMap.put("name", getSafeValue(dto.getName()));
+        dataMap.put("idCard", getSafeValue(dto.getIdCard()));
+        dataMap.put("ticketId", getSafeValue(dto.getTicketId()));
+        dataMap.put("classCode", getSafeValue(dto.getClassCode() != null ? dto.getClassCode().toString() : null));
+        dataMap.put("className", getSafeValue(dto.getClassName()));
+        dataMap.put("examType", getSafeValue(dto.getExamType()));
+        dataMap.put("examItem", getSafeValue(dto.getExamItem()));
+        dataMap.put("examRoom", getSafeValue(dto.getExamRoom()));
+        dataMap.put("examTime", getSafeValue(dto.getExamTime()));
+
+        // 下载或从缓存读取照片
+        byte[] photoBytes = null;
+        if (dto.getPhoto() != null && !dto.getPhoto().isEmpty()) {
+            try {
+                photoBytes = loadPhotoCached(dto.getPhoto());
+                if (photoBytes == null || photoBytes.length == 0) {
+                    log.warn("照片为空或下载失败：{}", dto.getPhoto());
+                } else {
+                    log.debug("照片大小：{} bytes", photoBytes.length);
+                }
+            } catch (Exception e) {
+                log.warn("下载照片失败：{}, error: {}", dto.getPhoto(), e.getMessage());
+            }
+        }
+
+        // 下面的转换是重量级操作，需要获取 Semaphore
+        boolean permit = false;
         try {
-            // 1️ 查询准考证数据
-            String encryptedExamNumber = aesWithHMAC.encryptAndSign(examNumber);
-            CandidateTicketDTO dto = examTicketMapper.findTicketByUserAndExamNumber(userId, encryptedExamNumber);
-            dto.setPhoto("https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/10/22/68f8b90a5814e0d894c63901.jfif");
-            if (dto == null) throw new RuntimeException("未找到该用户的准考证数据！");
+            // 尝试获取许可，超时避免无限等待（可调整超时时间）
+            permit = generationSemaphore.tryAcquire(60, TimeUnit.SECONDS);
+            if (!permit) {
+                throw new RuntimeException("当前生成任务繁忙，请稍后重试");
+            }
 
-            dto.setTicketId(examNumber);
-            dto.setIdCard(aesWithHMAC.verifyAndDecrypt(dto.getIdCard()));
-            log.info("查询到的准考证数据：{}", dto);
+            // 1) 使用 EasyExcel 在内存中填充模板 -> 得到 excelBytes
+            byte[] excelBytes = fillTemplateToBytes(dataMap);
 
-            // 2️ 填充文本数据
-            Map<String, Object> dataMap = new HashMap<>();
-            dataMap.put("name", getSafeValue(dto.getName()));
-            dataMap.put("idCard", getSafeValue(dto.getIdCard()));
-            dataMap.put("ticketId", getSafeValue(dto.getTicketId()));
-            dataMap.put("classCode", getSafeValue(dto.getClassCode() != null ? dto.getClassCode().toString() : null));
-            dataMap.put("className", getSafeValue(dto.getClassName()));
-            dataMap.put("examType", getSafeValue(dto.getExamType()));
-            dataMap.put("examItem", getSafeValue(dto.getExamItem()));
-            dataMap.put("examRoom", getSafeValue(dto.getExamRoom()));
-            dataMap.put("examTime", getSafeValue(dto.getExamTime()));
+            // 2) 用 POI 在内存 Excel 上插入图片 -> 得到 excelWithPhoto
+            byte[] excelWithPhoto = insertPhotoToExcelBytes(excelBytes, photoBytes);
 
-            // 3️ 下载照片 (OSS URL → byte[])
-            byte[] photoBytes = null;
-            if (dto.getPhoto() != null && !dto.getPhoto().isEmpty()) {
-                try (InputStream is = new URL(dto.getPhoto()).openStream();
-                     ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                    byte[] buffer = new byte[1024];
-                    int len;
-                    while ((len = is.read(buffer)) != -1) {
-                        baos.write(buffer, 0, len);
+            // 3) 使用 Aspose 在内存将 Excel 转为 PDF -> 得到 pdfBytes
+            byte[] pdfBytes = convertExcelBytesToPdfBytes(excelWithPhoto);
+
+            // 4) 写入响应流
+            sendPdfResponse(response, pdfBytes, "准考证_" + examNumber + ".pdf");
+        } finally {
+            if (permit) {
+                generationSemaphore.release();
+            }
+        }
+    }
+
+    // ============ 辅助方法 ============
+
+    /**
+     * 从缓存或远程获取模板字节（线程安全的懒加载）
+     */
+    private InputStream getRemoteTemplateInputStream(String urlStr) throws Exception {
+        // 双重检查锁保证 templateCache 只加载一次
+        if (templateCache == null) {
+            synchronized (this) {
+                if (templateCache == null) {
+                    log.info("从远程下载 Excel 模板：{}", urlStr);
+                    URL url = new URL(urlStr);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
+                    conn.setConnectTimeout(5000);
+                    conn.setReadTimeout(15000);
+                    if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                        throw new RuntimeException("远程模板获取失败，响应码：" + conn.getResponseCode());
                     }
-                    photoBytes = baos.toByteArray();
+                    try (InputStream is = conn.getInputStream();
+                         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                        byte[] buf = new byte[4096];
+                        int n;
+                        while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
+                        templateCache = baos.toByteArray();
+                    }
                 }
             }
+        }
+        return new ByteArrayInputStream(templateCache);
+    }
 
-            // 4️ 生成临时 Excel
-            tempExcelPath = TEMP_DIR + "ticket_excel_" + System.currentTimeMillis() + ".xlsx";
-            fillExcelTemplate(dataMap, tempExcelPath, photoBytes);
+    /**
+     * 从缓存获取照片（若不存在则下载并缓存）
+     */
+    private byte[] loadPhotoCached(String photoUrl) {
+        return photoCache.computeIfAbsent(photoUrl, url -> {
+            try {
+                URL u = new URL(url);
+                HttpURLConnection conn = (HttpURLConnection) u.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(15000);
+                if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    log.warn("图片请求返回非200：{} -> {}", url, conn.getResponseCode());
+                    return new byte[0];
+                }
+                try (InputStream is = conn.getInputStream();
+                     ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                    byte[] buf = new byte[4096];
+                    int n;
+                    while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
+                    return baos.toByteArray();
+                }
+            } catch (Exception e) {
+                log.warn("下载图片异常：{} -> {}", url, e.getMessage());
+                return new byte[0];
+            }
+        });
+    }
 
-            verifyTempFile(tempExcelPath, "Excel");
+    /**
+     * 使用 EasyExcel 将模板和 dataMap 填充并返回 excel 字节数组（内存）
+     */
+    private byte[] fillTemplateToBytes(Map<String, Object> dataMap) throws Exception {
+        try (InputStream templateIs = getRemoteTemplateInputStream(excelTemplateUrl);
+             ByteArrayOutputStream excelOut = new ByteArrayOutputStream()) {
 
-            // 5️ Excel 转 PDF
-            tempPdfPath = TEMP_DIR + "ticket_pdf_" + System.currentTimeMillis() + ".pdf";
-            excelToPdf(tempExcelPath, tempPdfPath);
+            List<Map<String, Object>> dataList = Collections.singletonList(dataMap);
+            EasyExcel.write(excelOut)
+                    .withTemplate(templateIs)
+                    .sheet()
+                    .doFill(dataList);
 
-            verifyTempFile(tempPdfPath, "PDF");
-
-            // 6️ 输出下载
-            downloadPdf(tempPdfPath, response, "准考证_" + examNumber + ".pdf");
-
-        } finally {
-            deleteTempFile(tempExcelPath);
-            deleteTempFile(tempPdfPath);
+            return excelOut.toByteArray();
         }
     }
 
-
     /**
-     * 填充 Excel 模板
+     * 在内存中的 Excel 字节上用 POI 插入图片（放在 D2:D6 区域并内缩留白）
      */
-    /**
-     * 填充 Excel 模板并插入照片到 D2
-     */
-    private void fillExcelTemplate(Map<String, Object> dataMap, String outputPath, byte[] photoBytes) throws Exception {
-        try (InputStream templateIs = getRemoteTemplateInputStream(excelTemplateUrl)) {
-            List<Map<String, Object>> dataList = new ArrayList<>();
-            dataList.add(dataMap);
+    private byte[] insertPhotoToExcelBytes(byte[] excelBytes, byte[] photoBytes) throws Exception {
+        if (photoBytes == null || photoBytes.length == 0) {
+            // 没有照片则直接返回原字节
+            return excelBytes;
+        }
 
-            var writer = EasyExcel.write(outputPath)
-                    .withTemplate(templateIs)
-                    .sheet();
+        try (ByteArrayInputStream excelIn = new ByteArrayInputStream(excelBytes);
+             XSSFWorkbook workbook = new XSSFWorkbook(excelIn);
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-            // 仅当有照片时注册图片写入
-            if (photoBytes != null && photoBytes.length > 0) {
-                // D2:D6 → row1=1, col1=3, row2=6, col2=4
-                writer.registerWriteHandler(new ImageSheetWriteHandler(1, 3, 6, 4, photoBytes));
+            Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : null;
+            if (sheet == null) {
+                log.warn("Excel 没有 sheet，无法插入图片");
+                workbook.write(out);
+                return out.toByteArray();
             }
 
-            writer.doFill(dataList);
+            Drawing<?> drawing = sheet.createDrawingPatriarch();
+            CreationHelper helper = workbook.getCreationHelper();
+            ClientAnchor anchor = helper.createClientAnchor();
+
+            // D2:D6 -> col1=3,row1=1 ; col2=4,row2=6
+            anchor.setCol1(COL_D_INDEX);
+            anchor.setRow1(ROW_D2_INDEX);
+            anchor.setCol2(COL_D_INDEX + 1); // end col (右边一列)
+            anchor.setRow2(ROW_D6_INDEX);
+
+            // 内缩偏移，防止遮盖方格线
+            anchor.setDx1(MARGIN_X);
+            anchor.setDy1(MARGIN_Y);
+            anchor.setDx2(1023 - MARGIN_X);
+            anchor.setDy2(255 - MARGIN_Y);
+
+            int pictureIdx = workbook.addPicture(photoBytes, Workbook.PICTURE_TYPE_JPEG);
+            drawing.createPicture(anchor, pictureIdx);
+
+            workbook.write(out);
+            return out.toByteArray();
         }
     }
 
+    /**
+     * 使用 Aspose 将 Excel 字节转换为 PDF 字节（内存）
+     */
+    private byte[] convertExcelBytesToPdfBytes(byte[] excelBytes) throws Exception {
+        try (ByteArrayInputStream in = new ByteArrayInputStream(excelBytes);
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
+            com.aspose.cells.Workbook wb = new com.aspose.cells.Workbook(in);
 
-    private InputStream getRemoteTemplateInputStream(String urlStr) throws Exception {
-        URL url = new URL(urlStr);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(10000);
+            PdfSaveOptions options = new PdfSaveOptions();
+            // 优化参数（按需调整）
+            // options.setOnePagePerSheet(true);
+            // options.setOptimizationType(com.aspose.cells.Rendering.PdfOptimizationType.MINIMUM_SIZE);
+            // options.setEmbedStandardWindowsFonts(false);
+            wb.save(out, options);
 
-        if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-            throw new RuntimeException("远程模板获取失败，响应码：" + connection.getResponseCode());
+            // Aspose Workbook 没有 closeable，但可以尝试 dispose（若可用）
+            try {
+                wb.dispose();
+            } catch (Throwable ignored) {}
+
+            return out.toByteArray();
         }
-        return connection.getInputStream();
     }
 
     /**
-     * Excel 转 PDF
+     * 写 PDF 到 HttpServletResponse
      */
-    private void excelToPdf(String excelPath, String pdfPath) throws Exception {
-        com.aspose.cells.Workbook workbook = new com.aspose.cells.Workbook(excelPath);
-        PdfSaveOptions options = new PdfSaveOptions();
-        workbook.save(pdfPath, options);
-    }
-
-    /**
-     * 下载 PDF 到前端
-     */
-    private void downloadPdf(String pdfPath, HttpServletResponse response, String fileName) throws Exception {
+    private void sendPdfResponse(HttpServletResponse response, byte[] pdfBytes, String fileName) throws Exception {
+        if (pdfBytes == null || pdfBytes.length == 0) {
+            throw new RuntimeException("生成 PDF 为空");
+        }
         response.setContentType("application/pdf");
-        response.setHeader("Content-Disposition", "attachment; filename=" +
-                URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()));
+        response.setHeader("Content-Disposition",
+                "attachment; filename=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8));
         response.setHeader("Cache-Control", "no-store");
-
-        try (InputStream is = new FileInputStream(pdfPath);
-             OutputStream os = response.getOutputStream()) {
-            FileCopyUtils.copy(is, os);
+        try (OutputStream os = response.getOutputStream()) {
+            FileCopyUtils.copy(new ByteArrayInputStream(pdfBytes), os);
+            os.flush();
         }
     }
 
     /**
-     * 校验临时文件有效性
+     * 安全处理 null -> ""
      */
-    private void verifyTempFile(String filePath, String fileType) {
-        if (filePath == null) throw new RuntimeException(fileType + "临时文件路径为空");
-        File file = new File(filePath);
-        if (!file.exists()) throw new RuntimeException(fileType + "临时文件不存在：" + filePath);
-        if (file.length() == 0) throw new RuntimeException(fileType + "临时文件为空：" + filePath);
-        if (!file.canRead()) throw new RuntimeException(fileType + "临时文件不可读取：" + filePath);
-        log.info("{}临时文件生成成功，路径：{}，大小：{}字节", fileType, filePath, file.length());
-    }
-
-    /**
-     * 删除临时文件
-     */
-    private void deleteTempFile(String filePath) {
-        if (filePath == null) return;
-        File file = new File(filePath);
-        if (file.exists() && !file.delete()) log.warn("临时文件删除失败：{}", filePath);
-    }
-
-    /**
-     * 安全处理空值
-     */
-    private String getSafeValue(String value) {
-        return value == null ? "" : value;
+    private String getSafeValue(String v) {
+        return v == null ? "" : v;
     }
 }
