@@ -28,7 +28,7 @@
     </select>
 
     <select id="getDocumentList" resultType="top.continew.admin.document.model.resp.DocumentCandidatesResp">
-        SELECT tdt.type_name,td.status,td.doc_path as documentUrl,td.update_time as ReviewTime,su.nickname as Reviewer
+        SELECT tdt.type_name,td.status,td.audit_remark,td.doc_path as documentUrl,td.update_time as ReviewTime,su.nickname as Reviewer
             FROM ted_examinee_document as ed
         LEFT JOIN ted_document as td on ed.document_id=td.id
         LEFT JOIN ted_document_type as tdt on tdt.id=td.type_id

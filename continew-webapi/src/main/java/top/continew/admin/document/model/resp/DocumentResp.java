@@ -93,4 +93,11 @@ public class DocumentResp extends BaseResp {
      */
     @Schema(description = "删除标记(0未删,1已删)")
     private Boolean isDeleted;
+
+    /**
+     * 审核备注
+     */
+    @Schema(description = "审核备注")
+    private String auditRemark;
+
 }

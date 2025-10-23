@@ -25,6 +25,8 @@ public class DocumentCandidatesResp {
     private String TypeName;
     @Schema(description = "审核状态")
     private Long Status;
+    @Schema(description = "审核备注")
+    private String AuditRemark;
     @Schema(description = "图片url")
     private String DocumentUrl;
     @Schema(description = "审核人")
