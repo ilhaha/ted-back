@@ -222,6 +222,42 @@
             #{ id }
         </foreach>
     </select>
+    <select id="getUnuploadedDocumentTypes"
+            resultType="top.continew.admin.system.model.vo.UnuploadedDocumentTypeVO">
+        SELECT dt.id, dt.type_name
+        FROM ted_document_type dt
+                 INNER JOIN ted_project_document_type tpdt
+                            ON dt.id = tpdt.document_type_id
+                                AND tpdt.is_deleted = 0
+        WHERE tpdt.project_id = (
+            SELECT exam_project_id
+            FROM ted_exam_plan
+            WHERE id = #{planId}
+            AND is_deleted = 0
+        )
+          AND dt.is_deleted = 0
+          AND NOT EXISTS (
+            SELECT 1
+            FROM ted_examinee_document ed
+                     INNER JOIN ted_document td
+                                ON ed.document_id = td.id
+            WHERE ed.examinee_id = #{candidateId}
+              AND ed.is_deleted = 0
+              AND td.is_deleted = 0
+              AND td.status IN (0, 1)
+              AND td.type_id = dt.id
+        );
+    </select>
+    <select id="getPlanInfoByPlanId" resultType="top.continew.admin.system.model.vo.PlanInfoVO">
+        SELECT tep.exam_plan_name,tp.project_name,tp.project_code,tc.`name` AS category_name
+        FROM ted_exam_plan tep
+                 JOIN ted_project tp
+                      ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                 JOIN ted_category tc
+                      ON tp.category_id = tc.id AND tc.is_deleted = 0
+        WHERE tep.id = 188
+          AND tep.is_deleted = 0
+    </select>
 
     <insert id="addInvigilatesTime">
         insert into ted_plan_invigilate

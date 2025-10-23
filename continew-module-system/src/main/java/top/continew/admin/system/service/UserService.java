@@ -307,9 +307,9 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      * 考生扫码上传资料时获取个人信息
      *
      * @param candidateId
-     * @param orClassId
+     * @param planId
      * @return
      */
-    UploadWhenUserInfoVO uploadWhenInfo(String candidateId, String orClassId);
+    UploadWhenUserInfoVO uploadWhenInfo(String candidateId, String planId);
 
 }

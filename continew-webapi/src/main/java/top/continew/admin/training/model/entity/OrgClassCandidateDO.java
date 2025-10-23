@@ -32,11 +32,6 @@ public class OrgClassCandidateDO extends BaseDO {
     private Long candidateId;
 
     /**
-     * 上传资料二维码
-     */
-    private String uploadQrCode;
-
-    /**
      * 删除标记
      */
     private Integer isDeleted;

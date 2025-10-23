@@ -179,25 +179,25 @@
     <select id="getSelectProjectClassCandidate"
             resultType="top.continew.admin.training.model.vo.OrgProjectClassCandidateVO">
         SELECT
-            p.id AS projectId,
-            p.project_name AS projectLabel,
-            c.id AS classId,
-            c.class_name AS classLabel,
-            occ.candidate_id AS candidateId,
-            su.nickname
+        p.id AS projectId,
+        p.project_name AS projectLabel,
+        c.id AS classId,
+        c.class_name AS classLabel,
+        occ.candidate_id AS candidateId,
+        su.nickname
         FROM ted_org_class c
-                 JOIN ted_project p
-                      ON c.project_id = p.id AND p.is_deleted = 0
-                 LEFT JOIN ted_org_class_candidate occ
-                           ON c.id = occ.class_id
-                 LEFT JOIN sys_user su
-                           ON occ.candidate_id = su.id
-                 LEFT JOIN ted_enroll_pre ep
-                           ON occ.candidate_id = ep.candidate_id AND ep.is_deleted = 0
+        JOIN ted_project p
+        ON c.project_id = p.id AND p.is_deleted = 0
+        LEFT JOIN ted_org_class_candidate occ
+        ON c.id = occ.class_id
+        LEFT JOIN sys_user su
+        ON occ.candidate_id = su.id
+        LEFT JOIN ted_enroll_pre ep
+        ON occ.candidate_id = ep.candidate_id AND ep.is_deleted = 0
         WHERE c.is_deleted = 0
-          AND c.org_id = #{orgId}
-          AND c.project_id = #{projectId}
-          AND ep.id IS NULL
+        AND c.org_id = #{orgId}
+        AND c.project_id = #{projectId}
+        AND ep.id IS NULL
     </select>
     <select id="getOrgSelect" resultType="top.continew.admin.training.model.vo.SelectOrgVO">
         SELECT id AS `value`,`name` AS label
