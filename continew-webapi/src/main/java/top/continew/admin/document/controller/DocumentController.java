@@ -21,10 +21,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.document.model.req.QrcodeUploadReq;
 import top.continew.admin.document.model.resp.DocumentTypeAddResp;
 import top.continew.admin.document.model.vo.DocumentTypeNameVO;
 import top.continew.admin.document.service.DocumentTypeService;
+import top.continew.admin.util.Result;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -85,5 +87,16 @@ public class DocumentController extends BaseController<DocumentService, Document
     @Operation(summary = "上传资料")
     public void uploadDocument(DocumentReq req) {
         documentService.upload(req);
+    }
+    /**
+     * 审核资料接口
+     * @param request 审核请求参数
+     * @return 操作结果
+     */
+    @PostMapping("/audit")
+    @Operation(summary = "审核资料接口")
+    public R<Boolean> auditDocument(@RequestBody @Validated DocumentAuditReq request) {
+        boolean result = documentService.auditDocument(request);
+        return R.ok(result);
     }
 }

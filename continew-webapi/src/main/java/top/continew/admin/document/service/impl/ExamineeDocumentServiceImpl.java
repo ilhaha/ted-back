@@ -97,6 +97,8 @@ public class ExamineeDocumentServiceImpl extends BaseServiceImpl<ExamineeDocumen
         DocumentDO documentDO = new DocumentDO();
         documentDO.setDocPath(studentUploadDocumentsReq.getDocPath());
         documentDO.setTypeId(studentUploadDocumentsReq.getTypeId());
+        documentDO.setCreateUser(certificateId);
+        documentDO.setUpdateUser(certificateId);
         documentDO.setStatus(DocumentStatus.PENDING_REVIEW);
         documentMapper.insert(documentDO);
         // 关联考生和资料表

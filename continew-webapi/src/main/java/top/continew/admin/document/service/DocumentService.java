@@ -16,6 +16,7 @@
 
 package top.continew.admin.document.service;
 
+import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.document.model.req.QrcodeUploadReq;
 import top.continew.admin.document.model.resp.*;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -53,5 +54,13 @@ public interface DocumentService extends BaseService<DocumentResp, DocumentDetai
      * @return
      */
     Boolean qrcodeUpload(QrcodeUploadReq qrcodeUploadReq);
+    /**
+     * 审核资料
+     *
+     * @param request 审核请求对象
+     * @return true=审核成功，false=失败
+     */
+
+    boolean auditDocument(DocumentAuditReq request);
 
 }

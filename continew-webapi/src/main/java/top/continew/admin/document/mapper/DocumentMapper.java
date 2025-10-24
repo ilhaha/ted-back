@@ -72,4 +72,13 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
       获取资料id
      */
     Long selectId(@Param("certificateId") Long certificateId, @Param("typeId") Long typeId);
+
+
+    /**
+     * 更新审核状态与备注
+     */
+    int updateAuditStatus(@Param("id") Long id,
+                          @Param("status") Integer status,
+                          @Param("auditRemark") String auditRemark,
+                          @Param("updateUser") Long updateUser);
 }

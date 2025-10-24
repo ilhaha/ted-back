@@ -29,6 +29,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -39,9 +40,17 @@ import top.continew.admin.document.model.dto.DocumentTypeDTO;
 import top.continew.admin.document.model.dto.UserDTO;
 import top.continew.admin.document.model.entity.DocumentTypeDO;
 // import top.continew.admin.document.service.cache.DocumentTypeCache;
+import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.document.model.req.QrcodeUploadReq;
 import top.continew.admin.document.model.resp.*;
 import top.continew.admin.document.service.cache.DocumentTypeCache;
+import top.continew.admin.exam.mapper.EnrollMapper;
+import top.continew.admin.exam.mapper.SpecialCertificationApplicantMapper;
+import top.continew.admin.exam.model.entity.EnrollDO;
+import top.continew.admin.exam.model.resp.EnrollStatusResp;
+import top.continew.admin.exam.model.resp.SpecialCertificationApplicantResp;
+import top.continew.admin.file.model.dto.Document;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -73,6 +82,9 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
     @Resource
     private AESWithHMAC aesWithHMAC;
 
+    @Resource
+    private EnrollMapper enrollMapper;
+
     @Override
     public PageResp<DocumentResp> page(DocumentQuery query, PageQuery pageQuery) {
         // 1. 分页查询主数据
@@ -97,6 +109,8 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
                 if (userDTO.getDocumentId().equals(documentResp.getId())) {
                     documentResp.setUserName(userDTO.getUsername());
                     documentResp.setNickName(userDTO.getNickname());
+                    documentResp.setCreateUser(userDTO.getId());
+                    documentResp.setCandidateId(userDTO.getId());
                 }
             });
             if (typeId != null) {
@@ -198,7 +212,10 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
     public PageResp<DocumentCandidatesResp> listDocument(DocumentQuery query, PageQuery pageQuery) {
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         QueryWrapper<DocumentDO> queryWrapper = this.buildQueryWrapper(query);
-        queryWrapper.eq("ed.is_deleted", 0).eq("examinee_id", userTokenDo.getUserId());
+        queryWrapper.eq("ed.is_deleted", 0)
+                .eq("ed.examinee_id", userTokenDo.getUserId())
+                .eq("td.create_user",userTokenDo.getUserId())
+                .eq("td.is_deleted", 0);
         // 根据 pageQuery 里的排序参数，对查询结果进行排序
         super.sort(queryWrapper, pageQuery);
 
@@ -244,5 +261,60 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
                 "身份证后六位验证不通过，请确认信息后重新输入"
         );
         return null;
+    }
+
+    /**
+     * 审核资料
+     *
+     * @param request 审核请求对象
+     * @return true=审核成功，false=失败
+     */
+    @Override
+    public boolean auditDocument(DocumentAuditReq request) {
+        Integer status = request.getStatus();
+
+        if (status == null) {
+            throw new IllegalArgumentException("审核状态不能为空");
+        }
+
+        // 仅支持两种操作：审核通过(1) 和 补正(2)
+        if (status != 1 && status != 2) {
+            throw new IllegalArgumentException("非法的审核状态：" + status);
+        }
+
+        // 查询资料是否存在
+        DocumentDO document = documentMapper.selectById(request.getId());
+        if (document == null) {
+            throw new RuntimeException("资料不存在");
+        }
+
+        Long documentId = document.getId();
+        Long userId = document.getCreateUser();
+
+        // ===== 当前状态为1（已通过）时，禁止再次审核为1（重复通过） =====
+        if (document.getStatus() == 1 && status == 1) {
+            throw new BusinessException("该资料已通过审核，无需重复审核！");
+        }
+
+        // 如果目标状态是补正(2)，且当前状态是已通过(1)，需检查考生是否已报名
+        if (document.getStatus() == 1 && status == 2) {
+            EnrollDO enrollDO = enrollMapper.getByCandidateId(userId);
+            if (enrollDO != null) {
+                throw new BusinessException("该考生已报名考试，不能将状态从审核通过改为补正！");
+            }
+        }
+
+        // ========== 补正备注必填 ==========
+        if (status == 2 && !StringUtils.hasText(request.getAuditRemark())) {
+            throw new IllegalArgumentException("补正时必须填写审核备注");
+        }
+
+        // ========== 更新状态与备注 ==========
+        int rows = documentMapper.updateAuditStatus(documentId, status, request.getAuditRemark(),
+                TokenLocalThreadUtil.get().getUserId());
+        if (rows == 0) {
+            throw new RuntimeException("审核失败，未更新任何记录");
+        }
+        return true;
     }
 }

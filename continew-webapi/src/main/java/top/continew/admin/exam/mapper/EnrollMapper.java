@@ -97,4 +97,12 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
                             @Param("status") Long status);
 
 
+
+    /**
+     * 根据考生id查询申报记录
+     * @param userId 考生id
+     */
+    @Select("SELECT * FROM ted.ted_enroll WHERE user_id = #{userId} AND enroll_status NOT IN (0, 3) AND is_deleted = 0 LIMIT 1")
+    EnrollDO getByCandidateId(@Param("userId") Long userId);
+
 }

@@ -14,26 +14,29 @@
  * limitations under the License.
  */
 
-package top.continew.admin.document.model.entity;
+package top.continew.admin.document.model.req;
+
+import jakarta.validation.constraints.*;
 
 import lombok.Data;
 
-import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-import top.continew.admin.common.model.entity.BaseDO;
+import org.hibernate.validator.constraints.Length;
 
 import java.io.Serial;
+import java.io.Serializable;
 import java.time.*;
 
 /**
- * 资料核心存储实体
+ * 创建或修改资料核心存储参数
  *
  * @author Anton
  * @since 2025/03/12 15:29
  */
 @Data
-@TableName("ted_document")
-public class DocumentDO extends BaseDO {
+@Schema(description = "审核资料请求参数")
+public class DocumentAuditReq implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -41,51 +44,36 @@ public class DocumentDO extends BaseDO {
     /**
      * 资料id
      */
+    @Schema(description = "资料id")
     private Long id;
-
-    /**
-     * 存储路径(如/img/身份证正面.jpg)
-     */
-    private String docPath;
 
     /**
      * 关联资料类型ID
      */
+    @Schema(description = "关联资料类型ID")
+    @NotNull(message = "关联资料类型ID不能为空")
     private Long typeId;
-
-    /**
-     * 审核状态:0:待审核;1:已生效;2:未通过;
-     */
-    private Integer status;
-
-
-    /**
-     * 审核备注
-     */
-    private String auditRemark;
-
-    /**
-     * 更新人ID
-     */
-    private Long updateUser;
 
     /**
      * 创建人ID
      */
-    private Long createUser;
+    @Schema(description = "创建人ID")
+    private Long candidateId;
 
     /**
-     * 创建时间
+     * 审核状态：
+     * 0 待审核
+     * 1 已生效（审核通过）
+     * 2 待补正
+     * 3 补正审核
      */
-    private LocalDateTime createTime;
+    @Schema(description = "资料状态")
+    private Integer status = 0;
 
     /**
-     * 更新时间
+     * 审核备注
      */
-    private LocalDateTime updateTime;
+    @Schema(description = "审核备注")
+    private String auditRemark;
 
-    /**
-     * 删除标记(0未删,1已删)
-     */
-    private Boolean isDeleted;
 }

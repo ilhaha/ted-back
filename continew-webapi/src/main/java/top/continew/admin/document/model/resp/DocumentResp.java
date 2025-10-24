@@ -94,6 +94,19 @@ public class DocumentResp extends BaseResp {
     @Schema(description = "删除标记(0未删,1已删)")
     private Boolean isDeleted;
 
+
+    /**
+     * 创建人ID
+     */
+    @Schema(description = "创建人ID")
+    private Long createUser;
+
+    /**
+     * 考生id
+     */
+    @Schema(description = "考生id")
+    private Long candidateId;
+
     /**
      * 审核备注
      */

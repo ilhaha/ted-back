@@ -17,6 +17,7 @@
 package top.continew.admin.exam.service;
 
 import net.dreamlu.mica.core.result.R;
+import org.apache.ibatis.annotations.Select;
 import top.continew.admin.exam.model.dto.BatchAuditSpecialCertificationApplicantDTO;
 import top.continew.admin.exam.model.req.SpecialCertificationApplicantListReq;
 import top.continew.starter.extension.crud.service.BaseService;

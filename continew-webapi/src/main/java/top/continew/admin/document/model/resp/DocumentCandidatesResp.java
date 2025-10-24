@@ -27,6 +27,8 @@ public class DocumentCandidatesResp {
     private Long Status;
     @Schema(description = "审核备注")
     private String AuditRemark;
+    @Schema(description = "创建人ID")
+    private Long CreateUser;
     @Schema(description = "图片url")
     private String DocumentUrl;
     @Schema(description = "审核人")
