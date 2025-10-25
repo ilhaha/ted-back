@@ -56,6 +56,8 @@ import top.continew.admin.exam.model.resp.EnrollDetailResp;
 import top.continew.admin.exam.service.EnrollService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.training.mapper.EnrollPreMapper;
+import top.continew.admin.training.model.entity.EnrollPreDO;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -111,6 +113,9 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     @Resource
     private EnrollMapper enrollMapper;
 
+    @Resource
+    private EnrollPreMapper enrollPreMapper;
+
 /**
  * 根据考生和计划ID查询申报记录
  *
@@ -148,7 +153,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     public Boolean candidatesUpload(SpecialCertificationApplicantReq req) {
         UserTokenDo user = TokenLocalThreadUtil.get();
 
-        // 1. 查询该考生在该计划下是否已存在申报记录
+        // 查询该考生在该计划下是否已存在申报记录
         LambdaQueryWrapper<SpecialCertificationApplicantDO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SpecialCertificationApplicantDO::getCandidatesId, user.getUserId())
                 .eq(SpecialCertificationApplicantDO::getPlanId, req.getPlanId())
@@ -158,11 +163,23 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
 
         SpecialCertificationApplicantDO existing = baseMapper.selectOne(queryWrapper);
 
-        // 2. 若存在虚假资料记录（status=3），禁止再次申报
+
+        // 校验该考生是否已有机构预报名记录
+        LambdaQueryWrapper<EnrollPreDO> preQuery = new LambdaQueryWrapper<>();
+        preQuery.eq(EnrollPreDO::getCandidateId, user.getUserId())
+                .eq(EnrollPreDO::getPlanId, req.getPlanId())
+                .eq(EnrollPreDO::getIsDeleted, false)
+                .last("LIMIT 1");
+        EnrollPreDO preRecord = enrollPreMapper.selectOne(preQuery);
+
+        ValidationUtils.throwIf(preRecord != null,
+                "您已通过机构完成预报名，无法再次自行上传资料。");
+
+        // 若存在虚假资料记录（status=3），禁止再次申报
         ValidationUtils.throwIf(!ObjectUtils.isEmpty(existing) && existing.getStatus() == 3,
                 "您的申报被标记为虚假资料，禁止再次申报该考试。如有疑问，请联系管理员。");
 
-        // 3. 校验是否距离考试不足 5 天
+        // 校验是否距离考试不足 5 天
         EnrollDetailResp detail = enrollMapper.getAllDetailEnrollList(req.getPlanId(), user.getUserId());
         if (detail == null || detail.getExamStartTime() == null) {
             throw new BusinessException("未找到考试计划或考试时间信息，无法上传资料。");
@@ -176,7 +193,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             throw new BusinessException("距离考试不足5天，无法重新上传资料。");
         }
 
-        // 4. 插入或更新申请信息
+        //  插入或更新申请信息
         SpecialCertificationApplicantDO entity = new SpecialCertificationApplicantDO();
         BeanUtils.copyProperties(req, entity);
         entity.setCandidatesId(user.getUserId());
@@ -196,7 +213,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             baseMapper.insert(entity);
         }
 
-        // 5. 同步插入报名表（状态 = 4 审核中）
+        // 同步插入报名表（状态 = 4 审核中）
         EnrollDO existingEnroll = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
                 .eq(EnrollDO::getExamPlanId, req.getPlanId())
                 .eq(EnrollDO::getUserId, user.getUserId())
