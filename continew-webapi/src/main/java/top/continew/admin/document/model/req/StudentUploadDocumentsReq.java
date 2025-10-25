@@ -41,4 +41,9 @@ public class StudentUploadDocumentsReq implements Serializable {
     @Schema(description = "考生id")
     private Long candidateId;
 
+    @Schema(description = "资料id")
+    private Long Id;
+
+    @Schema(description = "审核状态:0:待审核;1:已生效;2:待补正;3:补正审核;")
+    private Integer status;
 }

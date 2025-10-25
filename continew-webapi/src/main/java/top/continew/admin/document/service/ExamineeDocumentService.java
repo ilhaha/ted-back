@@ -40,4 +40,14 @@ public interface ExamineeDocumentService extends BaseService<ExamineeDocumentRes
      */
     R studentUploadDocuments(StudentUploadDocumentsReq studentUploadDocumentsReq);
 
+
+    /**
+     * 考生重新上传资料
+     *
+     * @param studentUploadDocumentsReq
+     * @return
+     */
+    R studentReUploadDocument(StudentUploadDocumentsReq studentUploadDocumentsReq);
+
+
 }

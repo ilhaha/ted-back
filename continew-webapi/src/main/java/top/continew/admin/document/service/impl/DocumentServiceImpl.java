@@ -222,6 +222,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         // 执行分页查询
         IPage<DocumentCandidatesResp> page = baseMapper.getDocumentList(new Page<>(pageQuery.getPage(), pageQuery
                 .getSize()), queryWrapper);
+        System.out.println("page========"+page);
 
         // 将查询结果转换成 PageResp 对象
         PageResp<DocumentCandidatesResp> pageResp = PageResp.build(page, DocumentCandidatesResp.class);
@@ -310,8 +311,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         }
 
         // ========== 更新状态与备注 ==========
-        int rows = documentMapper.updateAuditStatus(documentId, status, request.getAuditRemark(),
-                TokenLocalThreadUtil.get().getUserId());
+        int rows = documentMapper.updateAuditStatus(documentId, status, request.getAuditRemark(),TokenLocalThreadUtil.get().getUserId());
         if (rows == 0) {
             throw new RuntimeException("审核失败，未更新任何记录");
         }

@@ -35,4 +35,8 @@ public class DocumentCandidatesResp {
     private String Reviewer;
     @Schema(description = "审核时间")
     private String ReviewTime;
+    @Schema (description = "资料ID")
+    private Long Id;
+    @Schema (description = "资料类型ID")
+    private Long TypeId;
 }

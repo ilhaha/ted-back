@@ -113,4 +113,11 @@ public class DocumentResp extends BaseResp {
     @Schema(description = "审核备注")
     private String auditRemark;
 
+
+    /**
+     * 资料ID
+     */
+    @Schema(description = "资料ID")
+    private Long Id;
+
 }

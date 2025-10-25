@@ -70,4 +70,10 @@ public class ExamineeDocumentController extends BaseController<ExamineeDocumentS
                                                          @Validated PageQuery pageQuery) {
         return documentService.listDocument(query, pageQuery);
     }
+
+    @Operation(summary = "考生重新上传资料", description = "考生重新上传资料")
+    @PostMapping({"/studentReUploadDocument"})
+    public R studentReUploadDocument(@RequestBody StudentUploadDocumentsReq studentUploadDocumentsReq) {
+        return examineeDocumentService.studentReUploadDocument(studentUploadDocumentsReq);
+    }
 }

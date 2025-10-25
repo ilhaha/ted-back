@@ -33,6 +33,9 @@ import top.continew.admin.document.model.req.StudentUploadDocumentsReq;
 import top.continew.admin.document.model.resp.ExamineeDocumentDetailResp;
 import top.continew.admin.document.model.resp.ExamineeDocumentResp;
 import top.continew.admin.document.service.ExamineeDocumentService;
+import top.continew.admin.exam.mapper.EnrollMapper;
+import top.continew.admin.exam.model.entity.EnrollDO;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.starter.web.model.R;
@@ -54,6 +57,9 @@ public class ExamineeDocumentServiceImpl extends BaseServiceImpl<ExamineeDocumen
 
     @Resource
     private ExamineeDocumentMapper examineeDocumentMapper;
+
+    @Resource
+    private EnrollMapper enrollMapper;
 
     /**
      * 考生上传资料
@@ -112,5 +118,53 @@ public class ExamineeDocumentServiceImpl extends BaseServiceImpl<ExamineeDocumen
 
         examineeDocumentMapper.insert(examineeDocumentDO);
         return R.ok("成功");
+    }
+
+
+    /**
+     * 学生重新上传资料
+     */
+    @Override
+    public R studentReUploadDocument(StudentUploadDocumentsReq studentUploadDocumentsReq) {
+
+        // 参数校验
+        if (studentUploadDocumentsReq.getId() == null || studentUploadDocumentsReq.getDocPath() == null) {
+            throw new BusinessException("资料ID或资料路径不能为空");
+        }
+        Long userId = TokenLocalThreadUtil.get().getUserId();
+        // 查询旧资料
+        DocumentDO oldDoc = documentMapper.selectById(studentUploadDocumentsReq.getId());
+        if (oldDoc == null) {
+            throw new RuntimeException("未找到对应资料记录");
+        }
+        // 权限校验
+        if (!oldDoc.getCreateUser().equals(userId)) {
+            throw new BusinessException("无权限重新上传该资料");
+        }
+        // 根据前端传入状态进行逻辑处理
+        Integer status = studentUploadDocumentsReq.getStatus();
+        if (status != null) {
+            if (status == 1) {
+                // 报名检查
+                EnrollDO enrollDO = enrollMapper.getByCandidateId(userId);
+                if (enrollDO != null) {
+                    throw new BusinessException("您已报名考试，不能重新上传资料！请等到考试结束再操作");
+                }
+            } else if (status == 2) {
+                // 将状态改为3
+                status = 3;
+            }
+            oldDoc.setStatus(status);
+        } else {
+            oldDoc.setStatus(DocumentStatus.PENDING_REVIEW);
+        }
+        // 更新资料路径与状态
+        oldDoc.setDocPath(studentUploadDocumentsReq.getDocPath());
+        oldDoc.setUpdateUser(userId);
+        int updated = documentMapper.updateById(oldDoc);
+        if (updated <= 0) {
+            throw new RuntimeException("资料更新失败");
+        }
+        return R.ok("重新上传成功");
     }
 }
