@@ -48,7 +48,7 @@
         SET
             status = #{status},
             audit_remark = #{auditRemark},
-            update_user = #{updateUser},
+            update_user = #{updateUser}
         WHERE id = #{id} and is_deleted = 0
     </update>
 </mapper>
