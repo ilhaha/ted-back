@@ -22,6 +22,12 @@ public class OrgCandidateDO extends BaseDO {
     private static final long serialVersionUID = 1L;
 
     /**
+     * ID
+     */
+    private Long Id;
+
+
+    /**
      * 机构ID
      */
     private Long orgId;

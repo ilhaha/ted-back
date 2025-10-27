@@ -61,6 +61,9 @@ public class OrgCandidateServiceImpl extends BaseServiceImpl<OrgCandidateMapper,
     @Resource
     private OrgClassCandidateMapper orgClassCandidateMapper;
 
+    @Resource
+    private OrgCandidateMapper orgCandidateMapper;
+
     @Value("${qrcode.url}")
     private String qrcodeUrl;
 
@@ -106,22 +109,28 @@ public class OrgCandidateServiceImpl extends BaseServiceImpl<OrgCandidateMapper,
      * @param orgCandidateReq
      * @return
      */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
     public Boolean review(OrgCandidateReq orgCandidateReq) {
-        if (orgCandidateReq.getStatus().equals(2)) {
+        Integer status = orgCandidateReq.getStatus();
+        if (status == null) {
+            return false;
+        }
+
+        Long candidateId = orgCandidateReq.getCandidateId();
+        Long id = orgCandidateReq.getId();
+        String remark = orgCandidateReq.getRemark();
+
+        // 通过
+        if (status.equals(2)) {
             OrgClassCandidateDO orgClassCandidateDO = new OrgClassCandidateDO();
-            orgClassCandidateDO.setCandidateId(orgCandidateReq.getCandidateId());
+            orgClassCandidateDO.setCandidateId(candidateId);
             orgClassCandidateDO.setClassId(orgCandidateReq.getOrClassId());
+            orgClassCandidateDO.setStatus(0);
             orgClassCandidateMapper.insert(orgClassCandidateDO);
         }
 
-        // 8. 更新考生申请表
-        super.update(orgCandidateReq, orgCandidateReq.getId());
+        // 更新状态
+        orgCandidateMapper.updateCandidateStatus(id, candidateId, status, remark);
         return true;
     }
-
-
-
 
 }

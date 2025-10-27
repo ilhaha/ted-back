@@ -23,6 +23,7 @@ import cn.hutool.extra.qrcode.QrCodeUtil;
 import com.alibaba.excel.support.cglib.beans.BeanMap;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -449,12 +450,23 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         return orgDetailResp;
     }
 
+    // 考生查看考生机构表 status 和 remark
     @Override
-    public Integer getAgencyStatus(Long orgId) {
+    public AgencyStatusVO getAgencyStatus(Long orgId) {
         if (orgId == null)
             throw new BusinessException("请选择机构");
-        Integer agencyStatus = orgMapper.getAgencyStatus(orgId, TokenLocalThreadUtil.get().getUserId());
-        return agencyStatus != null ? agencyStatus : 0;
+
+        // 调用 Mapper，获取包含 status 和 remark 的结果
+        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, TokenLocalThreadUtil.get().getUserId());
+
+        // 无数据时，返回默认值（status=0，remark为空）
+        if (agencyStatusVO == null) {
+            agencyStatusVO = new AgencyStatusVO();
+            agencyStatusVO.setStatus(0);
+            agencyStatusVO.setRemark("");  // 或根据需求设为 null
+        }
+
+        return agencyStatusVO;  // 返回包含两个字段的结果
     }
 
     @Override
@@ -462,10 +474,21 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         if (orgId == null)
             throw new BusinessException("请选择机构");
         Long userId = TokenLocalThreadUtil.get().getUserId();
-        // 查找机构2
+        // 查找机构与考生关联状态等于1的数据
         Integer agencyStatus = orgMapper.findAgency(orgId, userId);
         if (agencyStatus > 0) {
             return -1;
+        }
+        // 查找机构与考生关联状态等于-1的数据
+        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, TokenLocalThreadUtil.get().getUserId());
+        if (agencyStatusVO != null && agencyStatusVO.getStatus() != null && agencyStatusVO.getStatus() == -1) {
+            OrgCandidateDO orgCandidateDO = new OrgCandidateDO();
+            orgCandidateDO.setId(orgId);
+            orgCandidateDO.setProjectId(projectId);
+            orgCandidateDO.setId(agencyStatusVO.getId());
+            orgCandidateDO.setStatus(1);
+            return orgCandidateMapper.update(orgCandidateDO,new LambdaUpdateWrapper<OrgCandidateDO>().eq(OrgCandidateDO::getId,agencyStatusVO.getId())
+                    .set(OrgCandidateDO::getRemark,null));
         }
         OrgCandidateDO orgCandidateDO = new OrgCandidateDO();
         orgCandidateDO.setOrgId(orgId);

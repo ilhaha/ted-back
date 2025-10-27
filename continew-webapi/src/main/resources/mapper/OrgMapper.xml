@@ -78,8 +78,8 @@
         where o.id = #{orgId}
     </select>
 
-    <select id="getAgencyStatus" resultType="java.lang.Integer">
-        select status
+    <select id="getAgencyStatus" resultType="top.continew.admin.training.model.vo.AgencyStatusVO">
+        select id,org_id,status ,remark
         from ted_org_candidate
         where is_deleted = 0
           and org_id = #{orgId}

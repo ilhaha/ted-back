@@ -66,16 +66,16 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
 
     OrgDetailResp getOrgDetail(@Param("orgId") Long orgId);
 
-    Integer getAgencyStatus(@Param("orgId") Long orgId, @Param("userId") Long userId);
-
+    //  AgencyStatusVO，接收多字段
+    AgencyStatusVO getAgencyStatus(@Param("orgId") Long orgId, @Param("userId") Long userId);
     @Insert("insert into ted_org_candidate values (null, #{orgId}, #{userId}, #{projectId}, 1, null,1,1, now(), now() 0)")
     Integer studentAddAgency(@Param("orgId") Long orgId, @Param("userId") Long userId, @Param("projectId") Long projectId);
 
     @Select("select count(1) " + "from ted_org_candidate " + "where is_deleted = 0 " + "and status = 1 " + "and org_id = #{orgId} " + "and candidate_id = #{userId}")
     Integer findAgency(@Param("orgId") Long orgId, @Param("userId") Long userId);
 
-    @Delete("update ted_org_candidate set is_deleted = 1 where org_id = #{orgId}")
-    Integer studentDelAgency(@Param("orgId") Long orgId, @Param("userId") Long userId);
+    @Delete("update ted_org_candidate set is_deleted = 1,status = 3 where org_id = #{orgId} and candidate_id = #{userId}")
+    Integer studentDelAgency(@Param("orgId") Long orgId, @Param("userId") Long userId );
 
     Integer approveStudent(@Param("orgId") Long orgId, @Param("userId") Long userId);
 

@@ -27,6 +27,7 @@ import top.continew.admin.training.listen.StudentDataListener;
 import top.continew.admin.training.model.req.BindUserReq;
 import top.continew.admin.training.model.req.OrgApplyPreReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
+import top.continew.admin.training.model.vo.AgencyStatusVO;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.SelectOrgVO;
 import top.continew.admin.training.model.vo.UserVO;
@@ -193,8 +194,9 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     }
 
     @GetMapping("/getAgencyStatus/{orgId}")
-    public Integer getAgencyStatus(@PathVariable Long orgId) {
-        return orgService.getAgencyStatus(orgId);
+    public Result getAgencyStatus(@PathVariable Long orgId) {
+        AgencyStatusVO statusVO = orgService.getAgencyStatus(orgId);
+        return Result.success(statusVO);
     }
 
     @GetMapping("/studentAddAgency/{orgId}/{projectId}")

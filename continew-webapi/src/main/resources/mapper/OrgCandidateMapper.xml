@@ -14,4 +14,20 @@
                            ON su.username = tei.id_card_number AND tei.is_deleted = 0
             ${ew.customSqlSegment}
     </select>
+
+    <!-- 根据传入参数动态更新状态（可选更新remark） -->
+    <update id="updateCandidateStatus">
+        UPDATE ted_org_candidate
+        SET
+        <if test="remark != null and remark != ''">
+            remark = #{remark},
+        </if>
+        status = #{status}
+        WHERE
+        id = #{id}
+        AND candidate_id = #{candidateId}
+        AND is_deleted = 0
+    </update>
+
+
 </mapper>

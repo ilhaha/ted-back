@@ -19,6 +19,7 @@ package top.continew.admin.training.service;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.model.req.OrgApplyPreReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
+import top.continew.admin.training.model.vo.AgencyStatusVO;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.admin.training.model.vo.SelectOrgVO;
 import top.continew.admin.training.model.vo.UserVO;
@@ -64,12 +65,11 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
     OrgDetailResp getOrgDetail(Long orgId);
 
     /**
-     * 获取机构状态
-     *
-     * @param orgId 机构id
-     * @return Integer
+     * 获取当前用户在指定机构的状态（包含状态码和备注）
+     * @param orgId 机构ID
+     * @return 包含status和remark的VO对象
      */
-    Integer getAgencyStatus(Long orgId);
+    AgencyStatusVO getAgencyStatus(Long orgId);
 
     /**
      * 学生报名
