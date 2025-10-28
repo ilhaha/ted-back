@@ -204,6 +204,12 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
         return orgService.studentAddAgency(orgId,projectId);
     }
 
+    //学生退出机构
+    @GetMapping("/studentQuitAgency/{orgId}")
+    public Integer studentQuitAgency(@PathVariable Long orgId) {
+        return orgService.studentQuitAgency(orgId);
+    }
+
     @GetMapping("/studentDelAgency/{orgId}")
     public Integer studentDelAgency(@PathVariable Long orgId) {
         return orgService.studentDelAgency(orgId);

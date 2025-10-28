@@ -124,12 +124,13 @@ public class OrgCandidateServiceImpl extends BaseServiceImpl<OrgCandidateMapper,
             OrgClassCandidateDO orgClassCandidateDO = new OrgClassCandidateDO();
             orgClassCandidateDO.setCandidateId(candidateId);
             orgClassCandidateDO.setClassId(orgCandidateReq.getOrClassId());
+            orgClassCandidateDO.setUpdateUser(TokenLocalThreadUtil.get().getUserId());
             orgClassCandidateDO.setStatus(0);
             orgClassCandidateMapper.insert(orgClassCandidateDO);
         }
 
         // 更新状态
-        orgCandidateMapper.updateCandidateStatus(id, candidateId, status, remark);
+        orgCandidateMapper.updateCandidateStatus(id, candidateId, status, remark, TokenLocalThreadUtil.get().getUserId());
         return true;
     }
 

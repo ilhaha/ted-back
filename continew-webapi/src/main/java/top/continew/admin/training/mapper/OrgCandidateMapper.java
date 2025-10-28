@@ -22,6 +22,6 @@ public interface OrgCandidateMapper extends BaseMapper<OrgCandidateDO> {
     IPage<OrgCandidateResp> getCandidatesList(@Param("page") Page<Object> objectPage, @Param(Constants.WRAPPER) QueryWrapper<OrgCandidateDO> queryWrapper);
 
     // 修改机构考生表状态
-    void updateCandidateStatus(@Param("id") Long id, @Param("candidateId") Long candidateId, @Param("status") Integer status, @Param("remark") String remark);
+    void updateCandidateStatus(@Param("id") Long id, @Param("candidateId") Long candidateId, @Param("status") Integer status, @Param("remark") String remark, @Param("updateUser") Long updateUser);
 
 }

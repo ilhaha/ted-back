@@ -77,6 +77,10 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
     @Delete("update ted_org_candidate set is_deleted = 1,status = 3 where org_id = #{orgId} and candidate_id = #{userId}")
     Integer studentDelAgency(@Param("orgId") Long orgId, @Param("userId") Long userId );
 
+    Integer studentQuitAgency(@Param("orgId") Long orgId, @Param("userId") Long userId);
+
+    Integer studentQuitAgencyClass(@Param("orgId") Long orgId, @Param("userId") Long userId  );
+
     Integer approveStudent(@Param("orgId") Long orgId, @Param("userId") Long userId);
 
     Integer refuseStudent(@Param("orgId") Long orgId, @Param("userId") Long userId);

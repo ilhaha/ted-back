@@ -221,4 +221,29 @@
           and org_id = #{orgId}
           and candidate_id = #{userId}
     </update>
+
+    <!-- 退出机构班级 -->
+    <update id="studentQuitAgencyClass">
+        UPDATE ted_org_class_candidate coc
+        SET coc.is_deleted = 1,
+            coc.status = 3
+        WHERE coc.candidate_id = #{userId}
+          AND coc.class_id IN (
+            SELECT id
+            FROM ted_org_class oc
+            WHERE oc.org_id = #{orgId}
+              AND oc.is_deleted = 0
+        )
+    </update>
+
+   <!-- 退出机构 -->
+    <update id="studentQuitAgency">
+        UPDATE ted_org_candidate
+        SET is_deleted = 1,
+            status = 0
+        WHERE org_id = #{orgId}
+          AND candidate_id = #{userId}
+          AND is_deleted = 0
+    </update>
+
 </mapper>

@@ -42,7 +42,11 @@ import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.exam.mapper.ExamPlanMapper;
 import top.continew.admin.exam.mapper.ProjectMapper;
+import top.continew.admin.exam.mapper.SpecialCertificationApplicantMapper;
+import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.system.model.resp.FileInfoResp;
@@ -130,6 +134,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Resource
     private EnrollPreMapper enrollPreMapper;
+
+    @Resource
+    private ExamPlanMapper examPlanMapper;
 
     private static final long EXPIRE_TIME = 7;  // 过期时间（天）
 
@@ -485,6 +492,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             OrgCandidateDO orgCandidateDO = new OrgCandidateDO();
             orgCandidateDO.setId(orgId);
             orgCandidateDO.setProjectId(projectId);
+            orgCandidateDO.setUpdateUser(TokenLocalThreadUtil.get().getUserId());
             orgCandidateDO.setId(agencyStatusVO.getId());
             orgCandidateDO.setStatus(1);
             return orgCandidateMapper.update(orgCandidateDO,new LambdaUpdateWrapper<OrgCandidateDO>().eq(OrgCandidateDO::getId,agencyStatusVO.getId())
@@ -494,8 +502,55 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         orgCandidateDO.setOrgId(orgId);
         orgCandidateDO.setCandidateId(userId);
         orgCandidateDO.setProjectId(projectId);
+        orgCandidateDO.setUpdateUser(TokenLocalThreadUtil.get().getUserId());
         orgCandidateDO.setStatus(1);
         return orgCandidateMapper.insert(orgCandidateDO);
+    }
+
+    // 学生退出机构
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Integer studentQuitAgency(Long orgId) {
+        if (orgId == null) {
+            throw new BusinessException("请选择机构");
+        }
+        Long userId = TokenLocalThreadUtil.get().getUserId();
+
+        // 查询该考生在当前机构下的所有未完成预报名记录（多个考试计划）
+        LambdaQueryWrapper<EnrollPreDO> enrollPreQueryWrapper = new LambdaQueryWrapper<>();
+        enrollPreQueryWrapper.eq(EnrollPreDO::getCandidateId, userId)
+                .eq(EnrollPreDO::getOrgId, orgId)
+                .eq(EnrollPreDO::getIsDeleted, false);
+        List<EnrollPreDO> enrollPreList = enrollPreMapper.selectList(enrollPreQueryWrapper);
+
+        // 检查所有预报名记录关联的考试计划
+        if (!enrollPreList.isEmpty()) {
+            for (EnrollPreDO enrollPre : enrollPreList) {
+                // 查询当前预报名记录关联的考试计划
+                LambdaQueryWrapper<ExamPlanDO> examPlanQueryWrapper = new LambdaQueryWrapper<>();
+                examPlanQueryWrapper.eq(ExamPlanDO::getId, enrollPre.getPlanId())
+                        .eq(ExamPlanDO::getIsDeleted, false);
+                ExamPlanDO examPlan = examPlanMapper.selectOne(examPlanQueryWrapper);
+
+                // 仅当“计划存在且未结束（status≠6）”时，才禁止退出
+                if (examPlan != null && examPlan.getStatus() != 6) {
+                    throw new BusinessException("存在通过该机构申请的未结束的考试计划申请或考试，无法退出机构");
+                }
+            }
+        }
+
+        // 退出机构班级
+        int classAffectedRows = orgMapper.studentQuitAgencyClass(orgId, userId);
+        if (classAffectedRows <= 0) {
+            throw new BusinessException("退出班级失败");
+        }
+
+        // 退出机构
+        int orgAffectedRows = orgMapper.studentQuitAgency(orgId, userId);
+        if (orgAffectedRows <= 0) {
+            throw new BusinessException("退出机构失败");
+        }
+        return orgAffectedRows;
     }
 
     @Override

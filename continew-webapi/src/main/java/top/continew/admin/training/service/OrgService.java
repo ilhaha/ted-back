@@ -72,14 +72,21 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
     AgencyStatusVO getAgencyStatus(Long orgId);
 
     /**
-     * 学生报名
+     * 学生报名机构
      *
      * @return Integer
      */
     Integer studentAddAgency(Long orgId, Long projectId);
 
     /**
-     * 学生取消报名
+     * 学生退出机构
+     *
+     * @return Integer
+     */
+    Integer studentQuitAgency(Long orgId);
+
+    /**
+     * 学生取消报名机构
      *
      * @param orgId 机构id
      * @return Integer

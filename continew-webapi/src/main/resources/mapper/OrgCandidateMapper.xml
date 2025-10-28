@@ -22,7 +22,8 @@
         <if test="remark != null and remark != ''">
             remark = #{remark},
         </if>
-        status = #{status}
+        status = #{status},
+        update_user = #{updateUser}
         WHERE
         id = #{id}
         AND candidate_id = #{candidateId}
