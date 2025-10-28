@@ -825,9 +825,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     public Boolean applyPre(OrgApplyPreReq orgApplyPreReq) {
         Long examPlanId = orgApplyPreReq.getExamPlanId();
         List<Long> candidateIds = orgApplyPreReq.getCandidateIds();
-
+        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+        OrgDO orgDO = orgUserMapper.selectOrgByUserId(userTokenDo.getUserId());
         List<EnrollPreDO> insertPreList = candidateIds.stream()
-                .map(candidateId -> createEnrollPre(candidateId, examPlanId))
+                .map(candidateId -> createEnrollPre(candidateId, examPlanId,orgDO.getId()))
                 .toList();
 
         return enrollPreMapper.insertBatch(insertPreList);
@@ -845,15 +846,15 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     /**
      * 封装创建单个 EnrollPreDO 的逻辑
      */
-    private EnrollPreDO createEnrollPre(Long candidateId, Long examPlanId) {
+    private EnrollPreDO createEnrollPre(Long candidateId, Long examPlanId,Long orgId) {
         EnrollPreDO preDO = new EnrollPreDO();
         preDO.setCandidateId(candidateId);
         preDO.setPlanId(examPlanId);
+        preDO.setOrgId(orgId);
         preDO.setStatus(0);
         try {
             // 生成二维码 URL
             String qrContent = buildQrContent(candidateId, examPlanId);
-
             // 生成二维码图片并上传
             String qrUrl = generateAndUploadQr(candidateId, qrContent);
             // 设置二维码地址

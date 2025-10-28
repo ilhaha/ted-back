@@ -30,17 +30,4 @@ public class DocumentPreQuery implements Serializable {
     @Query(type = QueryType.EQ)
     private Long enrollPreUploadId;
 
-    /**
-     * 存储路径
-     */
-    @Schema(description = "存储路径")
-    @Query(type = QueryType.EQ)
-    private String docPath;
-
-    /**
-     * 关联资料类型ID
-     */
-    @Schema(description = "关联资料类型ID")
-    @Query(type = QueryType.EQ)
-    private Long typeId;
 }

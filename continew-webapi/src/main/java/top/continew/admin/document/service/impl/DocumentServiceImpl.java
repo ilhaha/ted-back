@@ -89,6 +89,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
     public PageResp<DocumentResp> page(DocumentQuery query, PageQuery pageQuery) {
         // 1. 分页查询主数据
         QueryWrapper<DocumentDO> queryWrapper = buildQueryWrapper(query);
+        queryWrapper.eq("is_deleted", 0);
         super.sort(queryWrapper, pageQuery);
         IPage<DocumentDO> page = baseMapper.selectPage(new Page<>(pageQuery.getPage(), pageQuery
                 .getSize()), queryWrapper);

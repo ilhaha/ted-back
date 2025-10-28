@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="top.continew.admin.document.mapper.DocumentPreMapper">
+    <select id="selectDocumentPrePage"
+            resultType="top.continew.admin.document.model.resp.DocumentPreDetailResp">
+        SELECT tdp.*, tdt.type_name
+        FROM ted_document_pre tdp
+                 LEFT JOIN ted_document_type tdt
+                           ON tdp.type_id = tdt.id AND tdt.is_deleted = 0
+            ${ew.customSqlSegment}
+    </select>
 </mapper>

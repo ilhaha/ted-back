@@ -22,6 +22,12 @@ public class EnrollPreDO extends BaseDO {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 机构id
+     */
+    private Long orgId;
+
+
+    /**
      * 考生id
      */
     private Long candidateId;
