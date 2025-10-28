@@ -553,6 +553,54 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         return orgAffectedRows;
     }
 
+    // 机构移除学生
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Integer agencyRemoveStudent(Long orgId, Long candidateId) {
+        if (orgId == null) {
+            throw new BusinessException("机构ID不能为空");
+        }
+        if (candidateId == null) {
+            throw new BusinessException("学生ID不能为空");
+        }
+
+        // 检查学生在该机构下是否存在未结束的考试计划
+        LambdaQueryWrapper<EnrollPreDO> enrollPreQueryWrapper = new LambdaQueryWrapper<>();
+        enrollPreQueryWrapper.eq(EnrollPreDO::getCandidateId, candidateId)
+                .eq(EnrollPreDO::getOrgId, orgId)
+                .eq(EnrollPreDO::getIsDeleted, false);
+        List<EnrollPreDO> enrollPreList = enrollPreMapper.selectList(enrollPreQueryWrapper);
+
+        if (!enrollPreList.isEmpty()) {
+            for (EnrollPreDO enrollPre : enrollPreList) {
+                LambdaQueryWrapper<ExamPlanDO> examPlanQueryWrapper = new LambdaQueryWrapper<>();
+                examPlanQueryWrapper.eq(ExamPlanDO::getId, enrollPre.getPlanId())
+                        .eq(ExamPlanDO::getIsDeleted, false);
+                ExamPlanDO examPlan = examPlanMapper.selectOne(examPlanQueryWrapper);
+
+                // 如果考试计划未结束，则禁止移除
+                if (examPlan != null && examPlan.getStatus() != 6) {
+                    throw new BusinessException("该学生存在未结束的考试计划，无法从机构中移除");
+                }
+            }
+        }
+
+        // 退出机构班级
+        int classAffectedRows = orgMapper.studentQuitAgencyClass(orgId, candidateId);
+        if (classAffectedRows < 0) {
+            throw new BusinessException("移除学生班级失败");
+        }
+
+        // 退出机构
+        int orgAffectedRows = orgMapper.studentQuitAgency(orgId, candidateId);
+        if (orgAffectedRows <= 0) {
+            throw new BusinessException("移除学生失败");
+        }
+
+        return orgAffectedRows;
+    }
+
+
     @Override
     public Integer studentDelAgency(Long orgId) {
         if (orgId == null)

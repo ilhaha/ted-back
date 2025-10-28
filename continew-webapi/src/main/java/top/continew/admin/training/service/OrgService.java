@@ -85,6 +85,17 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      */
     Integer studentQuitAgency(Long orgId);
 
+
+    /**
+     * 机构移除学生
+     *
+     * @param orgId 机构ID
+     * @param candidateId 学生ID
+     * @return Integer
+     */
+    Integer agencyRemoveStudent(Long orgId, Long candidateId);
+
+
     /**
      * 学生取消报名机构
      *
