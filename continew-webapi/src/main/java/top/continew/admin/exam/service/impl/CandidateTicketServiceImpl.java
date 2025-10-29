@@ -2,6 +2,7 @@ package top.continew.admin.exam.service.impl;
 
 import com.alibaba.excel.EasyExcel;
 import com.aspose.cells.PdfSaveOptions;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,8 +13,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileCopyUtils;
 import top.continew.admin.common.util.AESWithHMAC;
+import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.exam.mapper.ExamIdcardMapper;
 import top.continew.admin.exam.mapper.ExamTicketMapper;
 import top.continew.admin.exam.model.dto.CandidateTicketDTO;
+import top.continew.admin.exam.model.entity.ExamIdcardDO;
 import top.continew.admin.exam.service.CandidateTicketService;
 
 import java.io.*;
@@ -42,6 +46,9 @@ public class CandidateTicketServiceImpl implements CandidateTicketService {
     /** 最大并发生成数量（保护 Aspose / POI 的内存与 CPU 占用） */
     @Value("${ticket.gen.concurrent:8}")
     private int maxConcurrentGenerations;
+
+    @Resource
+    private ExamIdcardMapper examIdcardMapper;
 
     /** 模板缓存（字节）*/
     private volatile byte[] templateCache;
@@ -77,9 +84,12 @@ public class CandidateTicketServiceImpl implements CandidateTicketService {
 
         // 查询数据
         CandidateTicketDTO dto = examTicketMapper.findTicketByUserAndExamNumber(userId, aesWithHMAC.encryptAndSign(examNumber));
-        // 测试或默认赋值（可去掉）
-         dto.setPhoto("https://img.shetu66.com/2023/04/25/1682417792544419.png");
-
+        // 查询用户照片URL
+        QueryWrapper<ExamIdcardDO> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("id_card_number", dto.getIdCard())
+                    .eq("is_deleted", 0)
+                    .select("face_photo");
+        dto.setPhoto(examIdcardMapper.selectOne(queryWrapper).getFacePhoto());
         if (dto == null) {
             throw new RuntimeException("未找到该用户的准考证数据！");
         }
@@ -87,8 +97,6 @@ public class CandidateTicketServiceImpl implements CandidateTicketService {
         // 解密并设置
         dto.setTicketId(examNumber);
         dto.setIdCard(aesWithHMAC.verifyAndDecrypt(dto.getIdCard()));
-        log.info("查询到的准考证数据：{}", dto);
-
         // 组装填充字段
         Map<String, Object> dataMap = new HashMap<>();
         dataMap.put("name", getSafeValue(dto.getName()));

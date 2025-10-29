@@ -84,6 +84,12 @@ public class IdCardFileInfoResp extends FileInfo {
      */
     private String idCardPhotoBack;
 
+
+    /**
+     * 人像证件照路径
+     */
+    private String facePhoto;
+
     /**
      * 逻辑删除标志：0否 1是
      */

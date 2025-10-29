@@ -78,6 +78,11 @@ public class ExamIdcardDO extends BaseDO {
     private String idCardPhotoBack;
 
     /**
+     * 人像照片路径
+     */
+    private String facePhoto;
+
+    /**
      * 逻辑删除标志：0否 1是
      */
     private Integer isDeleted;

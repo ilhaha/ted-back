@@ -21,6 +21,7 @@ import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.URLUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,12 +52,15 @@ import top.continew.admin.system.model.resp.file.FileStatisticsResp;
 import top.continew.admin.system.service.FileService;
 import top.continew.admin.system.service.StorageService;
 import top.continew.starter.core.constant.StringConstants;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.util.StrUtils;
 import top.continew.starter.core.util.URLUtils;
 import top.continew.starter.core.validation.CheckUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -224,12 +228,10 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         }
         return fileInfoResp;
     }
-
     /**
-     * 上传身份证（用于登录实名验证）
-     * @param file
-     * @param frontOrBack
-     * @return
+     * 上传身份证或人脸证件照（用于登录实名验证）
+     * @param file 文件
+     * @param frontOrBack 1=身份证正面，0=身份证反面，2=人脸证件照
      */
     @Override
     public IdCardFileInfoResp uploadIdCard(MultipartFile file, Integer frontOrBack) {
@@ -242,9 +244,10 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
             storage = storageService.getByCode(storageCode);
             CheckUtils.throwIfNotExists(storage, "StorageDO", "Code", storageCode);
         }
+
         LocalDate today = LocalDate.now();
-        String path = today.getYear() + StringConstants.SLASH + today.getMonthValue() + StringConstants.SLASH + today
-                .getDayOfMonth() + StringConstants.SLASH;
+        String path = today.getYear() + StringConstants.SLASH + today.getMonthValue()
+                + StringConstants.SLASH + today.getDayOfMonth() + StringConstants.SLASH;
 
         UploadPretreatment uploadPretreatment = fileStorageService.of(file)
                 .setPlatform(storage.getCode())
@@ -261,27 +264,53 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
             public void start() {
                 log.info("开始上传");
             }
-
             @Override
             public void progress(long progressSize, Long allSize) {
                 log.info("已上传 [{}]，总大小 [{}]", progressSize, allSize);
             }
-
             @Override
             public void finish() {
                 log.info("上传结束");
             }
         });
-        // 处理本地存储文件 URL
+
+        // 上传文件
         FileInfo fileInfo = uploadPretreatment.upload();
         String domain = StrUtil.appendIfMissing(storage.getDomain(), StringConstants.SLASH);
         fileInfo.setUrl(URLUtil.normalize(domain + fileInfo.getPath() + fileInfo.getFilename()));
         IdCardFileInfoResp fileInfoResp = new IdCardFileInfoResp();
         BeanUtils.copyProperties(fileInfo, fileInfoResp);
-        IdCardDo idCardDo = null;
+
+        // 处理人脸证件照
+        if (frontOrBack != null && frontOrBack == 2) {
+            try {
+                BufferedImage img = ImageIO.read(file.getInputStream());
+                int width = img.getWidth();
+                int height = img.getHeight();
+
+                // 校验尺寸约为 295x413
+                if (Math.abs(width - 295) > 10 || Math.abs(height - 413) > 10) {
+                    throw new BusinessException("人脸证件照尺寸不符合要求，应为约 295×413 像素");
+                }
+
+                // 校验文件大小
+                if (file.getSize() > 2 * 1024 * 1024) {
+                    throw new BusinessException("人脸证件照大小不能超过 2MB");
+                }
+
+                fileInfoResp.setFacePhoto(fileInfo.getUrl());
+                log.info("人脸证件照上传成功：{}", fileInfo.getUrl());
+                return fileInfoResp;
+
+            } catch (Exception e) {
+                log.error("人脸证件照上传失败：{}", e.getMessage(), e);
+                throw new BusinessException("人脸证件照上传失败：" + e.getMessage());
+            }
+        }
+        // 身份证识别逻辑
         try {
-            boolean flag = frontOrBack == 1 ? true : false;
-            idCardDo = idCardRecognition.uploadIdCard(file.getInputStream(), flag);
+            boolean flag = frontOrBack == 1;
+            IdCardDo idCardDo = idCardRecognition.uploadIdCard(file.getInputStream(), flag);
             ValidationUtils.throwIf(ObjectUtils.isEmpty(idCardDo), "身份证信息识别失败");
             if (flag) {
                 fileInfoResp.setRealName(idCardDo.getName());
@@ -290,7 +319,7 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
                 fileInfoResp.setBirthDate(idCardDo.getBirthDate());
                 fileInfoResp.setAddress(idCardDo.getAddress());
                 fileInfoResp.setIdCardNumber(idCardDo.getIdNumber());
-            }else {
+            } else {
                 fileInfoResp.setIssuingAuthority(idCardDo.getIssueAuthority());
                 fileInfoResp.setValidStartDate(idCardDo.getSetValidPeriodStart());
                 fileInfoResp.setValidEndDate(idCardDo.getSetValidPeriodEnd());

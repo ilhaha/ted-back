@@ -85,4 +85,11 @@ public class ExamIdcardReq implements Serializable {
      * 身份证反面照片路径
      */
     private String idCardPhotoBack;
+
+    /**
+     * 人像面照片路径
+     */
+    private String facePhoto;
+
+
 }

@@ -53,11 +53,23 @@ public class ExamIdcardServiceImpl extends BaseServiceImpl<ExamIdcardMapper, Exa
 
     @Override
     public Long saveRealName(ExamIdcardReq examIdcardReq) {
+        // 校验有效期是否过期
         LocalDate validEndDate = examIdcardReq.getValidEndDate();
         LocalDate today = LocalDate.now();
-        ValidationUtils.throwIf(validEndDate != null && today.isAfter(validEndDate),"身份证已过期");
-        examIdcardReq.setIdCardNumber(aesWithHMAC.encryptAndSign(examIdcardReq.getIdCardNumber()));
+        ValidationUtils.throwIf(validEndDate != null && today.isAfter(validEndDate), "身份证已过期");
+
+        //加密身份证号
+        String encryptedIdCardNumber = aesWithHMAC.encryptAndSign(examIdcardReq.getIdCardNumber());
+
+        // 校验身份证号是否已实名
+        LambdaQueryWrapper<ExamIdcardDO> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ExamIdcardDO::getIdCardNumber, encryptedIdCardNumber)
+                .eq(ExamIdcardDO::getIsDeleted, 0)
+                .select(ExamIdcardDO::getIdCardNumber);
+        Long count = baseMapper.selectCount(queryWrapper);
+        ValidationUtils.throwIf(count > 0, "该身份证号码已实名，不能重复认证");
+        //加密再保存
+        examIdcardReq.setIdCardNumber(encryptedIdCardNumber);
         return super.add(examIdcardReq);
     }
-
 }
