@@ -1,6 +1,7 @@
 package top.continew.admin.document.service;
 
 import top.continew.admin.document.model.req.QrcodeUploadReq;
+import top.continew.admin.document.model.req.EnrollPreReviewReq;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.document.model.query.EnrollPreUploadQuery;
 import top.continew.admin.document.model.req.EnrollPreUploadReq;
@@ -21,4 +22,11 @@ public interface EnrollPreUploadService extends BaseService<EnrollPreUploadResp,
      * @return
      */
     Boolean qrcodeUpload(QrcodeUploadReq qrcodeUploadReq);
+
+    /**
+     * 机构报考
+     * @param reviewReq
+     * @return
+     */
+    Boolean review(EnrollPreReviewReq reviewReq);
 }

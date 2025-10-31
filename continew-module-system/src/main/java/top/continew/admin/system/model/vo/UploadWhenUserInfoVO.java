@@ -19,10 +19,20 @@ public class UploadWhenUserInfoVO implements Serializable {
     /**
      * 考生未上传的资料集合
      */
-    private List<UnuploadedDocumentTypeVO> unuploadedDocumentTypes;
+    private List<UploadedDocumentTypeVO> unuploadedDocumentTypes;
+
+    /**
+     * 考生已上传的资料集合
+     */
+    private List<UploadedDocumentTypeVO> uploadedDocumentTypes;
 
     /**
      * 计划信息
      */
     private PlanInfoVO planInfoVO;
+
+    /**
+     * 预报名信息
+     */
+    private EnrollPreInfoVO enrollPreInfoVO;
 }

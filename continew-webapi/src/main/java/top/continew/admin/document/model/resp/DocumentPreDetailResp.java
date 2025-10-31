@@ -47,6 +47,13 @@ public class DocumentPreDetailResp extends BaseDetailResp {
     private Long typeId;
 
     /**
+     * 资料类型
+     */
+    @Schema(description = "资料类型")
+    @ExcelProperty(value = "资料类型")
+    private String typeName;
+
+    /**
      * 删除标记(0未删,1已删)
      */
     @Schema(description = "删除标记(0未删,1已删)")

@@ -9,7 +9,7 @@ import java.io.Serializable;
  * @Create 2025/10/21 20:49
  */
 @Data
-public class UnuploadedDocumentTypeVO implements Serializable {
+public class UploadedDocumentTypeVO implements Serializable {
 
     /**
      * 资料类型id
@@ -20,4 +20,9 @@ public class UnuploadedDocumentTypeVO implements Serializable {
      * 资料类型名称
      */
     private String typeName;
+
+    /**
+     * 资料路径
+     */
+    private String docPath;
 }

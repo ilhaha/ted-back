@@ -3,6 +3,7 @@ package top.continew.admin.document.controller;
 import cn.dev33.satoken.annotation.SaIgnore;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.document.model.req.QrcodeUploadReq;
+import top.continew.admin.document.model.req.EnrollPreReviewReq;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,6 +28,17 @@ import top.continew.admin.document.service.EnrollPreUploadService;
 @RestController
 @CrudRequestMapping(value = "/document/enrollPreUpload", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE, Api.EXPORT})
 public class EnrollPreUploadController extends BaseController<EnrollPreUploadService, EnrollPreUploadResp, EnrollPreUploadDetailResp, EnrollPreUploadQuery, EnrollPreUploadReq> {
+
+
+    /**
+     * 机构报考审核
+     * @param reviewReq
+     * @return
+     */
+    @PostMapping("/review")
+    public Boolean review(@RequestBody @Validated EnrollPreReviewReq reviewReq) {
+        return baseService.review(reviewReq);
+    }
 
 
     /**

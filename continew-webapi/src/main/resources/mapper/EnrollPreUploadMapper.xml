@@ -22,4 +22,25 @@
                            ON toc.org_id = org.id AND org.is_deleted = 0
             ${ew.customSqlSegment}
     </select>
+    <select id="selectPreDoc" resultType="top.continew.admin.document.model.dto.EnrollPrePassDTO">
+        SELECT
+        tepu.id,
+        tepu.candidates_id,
+        tepu.plan_id,
+        tepu.qualification_file_url,
+        tepu.batch_id,
+        tdp.type_id,
+        GROUP_CONCAT(tdp.doc_path) AS doc_paths
+        FROM ted_enroll_pre_upload tepu
+        LEFT JOIN ted_document_pre tdp
+        ON tepu.id = tdp.enroll_pre_upload_id
+        AND tdp.is_deleted = 0
+        WHERE tepu.id IN
+        <foreach collection="reviewIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND tepu.is_deleted = 0
+        GROUP BY tepu.id, tdp.type_id, tepu.candidates_id, tepu.plan_id, tepu.qualification_file_url, tepu.batch_id
+        ORDER BY tepu.id, tdp.type_id
+    </select>
 </mapper>

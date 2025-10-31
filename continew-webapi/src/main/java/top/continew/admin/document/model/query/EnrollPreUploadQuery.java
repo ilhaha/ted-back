@@ -43,4 +43,11 @@ public class EnrollPreUploadQuery implements Serializable {
     @Schema(description = "机构id")
     @Query(type = QueryType.EQ,columns = "org.id")
     private Long orgId;
+
+    /**
+     * 审核状态
+     */
+    @Schema(description = "审核状态")
+    @Query(type = QueryType.EQ,columns = "tepu.status")
+    private Integer status;
 }

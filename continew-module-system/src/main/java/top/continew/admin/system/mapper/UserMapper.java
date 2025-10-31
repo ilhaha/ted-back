@@ -32,10 +32,7 @@ import top.continew.admin.common.model.entity.UserRoleDeptDo;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.resp.user.UserDetailResp;
 import top.continew.admin.system.model.resp.user.UserResp;
-import top.continew.admin.system.model.vo.InvigilatorVO;
-import top.continew.admin.system.model.vo.PlanInfoVO;
-import top.continew.admin.system.model.vo.StudentDocumentTypeVO;
-import top.continew.admin.system.model.vo.UnuploadedDocumentTypeVO;
+import top.continew.admin.system.model.vo.*;
 import top.continew.starter.extension.datapermission.annotation.DataPermission;
 import top.continew.starter.security.crypto.annotation.FieldEncrypt;
 
@@ -230,7 +227,11 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
     @Select("SELECT COUNT(1) FROM ted_org_user WHERE user_id = #{id}")
     boolean checkOrgUser(Long id);
 
-    List<UnuploadedDocumentTypeVO> getUnuploadedDocumentTypes(@Param("candidateId") String candidateId, @Param("planId") String planId);
+    List<UploadedDocumentTypeVO> getUnuploadedDocumentTypes(@Param("candidateId") String candidateId, @Param("planId") String planId);
 
     PlanInfoVO getPlanInfoByPlanId(@Param("planId") String planId);
+
+    EnrollPreInfoVO getEnrollPreInfo(@Param("candidateId") String candidateId, @Param("planId") String planId);
+
+    List<UploadedDocumentTypeVO> getUploadedDocumentTypes(@Param("uploadPreId") Long uploadPreId);
 }

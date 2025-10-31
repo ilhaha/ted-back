@@ -84,10 +84,7 @@ import top.continew.admin.system.model.resp.user.UserDetailResp;
 import top.continew.admin.system.model.resp.user.UserImportParseResp;
 import top.continew.admin.system.model.resp.user.UserImportResp;
 import top.continew.admin.system.model.resp.user.UserResp;
-import top.continew.admin.system.model.vo.InvigilatorTimeVO;
-import top.continew.admin.system.model.vo.InvigilatorVO;
-import top.continew.admin.system.model.vo.StudentDocumentTypeVO;
-import top.continew.admin.system.model.vo.UploadWhenUserInfoVO;
+import top.continew.admin.system.model.vo.*;
 import top.continew.admin.system.service.*;
 import top.continew.starter.cache.redisson.util.RedisUtils;
 import top.continew.starter.core.constant.StringConstants;
@@ -940,9 +937,17 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         UserDO userDO = baseMapper.selectById(candidateId);
         ValidationUtils.throwIfNull(userDO, "二维码错误");
         UploadWhenUserInfoVO uploadWhenUserInfoVO = new UploadWhenUserInfoVO();
+        // 先查是不是已上传过资料
+        EnrollPreInfoVO enrollPreInfoVO = baseMapper.getEnrollPreInfo(candidateId,planId);
+        if (ObjectUtil.isEmpty(enrollPreInfoVO)) {
+            // 获取考生未上传的资料类型
+            uploadWhenUserInfoVO.setUnuploadedDocumentTypes(baseMapper.getUnuploadedDocumentTypes(candidateId,planId));
+        }else {
+            uploadWhenUserInfoVO.setEnrollPreInfoVO(enrollPreInfoVO);
+            // 查出考生已上传的资料
+            uploadWhenUserInfoVO.setUploadedDocumentTypes(baseMapper.getUploadedDocumentTypes(enrollPreInfoVO.getId()));
+        }
         uploadWhenUserInfoVO.setNickname(userDO.getNickname());
-        // 获取考生未上传的资料类型
-        uploadWhenUserInfoVO.setUnuploadedDocumentTypes(baseMapper.getUnuploadedDocumentTypes(candidateId,planId));
         // 获取考生报考的计划名称和八大类信息
         uploadWhenUserInfoVO.setPlanInfoVO(baseMapper.getPlanInfoByPlanId(planId));
         return uploadWhenUserInfoVO;

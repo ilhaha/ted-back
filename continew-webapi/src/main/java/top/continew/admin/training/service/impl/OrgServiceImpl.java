@@ -31,6 +31,7 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import me.zhyd.oauth.exception.AuthException;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -39,14 +40,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.RedisConstant;
+import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
-import top.continew.admin.exam.mapper.ExamPlanMapper;
-import top.continew.admin.exam.mapper.ProjectMapper;
-import top.continew.admin.exam.mapper.SpecialCertificationApplicantMapper;
+import top.continew.admin.exam.mapper.*;
+import top.continew.admin.exam.model.entity.ClassroomDO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
+import top.continew.admin.exam.model.vo.ExamPlanVO;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.system.model.resp.FileInfoResp;
@@ -77,6 +79,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -137,6 +140,12 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Resource
     private ExamPlanMapper examPlanMapper;
+
+    @Resource
+    private ClassroomMapper classroomMapper;
+
+    @Resource
+    private EnrollMapper enrollMapper;
 
     private static final long EXPIRE_TIME = 7;  // 过期时间（天）
 
@@ -927,13 +936,30 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Transactional(rollbackFor = Exception.class)
     public Boolean applyPre(OrgApplyPreReq orgApplyPreReq) {
         Long examPlanId = orgApplyPreReq.getExamPlanId();
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
+        // 如果报名时间已过无法报名
+        LocalDateTime enrollEndTime = examPlanDO.getEnrollEndTime();
+        ValidationUtils.throwIf(!ExamPlanStatusEnum.IN_FORCE.getValue().equals(examPlanDO.getStatus()) || LocalDateTime.now().isAfter(enrollEndTime),
+                "报名时间已截至，无法继续报名");
+        // 如果报考的人数大于剩余计划人数，无法报名
+        ExamPlanVO examPlanVO = new ExamPlanVO();
+        BeanUtils.copyProperties(examPlanDO, examPlanVO);
+        examPlanVO.setClassroomList(examPlanMapper.getPlanExamClassroom(examPlanId));
+        int maxNumber = 0;
+        LambdaQueryWrapper<ClassroomDO> classroomDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        classroomDOLambdaQueryWrapper.in(ClassroomDO::getId,examPlanVO.getClassroomList());
+        List<ClassroomDO> classroomDOS = classroomMapper.selectList(classroomDOLambdaQueryWrapper);
+        for (ClassroomDO classroomDO : classroomDOS) {
+            maxNumber += classroomDO.getMaxCandidates();
+        }
+        Long actualCount = enrollMapper.getEnrollCount(examPlanId);
+        ValidationUtils.throwIf(maxNumber - actualCount - orgApplyPreReq.getCandidateIds().size() < 0, "报名人数大于考试计划剩余报名名额");
         List<Long> candidateIds = orgApplyPreReq.getCandidateIds();
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         OrgDO orgDO = orgUserMapper.selectOrgByUserId(userTokenDo.getUserId());
         List<EnrollPreDO> insertPreList = candidateIds.stream()
                 .map(candidateId -> createEnrollPre(candidateId, examPlanId,orgDO.getId()))
                 .toList();
-
         return enrollPreMapper.insertBatch(insertPreList);
     }
 
