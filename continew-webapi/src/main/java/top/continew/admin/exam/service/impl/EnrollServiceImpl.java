@@ -32,6 +32,7 @@ import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.ExamPlanVO;
@@ -77,6 +78,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     @Resource
     private AESWithHMAC aesWithHMAC;
 
+    @Resource
+    private ProjectMapper projectMapper;
+
     /**
      * 获取报名相关所有信息
      * 分页
@@ -90,7 +94,14 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         // 调用enrollMapper的getAllDetailEnrollList方法，传入项目id，获取所有报名详情列表
         EnrollDetailResp detailEnrollList = enrollMapper.getAllDetailEnrollList(examPlanId, TokenLocalThreadUtil.get()
             .getUserId());
+        //查询项目对应的收费标准
+        QueryWrapper<ProjectDO> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("id",examPlanMapper.selectById(examPlanId).getExamProjectId())
+            .eq("is_deleted", 0)
+            .select("exam_fee");
+        ProjectDO projectDO = projectMapper.selectOne(queryWrapper);
         // 返回所有报名详情列表
+        detailEnrollList.setExamFee(projectDO.getExamFee());
         detailEnrollList.setCertificates(enrollMapper.getCertificateList(examPlanId));
         detailEnrollList.setDocumentNames(enrollMapper.getDocumentList(examPlanId));
 

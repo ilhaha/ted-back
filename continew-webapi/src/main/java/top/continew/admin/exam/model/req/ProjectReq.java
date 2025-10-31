@@ -77,4 +77,10 @@ public class ProjectReq implements Serializable {
      */
     private Integer projectType;
 
+
+    /**
+     * 项目收费标准
+     */
+    private Long examFee;
+
 }

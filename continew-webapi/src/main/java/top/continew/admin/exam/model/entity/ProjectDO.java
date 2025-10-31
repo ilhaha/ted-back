@@ -81,4 +81,9 @@ public class ProjectDO extends BaseDO {
      * 项目类型（0-理论考试 1-实操考试）
      */
     private Integer projectType;
+
+    /**
+     * 项目收费标准
+     */
+    private Long examFee;
 }

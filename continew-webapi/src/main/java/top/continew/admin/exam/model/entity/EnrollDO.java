@@ -48,6 +48,11 @@ public class EnrollDO extends BaseDO {
     private Long examPlanId;
 
     /**
+     * 项目id
+     */
+    private Long examProjectId;
+
+    /**
      * 考试状态（0：未报名，1：已报名：2：已完成，3：已过期）
      */
     private Long enrollStatus;

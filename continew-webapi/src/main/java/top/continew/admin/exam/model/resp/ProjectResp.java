@@ -107,4 +107,11 @@ public class ProjectResp extends BaseResp {
     //    @Schema(description = "删除标记")
     //    private Boolean isDeleted;
 
+
+    /**
+     * 项目收费标准
+     */
+    @Schema(description = "项目收费标准")
+    private Long examFee;
+
 }
