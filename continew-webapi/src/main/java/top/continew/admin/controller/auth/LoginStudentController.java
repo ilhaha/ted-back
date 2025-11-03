@@ -19,8 +19,10 @@ package top.continew.admin.controller.auth;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
+import top.continew.admin.common.constant.enums.CandidateTypeEnum;
 import top.continew.admin.common.controller.BaseController;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
@@ -30,6 +32,9 @@ import top.continew.admin.system.model.req.user.UserReq;
 import top.continew.admin.system.model.resp.user.UserDetailResp;
 import top.continew.admin.system.model.resp.user.UserResp;
 import top.continew.admin.system.service.UserService;
+import top.continew.admin.training.mapper.CandidateTypeMapper;
+import top.continew.admin.training.model.entity.CandidateTypeDO;
+import top.continew.admin.training.service.CandidateTypeService;
 import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.annotation.CrudRequestMapping;
@@ -61,7 +66,11 @@ public class LoginStudentController extends BaseController<UserService, UserResp
     @Resource
     private AESWithHMAC aesWithHMAC;
 
+    @Resource
+    private CandidateTypeMapper candidateTypeMapper;
+
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public BaseIdResp<Long> add(UserReq req) {
         String rawUsername = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(req.getUsername()));
         String username = aesWithHMAC.encryptAndSign(rawUsername);
@@ -80,7 +89,12 @@ public class LoginStudentController extends BaseController<UserService, UserResp
         if (rawPassword == null || rawPassword.isEmpty())
             return null;
         req.setPassword(rawPassword);
-        return super.add(req);
+        BaseIdResp<Long> res = super.add(req);
+        CandidateTypeDO candidateTypeDO = new CandidateTypeDO();
+        candidateTypeDO.setCandidateId(res.getId());
+        candidateTypeDO.setType(CandidateTypeEnum.INSPECTION.getValue());
+        candidateTypeMapper.insert(candidateTypeDO);
+        return res;
     }
 
 }

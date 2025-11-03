@@ -234,4 +234,6 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
     EnrollPreInfoVO getEnrollPreInfo(@Param("candidateId") String candidateId, @Param("planId") String planId);
 
     List<UploadedDocumentTypeVO> getUploadedDocumentTypes(@Param("uploadPreId") Long uploadPreId);
+
+    int getCandidateIdentity(@Param("id") Long id);
 }

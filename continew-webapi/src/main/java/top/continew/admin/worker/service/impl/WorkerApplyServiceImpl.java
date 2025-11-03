@@ -18,32 +18,24 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
-import top.continew.admin.common.constant.enums.WorkerApplyReviewStatus;
+import top.continew.admin.common.constant.enums.WorkerApplyReviewStatusEnum;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.document.model.dto.DocFileDTO;
-import top.continew.admin.document.model.entity.EnrollPreUploadDO;
-import top.continew.admin.document.model.resp.EnrollPreUploadDetailResp;
-import top.continew.admin.document.model.resp.EnrollPreUploadResp;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.training.mapper.CandidateTypeMapper;
 import top.continew.admin.training.mapper.OrgClassCandidateMapper;
-import top.continew.admin.training.mapper.OrgClassMapper;
 import top.continew.admin.training.model.entity.CandidateTypeDO;
-import top.continew.admin.training.model.entity.OrgCandidateDO;
 import top.continew.admin.training.model.entity.OrgClassCandidateDO;
-import top.continew.admin.training.model.entity.OrgClassDO;
 import top.continew.admin.worker.mapper.WorkerApplyDocumentMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDocumentDO;
 import top.continew.admin.worker.model.req.VerifyReq;
 import top.continew.admin.worker.model.req.WorkerApplyReviewReq;
 import top.continew.admin.worker.model.req.WorkerQrcodeUploadReq;
-import top.continew.admin.worker.model.resp.ProjectNeedUploadDocVO;
 import top.continew.admin.worker.model.resp.WorkerApplyVO;
-import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -172,13 +164,13 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         // 1. 校验
         Integer status = req.getStatus();
         ValidationUtils.throwIf(
-                (WorkerApplyReviewStatus.REJECTED.getValue().equals(status)
-                        || WorkerApplyReviewStatus.FAKE_MATERIAL.getValue().equals(status))
+                (WorkerApplyReviewStatusEnum.REJECTED.getValue().equals(status)
+                        || WorkerApplyReviewStatusEnum.FAKE_MATERIAL.getValue().equals(status))
                         && ObjectUtil.isEmpty(req.getRemark()),
                 "请填写审核原因"
         );
 
-        if (WorkerApplyReviewStatus.APPROVED.getValue().equals(status)) {
+        if (WorkerApplyReviewStatusEnum.APPROVED.getValue().equals(status)) {
             // 2. 批量查询申请
             List<WorkerApplyDO> applyList = baseMapper.selectByIds(req.getReviewIds());
             if (CollUtil.isEmpty(applyList)) {

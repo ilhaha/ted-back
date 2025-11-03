@@ -953,6 +953,11 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         return uploadWhenUserInfoVO;
     }
 
+    @Override
+    public Boolean isWorker(Long id) {
+        return baseMapper.getCandidateIdentity(id) > 0;
+    }
+
     /**
      * 根据用户名获取用户列表
      *

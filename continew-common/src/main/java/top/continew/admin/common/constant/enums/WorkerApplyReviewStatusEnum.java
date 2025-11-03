@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Getter
 @RequiredArgsConstructor
-public enum WorkerApplyReviewStatus {
+public enum WorkerApplyReviewStatusEnum {
 
     PENDING_REVIEW(0, "待审核"),
 
