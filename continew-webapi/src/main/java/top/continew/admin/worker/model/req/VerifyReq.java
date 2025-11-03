@@ -16,5 +16,5 @@ public class VerifyReq {
     private String idLast6;
 
     @NotNull(message = "二维码错误")
-    private Long classId;
+    private String classId;
 }

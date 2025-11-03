@@ -21,7 +21,7 @@ public class WorkerQrcodeUploadReq {
      * 班级id
      */
     @NotNull(message = "二维码错误")
-    private Long classId;
+    private String classId;
 
     /**
      * 手机号

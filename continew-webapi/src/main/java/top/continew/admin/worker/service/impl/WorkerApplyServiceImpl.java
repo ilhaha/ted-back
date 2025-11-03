@@ -96,12 +96,14 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Override
     public WorkerApplyVO verify(VerifyReq verifyReq) {
         WorkerApplyVO workerApplyVO = new WorkerApplyVO();
-
+        String aseClassId = aesWithHMAC.verifyAndDecrypt(verifyReq.getClassId());
+        ValidationUtils.throwIfNull(aseClassId,"二维码已被篡改");
+        Long classId = Long.valueOf(aseClassId);
         // 初始化项目报名所需资料
-        workerApplyVO.setProjectNeedUploadDocs(baseMapper.selectProjectNeedUploadDoc(verifyReq.getClassId()));
+        workerApplyVO.setProjectNeedUploadDocs(baseMapper.selectProjectNeedUploadDoc(classId));
 
         // 如果有报名信息，可以在这里处理额外逻辑
-        if (isUpload(verifyReq.getClassId(), verifyReq.getIdLast6())) {
+        if (isUpload(classId, verifyReq.getIdLast6())) {
             // TODO: 查出已有报名信息，填充到 workerApplyVO
         }
 
@@ -117,12 +119,15 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Transactional(rollbackFor = Exception.class)
     @Override
     public Boolean submit(WorkerQrcodeUploadReq workerQrcodeUploadReq) {
+        String aseClassId = aesWithHMAC.verifyAndDecrypt(workerQrcodeUploadReq.getClassId());
+        ValidationUtils.throwIfNull(aseClassId,"二维码已被篡改");
+        Long classId = Long.valueOf(aseClassId);
         String idCardNumber = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(workerQrcodeUploadReq.getIdCardNumber()));
         ValidationUtils.throwIfBlank(idCardNumber, "身份证未上传");
         String phone = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(workerQrcodeUploadReq.getPhone()));
         ValidationUtils.throwIfBlank(phone, "身份信息未通过验证");
         // 先查是否重复上传
-        Long classId = workerQrcodeUploadReq.getClassId();
+
         String idCardNumberLast6 = idCardNumber.substring(idCardNumber.length() - 6);
         ValidationUtils.throwIf(isUpload(classId, idCardNumberLast6), "您已提交过报名，请勿重复提交！");
         // 插入作业人员报名表

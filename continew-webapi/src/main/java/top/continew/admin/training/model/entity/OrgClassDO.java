@@ -42,6 +42,11 @@ public class OrgClassDO extends BaseDO {
     private Integer classType;
 
     /**
+     * 作业人员扫码报考二维码
+     */
+    private String qrcodeApplyUrl;
+
+    /**
      * 是否删除 0-未删除 1-已删除
      */
     private Integer isDeleted;
