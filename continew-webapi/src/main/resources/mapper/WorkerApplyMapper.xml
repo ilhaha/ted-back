@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.worker.mapper.WorkerApplyMapper">
+
+    <select id="selectProjectNeedUploadDoc"
+            resultType="top.continew.admin.worker.model.resp.ProjectNeedUploadDocVO">
+        SELECT tc.name AS category_name,tp.project_name,tp.project_code,tdt.id,tdt.type_name
+        FROM ted_org_class toc
+                 LEFT JOIN ted_project tp
+                           ON toc.project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN ted_category tc
+                           ON tp.category_id = tc.id AND tc.is_deleted = 0
+                 LEFT JOIN ted_project_document_type tpdt
+                           ON tp.id = tpdt.project_id AND tpdt.is_deleted = 0
+                 LEFT JOIN ted_document_type tdt
+                           ON tpdt.document_type_id = tdt.id AND tdt.is_deleted = 0
+        WHERE toc.id = #{classId}
+          AND toc.is_deleted = 0
+          AND tdt.type_name != '身份证'
+    </select>
+</mapper>

@@ -28,4 +28,5 @@ public final class SmsConstants {
     public static final String EXAM_NOTIFICATION_TEMPLATE = "examCode";
     public static final String ENROLLMENT_CONFIRMATION_TEMPLATE = "enrollNotice";
     public static final String DEVICE_BINDING_TEMPLATE = "phoneConnectedCode";
+    public static final String WORKER_QRCODE_APPLY_TEMPLATE = "workerQRCodeApply";
 }

@@ -7,6 +7,8 @@ import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import org.hibernate.validator.constraints.Length;
+import top.continew.starter.data.core.annotation.Query;
+import top.continew.starter.data.core.enums.QueryType;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -45,4 +47,10 @@ public class OrgClassReq implements Serializable {
     @NotBlank(message = "班级名称不能为空")
     @Length(max = 255, message = "班级名称长度不能超过 {max} 个字符")
     private String className;
+
+    /**
+     * 班级类型，0作业人员班级，1检验人员班级
+     */
+    @Schema(description = "班级类型，0作业人员班级，1检验人员班级")
+    private Integer classType;
 }

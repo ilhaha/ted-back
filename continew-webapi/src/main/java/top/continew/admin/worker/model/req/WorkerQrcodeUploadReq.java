@@ -1,0 +1,85 @@
+package top.continew.admin.worker.model.req;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+import top.continew.admin.document.model.dto.DocFileDTO;
+
+import java.util.List;
+
+/**
+ * @author ilhaha
+ * @Create 2025/10/22 19:35
+ *
+ * 作业人员通过二维码上传资料
+ */
+@Data
+public class WorkerQrcodeUploadReq {
+
+    /**
+     * 班级id
+     */
+    @NotNull(message = "二维码错误")
+    private Long classId;
+
+    /**
+     * 手机号
+     */
+    @NotBlank(message = "手机号未填写")
+    private String phone;
+
+    /**
+     * 资料申请表文件集合
+     */
+    private List<DocFileDTO> docFileList;
+
+    /**
+     * 报名资格申请表文件
+     */
+    @NotBlank(message = "报名资格申请表文件未上传")
+    private String qualificationFileUrl;
+
+    /**
+     * 报名资格申请表文件名称
+     */
+    @NotBlank(message = "报名资格申请表文件未上传")
+    private String qualificationName;
+
+    /**
+     * 作业人员真实姓名
+     */
+    @NotBlank(message = "身份证未上传")
+    private String realName;
+
+    /**
+     * 作业人员真实性别
+     */
+    @NotEmpty(message = "身份证未上传")
+    private String gender;
+
+    /**
+     * 作业人员真实身份证
+     */
+    @NotBlank(message = "身份证未上传")
+    private String idCardNumber;
+
+    /**
+     * 作业人员身份证正面地址
+     */
+    @NotBlank(message = "身份证未上传")
+    private String idCardPhotoFront;
+
+    /**
+     * 作业人员身份证反面地址
+     */
+    @NotBlank(message = "身份证未上传")
+    private String idCardPhotoBack;
+
+    /**
+     * 作业人员正脸照地址
+     */
+    @NotBlank(message = "一寸免冠照未上传")
+    private String facePhoto;
+
+}

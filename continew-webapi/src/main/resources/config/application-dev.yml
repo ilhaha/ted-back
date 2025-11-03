@@ -13,8 +13,8 @@ server:
 spring.datasource:
   type: com.zaxxer.hikari.HikariDataSource
   # 请务必提前创建好名为 continew_admin 的数据库，如果使用其他数据库名请注意同步修改 DB_NAME 配置
-  url: jdbc:p6spy:mysql://${DB_HOST:120.79.7.238}:${DB_PORT:3306}/${DB_NAME:ted}?serverTimezone=Asia/Shanghai&useSSL=true&useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&autoReconnect=true&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
-  username: ${DB_USER:dev}
+  url: jdbc:p6spy:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ted}?serverTimezone=Asia/Shanghai&useSSL=true&useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&autoReconnect=true&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
+  username: ${DB_USER:root}
   password: ${DB_PWD:123456}
   driver-class-name: com.p6spy.engine.spy.P6SpyDriver
 
@@ -326,6 +326,8 @@ http:
   certificate: http://
 
 examine:
+  worker:
+    init-password: yxt@123!#
   userRole:
     candidatesId: 547888897925840930
     invigilatorId: 547888897925840935
@@ -348,4 +350,4 @@ excel:
     url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/10/22/68f8c4095814e0d894c63935.xlsx
 
 qrcode:
-  url: http://localhost:5174/org/apply/upload
+  url: http://localhost:5173/worker/apply/upload

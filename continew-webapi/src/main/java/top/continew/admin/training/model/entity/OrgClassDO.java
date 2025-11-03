@@ -37,6 +37,11 @@ public class OrgClassDO extends BaseDO {
     private String className;
 
     /**
+     * 班级类型，0作业人员班级，1检验人员班级
+     */
+    private Integer classType;
+
+    /**
      * 是否删除 0-未删除 1-已删除
      */
     private Integer isDeleted;

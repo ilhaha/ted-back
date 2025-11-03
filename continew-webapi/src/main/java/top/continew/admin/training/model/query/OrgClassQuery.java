@@ -37,4 +37,11 @@ public class OrgClassQuery implements Serializable {
     @Schema(description = "班级名称")
     @Query(type = QueryType.LIKE)
     private String className;
+
+    /**
+     * 班级类型，0作业人员班级，1检验人员班级
+     */
+    @Schema(description = "班级类型，0作业人员班级，1检验人员班级")
+    @Query(type = QueryType.EQ)
+    private Integer classType;
 }

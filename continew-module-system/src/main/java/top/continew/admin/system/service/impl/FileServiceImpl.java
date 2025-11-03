@@ -290,7 +290,7 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
 
                 // 校验尺寸约为 295x413
                 if (Math.abs(width - 295) > 10 || Math.abs(height - 413) > 10) {
-                    throw new BusinessException("人脸证件照尺寸不符合要求，应为约 295×413 像素");
+                    throw new BusinessException("一寸免冠照尺寸不符合要求，应为约 295×413 像素");
                 }
 
                 // 校验文件大小
@@ -304,7 +304,7 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
 
             } catch (Exception e) {
                 log.error("人脸证件照上传失败：{}", e.getMessage(), e);
-                throw new BusinessException("人脸证件照上传失败：" + e.getMessage());
+                throw new BusinessException(e.getMessage());
             }
         }
         // 身份证识别逻辑

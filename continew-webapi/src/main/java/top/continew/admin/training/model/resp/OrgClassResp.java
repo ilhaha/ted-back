@@ -47,6 +47,12 @@ public class OrgClassResp extends BaseResp {
     private String className;
 
     /**
+     * 班级类型，0作业人员班级，1检验人员班级
+     */
+    @Schema(description = "班级类型，0作业人员班级，1检验人员班级")
+    private Integer classType;
+
+    /**
      * 更新人id
      */
     @Schema(description = "更新人id")

@@ -310,6 +310,7 @@ aliyun:
     examCode: SMS_485670047
     enrollNotice: SMS_481035129
     phoneConnectedCode: SMS_486145105
+    workerQRCodeApply: SMS_497870064
   endpoint: dysmsapi.aliyuncs.com
   ocr:
     endpoint: ocr-api.cn-hangzhou.aliyuncs.com
