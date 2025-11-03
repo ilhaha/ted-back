@@ -113,6 +113,12 @@ ExamPlanResp extends BaseResp {
     private Integer status;
 
     /**
+     * 确定最终考试时间以及地点状态
+     */
+    @Schema(description = "确定最终考试时间以及地点状态")
+    private Integer isFinalConfirmed;
+
+    /**
      * 审批人ID列表
      */
     @Schema(description = "审批人")

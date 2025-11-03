@@ -144,6 +144,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         long count = maxCandidates.stream().mapToLong(Long::longValue).sum();
 
         examPlanDO.setMaxCandidates(Math.toIntExact(count));
+        //最终确定考试时间以及地点状态
+        examPlanDO.setIsFinalConfirmed(0);
         this.save(examPlanDO);
         // 添加计划和考场关联表
         examPlanMapper.savePlanClassroom(examPlanDO.getId(), examPlanSaveReq.getClassroomId());
@@ -593,6 +595,12 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         req.setEndTime(req.getStartTime().plusMinutes(projectDO.getExamDuration()));
         if (!DateUtil.validateEnrollmentTime(req.getEnrollEndTime(), req.getStartTime()))
             ValidationUtils.validate("报名结束时间不能晚于考试开始时间");
+
+        //判定最终确定考试时间以及地点状态
+        if (req.getIsFinalConfirmed() == null || req.getIsFinalConfirmed() != 1) {
+            throw new BusinessException("最终确定考试时间以及地点状态不能为空");
+        }
+        req.setIsFinalConfirmed(1);
         super.update(req, id);
     }
 

@@ -91,5 +91,6 @@ public class ExamPlanReq implements Serializable {
     private LocalDateTime enrollStartTime;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private Integer isFinalConfirmed;
 
 }

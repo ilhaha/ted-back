@@ -153,6 +153,11 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     public Boolean candidatesUpload(SpecialCertificationApplicantReq req) {
         UserTokenDo user = TokenLocalThreadUtil.get();
 
+        //判定该计划是否确定考试时间和考试地点
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(req.getPlanId());
+        ValidationUtils.throwIf(examPlanDO == null || examPlanDO.getIsFinalConfirmed() == 1,
+                "该考试计划已确定考试时间以及地点，无法报名。");
+
         // 查询该考生在该计划下是否已存在申报记录
         LambdaQueryWrapper<SpecialCertificationApplicantDO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SpecialCertificationApplicantDO::getCandidatesId, user.getUserId())
@@ -164,16 +169,16 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
         SpecialCertificationApplicantDO existing = baseMapper.selectOne(queryWrapper);
 
 
-        // 校验该考生是否已有机构预报名记录
-        LambdaQueryWrapper<EnrollPreDO> preQuery = new LambdaQueryWrapper<>();
-        preQuery.eq(EnrollPreDO::getCandidateId, user.getUserId())
-                .eq(EnrollPreDO::getPlanId, req.getPlanId())
-                .eq(EnrollPreDO::getIsDeleted, false)
-                .last("LIMIT 1");
-        EnrollPreDO preRecord = enrollPreMapper.selectOne(preQuery);
-
-        ValidationUtils.throwIf(preRecord != null,
-                "您已通过机构完成预报名，无法再次自行上传资料。");
+//        // 校验该考生是否已有机构预报名记录
+//        LambdaQueryWrapper<EnrollPreDO> preQuery = new LambdaQueryWrapper<>();
+//        preQuery.eq(EnrollPreDO::getCandidateId, user.getUserId())
+//                .eq(EnrollPreDO::getPlanId, req.getPlanId())
+//                .eq(EnrollPreDO::getIsDeleted, false)
+//                .last("LIMIT 1");
+//        EnrollPreDO preRecord = enrollPreMapper.selectOne(preQuery);
+//
+//        ValidationUtils.throwIf(preRecord != null,
+//                "您已通过机构完成预报名，无法再次自行上传资料。");
 
         // 若存在虚假资料记录（status=3），禁止再次申报
         ValidationUtils.throwIf(!ObjectUtils.isEmpty(existing) && existing.getStatus() == 3,

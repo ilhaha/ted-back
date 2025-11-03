@@ -137,6 +137,13 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     private Integer status;
 
     /**
+     * 确定最终考试时间以及地点状态
+     */
+    @Schema(description = "确定最终考试时间以及地点状态")
+    @ExcelProperty(value = "确定最终考试时间以及地点状态")
+    private Integer isFinalConfirmed;
+
+    /**
      * 审批人ID列表
      */
     @Schema(description = "审批人")

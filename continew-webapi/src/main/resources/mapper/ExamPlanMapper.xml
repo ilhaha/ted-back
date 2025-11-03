@@ -15,6 +15,7 @@
                tep.approval_time,
                tep.create_user,
                tep.update_user,
+               tep.is_final_confirmed,
                CASE
                    WHEN tep.update_user IS NOT NULL THEN su.nickname
                    ELSE NULL
@@ -66,6 +67,7 @@
                tep.update_user,
                tep.create_time,
                tep.update_time,
+               tep.is_final_confirmed,
                tel.location_name,
                tp.project_name,
                tep.exam_project_id,

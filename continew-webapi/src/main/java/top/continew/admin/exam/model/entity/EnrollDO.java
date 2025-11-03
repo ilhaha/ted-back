@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.model.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -50,6 +51,7 @@ public class EnrollDO extends BaseDO {
     /**
      * 项目id
      */
+    @TableField(exist = false)
     private Long examProjectId;
 
     /**
