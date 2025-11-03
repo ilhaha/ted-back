@@ -53,4 +53,11 @@ public class WorkerApplyDocumentDetailResp extends BaseDetailResp {
     @Schema(description = "删除标记(0未删,1已删)")
     @ExcelProperty(value = "删除标记(0未删,1已删)")
     private Integer isDeleted;
+
+    /**
+     * 资料类型
+     */
+    @Schema(description = "资料类型")
+    @ExcelProperty(value = "资料类型")
+    private String typeName;
 }

@@ -4,7 +4,7 @@
 
     <select id="selectProjectNeedUploadDoc"
             resultType="top.continew.admin.worker.model.resp.ProjectNeedUploadDocVO">
-        SELECT tc.name AS category_name,tp.project_name,tp.project_code,tdt.id,tdt.type_name
+        SELECT tc.name AS category_name, tp.project_name, tp.project_code, tdt.id, tdt.type_name
         FROM ted_org_class toc
                  LEFT JOIN ted_project tp
                            ON toc.project_id = tp.id AND tp.is_deleted = 0
@@ -17,5 +17,31 @@
         WHERE toc.id = #{classId}
           AND toc.is_deleted = 0
           AND tdt.type_name != '身份证'
+    </select>
+    <select id="page" resultType="top.continew.admin.worker.model.resp.WorkerApplyDetailResp">
+        SELECT twa.id,
+               twa.class_id,
+               twa.candidate_name,
+               twa.gender,
+               twa.phone,
+               twa.remark,
+               twa.qualification_path,
+               twa.qualification_name,
+               twa.id_card_number,
+               twa.id_card_photo_front,
+               twa.id_card_photo_back,
+               twa.face_photo,
+               twa.`status`,
+               toc.class_name,
+               tp.project_name,
+               tc.`name` AS category_name
+        FROM ted_worker_apply twa
+                 LEFT JOIN ted_org_class toc
+                           ON twa.class_id = toc.id AND toc.is_deleted = 0
+                 LEFT JOIN ted_project tp
+                           ON toc.project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN ted_category tc
+                           ON tp.category_id = tc.id AND tc.is_deleted = 0
+            ${ew.customSqlSegment}
     </select>
 </mapper>

@@ -1,5 +1,7 @@
 package top.continew.admin.worker.model.entity;
 
+import com.alibaba.excel.annotation.ExcelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -75,6 +77,11 @@ public class WorkerApplyDO extends BaseDO {
      * 审核状态:0待审核,1已生效,2未通过
      */
     private Integer status;
+
+    /**
+     * 审核意见或退回原因
+     */
+    private String remark;
 
     /**
      * 删除标记(0未删,1已删)

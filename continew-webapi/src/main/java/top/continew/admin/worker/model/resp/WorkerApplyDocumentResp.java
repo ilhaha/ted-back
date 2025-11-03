@@ -1,5 +1,6 @@
 package top.continew.admin.worker.model.resp;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -39,4 +40,10 @@ public class WorkerApplyDocumentResp extends BaseResp {
      */
     @Schema(description = "关联资料类型ID")
     private Long typeId;
+
+    /**
+     * 资料类型
+     */
+    @Schema(description = "资料类型")
+    private String typeName;
 }

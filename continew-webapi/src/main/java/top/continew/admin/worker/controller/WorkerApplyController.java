@@ -3,6 +3,7 @@ package top.continew.admin.worker.controller;
 import cn.dev33.satoken.annotation.SaIgnore;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.worker.model.req.VerifyReq;
+import top.continew.admin.worker.model.req.WorkerApplyReviewReq;
 import top.continew.admin.worker.model.req.WorkerQrcodeUploadReq;
 import top.continew.admin.worker.model.resp.WorkerApplyVO;
 import top.continew.starter.extension.crud.enums.Api;
@@ -29,6 +30,15 @@ import top.continew.admin.worker.service.WorkerApplyService;
 @RestController
 @CrudRequestMapping(value = "/worker/workerApply", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE, Api.EXPORT})
 public class WorkerApplyController extends BaseController<WorkerApplyService, WorkerApplyResp, WorkerApplyDetailResp, WorkerApplyQuery, WorkerApplyReq> {
+
+    /**
+     * 审核作业人员报考
+     * @return
+     */
+    @PostMapping("/review")
+    public Boolean review(@Validated @RequestBody WorkerApplyReviewReq workerApplyReviewReq){
+        return baseService.review(workerApplyReviewReq);
+    }
 
     /**
      * 作业人员通过二维码上传资料
