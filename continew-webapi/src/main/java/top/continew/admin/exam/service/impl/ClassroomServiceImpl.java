@@ -17,16 +17,31 @@
 package top.continew.admin.exam.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.BeanUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import top.continew.admin.exam.mapper.ExamPlanClassroomMapper;
+import top.continew.admin.exam.mapper.ExamPlanMapper;
 import top.continew.admin.exam.mapper.LocationClassroomMapper;
+import top.continew.admin.exam.model.dto.ExamPlanDTO;
+import top.continew.admin.exam.model.entity.ExamPlanClassroomDO;
+import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.entity.LocationClassroomDO;
 import top.continew.admin.exam.model.resp.*;
+import top.continew.admin.exam.service.ExamPlanService;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
@@ -36,7 +51,12 @@ import top.continew.admin.exam.model.query.ClassroomQuery;
 import top.continew.admin.exam.model.req.ClassroomReq;
 import top.continew.admin.exam.service.ClassroomService;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 考场业务实现
@@ -52,13 +72,25 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
 
     private final ClassroomMapper classroomMapper;
 
+
+    @Resource
+    private ExamPlanClassroomMapper examPlanClassroomMapper;
+
+    private final RedissonClient redissonClient;
+
+    private final ExamPlanService examPlanService;
+
+    @Resource
+    private ExamPlanMapper examPlanMapper;
+
+
     @Override
     public PageResp<ClassroomResp> page(ClassroomQuery query, PageQuery pageQuery) {
         QueryWrapper<ClassroomDO> wrapper = this.buildQueryWrapper(query);
         wrapper.eq("tc.is_deleted", 0);
         super.sort(wrapper, pageQuery);
         IPage<ClassroomResp> page = baseMapper.selectExamLocation(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), wrapper);
+                .getSize()), wrapper);
         PageResp<ClassroomResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
         return build;
@@ -99,16 +131,77 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
         wrapper.in("classroom_id", ids);
         locationClassroomMapper.delete(wrapper);
     }
-
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void update(ClassroomReq req, Long id) {
-        //1.更新表
-        super.update(req, id);
-        //2.更新地点与考场关联表
-        Long examLocationId = req.getExamLocationId();
-        Long classroomId = req.getId();
-        UpdateWrapper<LocationClassroomDO> locationClassroomDOUpdateWrapper = new UpdateWrapper<>();
-        locationClassroomDOUpdateWrapper.set("location_id", examLocationId).eq("classroom_id", classroomId);
-        locationClassroomMapper.update(locationClassroomDOUpdateWrapper);
+        // 查询旧考场
+        ClassroomDO oldClassroom = classroomMapper.selectById(id);
+        if (oldClassroom == null) {
+            throw new BusinessException("未找到对应的考场记录");
+        }
+
+
+        Long oldMax = Optional.ofNullable(oldClassroom.getMaxCandidates()).orElse(0L);
+        Long newMax = Optional.ofNullable(req.getMaxCandidates()).orElse(0L);
+        boolean capacityChanged = !newMax.equals(oldMax);
+
+        //  若容量变化则批量更新 plan
+        if (capacityChanged) {
+            List<Long> planIdList = examPlanClassroomMapper.selectByClassroomId(id)
+                    .stream()
+                    .map(ExamPlanClassroomDO::getPlanId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+
+            if (!planIdList.isEmpty()) {
+                String lockKey = "lock:exam_plan_update:classroom_" + id;
+                RLock lock = redissonClient.getLock(lockKey);
+                try {
+                    if (lock.tryLock(5, 30, TimeUnit.SECONDS)) {
+                        //  构造批量更新数据
+                        List<ExamPlanDTO> updates = planIdList.stream()
+                                .map(planId -> {
+                                    ExamPlanDO plan = examPlanMapper.selectById(planId);
+                                    if (plan == null) return null;
+                                    int currentMax = plan.getMaxCandidates() != null ? plan.getMaxCandidates() : 0;
+                                    int updatedMax = (int) Math.max(currentMax - oldMax + newMax, 0L);
+                                    return new ExamPlanDTO(planId, (long) updatedMax);
+                                })
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toList());
+
+                        //  一次性批量更新
+                        if (!updates.isEmpty()) {
+                            examPlanService.batchUpdatePlanMaxCandidates(updates);
+                        }
+
+                    } else {
+                        throw new BusinessException("系统繁忙，请稍后再试");
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new BusinessException("获取分布式锁失败");
+                } finally {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                }
+            }
+        }
+
+        // 更新考场信息
+        ClassroomDO update = new ClassroomDO();
+        BeanUtils.copyProperties(req, update);
+        update.setId(id);
+        classroomMapper.updateById(update);
+
+        //  更新考点关联
+        if (req.getExamLocationId() != null) {
+            UpdateWrapper<LocationClassroomDO> wrapper = new UpdateWrapper<>();
+            wrapper.set("location_id", req.getExamLocationId())
+                    .eq("classroom_id", id);
+            locationClassroomMapper.update(null, wrapper);
+        }
     }
 }

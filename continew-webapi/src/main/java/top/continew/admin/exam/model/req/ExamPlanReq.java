@@ -58,12 +58,10 @@ public class ExamPlanReq implements Serializable {
      * 考试开始时间范围
      */
     @Schema(description = "考试开始时间范围")
-    @NotEmpty(message = "考试开始时间范围不能为空")
     @Size(min = 2, max = 2, message = "考试开始时间范围必须包含 2 个时间点")
     private List<@Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$", message = "考试开始时间格式不正确") String> dateRange;
 
     @Schema(description = "报名开始时间范围")
-    @NotEmpty(message = "报名开始时间范围不能为空")
     @Size(min = 2, max = 2, message = "报名开始时间范围必须包含 2 个时间点")
     private List<@Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$", message = "报名开始时间格式不正确") String> enrollList;
 
@@ -71,8 +69,15 @@ public class ExamPlanReq implements Serializable {
      * 考试地点id
      */
     @Schema(description = "考试地点")
-    @NotNull(message = "考试地点不能为空")
     private Long locationId;
+
+
+    /**
+     * 考场id列表
+     */
+    @Schema(description = "考场ID列表")
+    @NotNull(message = "考场ID列表不能为空")
+    private List<Long> classroomId;
 
     @Schema(description = "计划考试人数")
     @NotNull(message = "计划人数不能为空")
@@ -80,7 +85,6 @@ public class ExamPlanReq implements Serializable {
     private Integer maxCandidates;
 
     @Schema(description = "展示图")
-    @NotBlank(message = "请上传展示图")
     private String imageUrl;
 
     private LocalDateTime enrollEndTime;

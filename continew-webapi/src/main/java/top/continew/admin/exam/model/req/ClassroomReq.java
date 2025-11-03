@@ -47,6 +47,6 @@ public class ClassroomReq implements Serializable {
 
     private String classroomName;
 
-    private String maxCandidates;
+    private Long maxCandidates;
 
 }

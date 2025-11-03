@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.entity.UserNamesDO;
 import top.continew.admin.exam.model.resp.EnrollStatusResp;
 import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
@@ -76,4 +77,10 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
     IPage<OrgExamPlanVO> orgGetPlanList(@Param("page") Page<Object> objectPage,
                                         @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper,
                                         @Param("userId") Long userId);
+
+    /**
+     * 批量更新最大容纳人数
+     */
+    void batchUpdatePlanMaxCandidates(@Param("planList") List<ExamPlanDTO> planList);
+
 }

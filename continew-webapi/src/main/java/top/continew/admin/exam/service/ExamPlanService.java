@@ -16,7 +16,11 @@
 
 package top.continew.admin.exam.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.exam.mapper.ExamPlanMapper;
+import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.resp.EnrollStatusResp;
@@ -103,4 +107,6 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @return
      */
     PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery,PageQuery pageQuery);
+
+    void batchUpdatePlanMaxCandidates(List<ExamPlanDTO> planList);
 }

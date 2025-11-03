@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.exam.mapper.ExamPlanClassroomMapper">
+
+    <!-- 根据考场ID查询对应的考试计划 -->
+    <select id="selectByClassroomId" parameterType="long" resultType="top.continew.admin.exam.model.entity.ExamPlanClassroomDO">
+        SELECT *
+        FROM ted_plan_classroom
+        WHERE classroom_id = #{classroomId}
+    </select>
+</mapper>

@@ -38,6 +38,7 @@ import top.continew.admin.common.util.DateUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.ExcelParseResult;
+import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.dto.ExamPlanExcelRowDTO;
 import top.continew.admin.exam.model.dto.TimeRangeDTO;
 import top.continew.admin.exam.model.entity.*;
@@ -280,6 +281,15 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     public String updatePlanExamClassroom(Long planId, List<Long> classroomId) {
         examPlanMapper.deletePLanExamClassroom(planId);
         examPlanMapper.savePlanClassroom(planId, classroomId);
+        // 通过考场id获取最大人数
+        List<Long> maxCandidates = classroomMapper.getMaxCandidates(classroomId);
+        long count = maxCandidates.stream().mapToLong(Long::longValue).sum();
+        // 修改考试计划最大人数
+        ExamPlanDO examPlanDO = new ExamPlanDO();
+        examPlanDO.setId(planId);
+        examPlanDO.setMaxCandidates(Math.toIntExact(count));
+        examPlanMapper.updateById(examPlanDO);
+
         return null;
     }
 
@@ -576,16 +586,13 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Override
     public void update(ExamPlanReq req, Long id) {
         List<String> enrollList = req.getEnrollList();
-        List<String> dateRangeList = req.getDateRange();
         req.setEnrollStartTime(DateUtil.parse(enrollList.get(0)));
         req.setEnrollEndTime(DateUtil.parse(enrollList.get(1)));
-
-        req.setStartTime(DateUtil.parse(dateRangeList.get(0)));
-        req.setEndTime(DateUtil.parse(dateRangeList.get(1)));
-
+        ProjectDO projectDO = projectMapper.selectById(req.getExamProjectId());
+        req.setStartTime(req.getStartTime());
+        req.setEndTime(req.getStartTime().plusMinutes(projectDO.getExamDuration()));
         if (!DateUtil.validateEnrollmentTime(req.getEnrollEndTime(), req.getStartTime()))
             ValidationUtils.validate("报名结束时间不能晚于考试开始时间");
-
         super.update(req, id);
     }
 
@@ -597,5 +604,14 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         planInvigilateMapper.delete(wrapper);
         //删除监考计划关联表
         super.delete(ids);
+    }
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void batchUpdatePlanMaxCandidates(List<ExamPlanDTO> planList) {
+        if (planList != null && !planList.isEmpty()) {
+            examPlanMapper.batchUpdatePlanMaxCandidates(planList);
+        }
     }
 }

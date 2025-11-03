@@ -141,4 +141,18 @@
           AND tou.user_id = #{userId}
         GROUP BY tep.id;
     </select>
+
+    <update id="batchUpdatePlanMaxCandidates">
+        UPDATE ted_exam_plan
+        SET max_candidates = CASE id
+        <foreach collection="planList" item="plan">
+            WHEN #{plan.id} THEN #{plan.maxCandidates}
+        </foreach>
+        END
+        WHERE id IN
+        <foreach collection="planList" item="plan" open="(" separator="," close=")">
+            #{plan.id}
+        </foreach>
+    </update>
+
 </mapper>

@@ -46,7 +46,7 @@ public class ExamPlanSaveReq {
      */
     @Schema(description = "考试开始时间")
     @NotBlank(message = "考试开始时间")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime startTime;
 
     /**

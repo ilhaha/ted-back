@@ -74,7 +74,7 @@ public class ExamPlanDetailResp extends BaseDetailResp {
      */
     @Schema(description = "考试开始时间")
     @ExcelProperty(value = "考试开始时间")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime startTime;
 
     /**
@@ -82,7 +82,7 @@ public class ExamPlanDetailResp extends BaseDetailResp {
      */
     @Schema(description = "考试结束时间")
     @ExcelProperty(value = "考试结束时间")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime endTime;
 
     /**
@@ -159,7 +159,7 @@ public class ExamPlanDetailResp extends BaseDetailResp {
      */
     @Schema(description = "报名开始时间")
     @ExcelProperty(value = "报名开始时间")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime enrollStartTime;
 
     /**
@@ -167,7 +167,7 @@ public class ExamPlanDetailResp extends BaseDetailResp {
      */
     @Schema(description = "报名结束时间")
     @ExcelProperty(value = "报名结束时间")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private LocalDateTime enrollEndTime;
     /**
      * 考试费用
