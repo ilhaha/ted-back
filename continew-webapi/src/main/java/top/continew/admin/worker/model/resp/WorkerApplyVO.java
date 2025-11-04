@@ -20,5 +20,5 @@ public class WorkerApplyVO implements Serializable {
     /**
      * 作业人员已上传的资料
      */
-    private List<WorkerUploadedDocsVO> workerUploadedDocs;
+    private WorkerUploadedDocsVO workerUploadedDocs;
 }

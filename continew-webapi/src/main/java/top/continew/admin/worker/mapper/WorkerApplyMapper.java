@@ -26,5 +26,5 @@ public interface WorkerApplyMapper extends BaseMapper<WorkerApplyDO> {
 
     IPage<WorkerApplyDetailResp> page(@Param("page") Page<Object> objectPage, @Param(Constants.WRAPPER) QueryWrapper<WorkerApplyDO> queryWrapper);
 
-    List<WorkerUploadedDocsVO> selectWorkerUploadedDocs(@Param("classId") Long classId, @Param("idCard") String idCard);
+    WorkerUploadedDocsVO selectWorkerUploadedDocs(@Param("classId") Long classId, @Param("idCard") String idCard);
 }

@@ -55,9 +55,13 @@
                twa.remark,
                twa.face_photo,
                twa.`status`,
-               twad.type_id,
-               tdt.type_name,
-               GROUP_CONCAT(twad.doc_path ORDER BY twad.id SEPARATOR ',') AS doc_paths
+               JSON_ARRAYAGG(
+                       JSON_OBJECT(
+                               'typeId', twad.type_id,
+                               'typeName', tdt.type_name,
+                               'docPaths', twad.doc_path
+                       )
+               ) AS documents
         FROM ted_worker_apply twa
                  LEFT JOIN ted_worker_apply_document twad
                            ON twa.id = twad.worker_apply_id AND twad.is_deleted = 0
@@ -66,17 +70,8 @@
         WHERE twa.is_deleted = 0
           AND twa.id_card_number = #{idCard}
           AND twa.class_id = #{classId}
-        GROUP BY twa.id,
-                 twa.candidate_name,
-                 twa.qualification_path,
-                 twa.qualification_name,
-                 twa.id_card_photo_front,
-                 twa.id_card_photo_back,
-                 twa.remark,
-                 twa.face_photo,
-                 twa.`status`,
-                 twad.type_id,
-                 tdt.type_name;
+        GROUP BY twa.id;
     </select>
+
 
 </mapper>

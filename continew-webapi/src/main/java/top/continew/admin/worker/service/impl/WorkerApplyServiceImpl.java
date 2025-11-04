@@ -1,10 +1,12 @@
 package top.continew.admin.worker.service.impl;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -35,7 +37,7 @@ import top.continew.admin.worker.model.entity.WorkerApplyDocumentDO;
 import top.continew.admin.worker.model.req.VerifyReq;
 import top.continew.admin.worker.model.req.WorkerApplyReviewReq;
 import top.continew.admin.worker.model.req.WorkerQrcodeUploadReq;
-import top.continew.admin.worker.model.resp.WorkerApplyVO;
+import top.continew.admin.worker.model.resp.*;
 import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -45,8 +47,6 @@ import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.admin.worker.model.query.WorkerApplyQuery;
 import top.continew.admin.worker.model.req.WorkerApplyReq;
-import top.continew.admin.worker.model.resp.WorkerApplyDetailResp;
-import top.continew.admin.worker.model.resp.WorkerApplyResp;
 import top.continew.admin.worker.service.WorkerApplyService;
 
 import java.util.*;
@@ -62,9 +62,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, WorkerApplyDO, WorkerApplyResp, WorkerApplyDetailResp, WorkerApplyQuery, WorkerApplyReq> implements WorkerApplyService {
-
-    @Resource
-    private OrgClassCandidateMapper classCandidateMapper;
 
     @Resource
     private UserMapper userMapper;
@@ -105,9 +102,30 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         // 如果有报名信息，可以在这里处理额外逻辑
         String idCard = findIdCardIfExists(classId, verifyReq.getIdLast6());
         if (ObjectUtil.isNotEmpty(idCard)) {
-            workerApplyVO.setWorkerUploadedDocs(baseMapper.selectWorkerUploadedDocs(classId,aesWithHMAC.encryptAndSign(idCard)));
+            WorkerUploadedDocsVO workerUploadedDocsVO =
+                    baseMapper.selectWorkerUploadedDocs(classId, aesWithHMAC.encryptAndSign(idCard));
+            if (ObjectUtil.isNotNull(workerUploadedDocsVO)
+                    && ObjectUtil.isNotEmpty(workerUploadedDocsVO.getDocuments())) {
+
+                // 使用 Hutool 解析 JSON 数组
+                JSONArray array = JSONUtil.parseArray(workerUploadedDocsVO.getDocuments());
+                List<WorkerApplyDocumentVO> docs = new ArrayList<>();
+
+                for (Object obj : array) {
+                    JSONObject jsonObj = (JSONObject) obj;
+                    WorkerApplyDocumentVO vo = new WorkerApplyDocumentVO();
+                    vo.setTypeId(jsonObj.getLong("typeId"));
+                    vo.setTypeName(jsonObj.getStr("typeName"));
+                    vo.setDocPaths(jsonObj.getStr("docPaths"));
+                    docs.add(vo);
+                }
+                workerUploadedDocsVO.setWorkerApplyDocuments(docs);
+            }
+
+            workerApplyVO.setWorkerUploadedDocs(workerUploadedDocsVO);
         }
         return workerApplyVO;
+
     }
 
     /**
@@ -127,7 +145,6 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         String phone = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(workerQrcodeUploadReq.getPhone()));
         ValidationUtils.throwIfBlank(phone, "身份信息未通过验证");
         // 先查是否重复上传
-
         String idCardNumberLast6 = idCardNumber.substring(idCardNumber.length() - 6);
         ValidationUtils.throwIfNotNull(findIdCardIfExists(classId, idCardNumberLast6), "您已提交过报名，请勿重复提交！");
         // 插入作业人员报名表
@@ -255,6 +272,61 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         return true;
     }
 
+    /**
+     * 作业人员通过二维码重新上传资料
+     * @param workerQrcodeUploadReq
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean restSubmit(WorkerQrcodeUploadReq workerQrcodeUploadReq) {
+        String aseClassId = aesWithHMAC.verifyAndDecrypt(workerQrcodeUploadReq.getClassId());
+        ValidationUtils.throwIfNull(aseClassId,"二维码已被篡改");
+        Long classId = Long.valueOf(aseClassId);
+        String idCardNumber = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(workerQrcodeUploadReq.getIdCardNumber()));
+        ValidationUtils.throwIfBlank(idCardNumber, "身份证未上传");
+        String phone = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(workerQrcodeUploadReq.getPhone()));
+        ValidationUtils.throwIfBlank(phone, "身份信息未通过验证");
+        // 修改作业人员报名表
+        // 先查出原来的资料
+        LambdaQueryWrapper<WorkerApplyDO> workerApplyDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        workerApplyDOLambdaQueryWrapper.eq(WorkerApplyDO::getIdCardNumber, aesWithHMAC.encryptAndSign(idCardNumber))
+                .eq(WorkerApplyDO::getClassId, classId);
+        WorkerApplyDO workerApplyDO = baseMapper.selectOne(workerApplyDOLambdaQueryWrapper);
+        ValidationUtils.throwIfNull(workerApplyDO, "二维码已被篡改");
+        // 先删除掉原来的所有资料
+        workerApplyDocumentMapper.delete(new LambdaQueryWrapper<WorkerApplyDocumentDO>().eq(WorkerApplyDocumentDO::getWorkerApplyId, workerApplyDO.getId()));
+        // 再插入新的资料
+        List<DocFileDTO> docFileList = workerQrcodeUploadReq.getDocFileList();
+        if (!ObjectUtils.isEmpty(docFileList)) {
+            ArrayList<WorkerApplyDocumentDO> workerApplyDocumentDOS = new ArrayList<>();
+            for (DocFileDTO docFileDTO : docFileList) {
+                for (String url : docFileDTO.getUrls()) {
+                    WorkerApplyDocumentDO workerApplyDocumentDO = new WorkerApplyDocumentDO();
+                    workerApplyDocumentDO.setWorkerApplyId(workerApplyDO.getId());
+                    workerApplyDocumentDO.setTypeId(docFileDTO.getTypeId());
+                    workerApplyDocumentDO.setDocPath(url);
+                    workerApplyDocumentDOS.add(workerApplyDocumentDO);
+                }
+            }
+            workerApplyDocumentMapper.insertBatch(workerApplyDocumentDOS);
+        }
+        // 更新报名表信息
+        workerApplyDO.setClassId(classId);
+        workerApplyDO.setCandidateName(workerQrcodeUploadReq.getRealName());
+        workerApplyDO.setGender(workerQrcodeUploadReq.getGender());
+        workerApplyDO.setPhone(aesWithHMAC.encryptAndSign(phone));
+        workerApplyDO.setQualificationPath(workerQrcodeUploadReq.getQualificationFileUrl());
+        workerApplyDO.setQualificationName(workerQrcodeUploadReq.getQualificationName());
+        workerApplyDO.setIdCardNumber(aesWithHMAC.encryptAndSign(idCardNumber));
+        workerApplyDO.setIdCardPhotoFront(workerQrcodeUploadReq.getIdCardPhotoFront());
+        workerApplyDO.setIdCardPhotoBack(workerQrcodeUploadReq.getIdCardPhotoBack());
+        workerApplyDO.setFacePhoto(workerQrcodeUploadReq.getFacePhoto());
+        workerApplyDO.setStatus(WorkerApplyReviewStatusEnum.PENDING_REVIEW.getValue());
+        workerApplyDO.setRemark("");
+        return baseMapper.updateById(workerApplyDO) > 0;
+    }
+
 
     /**
      * 重写page
@@ -294,25 +366,21 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
      */
     private String findIdCardIfExists(Long classId, String uploadIdCardLast6) {
         // 查出该班级所有已有考生
-        List<OrgClassCandidateDO> classCandidates = classCandidateMapper.selectList(
-                new LambdaQueryWrapper<OrgClassCandidateDO>()
-                        .eq(OrgClassCandidateDO::getClassId, classId)
-        );
+        LambdaQueryWrapper<WorkerApplyDO> workerApplyDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        workerApplyDOLambdaQueryWrapper.eq(WorkerApplyDO::getClassId, classId);
+        List<WorkerApplyDO> workerApplyDOS = baseMapper.selectList(workerApplyDOLambdaQueryWrapper);
 
-        if (CollUtil.isEmpty(classCandidates)) {
+        if (CollUtil.isEmpty(workerApplyDOS)) {
             return null;
         }
 
-        // 提取所有考生ID
-        List<Long> candidateIds = classCandidates.stream()
-                .map(OrgClassCandidateDO::getCandidateId)
+        // 提取该班级的所有考试身份证号
+        List<String> candidateIdCards = workerApplyDOS.stream()
+                .map(WorkerApplyDO::getIdCardNumber)
                 .toList();
-
-        // 批量查出这些考生的用户信息
-        List<UserDO> userList = userMapper.selectByIds(candidateIds);
-
-        for (UserDO user : userList) {
-            String decryptedIdCard = aesWithHMAC.verifyAndDecrypt(user.getUsername());
+        // 比对身份后六位看是否已存在
+        for (String candidateIdCard : candidateIdCards) {
+            String decryptedIdCard = aesWithHMAC.verifyAndDecrypt(candidateIdCard);
             String last6 = decryptedIdCard.substring(decryptedIdCard.length() - 6);
             if (uploadIdCardLast6.equalsIgnoreCase(last6)) {
                 return decryptedIdCard;

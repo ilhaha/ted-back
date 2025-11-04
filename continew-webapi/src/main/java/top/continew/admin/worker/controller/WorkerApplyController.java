@@ -41,6 +41,17 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
     }
 
     /**
+     * 作业人员通过二维码重新上传资料
+     * @param workerQrcodeUploadReq
+     * @return
+     */
+    @SaIgnore
+    @PostMapping("/rest/submit")
+    public Boolean restSubmit(@Validated @RequestBody WorkerQrcodeUploadReq workerQrcodeUploadReq) {
+        return baseService.restSubmit(workerQrcodeUploadReq);
+    }
+
+    /**
      * 作业人员通过二维码上传资料
      * @param workerQrcodeUploadReq
      * @return

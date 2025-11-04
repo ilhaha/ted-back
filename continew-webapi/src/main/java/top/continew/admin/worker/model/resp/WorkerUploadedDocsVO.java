@@ -1,5 +1,6 @@
 package top.continew.admin.worker.model.resp;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.util.List;
@@ -38,12 +39,10 @@ public class WorkerUploadedDocsVO {
     /** 状态 */
     private Integer status;
 
-    /** 文档类型ID */
-    private Long typeId;
+    /** 材料列表 */
+    @JsonIgnore
+    private String documents;
 
-    /** 文档类型名称 */
-    private String typeName;
-
-    /** 多个文档路径（逗号分隔） */
-    private String docPaths;
+    /**资料列表*/
+    private List<WorkerApplyDocumentVO> workerApplyDocuments;
 }

@@ -38,4 +38,11 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      */
     Boolean review(WorkerApplyReviewReq workerApplyReviewReq);
 
+    /**
+     * 作业人员通过二维码重新上传资料
+     * @param workerQrcodeUploadReq
+     * @return
+     */
+    Boolean restSubmit(WorkerQrcodeUploadReq workerQrcodeUploadReq);
+
 }
