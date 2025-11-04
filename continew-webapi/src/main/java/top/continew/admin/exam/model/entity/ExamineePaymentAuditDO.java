@@ -1,0 +1,85 @@
+package top.continew.admin.exam.model.entity;
+
+import lombok.Data;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+
+import top.continew.admin.common.model.entity.BaseDO;
+
+import java.io.Serial;
+import java.time.*;
+import java.math.BigDecimal;
+
+/**
+ * 考生缴费审核实体
+ *
+ * @author ilhaha
+ * @since 2025/11/04 10:17
+ */
+@Data
+@TableName("ted_examinee_payment_audit")
+public class ExamineePaymentAuditDO extends BaseDO {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 关联考试计划ID
+     */
+    private Long examPlanId;
+
+    /**
+     * 考生ID
+     */
+    private Long examineeId;
+
+    /**
+     * 关联报名记录ID
+     */
+    private Long enrollId;
+
+    /**
+     * 缴费金额（元）
+     */
+    private BigDecimal paymentAmount;
+
+    /**
+     * 缴费时间
+     */
+    private LocalDateTime paymentTime;
+
+    /**
+     * 缴费凭证URL
+     */
+    private String paymentProofUrl;
+
+    /**
+     * 缴费通知单URL
+     */
+    private String auditNoticeUrl;
+
+    /**
+     * 审核状态：0-待审核，1-审核通过，2-审核驳回
+     */
+    private Integer auditStatus;
+
+    /**
+     * 驳回原因
+     */
+    private String rejectReason;
+
+    /**
+     * 审核人ID
+     */
+    private Long auditorId;
+
+    /**
+     * 审核时间
+     */
+    private LocalDateTime auditTime;
+
+    /**
+     * 是否删除（0否，1是）
+     */
+    private Boolean isDeleted;
+}

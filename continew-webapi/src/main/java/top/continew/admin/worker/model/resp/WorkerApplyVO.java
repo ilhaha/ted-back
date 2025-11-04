@@ -16,4 +16,9 @@ public class WorkerApplyVO implements Serializable {
      * 项目所需提交的报名资料
      */
     private List<ProjectNeedUploadDocVO> projectNeedUploadDocs;
+
+    /**
+     * 作业人员已上传的资料
+     */
+    private List<WorkerUploadedDocsVO> workerUploadedDocs;
 }

@@ -44,4 +44,39 @@
                            ON tp.category_id = tc.id AND tc.is_deleted = 0
             ${ew.customSqlSegment}
     </select>
+    <select id="selectWorkerUploadedDocs"
+            resultType="top.continew.admin.worker.model.resp.WorkerUploadedDocsVO">
+        SELECT twa.id,
+               twa.candidate_name,
+               twa.qualification_path,
+               twa.qualification_name,
+               twa.id_card_photo_front,
+               twa.id_card_photo_back,
+               twa.remark,
+               twa.face_photo,
+               twa.`status`,
+               twad.type_id,
+               tdt.type_name,
+               GROUP_CONCAT(twad.doc_path ORDER BY twad.id SEPARATOR ',') AS doc_paths
+        FROM ted_worker_apply twa
+                 LEFT JOIN ted_worker_apply_document twad
+                           ON twa.id = twad.worker_apply_id AND twad.is_deleted = 0
+                 LEFT JOIN ted_document_type tdt
+                           ON twad.type_id = tdt.id AND tdt.is_deleted = 0
+        WHERE twa.is_deleted = 0
+          AND twa.id_card_number = #{idCard}
+          AND twa.class_id = #{classId}
+        GROUP BY twa.id,
+                 twa.candidate_name,
+                 twa.qualification_path,
+                 twa.qualification_name,
+                 twa.id_card_photo_front,
+                 twa.id_card_photo_back,
+                 twa.remark,
+                 twa.face_photo,
+                 twa.`status`,
+                 twad.type_id,
+                 tdt.type_name;
+    </select>
+
 </mapper>

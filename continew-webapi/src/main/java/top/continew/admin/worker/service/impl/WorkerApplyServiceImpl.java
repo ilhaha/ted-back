@@ -103,10 +103,10 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         workerApplyVO.setProjectNeedUploadDocs(baseMapper.selectProjectNeedUploadDoc(classId));
 
         // 如果有报名信息，可以在这里处理额外逻辑
-        if (isUpload(classId, verifyReq.getIdLast6())) {
-            // TODO: 查出已有报名信息，填充到 workerApplyVO
+        String idCard = findIdCardIfExists(classId, verifyReq.getIdLast6());
+        if (ObjectUtil.isNotEmpty(idCard)) {
+            workerApplyVO.setWorkerUploadedDocs(baseMapper.selectWorkerUploadedDocs(classId,aesWithHMAC.encryptAndSign(idCard)));
         }
-
         return workerApplyVO;
     }
 
@@ -129,16 +129,19 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         // 先查是否重复上传
 
         String idCardNumberLast6 = idCardNumber.substring(idCardNumber.length() - 6);
-        ValidationUtils.throwIf(isUpload(classId, idCardNumberLast6), "您已提交过报名，请勿重复提交！");
+        ValidationUtils.throwIfNotNull(findIdCardIfExists(classId, idCardNumberLast6), "您已提交过报名，请勿重复提交！");
         // 插入作业人员报名表
         WorkerApplyDO workerApplyDO = new WorkerApplyDO();
-        BeanUtil.copyProperties(workerQrcodeUploadReq, workerApplyDO);
-        workerApplyDO.setCandidateName(workerQrcodeUploadReq.getRealName());
-        workerApplyDO.setQualificationName(workerQrcodeUploadReq.getQualificationName());
-        workerApplyDO.setQualificationPath(workerQrcodeUploadReq.getQualificationFileUrl());
         workerApplyDO.setClassId(classId);
-        workerApplyDO.setIdCardNumber(aesWithHMAC.encryptAndSign(idCardNumber));
+        workerApplyDO.setCandidateName(workerQrcodeUploadReq.getRealName());
+        workerApplyDO.setGender(workerQrcodeUploadReq.getGender());
         workerApplyDO.setPhone(aesWithHMAC.encryptAndSign(phone));
+        workerApplyDO.setQualificationPath(workerQrcodeUploadReq.getQualificationFileUrl());
+        workerApplyDO.setQualificationName(workerQrcodeUploadReq.getQualificationName());
+        workerApplyDO.setIdCardNumber(aesWithHMAC.encryptAndSign(idCardNumber));
+        workerApplyDO.setIdCardPhotoFront(workerQrcodeUploadReq.getIdCardPhotoFront());
+        workerApplyDO.setIdCardPhotoBack(workerQrcodeUploadReq.getIdCardPhotoBack());
+        workerApplyDO.setFacePhoto(workerQrcodeUploadReq.getFacePhoto());
         baseMapper.insert(workerApplyDO);
         // 插入报名表的资料
         List<DocFileDTO> docFileList = workerQrcodeUploadReq.getDocFileList();
@@ -282,32 +285,40 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         return build;
     }
 
-    private Boolean isUpload(Long classId, String uploadIdCardLast6) {
+    /**
+     * 判断是否已报名，并返回匹配到的身份证号
+     *
+     * @param classId 班级ID
+     * @param uploadIdCardLast6 上传的身份证后六位
+     * @return 匹配到的身份证号，如果没匹配到则返回 null
+     */
+    private String findIdCardIfExists(Long classId, String uploadIdCardLast6) {
         // 查出该班级所有已有考生
-        List<OrgClassCandidateDO> orgClassCandidateDOS = classCandidateMapper.selectList(
+        List<OrgClassCandidateDO> classCandidates = classCandidateMapper.selectList(
                 new LambdaQueryWrapper<OrgClassCandidateDO>()
                         .eq(OrgClassCandidateDO::getClassId, classId)
         );
-        boolean isApply = false;
-        if (CollUtil.isNotEmpty(orgClassCandidateDOS)) {
-            // 提取所有考生ID
-            List<Long> candidateIds = orgClassCandidateDOS.stream()
-                    .map(OrgClassCandidateDO::getCandidateId)
-                    .toList();
 
-            // 批量查出这些考生的用户信息
-            List<UserDO> userDOS = userMapper.selectByIds(candidateIds);
-            // 解密并提取身份证后六位
-            for (UserDO userDO : userDOS) {
-                String idCard = aesWithHMAC.verifyAndDecrypt(userDO.getUsername());
-                String last6 = idCard.substring(idCard.length() - 6);
-                if (uploadIdCardLast6.equalsIgnoreCase(last6)) {
-                    isApply = true;
-                    break;
-                }
+        if (CollUtil.isEmpty(classCandidates)) {
+            return null;
+        }
+
+        // 提取所有考生ID
+        List<Long> candidateIds = classCandidates.stream()
+                .map(OrgClassCandidateDO::getCandidateId)
+                .toList();
+
+        // 批量查出这些考生的用户信息
+        List<UserDO> userList = userMapper.selectByIds(candidateIds);
+
+        for (UserDO user : userList) {
+            String decryptedIdCard = aesWithHMAC.verifyAndDecrypt(user.getUsername());
+            String last6 = decryptedIdCard.substring(decryptedIdCard.length() - 6);
+            if (uploadIdCardLast6.equalsIgnoreCase(last6)) {
+                return decryptedIdCard;
             }
         }
-        return isApply;
+        return null;
     }
 
 }

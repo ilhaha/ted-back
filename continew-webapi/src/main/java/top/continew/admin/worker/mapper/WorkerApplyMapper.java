@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotEmpty;
 import org.apache.ibatis.annotations.Param;
 import top.continew.admin.worker.model.resp.ProjectNeedUploadDocVO;
 import top.continew.admin.worker.model.resp.WorkerApplyDetailResp;
+import top.continew.admin.worker.model.resp.WorkerUploadedDocsVO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 
@@ -24,4 +25,6 @@ public interface WorkerApplyMapper extends BaseMapper<WorkerApplyDO> {
     List<ProjectNeedUploadDocVO> selectProjectNeedUploadDoc(@Param("classId") Long classId);
 
     IPage<WorkerApplyDetailResp> page(@Param("page") Page<Object> objectPage, @Param(Constants.WRAPPER) QueryWrapper<WorkerApplyDO> queryWrapper);
+
+    List<WorkerUploadedDocsVO> selectWorkerUploadedDocs(@Param("classId") Long classId, @Param("idCard") String idCard);
 }
