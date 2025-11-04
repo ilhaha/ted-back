@@ -37,5 +37,6 @@ public class IdentityCardExamInfoVO {
     private Date startTime;
 
     private Date endTime;
-
+    //下载准考证pdf显示状态 0-隐藏 1-显示
+    private Integer showStatus;
 }

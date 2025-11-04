@@ -65,7 +65,19 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      * @param status    状态
      * @return 是否报名成功（0-人数超限，1-报名成功，2-数据库插入失败）
      */
-    Boolean singUp(EnrollReq enrollReq, Long userId, Integer status);
+    Boolean signUp(EnrollReq enrollReq, Long userId, Integer status);
+
+
+    /**
+     * 生成考生报名准考证
+     *
+     * @param enrollReq 报名请求
+     * @param userId    用户ID
+     * @param status    状态
+     * @return 是否报名成功（0-人数超限，1-报名成功，2-数据库插入失败）
+     */
+    Boolean signUpdate(EnrollReq enrollReq, Long userId, Integer status);
+
 
     /**
      * 获取考试成绩

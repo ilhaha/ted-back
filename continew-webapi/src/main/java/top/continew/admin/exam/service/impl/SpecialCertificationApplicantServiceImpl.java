@@ -345,7 +345,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
                     }
                 } else {
                     //2.插入报名表
-                    if (enrollService.singUp(enrollReq, sca.getCandidatesId(), sca.getStatus())) {
+                    if (enrollService.signUp(enrollReq, sca.getCandidatesId(), sca.getStatus())) {
                         //3.修改状态
                         SpecialCertificationApplicantReq specialCertificationApplicantReq = new SpecialCertificationApplicantReq();
                         BeanUtils.copyProperties(sca, specialCertificationApplicantReq);
@@ -419,14 +419,11 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
                 batchRejectApplications(req.getPlanId());
                 return R.status(false, "该考试计划报名人数已满，已自动改为审核不通过！");
             }
-
-            if (enrollService.singUp(enrollReq, applicantDO.getCandidatesId(), applicantDO.getStatus())) {
                 super.update(req, id);
                 // 审核通过 -> 报名状态改为已报名
                 enrollMapper.updateEnrollStatus(applicantDO.getPlanId(), applicantDO.getCandidatesId(), 1L);
                 sms(examPlanName, phone, "审核通过，报名成功！");
                 return R.status(true, "报名成功");
-            }
         }
 
         // === 退回补正 ===
@@ -454,14 +451,11 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             sms(examPlanName, phone, "您的申报被标记为虚假资料，原因：" + req.getRemark() + "。您将无法再次申报该考试。");
             return R.status(true, "已标记为虚假资料并禁止再次申报");
         }
-
         // === 其他状态 ===
         else {
             super.update(req, id);
             return R.status(true, "审核状态已更新");
         }
-
-        return R.status(true, "审核处理完成");
     }
 
     public void batchRejectApplications(Long planId) {

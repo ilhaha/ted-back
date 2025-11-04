@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service.impl;
 
+import cn.crane4j.core.util.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -23,6 +24,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
+import net.dreamlu.mica.core.result.R;
+import org.apache.catalina.User;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +36,7 @@ import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.entity.ProjectDO;
+import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.ExamPlanVO;
@@ -52,6 +56,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -80,6 +85,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     @Resource
     private ProjectMapper projectMapper;
+
+    @Resource
+    private EnrollService enrollService;
 
     /**
      * 获取报名相关所有信息
@@ -188,7 +196,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean singUp(EnrollReq enrollReq, Long userId, Integer status) {
+    public Boolean signUp(EnrollReq enrollReq, Long userId, Integer status) {
         synchronized (this) {
             Long planId = enrollReq.getExamPlanId();
             ExamPlanDO examPlanDO = examPlanMapper.selectById(planId);
@@ -209,7 +217,77 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                 }
             }
 
-            if (status != 2) {
+            if (status == 1) {
+                if (assignedClassroomId == null) {
+                    throw new BusinessException("当前考试已满员，已自动将该计划剩余审核改为不通过");
+                }
+
+                // 准考证号
+                String classroomId = String.format("%03d", assignedClassroomId);
+                String planYear = examPlanVO.getPlanYear();
+                String seatPart = String.format("%03d", classroomMapper.getSeatNumber(assignedClassroomId, examPlanDO.getId()));
+                String randomPart = String.format("%04d", random.nextInt(10000));
+                String examNumber = planYear + randomPart + classroomId + seatPart;
+
+                // 检查报名表是否已存在
+                EnrollDO existing = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
+                        .eq(EnrollDO::getExamPlanId, planId)
+                        .eq(EnrollDO::getUserId, userId)
+                        .eq(EnrollDO::getIsDeleted, false)
+                        .last("LIMIT 1"));
+
+                if (existing != null) {
+                    // 如果之前有记录（比如上传资料时插入的状态=4），则只更新状态为已报名
+                    existing.setEnrollStatus(1L);
+                    existing.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
+                    existing.setSeatId(Long.valueOf(seatPart));
+                    existing.setClassroomId(Long.valueOf(classroomId));
+                    existing.setUpdateTime(LocalDateTime.now());
+                    enrollMapper.updateById(existing);
+                    return true;
+                } else {
+                    // 如果之前没有记录，则插入新报名
+                    EnrollDO enrollDO = new EnrollDO();
+                    BeanUtils.copyProperties(enrollReq, enrollDO);
+                    enrollDO.setUserId(userId);
+                    enrollDO.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
+                    enrollDO.setSeatId(Long.valueOf(seatPart));
+                    enrollDO.setClassroomId(Long.valueOf(classroomId));
+                    enrollDO.setEnrollStatus(1L); // 已报名
+                    enrollDO.setIsDeleted(false);
+                    enrollDO.setCreateTime(LocalDateTime.now());
+                    enrollDO.setUpdateTime(LocalDateTime.now());
+                    return enrollMapper.insert(enrollDO) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean signUpdate(EnrollReq enrollReq, Long userId, Integer status) {
+        synchronized (this) {
+            Long planId = enrollReq.getExamPlanId();
+            ExamPlanDO examPlanDO = examPlanMapper.selectById(planId);
+            ExamPlanVO examPlanVO = new ExamPlanVO();
+            BeanUtils.copyProperties(examPlanDO, examPlanVO);
+            examPlanVO.setClassroomList(examPlanMapper.getPlanExamClassroom(planId));
+
+            SecureRandom random = new SecureRandom();
+            List<Long> classroomList = examPlanVO.getClassroomList();
+            Collections.shuffle(classroomList);
+
+            Long assignedClassroomId = null;
+            for (Long classroomId : classroomList) {
+                int updated = classroomMapper.incrementEnrolledCount(classroomId, examPlanDO.getId());
+                if (updated > 0) {
+                    assignedClassroomId = classroomId;
+                    break;
+                }
+            }
+
+            if (status == 1) {
                 if (assignedClassroomId == null) {
                     throw new BusinessException("当前考试已满员，已自动将该计划剩余审核改为不通过");
                 }
@@ -314,15 +392,60 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         LocalDateTime enrollEndTime = examPlanDO.getEnrollEndTime();
         ValidationUtils.throwIf(now.isBefore(enrollStartTime) || now.isAfter(enrollEndTime), "当前时间不在报名时间内");
     }
-
+    /**
+     * 生成并查看准考证信息
+     *
+     * @param examPlanId 考试计划ID
+     * @return 准考证信息
+     */
     @Override
     public IdentityCardExamInfoVO viewIdentityCard(Long examPlanId) {
+        // 1. 前置校验：入参 + 登录
         ValidationUtils.throwIfNull(examPlanId, "请选择考试计划");
-        Long userId = TokenLocalThreadUtil.get().getUserId();
+        UserTokenDo userToken = TokenLocalThreadUtil.get();
+        ValidationUtils.throwIfNull(userToken, "用户未登录，无法查看准考证信息");
+        Long userId = userToken.getUserId();
+        String userName = userToken.getNickname();
+
+        // 2. 校验考试计划
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
+        ValidationUtils.throwIf(examPlanDO == null || examPlanDO.getIsFinalConfirmed() != 1,
+                "考试计划考试时间和考试地点未最终确认，无法查看准考证信息");
+
+        // 3. 校验报名资格
+        SpecialCertificationApplicantDO applicantDO = specialCertificationApplicantMapper.selectOne(
+                new LambdaQueryWrapper<SpecialCertificationApplicantDO>()
+                        .eq(SpecialCertificationApplicantDO::getPlanId, examPlanId)
+                        .eq(SpecialCertificationApplicantDO::getCandidatesId, userId)
+                        .eq(SpecialCertificationApplicantDO::getIsDeleted, false)
+                        .last("LIMIT 1")
+        );
+        ValidationUtils.throwIfNull(applicantDO, "未找到报名申请，请先提交报名再查看准考证");
+        ValidationUtils.throwIf(!Objects.equals(applicantDO.getStatus(), 1),
+                "报名状态无效（未通过/已取消），无法查看准考证");
+
+        // 4. 先查是否已生成准考证（避免重复生成）
         IdentityCardExamInfoVO identityCardExamInfoVO = enrollMapper.viewIdentityCardInfo(examPlanId, userId);
+
+        if (identityCardExamInfoVO == null || StringUtils.isBlank(identityCardExamInfoVO.getExamNumber())) {
+            // 5. 若未生成准考证，则执行报名/准考证生成逻辑（要求 signUp 支持幂等）
+            EnrollReq enrollReq = new EnrollReq();
+            enrollReq.setExamPlanId(examPlanId);
+            Boolean signUpResult = enrollService.signUpdate(enrollReq, userId, applicantDO.getStatus());
+            ValidationUtils.throwIf(!signUpResult, "报名失败，无法生成准考证信息");
+
+            // 6. 再次查询准考证
+            identityCardExamInfoVO = enrollMapper.viewIdentityCardInfo(examPlanId, userId);
+            ValidationUtils.throwIfNull(identityCardExamInfoVO, "准考证信息生成失败，请稍后重试");
+        }
+
+        // 7. 补全返回信息
         identityCardExamInfoVO.setUserId(userId);
-        identityCardExamInfoVO.setName(TokenLocalThreadUtil.get().getNickname());
+        identityCardExamInfoVO.setName(userName);
+        identityCardExamInfoVO.setShowStatus(1);
+        ValidationUtils.throwIfBlank(identityCardExamInfoVO.getExamNumber(), "准考证号为空，无法查看");
         identityCardExamInfoVO.setExamNumber(aesWithHMAC.verifyAndDecrypt(identityCardExamInfoVO.getExamNumber()));
+
         return identityCardExamInfoVO;
     }
 

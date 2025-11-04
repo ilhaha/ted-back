@@ -81,9 +81,11 @@ public class CandidateTicketServiceImpl implements CandidateTicketService {
     @Override
     public void generateTicket(Long userId, String examNumber, HttpServletResponse response) throws Exception {
         ensureSemaphoreInitialized();
-
-        // 查询数据
+        // 判断查询数据
         CandidateTicketDTO dto = examTicketMapper.findTicketByUserAndExamNumber(userId, aesWithHMAC.encryptAndSign(examNumber));
+        if (dto == null) {
+            throw new RuntimeException("未找到该用户的准考证数据！或是没有确认考试计划最终考试时间和地点");
+        }
         // 查询用户照片URL
         QueryWrapper<ExamIdcardDO> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("id_card_number", dto.getIdCard())
