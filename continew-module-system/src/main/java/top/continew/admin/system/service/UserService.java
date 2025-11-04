@@ -312,4 +312,10 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      */
     UploadWhenUserInfoVO uploadWhenInfo(String candidateId, String planId);
 
+    /**
+     * 判断考生是否是作业人员
+     * @param id
+     * @return
+     */
+    Boolean isWorker(Long id);
 }

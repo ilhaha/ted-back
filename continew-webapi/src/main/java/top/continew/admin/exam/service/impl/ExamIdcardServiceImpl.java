@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
+import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.system.service.UserService;
 import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
@@ -34,6 +37,9 @@ public class ExamIdcardServiceImpl extends BaseServiceImpl<ExamIdcardMapper, Exa
     @Resource
     private AESWithHMAC aesWithHMAC;
 
+    @Resource
+    private UserService userService;
+
     /**
      * 考生根据身份证号查看是否已实名
      * @param username
@@ -42,13 +48,13 @@ public class ExamIdcardServiceImpl extends BaseServiceImpl<ExamIdcardMapper, Exa
     @Override
     public Boolean verifyRealName(String username) {
         String decrUsername = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(username));
-        System.out.println(decrUsername);
         ValidationUtils.throwIfBlank(username, "用户名解密失败");
         String aesUsername = aesWithHMAC.encryptAndSign(decrUsername);
-        System.out.println(aesUsername);
+        UserDO userDO = userService.getByUsername(aesUsername);
+        ValidationUtils.throwIf(userService.isWorker(userDO.getId()),"用户名或密码错误");
         LambdaQueryWrapper<ExamIdcardDO> examIdcardDOLambdaQueryWrapper =
                 new LambdaQueryWrapper<ExamIdcardDO>().eq(ExamIdcardDO::getIdCardNumber, aesUsername);
-        return  baseMapper.selectCount(examIdcardDOLambdaQueryWrapper) > 0;
+        return baseMapper.selectCount(examIdcardDOLambdaQueryWrapper) > 0;
     }
 
     @Override

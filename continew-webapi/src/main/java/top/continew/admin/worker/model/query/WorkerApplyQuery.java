@@ -28,69 +28,21 @@ public class WorkerApplyQuery implements Serializable {
      * 班级ID
      */
     @Schema(description = "班级ID")
-    @Query(type = QueryType.EQ)
+    @Query(type = QueryType.EQ,columns = "twa.class_id")
     private Long classId;
 
     /**
      * 作业人员姓名
      */
     @Schema(description = "作业人员姓名")
-    @Query(type = QueryType.EQ)
+    @Query(type = QueryType.LIKE,columns = "twa.candidate_name")
     private String candidateName;
 
-    /**
-     * 作业人员性别
-     */
-    @Schema(description = "作业人员性别")
-    @Query(type = QueryType.EQ)
-    private String gender;
-
-    /**
-     * 作业人员手机号
-     */
-    @Schema(description = "作业人员手机号")
-    @Query(type = QueryType.EQ)
-    private String phone;
-
-    /**
-     * 报名资格申请表名称
-     */
-    @Schema(description = "报名资格申请表名称")
-    @Query(type = QueryType.EQ)
-    private String qualificationName;
-
-    /**
-     * 身份证号
-     */
-    @Schema(description = "身份证号")
-    @Query(type = QueryType.EQ)
-    private String idCardNumber;
-
-    /**
-     * 身份证正面存储地址
-     */
-    @Schema(description = "身份证正面存储地址")
-    @Query(type = QueryType.EQ)
-    private String idCardPhotoFront;
-
-    /**
-     * 身份证反面存储地址
-     */
-    @Schema(description = "身份证反面存储地址")
-    @Query(type = QueryType.EQ)
-    private String idCardPhotoBack;
-
-    /**
-     * 一寸免冠照存储地址
-     */
-    @Schema(description = "一寸免冠照存储地址")
-    @Query(type = QueryType.EQ)
-    private String facePhoto;
 
     /**
      * 审核状态:0待审核,1已生效,2未通过
      */
     @Schema(description = "审核状态:0待审核,1已生效,2未通过")
-    @Query(type = QueryType.EQ)
+    @Query(type = QueryType.EQ,columns = "twa.status")
     private Integer status;
 }

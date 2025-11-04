@@ -47,6 +47,12 @@ public class OrgClassResp extends BaseResp {
     private String className;
 
     /**
+     * 作业人员扫码报考二维码
+     */
+    @Schema(description = "作业人员扫码报考二维码")
+    private String qrcodeApplyUrl;
+
+    /**
      * 班级类型，0作业人员班级，1检验人员班级
      */
     @Schema(description = "班级类型，0作业人员班级，1检验人员班级")

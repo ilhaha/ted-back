@@ -286,6 +286,12 @@
         GROUP BY tdp.type_id, tdt.type_name;
 
     </select>
+    <select id="getCandidateIdentity" resultType="java.lang.Integer">
+        SELECT COUNT(id)
+        FROM ted_candidate_type
+        WHERE candidate_id = #{id}
+        AND type = 0
+    </select>
 
     <insert id="addInvigilatesTime">
         insert into ted_plan_invigilate

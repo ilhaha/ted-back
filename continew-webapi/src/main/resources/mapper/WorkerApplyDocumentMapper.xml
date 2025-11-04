@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="top.continew.admin.worker.mapper.WorkerApplyDocumentMapper">
+    <select id="page" resultType="top.continew.admin.worker.model.resp.WorkerApplyDocumentDetailResp">
+        SELECT tdt.id                                                     AS type_id,
+               tdt.type_name,
+               GROUP_CONCAT(twad.doc_path ORDER BY twad.id SEPARATOR ',') AS doc_path
+        FROM ted_worker_apply_document twad
+                 LEFT JOIN ted_document_type tdt
+                           ON twad.type_id = tdt.id
+                               AND tdt.is_deleted = 0
+            ${ew.customSqlSegment}
+        GROUP BY tdt.id, tdt.type_name
+        ORDER BY tdt.id ASC;
+    </select>
 </mapper>

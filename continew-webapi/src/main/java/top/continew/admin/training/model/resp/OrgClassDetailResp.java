@@ -41,6 +41,13 @@ public class OrgClassDetailResp extends BaseDetailResp {
     private Long projectId;
 
     /**
+     * 班级类型
+     */
+    @Schema(description = "班级类型")
+    @ExcelProperty(value = "班级类型")
+    private Integer classType;
+
+    /**
      * 项目名称
      */
     @Schema(description = "项目名称")
@@ -53,6 +60,13 @@ public class OrgClassDetailResp extends BaseDetailResp {
     @Schema(description = "班级名称")
     @ExcelProperty(value = "班级名称")
     private String className;
+
+    /**
+     * 作业人员扫码报考二维码
+     */
+    @Schema(description = "作业人员扫码报考二维码")
+    @ExcelProperty(value = "作业人员扫码报考二维码")
+    private String qrcodeApplyUrl;
 
     /**
      * 是否删除 0-未删除 1-已删除

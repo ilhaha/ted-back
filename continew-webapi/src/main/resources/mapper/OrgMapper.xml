@@ -204,6 +204,29 @@
         FROM ted_org
         WHERE is_deleted = 0
     </select>
+    <select id="getSelectProjectClassByType"
+            resultType="top.continew.admin.training.model.vo.OrgProjectClassTypeVO">
+        SELECT
+            org.id AS org_id,
+            org.name AS org_name,
+            tp.id AS project_id,
+            tp.project_name,
+            toc.id AS class_id,
+            toc.class_name
+        FROM ted_org org
+                 LEFT JOIN ted_org_category_relation tocr
+                           ON org.id = tocr.org_id AND tocr.is_deleted = 0
+                 LEFT JOIN ted_category tc
+                           ON tocr.category_id = tc.id AND tc.is_deleted = 0
+                 LEFT JOIN ted_project tp
+                           ON tc.id = tp.category_id AND tp.is_deleted = 0
+                 LEFT JOIN ted_org_class toc
+                           ON tp.id = toc.project_id AND toc.is_deleted = 0
+        WHERE org.is_deleted = 0
+          AND toc.class_type = #{type}
+        ORDER BY org.id, tp.id, toc.id;
+
+    </select>
 
 
     <update id="approveStudent" parameterType="java.lang.Long">

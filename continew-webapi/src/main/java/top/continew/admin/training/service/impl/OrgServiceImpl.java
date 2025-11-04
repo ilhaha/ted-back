@@ -973,6 +973,56 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
     /**
+     * 根据班级类型获取机构对应的项目-班级级联选择
+     * @return
+     */
+    @Override
+    public List<Map<String, Object>> getSelectProjectClassByType(Integer type) {
+        List<OrgProjectClassTypeVO> list = baseMapper.getSelectProjectClassByType(type);
+        Map<Long, Map<String, Object>> orgMap = new LinkedHashMap<>();
+        for (OrgProjectClassTypeVO row : list) {
+            Map<String, Object> orgNode = orgMap.computeIfAbsent(row.getOrgId(), k -> {
+                Map<String, Object> node = new LinkedHashMap<>();
+                node.put("value", row.getOrgId());
+                node.put("label", row.getOrgName());
+                node.put("children", new LinkedHashMap<Long, Map<String, Object>>());
+                return node;
+            });
+
+            Map<Long, Map<String, Object>> projectMap =
+                    (Map<Long, Map<String, Object>>) orgNode.get("children");
+
+            Map<String, Object> projectNode = projectMap.computeIfAbsent(row.getProjectId(), k -> {
+                Map<String, Object> node = new LinkedHashMap<>();
+                node.put("value", row.getProjectId());
+                node.put("label", row.getProjectName());
+                node.put("children", new ArrayList<Map<String, Object>>());
+                return node;
+            });
+
+            List<Map<String, Object>> classList =
+                    (List<Map<String, Object>>) projectNode.get("children");
+
+            if (row.getClassId() != null) {
+                Map<String, Object> classNode = new LinkedHashMap<>();
+                classNode.put("value", row.getClassId());
+                classNode.put("label", row.getClassName());
+                classList.add(classNode);
+            }
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map<String, Object> orgNode : orgMap.values()) {
+            Map<Long, Map<String, Object>> projectMap =
+                    (Map<Long, Map<String, Object>>) orgNode.remove("children");
+            orgNode.put("children", new ArrayList<>(projectMap.values()));
+            result.add(orgNode);
+        }
+
+        return result;
+    }
+
+    /**
      * 封装创建单个 EnrollPreDO 的逻辑
      */
     private EnrollPreDO createEnrollPre(Long candidateId, Long examPlanId,Long orgId) {

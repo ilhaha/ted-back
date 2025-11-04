@@ -32,6 +32,7 @@ import top.continew.admin.training.model.resp.OrgDetailResp;
 import top.continew.admin.training.model.resp.OrgResp;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 机构信息业务接口
@@ -197,4 +198,9 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      */
     List<SelectOrgVO> getOrgSelect();
 
+    /**
+     * 根据班级类型获取机构对应的项目-班级级联选择
+     * @return
+     */
+    List<Map<String, Object>> getSelectProjectClassByType(Integer type);
 }

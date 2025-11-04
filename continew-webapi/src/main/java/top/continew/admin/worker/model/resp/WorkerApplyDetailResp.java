@@ -109,4 +109,32 @@ public class WorkerApplyDetailResp extends BaseDetailResp {
     @Schema(description = "删除标记(0未删,1已删)")
     @ExcelProperty(value = "删除标记(0未删,1已删)")
     private Integer isDeleted;
+
+    /**
+     * 八大类名称
+     */
+    @Schema(description = "八大类名称")
+    @ExcelProperty(value = "八大类名称")
+    private String categoryName;
+
+    /**
+     * 项目名称
+     */
+    @Schema(description = "项目名称")
+    @ExcelProperty(value = "项目名称")
+    private String projectName;
+
+    /**
+     * 班级名称
+     */
+    @Schema(description = "班级名称")
+    @ExcelProperty(value = "班级名称")
+    private String className;
+
+    /**
+     * 审核意见或退回原因
+     */
+    @Schema(description = "审核意见或退回原因")
+    @ExcelProperty(value = "审核意见或退回原因")
+    private String remark;
 }

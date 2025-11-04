@@ -1,6 +1,7 @@
 package top.continew.admin.worker.service;
 
 import top.continew.admin.worker.model.req.VerifyReq;
+import top.continew.admin.worker.model.req.WorkerApplyReviewReq;
 import top.continew.admin.worker.model.req.WorkerQrcodeUploadReq;
 import top.continew.admin.worker.model.resp.WorkerApplyVO;
 import top.continew.starter.extension.crud.service.BaseService;
@@ -30,5 +31,11 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      * @return
      */
     Boolean submit(WorkerQrcodeUploadReq workerQrcodeUploadReq);
+
+    /**
+     * 审核作业人员报考
+     * @return
+     */
+    Boolean review(WorkerApplyReviewReq workerApplyReviewReq);
 
 }

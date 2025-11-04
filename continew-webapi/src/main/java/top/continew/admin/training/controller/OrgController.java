@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -103,6 +104,15 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     @GetMapping("/select/project/class")
     public List<ProjectCategoryVO> getSelectProjectClass(@RequestParam Long orgId,@RequestParam Long projectId){
         return orgService.getSelectProjectClass(orgId,projectId);
+    }
+
+    /**
+     * 根据班级类型获取机构对应的项目-班级级联选择
+     * @return
+     */
+    @GetMapping("/select/org/project/class/{type}")
+    public List<Map<String, Object>> getSelectProjectClass(@PathVariable("type") Integer type){
+        return orgService.getSelectProjectClassByType(type);
     }
 
     /**

@@ -28,6 +28,6 @@ public class WorkerApplyDocumentQuery implements Serializable {
      * 作业人员报名表ID
      */
     @Schema(description = "作业人员报名表ID")
-    @Query(type = QueryType.EQ)
+    @Query(type = QueryType.EQ,columns = "twad.worker_apply_id")
     private Long workerApplyId;
 }
