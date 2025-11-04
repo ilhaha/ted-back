@@ -40,9 +40,18 @@ public class ExamineePaymentAuditQuery implements Serializable {
     private Long examineeId;
 
     /**
-     * 审核状态：0-待审核，1-审核通过，2-审核驳回
+     * 审核状态：0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回
      */
-    @Schema(description = "审核状态：0-待审核，1-审核通过，2-审核驳回")
+    @Schema(description = "0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回")
     @Query(type = QueryType.EQ)
     private Integer auditStatus;
+
+    @Schema(description = "考生姓名查询")
+    @Query(type = QueryType.LIKE,columns = "su.nickname")
+    private String examineeName; // 考生姓名查询
+
+    @Schema(description = "考试计划名称查询")
+    @Query(type = QueryType.LIKE,columns = "tep.exam_plan_name")
+    private String planName; // 考试计划名称查询
+
 }

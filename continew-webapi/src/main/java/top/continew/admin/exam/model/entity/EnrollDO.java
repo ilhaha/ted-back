@@ -39,6 +39,11 @@ public class EnrollDO extends BaseDO {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 主键ID
+     */
+    private Long id;
+
+    /**
      * 考生id
      */
     private Long userId;

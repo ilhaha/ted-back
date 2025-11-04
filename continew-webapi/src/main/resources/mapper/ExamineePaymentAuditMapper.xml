@@ -1,4 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="top.continew.admin.exam.mapper.ExamineePaymentAuditMapper">
+
+        <select id="getExamineePaymentAudits" resultType="top.continew.admin.exam.model.resp.ExamineePaymentAuditResp">
+            SELECT
+                tepa.*,
+                su.nickname AS examineeName,
+                tep.exam_plan_name AS planName
+            FROM ted_examinee_payment_audit tepa
+                     LEFT JOIN sys_user su
+                               ON tepa.examinee_id = su.id
+                     LEFT JOIN ted_exam_plan tep
+                               ON tepa.exam_plan_id = tep.id
+                ${ew.customSqlSegment}
+        </select>
+
 </mapper>

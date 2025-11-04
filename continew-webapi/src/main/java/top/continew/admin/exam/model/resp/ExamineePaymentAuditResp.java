@@ -30,10 +30,22 @@ public class ExamineePaymentAuditResp extends BaseResp {
     private Long examPlanId;
 
     /**
+     * 关联考试计划name
+     */
+    @Schema(description = "关联考试计划name")
+    private String planName;
+
+    /**
      * 考生ID
      */
     @Schema(description = "考生ID")
     private Long examineeId;
+
+    /**
+     * 考生name
+     */
+    @Schema(description = "考生name")
+    private String examineeName;
 
     /**
      * 关联报名记录ID
@@ -66,9 +78,9 @@ public class ExamineePaymentAuditResp extends BaseResp {
     private String auditNoticeUrl;
 
     /**
-     * 审核状态：0-待审核，1-审核通过，2-审核驳回
+     * 审核状态：0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回
      */
-    @Schema(description = "审核状态：0-待审核，1-审核通过，2-审核驳回")
+    @Schema(description = "0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回")
     private Integer auditStatus;
 
     /**
