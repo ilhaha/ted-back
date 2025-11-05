@@ -1,7 +1,6 @@
 package top.continew.admin.exam.service;
 
-import top.continew.starter.extension.crud.model.query.PageQuery;
-import top.continew.starter.extension.crud.model.resp.PageResp;
+import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.ExamineePaymentAuditQuery;
 import top.continew.admin.exam.model.req.ExamineePaymentAuditReq;
@@ -34,4 +33,13 @@ public interface ExamineePaymentAuditService extends BaseService<ExamineePayment
      * 生成缴费通知单
      */
     byte[] generatePaymentNotice(Long examPlanId, Long examineeId, String examPlanName, String projectName, Long paymentAmount) throws Exception;
+
+    /**
+     * 根据考试计划ID和考生ID查询缴费审核信息
+     *
+     * @param examPlanId 考试计划ID
+     * @param examineeId 考生ID
+     * @return 缴费审核信息
+     */
+    ExamineePaymentAuditDO getByExamPlanIdAndExamineeId(Long examPlanId, Long examineeId);
 }

@@ -1,5 +1,7 @@
 package top.continew.admin.exam.controller;
 
+import jakarta.annotation.Resource;
+import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +26,16 @@ import top.continew.admin.exam.service.ExamineePaymentAuditService;
 @RestController
 @CrudRequestMapping(value = "/exam/examineePaymentAudit", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE, Api.EXPORT})
 public class ExamineePaymentAuditController extends BaseController<ExamineePaymentAuditService, ExamineePaymentAuditResp, ExamineePaymentAuditDetailResp, ExamineePaymentAuditQuery, ExamineePaymentAuditReq> {
-
+    @Resource
+    private ExamineePaymentAuditService examineePaymentAuditService;
+    /**
+     * 根据考试计划ID和考生ID查询缴费审核信息
+     */
+    @GetMapping("/info")
+    public ExamineePaymentAuditDO getPaymentAuditInfo(
+            @RequestParam Long examPlanId,
+            @RequestParam Long examineeId) {
+        return examineePaymentAuditService.getByExamPlanIdAndExamineeId(examPlanId, examineeId);
+    }
 
 }

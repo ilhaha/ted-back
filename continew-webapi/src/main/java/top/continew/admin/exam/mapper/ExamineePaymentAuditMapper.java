@@ -24,5 +24,4 @@ public interface ExamineePaymentAuditMapper extends BaseMapper<ExamineePaymentAu
                                                              @Param(Constants.WRAPPER) QueryWrapper<ExamineePaymentAuditDO> queryWrapper);
 
 
-
 }
