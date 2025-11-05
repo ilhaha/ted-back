@@ -79,7 +79,7 @@
     </select>
 
     <select id="getAgencyStatus" resultType="top.continew.admin.training.model.vo.AgencyStatusVO">
-        select id,org_id,status ,remark
+        select id, org_id, status, remark
         from ted_org_candidate
         where is_deleted = 0
           and org_id = #{orgId}
@@ -178,41 +178,39 @@
     </select>
     <select id="getSelectProjectClassCandidate"
             resultType="top.continew.admin.training.model.vo.OrgProjectClassCandidateVO">
-        SELECT
-        p.id AS projectId,
-        p.project_name AS projectLabel,
-        c.id AS classId,
-        c.class_name AS classLabel,
-        occ.candidate_id AS candidateId,
-        su.nickname
+        SELECT p.id             AS projectId,
+               p.project_name   AS projectLabel,
+               c.id             AS classId,
+               c.class_name     AS classLabel,
+               occ.candidate_id AS candidateId,
+               su.nickname
         FROM ted_org_class c
-        JOIN ted_project p
-        ON c.project_id = p.id AND p.is_deleted = 0
-        LEFT JOIN ted_org_class_candidate occ
-        ON c.id = occ.class_id
-        LEFT JOIN sys_user su
-        ON occ.candidate_id = su.id
-        LEFT JOIN ted_enroll_pre ep
-        ON occ.candidate_id = ep.candidate_id AND ep.is_deleted = 0
+                 JOIN ted_project p
+                      ON c.project_id = p.id AND p.is_deleted = 0
+                 LEFT JOIN ted_org_class_candidate occ
+                           ON c.id = occ.class_id
+                 LEFT JOIN sys_user su
+                           ON occ.candidate_id = su.id
+                 LEFT JOIN ted_enroll_pre ep
+                           ON occ.candidate_id = ep.candidate_id AND ep.is_deleted = 0
         WHERE c.is_deleted = 0
-        AND c.org_id = #{orgId}
-        AND c.project_id = #{projectId}
-        AND ep.id IS NULL
+          AND c.org_id = #{orgId}
+          AND c.project_id = #{projectId}
+          AND ep.id IS NULL
     </select>
     <select id="getOrgSelect" resultType="top.continew.admin.training.model.vo.SelectOrgVO">
-        SELECT id AS `value`,`name` AS label
+        SELECT id AS `value`, `name` AS label
         FROM ted_org
         WHERE is_deleted = 0
     </select>
     <select id="getSelectProjectClassByType"
             resultType="top.continew.admin.training.model.vo.OrgProjectClassTypeVO">
-        SELECT
-            org.id AS org_id,
-            org.name AS org_name,
-            tp.id AS project_id,
-            tp.project_name,
-            toc.id AS class_id,
-            toc.class_name
+        SELECT org.id   AS org_id,
+               org.name AS org_name,
+               tp.id    AS project_id,
+               tp.project_name,
+               toc.id   AS class_id,
+               toc.class_name
         FROM ted_org org
                  LEFT JOIN ted_org_category_relation tocr
                            ON org.id = tocr.org_id AND tocr.is_deleted = 0
@@ -226,6 +224,31 @@
           AND toc.class_type = #{type}
         ORDER BY org.id, tp.id, toc.id;
 
+    </select>
+    <select id="getSelectOrgProjectClassByType"
+            resultType="top.continew.admin.training.model.vo.OrgProjectClassVO">
+        SELECT p.id           AS projectId,
+               p.project_name AS projectLabel,
+               c.id           AS classId,
+               c.class_name   AS classLabel
+        FROM ted_org_class c
+                 JOIN ted_project p
+                      ON c.project_id = p.id
+                          AND p.is_deleted = 0
+        WHERE c.is_deleted = 0
+          AND c.org_id = #{orgId}
+          AND c.class_type = #{type}
+    </select>
+    <select id="getNeedUploadDoc" resultType="java.lang.String">
+        SELECT type_name
+        FROM ted_org_class toc
+                 LEFT JOIN ted_project_document_type tpdt
+                           ON toc.project_id = tpdt.project_id AND tpdt.is_deleted = 0
+                 LEFT JOIN ted_document_type tdt
+                           ON tpdt.document_type_id = tdt.id AND tdt.is_deleted = 0
+        WHERE toc.is_deleted = 0
+          AND toc.id = #{classId}
+          AND tdt.type_name != '身份证'
     </select>
 
 
@@ -249,21 +272,19 @@
     <update id="studentQuitAgencyClass">
         UPDATE ted_org_class_candidate coc
         SET coc.is_deleted = 1,
-            coc.status = 3
+            coc.status     = 3
         WHERE coc.candidate_id = #{userId}
-          AND coc.class_id IN (
-            SELECT id
-            FROM ted_org_class oc
-            WHERE oc.org_id = #{orgId}
-              AND oc.is_deleted = 0
-        )
+          AND coc.class_id IN (SELECT id
+                               FROM ted_org_class oc
+                               WHERE oc.org_id = #{orgId}
+                                 AND oc.is_deleted = 0)
     </update>
 
-   <!-- 退出机构 -->
+    <!-- 退出机构 -->
     <update id="studentQuitAgency">
         UPDATE ted_org_candidate
         SET is_deleted = 1,
-            status = 0
+            status     = 0
         WHERE org_id = #{orgId}
           AND candidate_id = #{userId}
           AND is_deleted = 0

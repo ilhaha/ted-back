@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 import top.continew.admin.common.constant.enums.WorkerApplyReviewStatusEnum;
+import top.continew.admin.common.constant.enums.WorkerApplyTypeEnum;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
 import top.continew.admin.common.util.AESWithHMAC;
@@ -159,6 +160,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         workerApplyDO.setIdCardPhotoFront(workerQrcodeUploadReq.getIdCardPhotoFront());
         workerApplyDO.setIdCardPhotoBack(workerQrcodeUploadReq.getIdCardPhotoBack());
         workerApplyDO.setFacePhoto(workerQrcodeUploadReq.getFacePhoto());
+        workerApplyDO.setApplyType(WorkerApplyTypeEnum.SCAN_APPLY.getValue());
         baseMapper.insert(workerApplyDO);
         // 插入报名表的资料
         List<DocFileDTO> docFileList = workerQrcodeUploadReq.getDocFileList();

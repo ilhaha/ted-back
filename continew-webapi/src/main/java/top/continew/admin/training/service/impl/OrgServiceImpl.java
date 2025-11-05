@@ -18,7 +18,9 @@ package top.continew.admin.training.service.impl;
 
 import cn.crane4j.core.util.StringUtils;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.qrcode.QrCodeUtil;
 import com.alibaba.excel.support.cglib.beans.BeanMap;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -31,23 +33,35 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import me.zhyd.oauth.exception.AuthException;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.*;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.constant.ImportWorkerTemplateConstant;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
+import top.continew.admin.common.constant.enums.WorkerApplyReviewStatusEnum;
+import top.continew.admin.common.constant.enums.WorkerApplyTypeEnum;
+import top.continew.admin.common.constant.enums.WorkerPictureTypeEnum;
+import top.continew.admin.common.model.dto.ExcelUploadFileResultDTO;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
+import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.ClassroomDO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
-import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
 import top.continew.admin.exam.model.vo.ExamPlanVO;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
@@ -55,12 +69,17 @@ import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.UploadService;
 import top.continew.admin.training.mapper.*;
 import top.continew.admin.training.model.dto.OrgDTO;
+import top.continew.admin.training.model.vo.ParsedExcelResultVO;
+import top.continew.admin.training.model.vo.ParsedErrorVO;
+import top.continew.admin.training.model.vo.ParsedSuccessVO;
 import top.continew.admin.training.model.entity.*;
 import top.continew.admin.training.model.req.OrgApplyPreReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.vo.*;
+import top.continew.admin.util.ExcelMediaUtils;
 import top.continew.admin.util.InMemoryMultipartFile;
-import top.continew.admin.util.RedisUtil;
+import top.continew.admin.worker.mapper.WorkerApplyMapper;
+import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -74,9 +93,7 @@ import top.continew.admin.training.service.OrgService;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -94,8 +111,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, OrgDetailResp, OrgQuery, OrgReq> implements OrgService {
+
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
+
     @Resource
     private OrgMapper orgMapper;
 
@@ -146,6 +165,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Resource
     private EnrollMapper enrollMapper;
+
+    @Resource
+    private WorkerApplyMapper workerApplyMapper;
 
     private static final long EXPIRE_TIME = 7;  // 过期时间（天）
 
@@ -309,7 +331,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      */
     @Override
     public void orgSignUp(UserOrgDTO userDTO) {
-        Long orgId = orgMapper.getOrgId(TokenLocalThreadUtil.get().getUserId()).getId();//获取机构id
+        //获取机构id
+        Long orgId = orgMapper.getOrgId(TokenLocalThreadUtil.get().getUserId()).getId();
         Long candidateId = orgMapper.orgSignUp(userDTO);//获取考生id
         orgMapper.linkCandidateWithOrg(orgId, candidateId);//添加到关联表
         //添加到关联表
@@ -504,8 +527,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             orgCandidateDO.setUpdateUser(TokenLocalThreadUtil.get().getUserId());
             orgCandidateDO.setId(agencyStatusVO.getId());
             orgCandidateDO.setStatus(1);
-            return orgCandidateMapper.update(orgCandidateDO,new LambdaUpdateWrapper<OrgCandidateDO>().eq(OrgCandidateDO::getId,agencyStatusVO.getId())
-                    .set(OrgCandidateDO::getRemark,null));
+            return orgCandidateMapper.update(orgCandidateDO, new LambdaUpdateWrapper<OrgCandidateDO>().eq(OrgCandidateDO::getId, agencyStatusVO.getId())
+                    .set(OrgCandidateDO::getRemark, null));
         }
         OrgCandidateDO orgCandidateDO = new OrgCandidateDO();
         orgCandidateDO.setOrgId(orgId);
@@ -930,6 +953,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     /**
      * 机构预报名
+     *
      * @return
      */
     @Override
@@ -947,7 +971,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         examPlanVO.setClassroomList(examPlanMapper.getPlanExamClassroom(examPlanId));
         int maxNumber = 0;
         LambdaQueryWrapper<ClassroomDO> classroomDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        classroomDOLambdaQueryWrapper.in(ClassroomDO::getId,examPlanVO.getClassroomList());
+        classroomDOLambdaQueryWrapper.in(ClassroomDO::getId, examPlanVO.getClassroomList());
         List<ClassroomDO> classroomDOS = classroomMapper.selectList(classroomDOLambdaQueryWrapper);
         for (ClassroomDO classroomDO : classroomDOS) {
             maxNumber += classroomDO.getMaxCandidates();
@@ -958,13 +982,14 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         OrgDO orgDO = orgUserMapper.selectOrgByUserId(userTokenDo.getUserId());
         List<EnrollPreDO> insertPreList = candidateIds.stream()
-                .map(candidateId -> createEnrollPre(candidateId, examPlanId,orgDO.getId()))
+                .map(candidateId -> createEnrollPre(candidateId, examPlanId, orgDO.getId()))
                 .toList();
         return enrollPreMapper.insertBatch(insertPreList);
     }
 
     /**
      * 获取所有的机构作为选择器返回
+     *
      * @return
      */
     @Override
@@ -974,6 +999,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     /**
      * 根据班级类型获取机构对应的项目-班级级联选择
+     *
      * @return
      */
     @Override
@@ -1023,9 +1049,460 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
     /**
+     * 获取班级类型机构对应的项目-班级级联选择
+     *
+     * @return
+     */
+    @Override
+    public List<ProjectCategoryVO> getSelectOrgProjectClassByType(Integer type) {
+        // 查询原始数据（项目 + 班级）
+        Long orgId = orgMapper.getOrgId(TokenLocalThreadUtil.get().getUserId()).getId();
+        List<OrgProjectClassVO> flatList = baseMapper.getSelectOrgProjectClassByType(orgId, type);
+
+        // 按项目分组
+        Map<Long, ProjectCategoryVO> projectMap = new LinkedHashMap<>();
+
+        for (OrgProjectClassVO item : flatList) {
+            // 如果项目节点不存在，则新建
+            projectMap.computeIfAbsent(item.getProjectId(), id -> {
+                ProjectCategoryVO projectVO = new ProjectCategoryVO();
+                projectVO.setValue(item.getProjectId());
+                projectVO.setLabel(item.getProjectLabel());
+                projectVO.setChildren(new ArrayList<>());
+                return projectVO;
+            });
+
+            // 创建班级节点并挂在对应项目下
+            ProjectCategoryVO classVO = new ProjectCategoryVO();
+            classVO.setValue(item.getClassId());
+            classVO.setLabel(item.getClassLabel());
+
+            projectMap.get(item.getProjectId()).getChildren().add(classVO);
+        }
+
+        return new ArrayList<>(projectMap.values());
+    }
+
+    /**
+     * 根据班级id下载导入作业人员模板
+     *
+     * @param classId
+     * @return
+     */
+    @Override
+    public ResponseEntity<byte[]> downloadImportWorkerTemplate(Long classId) {
+        OrgClassDO orgClassDO = orgClassMapper.selectById(classId);
+        ValidationUtils.throwIfNull(orgClassDO, "班级已被删除");
+
+        List<String> headers = getExcelHeader(classId);
+
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            // 3. 创建工作表
+            Sheet sheet = workbook.createSheet(String.valueOf(classId));
+
+            // 4. 美化表头样式
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setFontHeightInPoints((short) 12);
+            headerFont.setColor(IndexedColors.WHITE.getIndex());
+            headerStyle.setFont(headerFont);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+            headerStyle.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+
+            // 5. 写表头
+            Row headerRow = sheet.createRow(0);
+            headerRow.setHeightInPoints(28); // 高一点更美观
+            for (int i = 0; i < headers.size(); i++) {
+                sheet.setColumnWidth(i, 20 * 256);
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers.get(i));
+                cell.setCellStyle(headerStyle);
+            }
+
+            // 6. 设置前 200 行的行高和列宽（方便插入图片）
+            for (int i = 1; i <= 200; i++) {
+                Row row = sheet.createRow(i);
+                row.setHeightInPoints(80); // 高一点方便放图片
+            }
+
+            // 设置图片列更宽，比如假设最后一列是照片列
+            if (!headers.isEmpty()) {
+                int lastColIndex = headers.size() - 1;
+                sheet.setColumnWidth(lastColIndex, 30 * 256); // 调宽最后一列
+            }
+
+            // 7. 写入输出流
+            workbook.write(out);
+
+            // 8. 构造响应头
+            String fileName = URLEncoder.encode(
+                    orgClassDO.getClassName() + "-导入作业人员信息模板.xlsx",
+                    StandardCharsets.UTF_8
+            );
+            HttpHeaders headersHttp = new HttpHeaders();
+            headersHttp.setContentType(MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headersHttp.setContentDispositionFormData("attachment", fileName);
+
+            return new ResponseEntity<>(out.toByteArray(), headersHttp, HttpStatus.OK);
+
+        } catch (IOException e) {
+            throw new RuntimeException("导出导入模板失败", e);
+        }
+    }
+
+    private @NotNull List<String> getExcelHeader(Long classId) {
+        // 1. 获取数据库中的需上传资料名称
+        List<String> docNames = baseMapper.getNeedUploadDoc(classId);
+
+        // 2. 复制默认表头
+        List<String> headers = new ArrayList<>(ImportWorkerTemplateConstant.DEFAULT_HEAD);
+        if (ObjectUtil.isNotEmpty(docNames)) {
+            headers.addAll(docNames);
+        }
+        return headers;
+    }
+
+    /**
+     * 批量导入作业人员
+     *
+     * @param file
+     * @return
+     */
+    @Override
+    public ParsedExcelResultVO importWorker(MultipartFile file, Long classId) {
+        if (file.isEmpty()) {
+            throw new BusinessException("文件不能为空");
+        }
+
+        String filename = file.getOriginalFilename();
+        if (filename == null || !filename.endsWith(".xlsx")) {
+            throw new BusinessException("仅支持.xlsx文件");
+        }
+
+        try (InputStream is = file.getInputStream();
+             XSSFWorkbook workbook = new XSSFWorkbook(is)) {
+            XSSFSheet sheet = workbook.getSheetAt(0);
+            if (sheet == null) {
+                throw new BusinessException("Excel中未找到有效工作表");
+            }
+
+            // ============ 阶段1：模板与表头校验 ============
+            validateTemplate(sheet, classId);
+
+            // ============ 阶段2：行级校验（仅检查存在性） ============
+            validateRowsBeforeUpload(workbook, sheet, classId);
+
+            // ============ 阶段3：上传校验============
+            ParsedExcelResultVO parsedExcelResultVO = parse(workbook, sheet, classId);
+
+            List<ParsedSuccessVO> successList = parsedExcelResultVO.getSuccessList();
+            List<ParsedErrorVO> failedList = parsedExcelResultVO.getFailedList();
+
+            // 检查成功列表中的重复身份证号，将重复条目移到失败列表，并记录重复行号
+            removeDuplicateIdCards(successList, failedList);
+
+            // 删除数据库已存在身份证，将已存在的移到失败列表
+            removeExistingIdCards(successList,failedList,classId);
+
+            // 对列表的身份证和手机号进行脱敏
+            if (ObjectUtil.isNotEmpty(successList)) {
+                successList.forEach(item -> {
+                    String phone = item.getPhone();
+                    item.setEncFieldA(aesWithHMAC.encryptAndSign(phone));
+                    item.setPhone(CharSequenceUtil.replaceByCodePoint(phone, 3, phone.length() - 4, '*'));
+
+                    String idCardNumber = item.getIdCardNumber();
+                    item.setEncFieldB(aesWithHMAC.encryptAndSign(idCardNumber));
+                    item.setIdCardNumber(CharSequenceUtil.replaceByCodePoint(idCardNumber, 2, idCardNumber.length() - 5, '*'));
+                });
+            }
+
+            return parsedExcelResultVO;
+
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new BusinessException("导入过程发生错误，请检查模板是否被修改");
+        }
+    }
+
+    /**
+     * 返回要插入的数据
+     *
+     * @param workbook
+     * @param sheet
+     * @param classId
+     * @return
+     */
+    private ParsedExcelResultVO parse(XSSFWorkbook workbook, XSSFSheet sheet, Long classId) {
+        ParsedExcelResultVO result = new ParsedExcelResultVO();
+        List<ParsedSuccessVO> successList = new ArrayList<>();
+        List<ParsedErrorVO> failedList = new ArrayList<>();
+
+        int rowCount = sheet.getPhysicalNumberOfRows();
+
+        for (int rowIndex = 1; rowIndex < rowCount; rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (ExcelMediaUtils.isRowEmpty(row)) break;
+
+            String excelName = getCellString(row, 0);
+            String phone = getCellString(row, 1);
+            try {
+                ParsedSuccessVO worker = new ParsedSuccessVO();
+                worker.setExcelName(excelName);
+                worker.setPhone(phone);
+                // 上传身份证正面
+                ExcelUploadFileResultDTO idFront = ExcelMediaUtils.excelUploadFile(
+                        workbook, sheet, rowIndex, 2, uploadService, WorkerPictureTypeEnum.ID_CARD_FRONT.getValue());
+                String realName = idFront.getRealName();
+                if (!realName.equals(excelName)) {
+                    throw new BusinessException("上传的身份证与Excel填写的姓名不一致");
+                }
+                worker.setRowNum(rowIndex + 1);
+                worker.setCandidateName(realName);
+                worker.setIdCardPhotoFront(idFront.getIdCardPhotoFront());
+                worker.setIdCardNumber(idFront.getIdCardNumber());
+                worker.setGender(idFront.getGender());
+                // 上传身份证反面
+                ExcelUploadFileResultDTO idBack = ExcelMediaUtils.excelUploadFile(
+                        workbook, sheet, rowIndex, 3, uploadService, WorkerPictureTypeEnum.ID_CARD_BACK.getValue());
+                // 上传一寸免冠照
+                ExcelUploadFileResultDTO face = ExcelMediaUtils.excelUploadFile(
+                        workbook, sheet, rowIndex, 4, uploadService, WorkerPictureTypeEnum.PASSPORT_PHOTO.getValue());
+
+
+                worker.setIdCardPhotoBack(idBack.getIdCardPhotoBack());
+                worker.setFacePhoto(face.getFacePhoto());
+
+                // 报名申请资格表附件
+                Map<String, List<String>> oleMap = ExcelMediaUtils.getOleAttachmentMapAndUpload(workbook, rowIndex, uploadService, true);
+                List<String> oleMapVal = oleMap.get(rowIndex + "_5");
+                worker.setQualificationName(oleMapVal.get(0));
+                worker.setQualificationPath(oleMapVal.get(1));
+                worker.setStatus(WorkerApplyReviewStatusEnum.PENDING_REVIEW.getValue());
+                worker.setClassId(classId);
+                worker.setApplyType(WorkerApplyTypeEnum.ORG_IMPORT.getValue());
+                successList.add(worker);
+
+            } catch (Exception e) {
+                failedList.add(new ParsedErrorVO(
+                        rowIndex + 1,
+                        excelName,
+                        phone,
+                        e.getMessage().split(": ")[2]
+                ));
+            }
+        }
+        result.setSuccessList(successList);
+        result.setFailedList(failedList);
+        return result;
+    }
+
+    /**
+     * 删除数据库班级已有的报名信息
+     *
+     * @param successList 成功导入列表
+     * @param failedList  失败导入列表
+     * @param classId     班级id
+     */
+    private void removeExistingIdCards(
+            List<ParsedSuccessVO> successList,
+            List<ParsedErrorVO> failedList,
+            Long classId) {
+        List<WorkerApplyDO> workerApplyDOS = workerApplyMapper.selectList(new LambdaQueryWrapper<WorkerApplyDO>()
+                .eq(WorkerApplyDO::getClassId, classId).select(WorkerApplyDO::getIdCardNumber));
+        if (ObjectUtil.isNotEmpty(workerApplyDOS)) {
+            Set<String> existingIdCardsFromDb = workerApplyDOS.stream()
+                    .map(item -> aesWithHMAC.verifyAndDecrypt(item.getIdCardNumber()))
+                    .filter(StrUtil::isNotBlank)
+                    .collect(Collectors.toSet());
+            Iterator<ParsedSuccessVO> iterator = successList.iterator();
+            while (iterator.hasNext()) {
+                ParsedSuccessVO worker = iterator.next();
+                String idCard = worker.getIdCardNumber();
+                if (StrUtil.isNotBlank(idCard) && existingIdCardsFromDb.contains(idCard)) {
+                    // 移到失败列表
+                    ParsedErrorVO errorDTO = new ParsedErrorVO();
+                    BeanUtils.copyProperties(worker, errorDTO);
+                    errorDTO.setErrorMessage("班级中已存在身份证为【" + CharSequenceUtil.replaceByCodePoint(idCard, 2, idCard.length() - 5, '*') + "】" + "的报名记录");
+                    failedList.add(errorDTO);
+                    // 从成功列表移除
+                    iterator.remove();
+                }
+            }
+        }
+    }
+
+
+    /**
+     * 检查成功列表中的重复身份证号，将重复条目移到失败列表，并记录重复行号
+     *
+     * @param successList 成功导入列表
+     * @param failedList  失败导入列表
+     */
+    private void removeDuplicateIdCards(
+            List<ParsedSuccessVO> successList,
+            List<ParsedErrorVO> failedList) {
+
+        Map<String, List<ParsedSuccessVO>> idCardMap = new HashMap<>();
+        for (ParsedSuccessVO worker : successList) {
+            String idCard = worker.getIdCardNumber();
+            if (StrUtil.isBlank(idCard)) continue;
+            idCardMap.computeIfAbsent(idCard, k -> new ArrayList<>()).add(worker);
+        }
+
+        for (Map.Entry<String, List<ParsedSuccessVO>> entry : idCardMap.entrySet()) {
+            List<ParsedSuccessVO> list = entry.getValue();
+            if (list.size() > 1) {
+                List<Integer> rowNums = list.stream()
+                        .map(ParsedSuccessVO::getRowNum)
+                        .collect(Collectors.toList());
+
+                for (ParsedSuccessVO duplicateWorker : list) {
+                    ParsedErrorVO errorDTO = new ParsedErrorVO();
+                    BeanUtils.copyProperties(duplicateWorker, errorDTO);
+
+                    List<Integer> otherRows = rowNums.stream()
+                            .filter(r -> !r.equals(duplicateWorker.getRowNum()))
+                            .collect(Collectors.toList());
+                    errorDTO.setErrorMessage(
+                            "身份证号重复，与第 " + otherRows.stream().map(String::valueOf).collect(Collectors.joining("、")) + " 行重复"
+                    );
+
+                    failedList.add(errorDTO);
+                }
+
+                successList.removeAll(list);
+            }
+        }
+    }
+
+
+    /**
+     * 校验表头
+     *
+     * @param sheet
+     * @param classId
+     */
+    private void validateTemplate(XSSFSheet sheet, Long classId) {
+        String sheetName = sheet.getSheetName();
+        if (!String.valueOf(classId).equals(sheetName)) {
+            throw new BusinessException("导入模板与所选班级不匹配或模板已被修改");
+        }
+
+        List<String> expectedHeaders = getExcelHeader(classId);
+        Row headerRow = sheet.getRow(0);
+        if (headerRow == null) {
+            throw new BusinessException("Excel表头行为空，请确认模板未被修改");
+        }
+
+        List<String> actualHeaders = new ArrayList<>();
+        for (Cell cell : headerRow) {
+            cell.setCellType(CellType.STRING);
+            actualHeaders.add(cell.getStringCellValue().trim());
+        }
+
+        if (expectedHeaders.size() != actualHeaders.size()) {
+            throw new BusinessException("模板表头数量不匹配，请重新下载最新模板");
+        }
+        for (int i = 0; i < expectedHeaders.size(); i++) {
+            if (!expectedHeaders.get(i).equals(actualHeaders.get(i))) {
+                throw new BusinessException(String.format(
+                        "模板表头与系统要求不符（第 %d 列应为「%s」，实际为「%s」）",
+                        i + 1, expectedHeaders.get(i), actualHeaders.get(i)
+                ));
+            }
+        }
+    }
+
+    /**
+     * 校验数据有没有空的
+     *
+     * @param workbook
+     * @param sheet
+     * @param classId
+     */
+    private void validateRowsBeforeUpload(XSSFWorkbook workbook, XSSFSheet sheet, Long classId) {
+        List<String> expectedHeaders = getExcelHeader(classId);
+        Set<String> phoneSet = new HashSet<>();
+        int rowCount = sheet.getPhysicalNumberOfRows();
+
+        for (int rowIndex = 1; rowIndex < rowCount; rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (ExcelMediaUtils.isRowEmpty(row)) break;
+
+            String workerName = getCellString(row, 0);
+            if (StrUtil.isBlank(workerName)) {
+                throw new BusinessException(String.format("第 %d 行【%s】不能为空", rowIndex + 1, expectedHeaders.get(0)));
+            }
+
+            // 手机号唯一性校验
+            String phone = getCellString(row, 1);
+            if (StrUtil.isBlank(phone)) {
+                throw new BusinessException(String.format("第 %d 行【%s】不能为空", rowIndex + 1, expectedHeaders.get(1)));
+            }
+            if (!phoneSet.add(phone)) {
+                throw new BusinessException(String.format("第 %d 行【%s】与前面行重复", rowIndex + 1, expectedHeaders.get(1)));
+            }
+
+            if (!phone.matches("^1[3-9]\\d{9}$")) {
+                throw new BusinessException(String.format("第 %d 行【%s】格式不正确", rowIndex + 1, expectedHeaders.get(1)));
+            }
+
+            // 校验必填图片存在
+            if (!ExcelMediaUtils.hasPicture(workbook, sheet, rowIndex, 2)) {
+                throw new BusinessException(String.format("第 %d 行【身份证人像面】不能为空", rowIndex + 1));
+            }
+            if (!ExcelMediaUtils.hasPicture(workbook, sheet, rowIndex, 3)) {
+                throw new BusinessException(String.format("第 %d 行【身份证国徽面】不能为空", rowIndex + 1));
+            }
+            if (!ExcelMediaUtils.hasPicture(workbook, sheet, rowIndex, 4)) {
+                throw new BusinessException(String.format("第 %d 行【一寸免冠照】不能为空", rowIndex + 1));
+            }
+
+            for (int col = 5; col < expectedHeaders.size(); col++) {
+                String header = expectedHeaders.get(col);
+                if (col == 5) {
+                    Map<String, List<String>> oleMap = ExcelMediaUtils.getOleAttachmentMapAndUpload(workbook, rowIndex, uploadService, false);
+                    if (!oleMap.containsKey(rowIndex + "_" + col)) {
+                        throw new BusinessException(String.format("第 %d 行【%s】不能为空", rowIndex + 1, expectedHeaders.get(col)));
+                    }
+                } else {
+                    boolean hasPicture = ExcelMediaUtils.hasPicture(workbook, sheet, rowIndex, col);
+                    if (!hasPicture) {
+                        throw new BusinessException(String.format("第 %d 行【%s】不能为空", rowIndex + 1, header));
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 安全读取单元格文本
+     */
+    private String getCellString(Row row, int colIndex) {
+        Cell cell = row.getCell(colIndex);
+        if (cell == null) return "";
+        cell.setCellType(CellType.STRING);
+        return StrUtil.trimToEmpty(cell.getStringCellValue());
+    }
+
+
+    /**
      * 封装创建单个 EnrollPreDO 的逻辑
      */
-    private EnrollPreDO createEnrollPre(Long candidateId, Long examPlanId,Long orgId) {
+    private EnrollPreDO createEnrollPre(Long candidateId, Long examPlanId, Long orgId) {
         EnrollPreDO preDO = new EnrollPreDO();
         preDO.setCandidateId(candidateId);
         preDO.setPlanId(examPlanId);
@@ -1076,5 +1553,4 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             return fileInfo.getUrl();
         }
     }
-
 }

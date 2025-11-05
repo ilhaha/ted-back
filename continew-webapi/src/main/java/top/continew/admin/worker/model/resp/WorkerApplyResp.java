@@ -94,6 +94,12 @@ public class WorkerApplyResp extends BaseResp {
     private Integer status;
 
     /**
+     * 报名方式，0作业人员自报名，1机构批量导入
+     */
+    @Schema(description = "报名方式，0作业人员自报名，1机构批量导入")
+    private Integer applyType;
+
+    /**
      * 删除标记(0未删,1已删)
      */
     @Schema(description = "删除标记(0未删,1已删)")

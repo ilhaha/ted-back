@@ -16,13 +16,12 @@
 
 package top.continew.admin.training.service;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.model.req.OrgApplyPreReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
-import top.continew.admin.training.model.vo.AgencyStatusVO;
-import top.continew.admin.training.model.vo.ProjectCategoryVO;
-import top.continew.admin.training.model.vo.SelectOrgVO;
-import top.continew.admin.training.model.vo.UserVO;
+import top.continew.admin.training.model.vo.*;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
@@ -203,4 +202,24 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      * @return
      */
     List<Map<String, Object>> getSelectProjectClassByType(Integer type);
+
+    /**
+     * 获取班级类型机构对应的项目-班级级联选择
+     * @return
+     */
+    List<ProjectCategoryVO> getSelectOrgProjectClassByType(Integer type);
+
+    /**
+     * 根据班级id下载导入作业人员模板
+     * @param classId
+     * @return
+     */
+    ResponseEntity<byte[]> downloadImportWorkerTemplate(Long classId);
+
+    /**
+     * 批量导入作业人员
+     * @param file
+     * @return
+     */
+    ParsedExcelResultVO importWorker(MultipartFile file, Long classId);
 }

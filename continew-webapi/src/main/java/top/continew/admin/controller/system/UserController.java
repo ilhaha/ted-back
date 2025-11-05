@@ -90,7 +90,7 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @Resource
     private AESWithHMAC aesWithHMAC;
 
-    @SaIgnore
+//    @SaIgnore
     @GetMapping("/upload/when/info")
     @Operation(summary = "考生扫码上传资料时获取个人信息", description = "考生扫码上传资料时获取个人信息")
     public UploadWhenUserInfoVO uploadWhenInfo(@RequestParam("candidateId") String candidateId,@RequestParam("planId") String planId) {

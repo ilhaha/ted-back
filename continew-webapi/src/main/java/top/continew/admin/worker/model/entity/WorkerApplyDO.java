@@ -74,6 +74,11 @@ public class WorkerApplyDO extends BaseDO {
     private String facePhoto;
 
     /**
+     * 报名方式，0作业人员自报名，1机构批量导入
+     */
+    private Integer applyType;
+
+    /**
      * 审核状态:0待审核,1已生效,2未通过
      */
     private Integer status;

@@ -20,6 +20,7 @@ import com.alibaba.excel.EasyExcel;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
@@ -27,10 +28,7 @@ import top.continew.admin.training.listen.StudentDataListener;
 import top.continew.admin.training.model.req.BindUserReq;
 import top.continew.admin.training.model.req.OrgApplyPreReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
-import top.continew.admin.training.model.vo.AgencyStatusVO;
-import top.continew.admin.training.model.vo.ProjectCategoryVO;
-import top.continew.admin.training.model.vo.SelectOrgVO;
-import top.continew.admin.training.model.vo.UserVO;
+import top.continew.admin.training.model.vo.*;
 import top.continew.admin.util.Result;
 import top.continew.starter.extension.crud.enums.Api;
 
@@ -71,6 +69,28 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     @Resource
     private OrgService orgService;
 
+
+    /**
+     * 批量导入作业人员
+     * @param file
+     * @return
+     */
+    @Operation(summary = "批量导入考试计划")
+    @PostMapping("/import/worker/{classId}")
+    public ParsedExcelResultVO importWorker(@RequestPart("file") MultipartFile file, @PathVariable("classId") Long classId) {
+        return baseService.importWorker(file,classId);
+    }
+
+    /**
+     * 根据班级id下载导入作业人员模板
+     * @param classId
+     * @return
+     */
+    @GetMapping("/download/importWorker/template/{classId}")
+    public ResponseEntity<byte[]> downloadImportWorkerTemplate(@PathVariable("classId") Long classId) {
+        return baseService.downloadImportWorkerTemplate(classId);
+    }
+
     /**
      * 获取所有的机构作为选择器返回
      * @return
@@ -96,6 +116,16 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     public List<ProjectCategoryVO> getSelectProjectClassCandidate(@RequestParam Long projectId) {
         return orgService.getSelectProjectClassCandidate(projectId);
     }
+
+    /**
+     * 获取班级类型机构对应的项目-班级级联选择
+     * @return
+     */
+    @GetMapping("/select/project/class/type/{type}")
+    public List<ProjectCategoryVO> getSelectProjectClassByType(@PathVariable("type") Integer type){
+        return orgService.getSelectOrgProjectClassByType(type);
+    }
+
 
     /**
      * 获取机构对应的项目-班级级联选择

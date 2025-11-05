@@ -107,4 +107,8 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
     List<SelectOrgVO> getOrgSelect();
 
     List<OrgProjectClassTypeVO> getSelectProjectClassByType(@Param("type") Integer type);
+
+    List<OrgProjectClassVO> getSelectOrgProjectClassByType(@Param("orgId") Long orgId, @Param("type") Integer type);
+
+    List<String> getNeedUploadDoc(@Param("classId") Long classId);
 }
