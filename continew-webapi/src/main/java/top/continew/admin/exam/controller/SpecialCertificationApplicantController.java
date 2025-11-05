@@ -90,7 +90,7 @@ public class SpecialCertificationApplicantController extends BaseController<Spec
      *
      */
     @PutMapping("/update/{id}")
-    public R updateResult(@RequestBody SpecialCertificationApplicantReq req, @PathVariable("id") Long id) {
+    public R updateResult(@RequestBody SpecialCertificationApplicantReq req, @PathVariable("id") Long id) throws Exception {
         return baseService.updateResult(req, id);
     }
 

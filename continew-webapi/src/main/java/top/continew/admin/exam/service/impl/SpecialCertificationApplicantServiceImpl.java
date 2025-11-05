@@ -392,7 +392,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
      */
 
     @Override
-    public R updateResult(SpecialCertificationApplicantReq req, Long id) {
+    public R updateResult(SpecialCertificationApplicantReq req, Long id) throws Exception {
         SpecialCertificationApplicantDO applicantDO = baseMapper.selectById(id);
         EnrollReq enrollReq = new EnrollReq();
         enrollReq.setEnrollStatus(1L);
@@ -420,7 +420,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             enrollMapper.updateEnrollStatus(applicantDO.getPlanId(), applicantDO.getCandidatesId(), 1L);
             // 发送短信
             sms(examPlanName, phone, "审核通过，报名成功！");
-            //建立缴费审核表记录
+            //创建缴费审核表记录
             EnrollDO enrollDO = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
                     .eq(EnrollDO::getExamPlanId, applicantDO.getPlanId())
                     .eq(EnrollDO::getUserId, applicantDO.getCandidatesId())

@@ -60,5 +60,5 @@ public interface SpecialCertificationApplicantService extends BaseService<Specia
 
     R batchAudit(BatchAuditSpecialCertificationApplicantDTO dto);
 
-    R updateResult(SpecialCertificationApplicantReq req, Long id);
+    R updateResult(SpecialCertificationApplicantReq req, Long id) throws Exception;
 }

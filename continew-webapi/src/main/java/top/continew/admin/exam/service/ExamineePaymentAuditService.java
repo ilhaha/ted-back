@@ -28,5 +28,10 @@ public interface ExamineePaymentAuditService extends BaseService<ExamineePayment
      * 报名审核通过生成缴费审核表
      *
      */
-    void generatePaymentAudit(Long examPlanId, Long examineeId , Long enrollId);
+    void generatePaymentAudit(Long examPlanId, Long examineeId , Long enrollId) throws Exception;
+
+    /**
+     * 生成缴费通知单
+     */
+    byte[] generatePaymentNotice(Long examPlanId, Long examineeId, String examPlanName, String projectName, Long paymentAmount) throws Exception;
 }

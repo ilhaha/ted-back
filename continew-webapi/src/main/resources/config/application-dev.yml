@@ -348,6 +348,9 @@ aes:
 excel:
   template:
     url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/10/22/68f8c4095814e0d894c63935.xlsx
+    url1: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/6/10/inspector_exam_fee_notice_template.xlsx
+  output:
+    path: ./excel/tedExport/
 
 qrcode:
   url: http://localhost:5173/worker/apply/upload

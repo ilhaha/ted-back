@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
+import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 
@@ -19,8 +20,8 @@ public interface ExamineePaymentAuditMapper extends BaseMapper<ExamineePaymentAu
     /**
      * page查询缴费审核信息表
      */
-    IPage<ExamineePaymentAuditDO> getExamineePaymentAudits(@Param("page") Page<ExamineePaymentAuditDO> page,
-                                                            @Param(Constants.WRAPPER) QueryWrapper<ExamineePaymentAuditDO> queryWrapper);
+    IPage<ExamineePaymentAuditResp> getExamineePaymentAudits(@Param("page") Page<ExamineePaymentAuditResp> page,
+                                                             @Param(Constants.WRAPPER) QueryWrapper<ExamineePaymentAuditDO> queryWrapper);
 
 
 
