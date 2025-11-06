@@ -48,6 +48,14 @@ public class ExamineePaymentAuditDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "关联报名记录ID")
     private Long enrollId;
 
+
+    /**
+     * 缴费通知单编号（格式：TZSB_PAY_时间戳_随机数）
+     */
+    @Schema(description = "缴费通知单编号")
+    @ExcelProperty(value = "缴费通知单编号")
+    private String noticeNo;
+
     /**
      * 缴费金额（元）
      */

@@ -1,7 +1,11 @@
 package top.continew.admin.exam.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
+import org.springframework.validation.annotation.Validated;
+import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
+import top.continew.admin.util.Result;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +19,7 @@ import top.continew.admin.exam.model.req.ExamineePaymentAuditReq;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditDetailResp;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
 import top.continew.admin.exam.service.ExamineePaymentAuditService;
+import top.continew.starter.web.model.R;
 
 /**
  * 考生缴费审核管理 API
@@ -35,7 +40,27 @@ public class ExamineePaymentAuditController extends BaseController<ExamineePayme
     public ExamineePaymentAuditDO getPaymentAuditInfo(
             @RequestParam Long examPlanId,
             @RequestParam Long examineeId) {
-        return examineePaymentAuditService.getByExamPlanIdAndExamineeId(examPlanId, examineeId);
+        return baseService.getByExamPlanIdAndExamineeId(examPlanId, examineeId);
     }
+
+
+    /**
+     * 上传缴费凭证
+     */
+    @PostMapping("/payment/uploadProof")
+    public Boolean uploadPaymentProof(@Validated @RequestBody ExamineePaymentAuditResp examineePaymentAuditResp) {
+        return baseService.uploadPaymentProof(examineePaymentAuditResp);
+    }
+
+    /**
+     * 审核缴费记录
+     */
+    @PostMapping("/reviewPayment")
+    @Operation(summary = "缴费审核接口")
+    public R<Boolean> reviewPayment(@RequestBody @Validated ExamineePaymentAuditResp examineePaymentAuditResp) {
+        boolean result = baseService.reviewPayment(examineePaymentAuditResp);
+        return R.ok(result);
+    }
+
 
 }

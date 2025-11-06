@@ -53,6 +53,12 @@ public class ExamineePaymentAuditResp extends BaseResp {
     @Schema(description = "关联报名记录ID")
     private Long enrollId;
 
+
+    /**
+     * 缴费通知单编号（格式：TZSB_PAY_时间戳_随机数）
+     */
+    private String noticeNo;
+
     /**
      * 缴费金额（元）
      */
@@ -78,9 +84,9 @@ public class ExamineePaymentAuditResp extends BaseResp {
     private String auditNoticeUrl;
 
     /**
-     * 审核状态：0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回
+     * 审核状态：0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回，4-补正审核 ，5-退款审核， 6-已退款, 7-退款驳回
      */
-    @Schema(description = "0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回")
+    @Schema(description = "审核状态：0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回，4-补正审核 ，5-退款审核， 6-已退款, 7-退款驳回 ")
     private Integer auditStatus;
 
     /**

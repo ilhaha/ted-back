@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ExamPlanMapper;
 import top.continew.admin.exam.mapper.ExamineePaymentAuditMapper;
 import top.continew.admin.exam.mapper.ProjectMapper;
@@ -28,6 +29,7 @@ import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.FileService;
 import top.continew.admin.util.ExcelUtilReactive;
 import top.continew.admin.util.InMemoryMultipartFile;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -88,6 +90,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         paymentAuditDO.setExamPlanId(examPlanId);
         paymentAuditDO.setEnrollId(enrollId);
         paymentAuditDO.setPaymentAmount(paymentInfoDTO.getPaymentAmount());
+        paymentAuditDO.setNoticeNo(generateUniqueNoticeNo());
         paymentAuditDO.setAuditStatus(0); // 待缴费状态
         paymentAuditDO.setCreateTime(LocalDateTime.now());
         paymentAuditDO.setIsDeleted(false);
@@ -108,6 +111,151 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         PageResp<ExamineePaymentAuditResp> pageResp = PageResp.build(page, super.getListClass());
         pageResp.getList().forEach(this::fill);
         return pageResp;
+    }
+
+
+
+    @Override
+    public Boolean uploadPaymentProof(ExamineePaymentAuditResp req) {
+        // 参数校验
+        if (req.getExamPlanId() == null || req.getExamineeId() == null) {
+            throw new BusinessException("考试计划ID或考生ID不能为空！");
+        }
+        if (req.getPaymentProofUrl() == null || req.getPaymentProofUrl().isEmpty()) {
+            throw new BusinessException("缴费凭证地址不能为空！");
+        }
+        // 查找当前记录
+        ExamineePaymentAuditDO record = examineePaymentAuditMapper.selectOne(
+                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId, req.getExamPlanId())
+                        .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                        .last("LIMIT 1")
+        );
+        if (record == null || record.getAuditNoticeUrl() == null) {
+            throw new BusinessException("未找到缴费通知记录，不能上传凭证！");
+        }
+        Integer uploadStatus = req.getAuditStatus();  // 考生上传时传的状态
+        if (uploadStatus == null) {
+            throw new BusinessException("上传状态不能为空！");
+        }
+        Integer newStatus;
+        switch (uploadStatus) {
+            case 0:  // 待缴费
+            case 1:  // 已缴费待审核
+                newStatus = 1; // 上传后都变为已缴费待审核
+                break;
+            case 2:  // 审核通过
+            case 5:  // 退款审核中
+            case 7:  // 退款驳回
+                newStatus = 5; // 上传后进入退款审核
+                break;
+            case 3:  // 审核驳回
+            case 4:  // 补正审核
+                newStatus = 4;
+                break;
+            case 6:  // 已退款
+                throw new BusinessException("该考生已退款，禁止操作！");
+            default:
+                throw new BusinessException("未知的上传状态：" + uploadStatus);
+        }
+        // 更新记录
+        record.setAuditStatus(newStatus);
+        record.setPaymentProofUrl(req.getPaymentProofUrl());
+        record.setPaymentTime(LocalDateTime.now());
+        record.setUpdateTime(LocalDateTime.now());
+
+        int result = examineePaymentAuditMapper.updateById(record);
+        if (result <= 0) {
+            throw new BusinessException("上传缴费凭证失败，请稍后再试！");
+        }
+        return true;
+    }
+
+
+
+    @Override
+    public boolean reviewPayment(ExamineePaymentAuditResp req) {
+        // 校验传入参数
+        if (req.getId() == null || req.getExamPlanId() == null || req.getExamineeId() == null) {
+            throw new BusinessException("审核请求参数缺失！");
+        }
+        // 查找对应记录
+        ExamineePaymentAuditDO record = examineePaymentAuditMapper.selectOne(
+                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getId, req.getId())
+                        .eq(ExamineePaymentAuditDO::getExamPlanId, req.getExamPlanId())
+                        .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                        .last("LIMIT 1")
+        );
+
+        if (record == null) {
+            throw new BusinessException("未找到对应的缴费审核记录！");
+        }
+        Integer currentStatus = record.getAuditStatus();
+        Integer newStatus = req.getAuditStatus();
+        if (newStatus == null || (!newStatus.equals(2) && !newStatus.equals(3))) {
+            throw new BusinessException("非法的审核状态！");
+        }
+        // 根据状态流转规则进行处理
+        switch (currentStatus) {
+            case 0:  // 待缴费
+                throw new BusinessException("考生还没有上传缴费凭证");
+            case 1:  // 已缴费待审核
+                record.setAuditStatus(newStatus);
+                break;
+            case 2:  // 审核通过
+                if (newStatus == 2) {
+                    throw new BusinessException("已审核，无需再次审核");
+                }
+                record.setAuditStatus(3);
+                break;
+            case 3:  // 审核驳回
+            case 4:  // 补正审核
+                record.setAuditStatus(newStatus);
+                break;
+            case 5:  // 退款审核
+                handleRefundAudit(record, newStatus);
+                break;
+            case 6:  // 已退款
+                    throw new BusinessException("已退款，不能再次审核");
+            case 7:  // 退款驳回
+                if (newStatus == 2) {
+                    record.setAuditStatus(6); // 已退款
+                }
+                break;
+            default:
+                throw new BusinessException("未知的审核状态！");
+        }
+        // 审核数据更新
+        record.setRejectReason(req.getRejectReason());
+        record.setAuditorId(TokenLocalThreadUtil.get().getUserId());
+        record.setAuditTime(LocalDateTime.now());
+        int result = examineePaymentAuditMapper.updateById(record);
+        if (result <= 0) {
+            throw new BusinessException("审核更新失败，请稍后重试！");
+        }
+
+        return true;
+    }
+
+    /**
+     * 处理退款审核逻辑（状态5 -> 状态6）
+     * @param record 当前审核记录
+     * @param newStatus 提交的新审核状态
+     */
+    private void handleRefundAudit(ExamineePaymentAuditDO record, Integer newStatus) {
+        if (newStatus == 2) {
+            record.setAuditStatus(6); // 已退款
+            // ... 业务待定
+
+
+        } else if (newStatus == 3) {
+            record.setAuditStatus(7); // 退款驳回
+        } else {
+            throw new BusinessException("非法的退款审核状态！");
+        }
     }
 
     @Override
@@ -142,7 +290,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
                 examineeId,
                 paymentInfoDTO.getExamPlanName(),
                 paymentInfoDTO.getProjectName(),
-                paymentInfoDTO.getPaymentAmount().longValue()
+                paymentInfoDTO.getPaymentAmount().longValue(),
+                record.getNoticeNo()
         );
 
         // 封装为 MultipartFile
@@ -173,7 +322,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     @Override
     public byte[] generatePaymentNotice(Long examPlanId, Long examineeId,
                                         String examPlanName, String projectName,
-                                        Long paymentAmount) {
+                                        Long paymentAmount,String noticeNo) {
         ValidationUtils.throwIfNull(examPlanId, "考试计划ID不能为空");
         ValidationUtils.throwIfNull(examineeId, "考生ID不能为空");
         ValidationUtils.throwIfNull(examPlanName, "考试名称不能为空");
@@ -181,8 +330,9 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         ValidationUtils.throwIfNull(paymentAmount, "缴费金额不能为空");
 
         String candidateName = userMapper.selectNicknameById(examineeId);
+
         Map<String, Object> dataMap = new HashMap<>();
-        dataMap.put("noticeNo", generateUniqueNoticeNo());
+        dataMap.put("noticeNo", getSafeValue(noticeNo));
         dataMap.put("candidateName", getSafeValue(candidateName));
         dataMap.put("examPlanName", getSafeValue(examPlanName));
         dataMap.put("projectName", getSafeValue(projectName));

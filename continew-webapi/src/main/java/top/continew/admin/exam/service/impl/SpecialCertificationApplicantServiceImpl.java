@@ -50,6 +50,7 @@ import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.BatchAuditSpecialCertificationApplicantDTO;
 import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.model.req.EnrollReq;
 import top.continew.admin.exam.model.req.SpecialCertificationApplicantListReq;
 import top.continew.admin.exam.model.resp.EnrollDetailResp;
@@ -113,6 +114,9 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     @Resource
     private ExamineePaymentAuditService examineePaymentAuditService;
 
+    @Resource
+    private ExamineePaymentAuditMapper examineePaymentAuditMapper;
+
     /**
      * 根据考生和计划ID查询申报记录
      *
@@ -140,6 +144,16 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
 
         SpecialCertificationApplicantResp resp = new SpecialCertificationApplicantResp();
         BeanUtils.copyProperties(applicantDO, resp);
+        // 查找缴费记录
+        ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper.selectOne(
+                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId, planId)
+                        .eq(ExamineePaymentAuditDO::getExamineeId, candidateId)
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                        .last("LIMIT 1")
+        );
+        resp.setAuditStatus(examineePaymentAuditDO.getAuditStatus());
+        resp.setRejectReason(examineePaymentAuditDO.getRejectReason());
         return resp;
     }
 

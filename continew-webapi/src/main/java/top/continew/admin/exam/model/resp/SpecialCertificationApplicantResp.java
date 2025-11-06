@@ -85,6 +85,19 @@ public class SpecialCertificationApplicantResp extends BaseResp {
     @Schema(description = "审核意见或退回原因")
     private String remark;
 
+
+    /**
+     * 缴费审核状态
+     */
+    @Schema(description = "缴费审核状态")
+    private Integer auditStatus;
+
+
+    /**
+     * 驳回原因
+     */
+    private String rejectReason;
+
     /**
      * 更新人
      */

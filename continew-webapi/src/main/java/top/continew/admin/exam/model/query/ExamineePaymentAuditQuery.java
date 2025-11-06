@@ -40,9 +40,16 @@ public class ExamineePaymentAuditQuery implements Serializable {
     private Long examineeId;
 
     /**
-     * 审核状态：0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回
+     * 缴费通知单编号（格式：TZSB_PAY_时间戳_随机数）
      */
-    @Schema(description = "0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回")
+    @Schema(description = "缴费通知单编号")
+    @Query(type = QueryType.EQ)
+    private String noticeNo;
+
+    /**
+     * 审核状态：0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回，4-补正审核 ，5-退款审核， 6-已退款, 7-退款驳回
+     */
+    @Schema(description = "审核状态：0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回，4-补正审核 ，5-退款审核， 6-已退款, 7-退款驳回 ")
     @Query(type = QueryType.EQ)
     private Integer auditStatus;
 
