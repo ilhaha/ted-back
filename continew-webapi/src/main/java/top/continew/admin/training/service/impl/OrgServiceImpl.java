@@ -34,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 
 import me.zhyd.oauth.exception.AuthException;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.*;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeanUtils;
@@ -97,6 +98,7 @@ import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -1099,10 +1101,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-            // 3. 创建工作表
+            // ============ 1. 创建工作表 ============
             Sheet sheet = workbook.createSheet(String.valueOf(classId));
 
-            // 4. 美化表头样式
+            // ============ 2. 表头样式 ============
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -1118,9 +1120,18 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             headerStyle.setBorderLeft(BorderStyle.THIN);
             headerStyle.setBorderRight(BorderStyle.THIN);
 
-            // 5. 写表头
+            // ============ 3. 温馨提示样式 ============
+            CellStyle tipStyle = workbook.createCellStyle();
+            Font tipFont = workbook.createFont();
+            tipFont.setColor(IndexedColors.DARK_RED.getIndex());
+            tipFont.setItalic(true);
+            tipStyle.setFont(tipFont);
+            tipStyle.setWrapText(true);
+            tipStyle.setVerticalAlignment(VerticalAlignment.TOP);
+
+            // ============ 4. 表头行 ============
             Row headerRow = sheet.createRow(0);
-            headerRow.setHeightInPoints(28); // 高一点更美观
+            headerRow.setHeightInPoints(28);
             for (int i = 0; i < headers.size(); i++) {
                 sheet.setColumnWidth(i, 20 * 256);
                 Cell cell = headerRow.createCell(i);
@@ -1128,26 +1139,60 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 cell.setCellStyle(headerStyle);
             }
 
-            // 6. 设置前 200 行的行高和列宽（方便插入图片）
-            for (int i = 1; i <= 200; i++) {
+            // ============ 5. 温馨提示行 ============
+            Row tipRow = sheet.createRow(1);
+            tipRow.setHeightInPoints(100);
+
+            String tipText = """
+                    温馨提示：
+                    1. 请完整填写所有必填项，表头对应的内容不得为空；
+                    2. 上传的图片（身份证正反面、一寸照等）请确保大小适配单元格，不可超出边界；
+                    3. 报名资格申请表请以 PDF 格式插入，并选择“文件附件”方式；
+                    4. 请从第 3 行开始填写数据，确保中间无空行或空白记录；
+                    5. 建议每次导入数据不超过 50 条，以提升导入效率。
+                    """;
+
+
+            // 合并提示单元格（例如 A2 ~ 最后一列）
+            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, headers.size() - 1));
+            Cell tipCell = tipRow.createCell(0);
+            tipCell.setCellValue(tipText);
+            tipCell.setCellStyle(tipStyle);
+
+            // ============ 6. 设置行高、列宽 ============
+            for (int i = 2; i <= 51; i++) {
                 Row row = sheet.createRow(i);
-                row.setHeightInPoints(80); // 高一点方便放图片
+                row.setHeightInPoints(80);
+                for (int j = 0; j < headers.size(); j++) {
+                    Cell cell = row.createCell(j);
+                    // 设置居中样式
+                    CellStyle cellStyle = workbook.createCellStyle();
+                    cellStyle.setAlignment(HorizontalAlignment.CENTER);
+                    cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+                    cell.setCellStyle(cellStyle);
+                }
             }
 
-            // 设置图片列更宽，比如假设最后一列是照片列
             if (!headers.isEmpty()) {
                 int lastColIndex = headers.size() - 1;
-                sheet.setColumnWidth(lastColIndex, 30 * 256); // 调宽最后一列
+                sheet.setColumnWidth(lastColIndex, 30 * 256);
             }
 
-            // 7. 写入输出流
+            // ============ 7. 设置前两列格式为文本 ============
+            DataFormat dataFormat = workbook.createDataFormat();
+            CellStyle textStyle = workbook.createCellStyle();
+            textStyle.setDataFormat(dataFormat.getFormat("@"));
+            sheet.setDefaultColumnStyle(0, textStyle); // 第一列
+            sheet.setDefaultColumnStyle(1, textStyle); // 第二列
+
+            // ============ 8. 写出 ============
             workbook.write(out);
 
-            // 8. 构造响应头
             String fileName = URLEncoder.encode(
                     orgClassDO.getClassName() + "-导入作业人员信息模板.xlsx",
                     StandardCharsets.UTF_8
             );
+
             HttpHeaders headersHttp = new HttpHeaders();
             headersHttp.setContentType(MediaType.parseMediaType(
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
@@ -1159,6 +1204,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             throw new RuntimeException("导出导入模板失败", e);
         }
     }
+
 
     private @NotNull List<String> getExcelHeader(Long classId) {
         // 1. 获取数据库中的需上传资料名称
@@ -1195,15 +1241,16 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             if (sheet == null) {
                 throw new BusinessException("Excel中未找到有效工作表");
             }
+            List<String> expectedHeaders = getExcelHeader(classId);
 
             // ============ 阶段1：模板与表头校验 ============
-            validateTemplate(sheet, classId);
+            validateTemplate(sheet, classId,expectedHeaders);
 
             // ============ 阶段2：行级校验（仅检查存在性） ============
-            validateRowsBeforeUpload(workbook, sheet, classId);
+            validateRowsBeforeUpload(workbook, sheet,expectedHeaders);
 
             // ============ 阶段3：上传校验============
-            ParsedExcelResultVO parsedExcelResultVO = parse(workbook, sheet, classId);
+            ParsedExcelResultVO parsedExcelResultVO = parse(workbook, sheet, classId,expectedHeaders);
 
             List<ParsedSuccessVO> successList = parsedExcelResultVO.getSuccessList();
             List<ParsedErrorVO> failedList = parsedExcelResultVO.getFailedList();
@@ -1212,7 +1259,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             removeDuplicateIdCards(successList, failedList);
 
             // 删除数据库已存在身份证，将已存在的移到失败列表
-            removeExistingIdCards(successList,failedList,classId);
+            removeExistingIdCards(successList, failedList, classId);
 
             // 对列表的身份证和手机号进行脱敏
             if (ObjectUtil.isNotEmpty(successList)) {
@@ -1224,6 +1271,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                     String idCardNumber = item.getIdCardNumber();
                     item.setEncFieldB(aesWithHMAC.encryptAndSign(idCardNumber));
                     item.setIdCardNumber(CharSequenceUtil.replaceByCodePoint(idCardNumber, 2, idCardNumber.length() - 5, '*'));
+
+                    item.setIsUpload(true);
                 });
             }
 
@@ -1245,14 +1294,14 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @param classId
      * @return
      */
-    private ParsedExcelResultVO parse(XSSFWorkbook workbook, XSSFSheet sheet, Long classId) {
+    private ParsedExcelResultVO parse(XSSFWorkbook workbook, XSSFSheet sheet, Long classId,List<String> expectedHeaders) {
         ParsedExcelResultVO result = new ParsedExcelResultVO();
         List<ParsedSuccessVO> successList = new ArrayList<>();
         List<ParsedErrorVO> failedList = new ArrayList<>();
 
         int rowCount = sheet.getPhysicalNumberOfRows();
 
-        for (int rowIndex = 1; rowIndex < rowCount; rowIndex++) {
+        for (int rowIndex = 2; rowIndex < rowCount; rowIndex++) {
             Row row = sheet.getRow(rowIndex);
             if (ExcelMediaUtils.isRowEmpty(row)) break;
 
@@ -1274,15 +1323,17 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 worker.setIdCardPhotoFront(idFront.getIdCardPhotoFront());
                 worker.setIdCardNumber(idFront.getIdCardNumber());
                 worker.setGender(idFront.getGender());
+
                 // 上传身份证反面
                 ExcelUploadFileResultDTO idBack = ExcelMediaUtils.excelUploadFile(
                         workbook, sheet, rowIndex, 3, uploadService, WorkerPictureTypeEnum.ID_CARD_BACK.getValue());
+                if (LocalDateTime.now().isAfter(idBack.getValidEndDate().atTime(LocalTime.MAX))) {
+                    throw new BusinessException("身份证已过期");
+                }
+                worker.setIdCardPhotoBack(idBack.getIdCardPhotoBack());
                 // 上传一寸免冠照
                 ExcelUploadFileResultDTO face = ExcelMediaUtils.excelUploadFile(
                         workbook, sheet, rowIndex, 4, uploadService, WorkerPictureTypeEnum.PASSPORT_PHOTO.getValue());
-
-
-                worker.setIdCardPhotoBack(idBack.getIdCardPhotoBack());
                 worker.setFacePhoto(face.getFacePhoto());
 
                 // 报名申请资格表附件
@@ -1293,14 +1344,31 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 worker.setStatus(WorkerApplyReviewStatusEnum.PENDING_REVIEW.getValue());
                 worker.setClassId(classId);
                 worker.setApplyType(WorkerApplyTypeEnum.ORG_IMPORT.getValue());
+
+                Map<String, String> docMap = new HashMap<>();
+                for (int col = 6; col < expectedHeaders.size(); col++) {
+                    String header = expectedHeaders.get(col);
+                    ExcelUploadFileResultDTO pic = ExcelMediaUtils.excelUploadFile(
+                            workbook, sheet, rowIndex, col, uploadService, WorkerPictureTypeEnum.GENERAL_PHOTO.getValue());
+                    docMap.put(header,pic.getDocUrl());
+                }
+                worker.setDocMap(docMap);
                 successList.add(worker);
 
             } catch (Exception e) {
+                String message = e.getMessage();
+                if (message != null && message.contains("BadRequestException")) {
+                    int idx = message.lastIndexOf(": ");
+                    if (idx != -1 && idx + 2 < message.length()) {
+                        message = message.substring(idx + 2);
+                    }
+                }
+
                 failedList.add(new ParsedErrorVO(
                         rowIndex + 1,
                         excelName,
                         phone,
-                        e.getMessage().split(": ")[2]
+                        message
                 ));
             }
         }
@@ -1377,7 +1445,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                             .filter(r -> !r.equals(duplicateWorker.getRowNum()))
                             .collect(Collectors.toList());
                     errorDTO.setErrorMessage(
-                            "身份证号重复，与第 " + otherRows.stream().map(String::valueOf).collect(Collectors.joining("、")) + " 行重复"
+                            "所上传身份证与第 " + otherRows.stream().map(String::valueOf).collect(Collectors.joining("、")) + " 行一致"
                     );
 
                     failedList.add(errorDTO);
@@ -1395,13 +1463,13 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @param sheet
      * @param classId
      */
-    private void validateTemplate(XSSFSheet sheet, Long classId) {
+    private void validateTemplate(XSSFSheet sheet, Long classId,List<String> expectedHeaders) {
         String sheetName = sheet.getSheetName();
         if (!String.valueOf(classId).equals(sheetName)) {
             throw new BusinessException("导入模板与所选班级不匹配或模板已被修改");
         }
 
-        List<String> expectedHeaders = getExcelHeader(classId);
+
         Row headerRow = sheet.getRow(0);
         if (headerRow == null) {
             throw new BusinessException("Excel表头行为空，请确认模板未被修改");
@@ -1431,17 +1499,15 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      *
      * @param workbook
      * @param sheet
-     * @param classId
      */
-    private void validateRowsBeforeUpload(XSSFWorkbook workbook, XSSFSheet sheet, Long classId) {
-        List<String> expectedHeaders = getExcelHeader(classId);
+    private void validateRowsBeforeUpload(XSSFWorkbook workbook, XSSFSheet sheet,List<String> expectedHeaders) {
+
         Set<String> phoneSet = new HashSet<>();
         int rowCount = sheet.getPhysicalNumberOfRows();
 
-        for (int rowIndex = 1; rowIndex < rowCount; rowIndex++) {
+        for (int rowIndex = 2; rowIndex < rowCount; rowIndex++) {
             Row row = sheet.getRow(rowIndex);
             if (ExcelMediaUtils.isRowEmpty(row)) break;
-
             String workerName = getCellString(row, 0);
             if (StrUtil.isBlank(workerName)) {
                 throw new BusinessException(String.format("第 %d 行【%s】不能为空", rowIndex + 1, expectedHeaders.get(0)));
@@ -1476,7 +1542,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 if (col == 5) {
                     Map<String, List<String>> oleMap = ExcelMediaUtils.getOleAttachmentMapAndUpload(workbook, rowIndex, uploadService, false);
                     if (!oleMap.containsKey(rowIndex + "_" + col)) {
-                        throw new BusinessException(String.format("第 %d 行【%s】不能为空", rowIndex + 1, expectedHeaders.get(col)));
+                        throw new BusinessException(String.format("第 %d 行【%s】请上传 PDF 格式文件", rowIndex + 1, expectedHeaders.get(col)));
                     }
                 } else {
                     boolean hasPicture = ExcelMediaUtils.hasPicture(workbook, sheet, rowIndex, col);

@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 /**
  * @author ilhaha
  * @Create 2025/11/5 13:57
@@ -34,7 +36,9 @@ public class ExcelUploadFileResultDTO {
     /** 一寸照或人脸照 URL */
     private String facePhoto;
 
-    /** 识别或上传错误信息 */
-    private String errorMsg;
+    /**
+     * 有效期截止日期
+     */
+    private LocalDate validEndDate;
 
 }

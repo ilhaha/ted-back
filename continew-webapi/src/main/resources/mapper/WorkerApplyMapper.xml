@@ -25,6 +25,7 @@
                twa.gender,
                twa.phone,
                twa.remark,
+               twa.apply_type,
                twa.qualification_path,
                twa.qualification_name,
                twa.id_card_number,

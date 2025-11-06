@@ -1,5 +1,6 @@
 package top.continew.admin.worker.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ObjectUtil;
@@ -26,7 +27,10 @@ import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
+import top.continew.admin.document.mapper.DocumentTypeMapper;
 import top.continew.admin.document.model.dto.DocFileDTO;
+import top.continew.admin.document.model.dto.DocumentTypeDTO;
+import top.continew.admin.document.model.entity.DocumentTypeDO;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.training.mapper.CandidateTypeMapper;
@@ -35,9 +39,7 @@ import top.continew.admin.training.model.entity.CandidateTypeDO;
 import top.continew.admin.training.model.entity.OrgClassCandidateDO;
 import top.continew.admin.worker.mapper.WorkerApplyDocumentMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDocumentDO;
-import top.continew.admin.worker.model.req.VerifyReq;
-import top.continew.admin.worker.model.req.WorkerApplyReviewReq;
-import top.continew.admin.worker.model.req.WorkerQrcodeUploadReq;
+import top.continew.admin.worker.model.req.*;
 import top.continew.admin.worker.model.resp.*;
 import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
@@ -47,7 +49,6 @@ import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.admin.worker.model.query.WorkerApplyQuery;
-import top.continew.admin.worker.model.req.WorkerApplyReq;
 import top.continew.admin.worker.service.WorkerApplyService;
 
 import java.util.*;
@@ -85,6 +86,9 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Resource
     private CandidateTypeMapper candidateTypeMapper;
 
+    @Resource
+    private DocumentTypeMapper documentTypeMapper;
+
     /**
      * 根据身份证后六位、和班级id查询当前身份证报名信息
      *
@@ -95,7 +99,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     public WorkerApplyVO verify(VerifyReq verifyReq) {
         WorkerApplyVO workerApplyVO = new WorkerApplyVO();
         String aseClassId = aesWithHMAC.verifyAndDecrypt(verifyReq.getClassId());
-        ValidationUtils.throwIfNull(aseClassId,"二维码已被篡改");
+        ValidationUtils.throwIfNull(aseClassId, "二维码已被篡改");
         Long classId = Long.valueOf(aseClassId);
         // 初始化项目报名所需资料
         workerApplyVO.setProjectNeedUploadDocs(baseMapper.selectProjectNeedUploadDoc(classId));
@@ -139,7 +143,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Override
     public Boolean submit(WorkerQrcodeUploadReq workerQrcodeUploadReq) {
         String aseClassId = aesWithHMAC.verifyAndDecrypt(workerQrcodeUploadReq.getClassId());
-        ValidationUtils.throwIfNull(aseClassId,"二维码已被篡改");
+        ValidationUtils.throwIfNull(aseClassId, "二维码已被篡改");
         Long classId = Long.valueOf(aseClassId);
         String idCardNumber = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(workerQrcodeUploadReq.getIdCardNumber()));
         ValidationUtils.throwIfBlank(idCardNumber, "身份证未上传");
@@ -268,7 +272,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         // 9. 批量更新审核状态
         String remark = req.getRemark();
         baseMapper.update(new LambdaUpdateWrapper<WorkerApplyDO>()
-                .set(!ObjectUtils.isEmpty(remark), WorkerApplyDO::getRemark,remark)
+                .set(!ObjectUtils.isEmpty(remark), WorkerApplyDO::getRemark, remark)
                 .set(WorkerApplyDO::getStatus, req.getStatus())
                 .in(WorkerApplyDO::getId, req.getReviewIds()));
         return true;
@@ -276,6 +280,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
     /**
      * 作业人员通过二维码重新上传资料
+     *
      * @param workerQrcodeUploadReq
      * @return
      */
@@ -283,7 +288,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Transactional(rollbackFor = Exception.class)
     public Boolean restSubmit(WorkerQrcodeUploadReq workerQrcodeUploadReq) {
         String aseClassId = aesWithHMAC.verifyAndDecrypt(workerQrcodeUploadReq.getClassId());
-        ValidationUtils.throwIfNull(aseClassId,"二维码已被篡改");
+        ValidationUtils.throwIfNull(aseClassId, "二维码已被篡改");
         Long classId = Long.valueOf(aseClassId);
         String idCardNumber = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(workerQrcodeUploadReq.getIdCardNumber()));
         ValidationUtils.throwIfBlank(idCardNumber, "身份证未上传");
@@ -329,6 +334,97 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         return baseMapper.updateById(workerApplyDO) > 0;
     }
 
+    /**
+     * 机构批量导入
+     *
+     * @param workerOrgImportReqs
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean orgImport(List<WorkerOrgImportReq> workerOrgImportReqs) {
+        // 1. 校验是否选择数据
+        ValidationUtils.throwIfEmpty(workerOrgImportReqs, "未选择导入的数据");
+
+        Long classId = workerOrgImportReqs.get(0).getClassId();
+
+        // 2. 获取所有提交的身份证
+        List<String> idCards = workerOrgImportReqs.stream()
+                .map(WorkerOrgImportReq::getEncFieldB)
+                .collect(Collectors.toList());
+
+        // 3. 查询数据库中已存在的身份证
+        List<WorkerApplyDO> existingWorkers = baseMapper.selectList(
+                new LambdaQueryWrapper<WorkerApplyDO>()
+                        .eq(WorkerApplyDO::getClassId, classId)
+                        .in(WorkerApplyDO::getIdCardNumber, idCards)
+        );
+
+        // 4. 如果存在重复，直接抛出异常
+        ValidationUtils.throwIf(!existingWorkers.isEmpty(),
+                "以下作业人员已存在：" + existingWorkers.stream()
+                        .map(WorkerApplyDO::getCandidateName)
+                        .collect(Collectors.joining(", "))
+        );
+
+        // 5. 构造待导入数据
+        List<WorkerApplyDO> toImport = workerOrgImportReqs.stream().map(item -> {
+            WorkerApplyDO workerApplyDO = new WorkerApplyDO();
+            BeanUtil.copyProperties(item, workerApplyDO);
+            workerApplyDO.setPhone(item.getEncFieldA());
+            workerApplyDO.setIdCardNumber(item.getEncFieldB());
+            return workerApplyDO;
+        }).toList();
+
+        // 6. 批量插入
+        if (!toImport.isEmpty()) {
+            baseMapper.insertBatch(toImport);
+        }
+
+        // 7. 插入文档资料
+        List<WorkerApplyDocumentDO> workerApplyDocumentDOS = new ArrayList<>();
+        for (WorkerOrgImportReq req : workerOrgImportReqs) {
+            Map<String, String> docMap = req.getDocMap();
+            if (ObjectUtil.isEmpty(docMap)) continue;
+
+            List<String> docNames = new ArrayList<>(docMap.keySet());
+
+            // 查询数据库中对应的文档类型
+            List<DocumentTypeDO> documentTypeDOS = documentTypeMapper.selectList(
+                    new LambdaQueryWrapper<DocumentTypeDO>()
+                            .in(DocumentTypeDO::getTypeName, docNames)
+                            .select(DocumentTypeDO::getId, DocumentTypeDO::getTypeName)
+            );
+
+            // 构造 name -> id 映射，保持顺序
+            Map<String, Long> docNameIdMap = documentTypeDOS.stream()
+                    .sorted(Comparator.comparingInt(d -> docNames.indexOf(d.getTypeName())))
+                    .collect(Collectors.toMap(DocumentTypeDO::getTypeName, DocumentTypeDO::getId, (a, b) -> a, LinkedHashMap::new));
+
+            // 找到对应 WorkerApplyDO
+            WorkerApplyDO workerApplyDO = toImport.stream()
+                    .filter(w -> w.getIdCardNumber().equals(req.getEncFieldB()))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("未找到对应的导入记录：" + req.getEncFieldB()));
+
+            // 构造 WorkerApplyDocumentDO
+            docMap.forEach((docName, path) -> {
+                WorkerApplyDocumentDO docDO = new WorkerApplyDocumentDO();
+                docDO.setWorkerApplyId(workerApplyDO.getId());
+                docDO.setTypeId(docNameIdMap.get(docName));
+                docDO.setDocPath(path);
+                workerApplyDocumentDOS.add(docDO);
+            });
+        }
+
+        // 批量插入文档
+        if (!workerApplyDocumentDOS.isEmpty()) {
+            workerApplyDocumentMapper.insertBatch(workerApplyDocumentDOS);
+        }
+        return true;
+    }
+
+
 
     /**
      * 重写page
@@ -362,7 +458,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     /**
      * 判断是否已报名，并返回匹配到的身份证号
      *
-     * @param classId 班级ID
+     * @param classId           班级ID
      * @param uploadIdCardLast6 上传的身份证后六位
      * @return 匹配到的身份证号，如果没匹配到则返回 null
      */
@@ -390,5 +486,4 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         }
         return null;
     }
-
 }

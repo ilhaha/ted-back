@@ -130,33 +130,28 @@ public class ExcelMediaUtils {
                         dto.setIdCardNumber(idCardFileInfoResp.getIdCardNumber());
                         dto.setRealName(idCardFileInfoResp.getRealName());
                         dto.setGender(idCardFileInfoResp.getGender());
+                    } else if (WorkerPictureTypeEnum.ID_CARD_BACK.getValue().equals(type)) {
+                        // 身份证反面
+                        IdCardFileInfoResp idCardFileInfoResp = uploadService.uploadIdCard(file, type);
+                        dto.setIdCardPhotoBack(idCardFileInfoResp.getUrl());
+                        dto.setValidEndDate(idCardFileInfoResp.getValidEndDate());
                     } else if (WorkerPictureTypeEnum.PASSPORT_PHOTO.getValue().equals(type)) {
                         // 如果是一寸照类型，先转换为标准一寸照片
-                        file = IDPhotoConverter.convertToOneInchPhoto(file);
+//                        file = IDPhotoConverter.convertToOneInchPhoto(file);
                         IdCardFileInfoResp idCardFileInfoResp = uploadService.uploadIdCard(file, type);
                         dto.setFacePhoto(idCardFileInfoResp.getFacePhoto());
-                        if (ObjectUtil.isEmpty(idCardFileInfoResp)) {
-                            throw new BusinessException("不符合一寸照规格");
-                        }
                     } else {
-                        // 身份证反面、资料
+                        // 资料
                         GeneralFileReq fileReq = new GeneralFileReq();
                         FileInfoResp fileInfo = uploadService.upload(file, fileReq);
-                        if (fileInfo == null || StrUtil.isBlank(fileInfo.getUrl())) {
-                            throw new BusinessException("图片上传失败");
-                        }
-                        if (WorkerPictureTypeEnum.ID_CARD_BACK.getValue().equals(type)) {
-                            dto.setIdCardPhotoBack(fileInfo.getUrl());
-                        }else {
-                            dto.setDocUrl(fileInfo.getUrl());
-                        }
+                        dto.setDocUrl(fileInfo.getUrl());
                     }
                     return dto;
                 }
             }
 
         } catch (Exception e) {
-            throw new BusinessException("第 " + (row + 1) + " 行第 " + (col + 1) + " 列图片上传失败: " + e.getMessage());
+            throw new BusinessException("第 " + (row + 1) + " 行第 " + (col + 1) + " 列错误: " + e.getMessage());
         }
         // 没有找到图片
         return null;
@@ -170,7 +165,7 @@ public class ExcelMediaUtils {
      * @param targetRow     目标行索引（0-based）
      * @param uploadService 上传服务
      * @param upload        是否执行上传（true=上传到OSS，false=仅检测是否存在）
-     * @return Map<" 行_列 ", 原文件名,URL>
+     * @return Map<" 行_列 ", 原文件名, URL>
      */
     public static Map<String, List<String>> getOleAttachmentMapAndUpload(
             XSSFWorkbook workbook,
@@ -207,8 +202,8 @@ public class ExcelMediaUtils {
                     String originalFileName = ole10Native.getFileName();
 
                     if (originalFileName == null || originalFileName.isEmpty()) {
-                        originalFileName =  targetRow + "_" + anchor.getCol1();
-                    }else {
+                        originalFileName = targetRow + "_" + anchor.getCol1();
+                    } else {
                         originalFileName = Paths.get(originalFileName).getFileName().toString();
                     }
 
@@ -222,10 +217,14 @@ public class ExcelMediaUtils {
                     String uploadedUrl = null;
 
                     if (upload) {
+                        String contentType = "application/pdf";
+                        if (".doc".equals(ext) || ".docx".equals(ext)) {
+                            contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                        }
                         MultipartFile file = new InMemoryMultipartFile(
                                 "file",
                                 fileName,
-                                objData.getContentType(),
+                                contentType,
                                 fileBytes
                         );
 

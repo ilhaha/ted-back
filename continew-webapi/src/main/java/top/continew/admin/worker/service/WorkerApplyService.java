@@ -1,14 +1,13 @@
 package top.continew.admin.worker.service;
 
-import top.continew.admin.worker.model.req.VerifyReq;
-import top.continew.admin.worker.model.req.WorkerApplyReviewReq;
-import top.continew.admin.worker.model.req.WorkerQrcodeUploadReq;
+import top.continew.admin.worker.model.req.*;
 import top.continew.admin.worker.model.resp.WorkerApplyVO;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.worker.model.query.WorkerApplyQuery;
-import top.continew.admin.worker.model.req.WorkerApplyReq;
 import top.continew.admin.worker.model.resp.WorkerApplyDetailResp;
 import top.continew.admin.worker.model.resp.WorkerApplyResp;
+
+import java.util.List;
 
 /**
  * 作业人员报名业务接口
@@ -45,4 +44,10 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      */
     Boolean restSubmit(WorkerQrcodeUploadReq workerQrcodeUploadReq);
 
+    /**
+     * 机构批量导入
+     * @param workerOrgImportReqs
+     * @return
+     */
+    Boolean orgImport(List<WorkerOrgImportReq> workerOrgImportReqs);
 }
