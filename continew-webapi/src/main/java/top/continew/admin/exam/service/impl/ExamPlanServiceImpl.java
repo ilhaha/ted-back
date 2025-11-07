@@ -99,6 +99,12 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Resource
     private PlanClassroomMapper planClassroomMapper;
 
+    @Resource
+    private SpecialCertificationApplicantMapper specialCertificationApplicantMapper;
+
+    @Resource
+    private ExamineePaymentAuditMapper examineePaymentAuditMapper;
+
     @Override
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
         QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(query);
@@ -600,6 +606,27 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         if (req.getIsFinalConfirmed() == null || req.getIsFinalConfirmed() == 1) {
             throw new BusinessException("最终确定考试时间以及地点状态已确认");
         }
+        //判断该考试计划申请考试人员是否已全部审核通过
+        SpecialCertificationApplicantDO specialCertificationApplicantDO = specialCertificationApplicantMapper.selectOne(
+                new LambdaQueryWrapper<SpecialCertificationApplicantDO>()
+                        .eq(SpecialCertificationApplicantDO::getPlanId,id)
+                        .eq(SpecialCertificationApplicantDO::getIsDeleted,false)
+                        .select(SpecialCertificationApplicantDO::getStatus)
+        );
+        ValidationUtils.throwIfNull(specialCertificationApplicantDO, "未找到考生申请该考试计划，请确认是否有人申请考试本计划");
+        ValidationUtils.throwIf(!Objects.equals(specialCertificationApplicantDO.getStatus(), 1),
+                "存在未审核考试报名申请，请审核后再确认考试时间或地址");
+
+        //判断该考试计划申请考试人员是否缴费审核通过
+        ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper.selectOne(
+                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId,id)
+                        .eq(ExamineePaymentAuditDO::getIsDeleted,false)
+                        .select(ExamineePaymentAuditDO::getAuditStatus)
+        );
+        ValidationUtils.throwIfNull(examineePaymentAuditDO, "存在考试人员未提交缴费通知单或是审核未通过，请到考生审核缴费管理审核完成");
+        ValidationUtils.throwIf(!Objects.equals(examineePaymentAuditDO.getAuditStatus(), 2),
+                "存在考试人员未提交缴费通知单或是审核未通过，请到考生审核缴费管理审核完成");
         req.setIsFinalConfirmed(1);
         super.update(req, id);
     }

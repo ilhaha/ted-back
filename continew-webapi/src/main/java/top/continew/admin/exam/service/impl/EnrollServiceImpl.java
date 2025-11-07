@@ -34,9 +34,7 @@ import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
-import top.continew.admin.exam.model.entity.ExamPlanDO;
-import top.continew.admin.exam.model.entity.ProjectDO;
-import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
+import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.ExamPlanVO;
@@ -46,13 +44,13 @@ import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
-import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.query.EnrollQuery;
 import top.continew.admin.exam.model.req.EnrollReq;
 import top.continew.admin.exam.service.EnrollService;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -78,9 +76,6 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     private ClassroomMapper classroomMapper;
 
     @Resource
-    private LocationClassroomMapper locationClassroomMapper;
-
-    @Resource
     private AESWithHMAC aesWithHMAC;
 
     @Resource
@@ -88,6 +83,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     @Resource
     private EnrollService enrollService;
+
+    @Resource
+    private ExamineePaymentAuditMapper examineePaymentAuditMapper;
 
     /**
      * 获取报名相关所有信息
@@ -352,7 +350,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     }
 
     /**
-     * 校验时间 人数
+     * 校验时间人数
      * 
      * @param examPlanId 考试计划ID
      */
@@ -400,19 +398,27 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
      */
     @Override
     public IdentityCardExamInfoVO viewIdentityCard(Long examPlanId) {
-        // 1. 前置校验：入参 + 登录
+        // 前置校验：入参 + 登录
         ValidationUtils.throwIfNull(examPlanId, "请选择考试计划");
         UserTokenDo userToken = TokenLocalThreadUtil.get();
         ValidationUtils.throwIfNull(userToken, "用户未登录，无法查看准考证信息");
         Long userId = userToken.getUserId();
         String userName = userToken.getNickname();
 
-        // 2. 校验考试计划
-        ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
-        ValidationUtils.throwIf(examPlanDO == null || examPlanDO.getIsFinalConfirmed() != 1,
-                "考试计划考试时间和考试地点未最终确认，无法查看准考证信息");
+        //校验是否缴费
+        ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper.selectOne(
+                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId,examPlanId)
+                        .eq(ExamineePaymentAuditDO::getExamineeId,userId)
+                        .eq(ExamineePaymentAuditDO::getIsDeleted,false)
+                        .select(ExamineePaymentAuditDO::getAuditStatus)
+        );
+        ValidationUtils.throwIfNull(examineePaymentAuditDO, "未找到考试缴费记录，请先提交缴费凭证再查看准考证");
+        ValidationUtils.throwIf(!Objects.equals(examineePaymentAuditDO.getAuditStatus(), 2),
+                "缴费凭证未上传或未审核通过，无法查看准考证");
 
-        // 3. 校验报名资格
+
+        // 校验报名资格
         SpecialCertificationApplicantDO applicantDO = specialCertificationApplicantMapper.selectOne(
                 new LambdaQueryWrapper<SpecialCertificationApplicantDO>()
                         .eq(SpecialCertificationApplicantDO::getPlanId, examPlanId)
@@ -424,22 +430,28 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         ValidationUtils.throwIf(!Objects.equals(applicantDO.getStatus(), 1),
                 "报名状态无效（未通过/已取消），无法查看准考证");
 
-        // 4. 先查是否已生成准考证（避免重复生成）
+
+        // 校验考试计划
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
+        ValidationUtils.throwIf(examPlanDO == null || examPlanDO.getIsFinalConfirmed() != 1,
+                "考试计划考试时间和考试地点未最终确认，无法查看准考证信息");
+
+        // 先查是否已生成准考证（避免重复生成）
         IdentityCardExamInfoVO identityCardExamInfoVO = enrollMapper.viewIdentityCardInfo(examPlanId, userId);
 
         if (identityCardExamInfoVO == null || StringUtils.isBlank(identityCardExamInfoVO.getExamNumber())) {
-            // 5. 若未生成准考证，则执行报名/准考证生成逻辑（要求 signUp 支持幂等）
+            // 若未生成准考证，则执行报名/准考证生成逻辑（要求 signUp 支持幂等）
             EnrollReq enrollReq = new EnrollReq();
             enrollReq.setExamPlanId(examPlanId);
             Boolean signUpResult = enrollService.signUpdate(enrollReq, userId, applicantDO.getStatus());
             ValidationUtils.throwIf(!signUpResult, "报名失败，无法生成准考证信息");
 
-            // 6. 再次查询准考证
+            // 再次查询准考证
             identityCardExamInfoVO = enrollMapper.viewIdentityCardInfo(examPlanId, userId);
             ValidationUtils.throwIfNull(identityCardExamInfoVO, "准考证信息生成失败，请稍后重试");
         }
 
-        // 7. 补全返回信息
+        // 补全返回信息
         identityCardExamInfoVO.setUserId(userId);
         identityCardExamInfoVO.setName(userName);
         identityCardExamInfoVO.setShowStatus(1);
@@ -479,35 +491,43 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     @Transactional(rollbackFor = Exception.class)
     public void cancelEnroll(Long examPlanId) {
         Long userId = TokenLocalThreadUtil.get().getUserId();
+        ValidationUtils.throwIfNull(examPlanId, "考试计划ID不能为空");
+        ValidationUtils.throwIfNull(userId, "用户ID不能为空");
 
-        // 获取报名详情
+        // 获取报名详情（含考生ID筛选，避免跨用户查询）
         EnrollDetailResp detailEnroll = enrollMapper.getAllDetailEnrollList(examPlanId, userId);
+        ValidationUtils.throwIfNull(detailEnroll, "未找到当前用户的报名信息，无法取消报名");
 
-        if (detailEnroll == null) {
-            throw new BusinessException("未找到考试计划信息，无法取消报名");
-        }
+        // 报名状态校验
+        Integer enrollStatus = detailEnroll.getEnrollStatus();
+        // 黑名单校验（状态6）
+        ValidationUtils.throwIf(Objects.equals(enrollStatus, 6),
+                "被标记黑名单，无法报名和取消报名");
 
-        // 如果状态为5，禁止取消报名
-        if (detailEnroll.getEnrollStatus() != null && detailEnroll.getEnrollStatus() == 5) {
-            throw new BusinessException("当前状态禁止报名，无法取消报名");
-        }
-
+        // 考试时间校验
         LocalDateTime examStartTime = detailEnroll.getExamStartTime();
-        if (examStartTime == null) {
-            throw new BusinessException("考试开始时间为空，无法取消报名");
-        }
-
+        ValidationUtils.throwIfNull(examStartTime, "考试开始时间为空，无法取消报名");
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime fiveDaysBeforeExam = examStartTime.minusDays(5);
+        boolean canCancelByTime = ChronoUnit.DAYS.between(now, examStartTime) >= 5;
+        ValidationUtils.throwIf(!canCancelByTime, "距离考试不足5天，无法取消报名");
 
-        // 允许取消：当前时间 <= 考试开始时间 - 5天
-        if (!now.isAfter(fiveDaysBeforeExam)) {
-            enrollMapper.deleteFromApplicant(examPlanId, userId);
-            enrollMapper.deleteFromEnroll(examPlanId, userId);
-        } else {
-            // 禁止取消
-            throw new BusinessException("距离考试不足5天，无法取消报名");
-        }
+        // 缴费状态校验（仅当前用户的缴费记录）
+        ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper.selectOne(
+                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
+                        .eq(ExamineePaymentAuditDO::getExamineeId, userId) // 关键：加考生ID筛选
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                        .select(ExamineePaymentAuditDO::getAuditStatus)
+        );
+        ValidationUtils.throwIf(
+                examineePaymentAuditDO != null && Objects.equals(examineePaymentAuditDO.getAuditStatus(), 2),
+                "缴费审核已通过，请先申请退款，通过后，再取消报名"
+        );
+
+        // 执行删除
+        examineePaymentAuditMapper.deleteFromPayment(examPlanId, userId);
+        enrollMapper.deleteFromEnroll(examPlanId, userId);
+        enrollMapper.deleteFromApplicant(examPlanId, userId);
     }
 
     //重写后台管理端分页

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
 import top.continew.starter.data.mp.base.BaseMapper;
@@ -22,6 +23,13 @@ public interface ExamineePaymentAuditMapper extends BaseMapper<ExamineePaymentAu
      */
     IPage<ExamineePaymentAuditResp> getExamineePaymentAudits(@Param("page") Page<ExamineePaymentAuditResp> page,
                                                              @Param(Constants.WRAPPER) QueryWrapper<ExamineePaymentAuditDO> queryWrapper);
+
+
+    /**
+     * 取消报名，更改缴费审核
+     */
+    @Update("UPDATE ted.ted_examinee_payment_audit SET audit_status = 6, is_deleted = 1 WHERE exam_plan_id = #{examPlanId} AND examinee_id = #{userId}")
+    void deleteFromPayment(@Param("examPlanId") Long examPlanId, @Param("userId") Long userId);
 
 
 }

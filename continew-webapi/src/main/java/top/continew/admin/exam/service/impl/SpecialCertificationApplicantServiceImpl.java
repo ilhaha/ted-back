@@ -152,8 +152,9 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
                         .eq(ExamineePaymentAuditDO::getIsDeleted, false)
                         .last("LIMIT 1")
         );
-        resp.setAuditStatus(examineePaymentAuditDO.getAuditStatus());
-        resp.setRejectReason(examineePaymentAuditDO.getRejectReason());
+        // 空值判断：为null时赋值null，不为null则取数据库值
+        resp.setAuditStatus(examineePaymentAuditDO != null ? examineePaymentAuditDO.getAuditStatus() : null);
+        resp.setRejectReason(examineePaymentAuditDO != null ? examineePaymentAuditDO.getRejectReason() : null);
         return resp;
     }
 
