@@ -34,9 +34,9 @@ public class OrgTrainingPaymentAuditDO extends BaseDO {
     private Long trainingId;
 
     /**
-     * 关联八大类ID（关联八大类字典表主键）
+     * 关联八大类项目ID（关联八大类项目字典表主键）
      */
-    private Long categoryId;
+    private Long projectId;
 
     /**
      * 考生ID（缴费考生，关联用户表主键）

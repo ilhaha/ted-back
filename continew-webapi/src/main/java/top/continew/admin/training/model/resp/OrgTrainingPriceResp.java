@@ -5,6 +5,8 @@ import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import top.continew.admin.common.model.resp.BaseResp;
+import top.continew.starter.data.core.annotation.Query;
+import top.continew.starter.data.core.enums.QueryType;
 
 import java.io.Serial;
 import java.time.*;
@@ -24,10 +26,10 @@ public class OrgTrainingPriceResp extends BaseResp {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 八大类ID（关联八大类字典表主键）
+     * 八大类项目ID（关联八大类项目字典表主键）
      */
-    @Schema(description = "八大类ID（关联八大类字典表主键）")
-    private Long categoryId;
+    @Schema(description = "八大类项目ID（关联八大类项目字典表主键）")
+    private Long projectId;
 
     /**
      * 机构ID（关联机构表主键）
@@ -58,4 +60,20 @@ public class OrgTrainingPriceResp extends BaseResp {
      */
     @Schema(description = "是否删除（0否，1是）")
     private Boolean isDeleted;
+
+
+    /**
+     * 八大类名称
+     */
+    @Schema(description = "八大类名称")
+    private String projectName;
+
+
+    /**
+     * 机构名称
+     */
+    @Schema(description = "机构名称")
+    private String orgName;
+
+
 }

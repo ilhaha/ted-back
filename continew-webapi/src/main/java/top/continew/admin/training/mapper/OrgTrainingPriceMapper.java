@@ -9,4 +9,7 @@ import top.continew.admin.training.model.entity.OrgTrainingPriceDO;
 * @author ilhaha
 * @since 2025/11/10 08:55
 */
-public interface OrgTrainingPriceMapper extends BaseMapper<OrgTrainingPriceDO> {}
+public interface OrgTrainingPriceMapper extends BaseMapper<OrgTrainingPriceDO> {
+
+
+}

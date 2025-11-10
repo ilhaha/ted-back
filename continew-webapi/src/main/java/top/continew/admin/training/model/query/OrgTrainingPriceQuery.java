@@ -26,11 +26,18 @@ public class OrgTrainingPriceQuery implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 八大类ID（关联八大类字典表主键）
+     * 八大类项目ID（关联八大类字典表主键）
      */
-    @Schema(description = "八大类ID（关联八大类字典表主键）")
+    @Schema(description = "八大类项目ID（关联八大类字典表主键）")
     @Query(type = QueryType.EQ)
-    private Long categoryId;
+    private Long projectId;
+
+    /**
+     * 八大类项目名称
+     */
+    @Schema(description = "八大类项目名称")
+    private String projectName;
+
 
     /**
      * 机构ID（关联机构表主键）
@@ -38,6 +45,13 @@ public class OrgTrainingPriceQuery implements Serializable {
     @Schema(description = "机构ID（关联机构表主键）")
     @Query(type = QueryType.EQ)
     private Long orgId;
+
+
+    /**
+     * 机构名称
+     */
+    @Schema(description = "机构名称")
+    private String orgName;
 
     /**
      * 培训价格（元，精确到分，对应“价格表”核心需求）

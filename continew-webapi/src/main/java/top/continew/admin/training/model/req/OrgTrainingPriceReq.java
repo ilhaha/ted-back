@@ -27,17 +27,15 @@ public class OrgTrainingPriceReq implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 八大类ID（关联八大类字典表主键）
+     * 八大类项目ID（关联八大类项目字典表主键）
      */
-    @Schema(description = "八大类ID（关联八大类字典表主键）")
-    @NotNull(message = "八大类ID（关联八大类字典表主键）不能为空")
-    private Long categoryId;
+    @Schema(description = "八大类项目ID（关联八大类字典表主键）")
+    private Long projectId;
 
     /**
      * 机构ID（关联机构表主键）
      */
     @Schema(description = "机构ID（关联机构表主键）")
-    @NotNull(message = "机构ID（关联机构表主键）不能为空")
     private Long orgId;
 
     /**

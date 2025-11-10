@@ -1,5 +1,6 @@
 package top.continew.admin.training.service;
 
+import top.continew.admin.training.model.dto.OrgTrainingPriceDTO;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.training.model.query.OrgTrainingPriceQuery;
 import top.continew.admin.training.model.req.OrgTrainingPriceReq;
@@ -12,4 +13,6 @@ import top.continew.admin.training.model.resp.OrgTrainingPriceResp;
  * @author ilhaha
  * @since 2025/11/10 08:55
  */
-public interface OrgTrainingPriceService extends BaseService<OrgTrainingPriceResp, OrgTrainingPriceDetailResp, OrgTrainingPriceQuery, OrgTrainingPriceReq> {}
+public interface OrgTrainingPriceService extends BaseService<OrgTrainingPriceResp, OrgTrainingPriceDetailResp, OrgTrainingPriceQuery, OrgTrainingPriceReq> {
+
+}

@@ -498,7 +498,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             throw new BusinessException("请选择机构");
 
         // 调用 Mapper，获取包含 status 和 remark 的结果
-        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, TokenLocalThreadUtil.get().getUserId());
+        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, TokenLocalThreadUtil.get().getUserId(),null);
 
         // 无数据时，返回默认值（status=0，remark为空）
         if (agencyStatusVO == null) {
@@ -512,33 +512,55 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Override
     public Integer studentAddAgency(Long orgId, Long projectId) {
-        if (orgId == null)
+        // 基础参数校验
+        if (orgId == null) {
             throw new BusinessException("请选择机构");
+        }
+        if (projectId == null) {
+            throw new BusinessException("请选择项目");
+        }
         Long userId = TokenLocalThreadUtil.get().getUserId();
-        // 查找机构与考生关联状态等于1的数据
-        Integer agencyStatus = orgMapper.findAgency(orgId, userId);
-        if (agencyStatus > 0) {
-            return -1;
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
         }
-        // 查找机构与考生关联状态等于-1的数据
-        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, TokenLocalThreadUtil.get().getUserId());
-        if (agencyStatusVO != null && agencyStatusVO.getStatus() != null && agencyStatusVO.getStatus() == -1) {
-            OrgCandidateDO orgCandidateDO = new OrgCandidateDO();
-            orgCandidateDO.setId(orgId);
-            orgCandidateDO.setProjectId(projectId);
-            orgCandidateDO.setUpdateUser(TokenLocalThreadUtil.get().getUserId());
-            orgCandidateDO.setId(agencyStatusVO.getId());
-            orgCandidateDO.setStatus(1);
-            return orgCandidateMapper.update(orgCandidateDO, new LambdaUpdateWrapper<OrgCandidateDO>().eq(OrgCandidateDO::getId, agencyStatusVO.getId())
-                    .set(OrgCandidateDO::getRemark, null));
+
+        //  查询用户-机构-项目的关联记录（需确保Mapper支持该查询）
+        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, userId, projectId);
+        if (agencyStatusVO != null) {
+            Integer status = agencyStatusVO.getStatus();
+            // 已存在有效关联（状态>0），返回-1
+            if (status != null && status > 0) {
+                return -1;
+            }
+            // 已存在无效关联（状态=-1），执行更新
+            if (status != null && status == -1) {
+                OrgCandidateDO updateDO = new OrgCandidateDO();
+                updateDO.setId(agencyStatusVO.getId());
+                updateDO.setStatus(1); // 恢复为有效状态
+                updateDO.setUpdateUser(userId);
+                updateDO.setUpdateTime(LocalDateTime.now());
+                updateDO.setRemark(null); // 清空备注
+
+                // 执行更新
+                int updateCount = orgCandidateMapper.update(updateDO,
+                        new LambdaUpdateWrapper<OrgCandidateDO>().eq(OrgCandidateDO::getId, agencyStatusVO.getId()));
+                return updateCount;
+            }
         }
-        OrgCandidateDO orgCandidateDO = new OrgCandidateDO();
-        orgCandidateDO.setOrgId(orgId);
-        orgCandidateDO.setCandidateId(userId);
-        orgCandidateDO.setProjectId(projectId);
-        orgCandidateDO.setUpdateUser(TokenLocalThreadUtil.get().getUserId());
-        orgCandidateDO.setStatus(1);
-        return orgCandidateMapper.insert(orgCandidateDO);
+
+        // 无关联记录，执行插入
+        OrgCandidateDO insertDO = new OrgCandidateDO();
+        insertDO.setOrgId(orgId); // 机构ID
+        insertDO.setCandidateId(userId); // 考生ID（当前用户）
+        insertDO.setProjectId(projectId); // 项目ID
+        insertDO.setStatus(1); // 关联状态：有效
+        insertDO.setCreateUser(userId); // 创建人
+        insertDO.setCreateTime(LocalDateTime.now()); // 创建时间
+        insertDO.setUpdateTime(LocalDateTime.now()); // 更新时间
+
+        // 执行插入
+        int insertResult = orgCandidateMapper.insert(insertDO);
+        return Math.toIntExact(insertResult > 0 ? insertDO.getId() : -2);
     }
 
     // 学生退出机构

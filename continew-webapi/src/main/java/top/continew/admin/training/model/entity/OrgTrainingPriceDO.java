@@ -23,9 +23,9 @@ public class OrgTrainingPriceDO extends BaseDO {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 八大类ID（关联八大类字典表主键）
+     * 八大类项目ID（关联八大类项目字典表主键）
      */
-    private Long categoryId;
+    private Long projectId;
 
     /**
      * 机构ID（关联机构表主键）
@@ -40,5 +40,5 @@ public class OrgTrainingPriceDO extends BaseDO {
     /**
      * 是否删除（0否，1是）
      */
-    private Boolean isDeleted;
+    private int isDeleted;
 }

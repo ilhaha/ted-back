@@ -67,7 +67,7 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
     OrgDetailResp getOrgDetail(@Param("orgId") Long orgId);
 
     //  AgencyStatusVO，接收多字段
-    AgencyStatusVO getAgencyStatus(@Param("orgId") Long orgId, @Param("userId") Long userId);
+    AgencyStatusVO getAgencyStatus(@Param("orgId") Long orgId, @Param("userId") Long userId, @Param("userId") Long projectId);
     @Insert("insert into ted_org_candidate values (null, #{orgId}, #{userId}, #{projectId}, 1, null,1,1, now(), now() 0)")
     Integer studentAddAgency(@Param("orgId") Long orgId, @Param("userId") Long userId, @Param("projectId") Long projectId);
 
