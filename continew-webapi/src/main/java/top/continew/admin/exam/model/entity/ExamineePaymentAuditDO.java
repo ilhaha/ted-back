@@ -89,4 +89,14 @@ public class ExamineePaymentAuditDO extends BaseDO {
      * 是否删除（0否，1是）
      */
     private Boolean isDeleted;
+
+    /**
+     * 作业人员班级id，如果是检验人员为空
+     */
+    private Long classId;
+
+    /**
+     * 上传通知单二维码URL，检验人员为空
+     */
+    private String qrcodeUploadUrl;
 }

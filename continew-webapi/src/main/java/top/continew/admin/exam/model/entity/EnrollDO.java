@@ -62,7 +62,7 @@ public class EnrollDO extends BaseDO {
     /**
      * 考试状态（0：未报名，1：已报名：2：已完成，3：已过期）
      */
-    private Long enrollStatus;
+    private Integer enrollStatus;
 
     /**
      * 删除标记
@@ -85,4 +85,9 @@ public class EnrollDO extends BaseDO {
      * 考试状态
      */
     private Integer examStatus;
+
+    /**
+     * 作业人员班级id，检验人员为空
+     */
+    private Long classId;
 }

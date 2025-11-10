@@ -19,14 +19,13 @@ package top.continew.admin.training.controller;
 import com.alibaba.excel.EasyExcel;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.listen.StudentDataListener;
 import top.continew.admin.training.model.req.BindUserReq;
-import top.continew.admin.training.model.req.OrgApplyPreReq;
+import top.continew.admin.training.model.req.OrgApplyReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.vo.*;
 import top.continew.admin.util.Result;
@@ -51,7 +50,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -100,21 +98,25 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
         return orgService.getOrgSelect();
     }
     /**
-     * 机构预报名
+     * 机构给作业人员报名
      * @return
      */
-    @PostMapping("/apply/pre")
-    public Boolean applyPre(@Validated @RequestBody OrgApplyPreReq orgApplyPreReq) {
-        return orgService.applyPre(orgApplyPreReq);
+    @PostMapping("/apply")
+    public Boolean apply(@Validated @RequestBody OrgApplyReq orgApplyPreReq) {
+        return orgService.apply(orgApplyPreReq);
     }
     /**
      * 根据报考状态获取机构对应的项目-班级-考生级联选择 （预报名）
      * @param projectId 项目id
+     * @param planType 计划考试人员类型
+     * @param planId 计划id
      * @return
      */
-    @GetMapping("/select/project/class/candidate")
-    public List<ProjectCategoryVO> getSelectProjectClassCandidate(@RequestParam Long projectId) {
-        return orgService.getSelectProjectClassCandidate(projectId);
+    @GetMapping("/select/project/class/candidate/{planType}")
+    public List<ProjectCategoryVO> getSelectProjectClassCandidate(@PathVariable("planType") Integer planType,
+                                                                  @RequestParam Long projectId,
+                                                                  @RequestParam("planId") Long planId) {
+        return orgService.getSelectProjectClassCandidate(projectId,planType,planId);
     }
 
     /**

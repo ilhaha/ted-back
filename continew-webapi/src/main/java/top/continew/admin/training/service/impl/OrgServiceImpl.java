@@ -17,6 +17,7 @@
 package top.continew.admin.training.service.impl;
 
 import cn.crane4j.core.util.StringUtils;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ObjectUtil;
@@ -49,6 +50,7 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.ImportWorkerTemplateConstant;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
@@ -58,12 +60,15 @@ import top.continew.admin.common.constant.enums.WorkerPictureTypeEnum;
 import top.continew.admin.common.model.dto.ExcelUploadFileResultDTO;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
-import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.ClassroomDO;
+import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.vo.ExamPlanVO;
+import top.continew.admin.exam.service.ExamineePaymentAuditService;
+import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.system.model.resp.FileInfoResp;
@@ -74,7 +79,7 @@ import top.continew.admin.training.model.vo.ParsedExcelResultVO;
 import top.continew.admin.training.model.vo.ParsedErrorVO;
 import top.continew.admin.training.model.vo.ParsedSuccessVO;
 import top.continew.admin.training.model.entity.*;
-import top.continew.admin.training.model.req.OrgApplyPreReq;
+import top.continew.admin.training.model.req.OrgApplyReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.vo.*;
 import top.continew.admin.util.ExcelMediaUtils;
@@ -170,6 +175,12 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Resource
     private WorkerApplyMapper workerApplyMapper;
+
+    @Resource
+    private UserMapper userMapper;
+
+    @Resource
+    private ExamineePaymentAuditService examineePaymentAuditService;
 
     private static final long EXPIRE_TIME = 7;  // 过期时间（天）
 
@@ -932,10 +943,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @return
      */
     @Override
-    public List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId) {
+    public List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId,Integer planType,Long planId) {
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         OrgDTO orgDTO = orgMapper.getOrgId(userTokenDo.getUserId());
-        List<OrgProjectClassCandidateVO> flatList = baseMapper.getSelectProjectClassCandidate(orgDTO.getId(), projectId);
+        List<OrgProjectClassCandidateVO> flatList = baseMapper.getSelectProjectClassCandidate(orgDTO.getId(), projectId,planType,planId);
 
         // 组装层级结构
         Map<Long, ProjectCategoryVO> projectMap = new LinkedHashMap<>();
@@ -976,40 +987,84 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
     /**
-     * 机构预报名
-     *
+     * 机构给作业人员报名
      * @return
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean applyPre(OrgApplyPreReq orgApplyPreReq) {
+    public Boolean apply(OrgApplyReq orgApplyPreReq) {
         Long examPlanId = orgApplyPreReq.getExamPlanId();
         ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
-        // 如果报名时间已过无法报名
+        ValidationUtils.throwIf(Objects.isNull(examPlanDO), "考试计划不存在");
+
+        // 报名时间校验
         LocalDateTime enrollEndTime = examPlanDO.getEnrollEndTime();
-        ValidationUtils.throwIf(!ExamPlanStatusEnum.IN_FORCE.getValue().equals(examPlanDO.getStatus()) || LocalDateTime.now().isAfter(enrollEndTime),
-                "报名时间已截至，无法继续报名");
-        // 如果报考的人数大于剩余计划人数，无法报名
+        ValidationUtils.throwIf(
+                !ExamPlanStatusEnum.IN_FORCE.getValue().equals(examPlanDO.getStatus())
+                        || LocalDateTime.now().isAfter(enrollEndTime),
+                "报名时间已截至，无法继续报名"
+        );
+
+        // 空检查
+        List<List<Long>> projectClassCandidateList = orgApplyPreReq.getCandidateIds();
+        ValidationUtils.throwIfEmpty(projectClassCandidateList,"未选择报考考生！");
+
+        // 计算最大人数
         ExamPlanVO examPlanVO = new ExamPlanVO();
         BeanUtils.copyProperties(examPlanDO, examPlanVO);
         examPlanVO.setClassroomList(examPlanMapper.getPlanExamClassroom(examPlanId));
+
         int maxNumber = 0;
-        LambdaQueryWrapper<ClassroomDO> classroomDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        classroomDOLambdaQueryWrapper.in(ClassroomDO::getId, examPlanVO.getClassroomList());
-        List<ClassroomDO> classroomDOS = classroomMapper.selectList(classroomDOLambdaQueryWrapper);
+        List<ClassroomDO> classroomDOS = classroomMapper.selectList(
+                new LambdaQueryWrapper<ClassroomDO>().in(ClassroomDO::getId, examPlanVO.getClassroomList())
+        );
         for (ClassroomDO classroomDO : classroomDOS) {
             maxNumber += classroomDO.getMaxCandidates();
         }
+
         Long actualCount = enrollMapper.getEnrollCount(examPlanId);
-        ValidationUtils.throwIf(maxNumber - actualCount - orgApplyPreReq.getCandidateIds().size() < 0, "报名人数大于考试计划剩余报名名额");
-        List<Long> candidateIds = orgApplyPreReq.getCandidateIds();
-        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
-        OrgDO orgDO = orgUserMapper.selectOrgByUserId(userTokenDo.getUserId());
-        List<EnrollPreDO> insertPreList = candidateIds.stream()
-                .map(candidateId -> createEnrollPre(candidateId, examPlanId, orgDO.getId()))
-                .toList();
-        return enrollPreMapper.insertBatch(insertPreList);
+        ValidationUtils.throwIf(
+                maxNumber - actualCount - projectClassCandidateList.size() < 0,
+                "报名人数大于考试计划剩余报名名额"
+        );
+
+
+        // 检查是否重复报名
+        List<Long> candidateIds = projectClassCandidateList.stream().map(item -> {
+            return item.get(2);
+        }).toList();
+
+        List<Long> existedCandidateIds = enrollMapper.selectList(
+                new LambdaQueryWrapper<EnrollDO>()
+                        .eq(EnrollDO::getExamPlanId, examPlanId)
+                        .in(EnrollDO::getUserId, candidateIds)
+        ).stream().map(EnrollDO::getUserId).toList();
+
+        if (CollUtil.isNotEmpty(existedCandidateIds)) {
+            String existedNames = String.join("、",
+                    userMapper.selectByIds(existedCandidateIds)
+                            .stream().map(UserDO::getNickname).toList());
+            throw new BusinessException("以下考生已预报名该考试计划：" + existedNames);
+        }
+
+        // 插入报名表
+        List<EnrollDO> insertEnrollList = projectClassCandidateList.stream().map(item -> {
+            EnrollDO enrollDO = new EnrollDO();
+            enrollDO.setExamPlanId(examPlanId);
+            enrollDO.setClassId(item.get(1));
+            enrollDO.setUserId(item.get(2));
+            enrollDO.setEnrollStatus(EnrollStatusConstant.SIGNED_UP);
+            return enrollDO;
+        }).toList();
+        enrollMapper.insertBatch(insertEnrollList);
+
+        // 生成通知单
+        examineePaymentAuditService.generatePaymentAudit(insertEnrollList);
+
+        return true;
     }
+
+
 
     /**
      * 获取所有的机构作为选择器返回

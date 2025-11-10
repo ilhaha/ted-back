@@ -3,13 +3,12 @@
 <mapper namespace="top.continew.admin.exam.mapper.EnrollMapper">
 
     <select id="getEnrollList" resultType="top.continew.admin.exam.model.resp.EnrollStatusResp">
-        SELECT
-            tep.id                        AS examPlanId,
-            tep.image_url                 AS imageUrl,
-            tep.start_time                AS examStartTime,
-            tep.exam_plan_name            AS examPlanName,
-            tep.enroll_end_time           AS enrollEndTime,
-            COALESCE(te.enroll_status, 0) AS enroll_status
+        SELECT tep.id                        AS examPlanId,
+               tep.image_url                 AS imageUrl,
+               tep.start_time                AS examStartTime,
+               tep.exam_plan_name            AS examPlanName,
+               tep.enroll_end_time           AS enrollEndTime,
+               COALESCE(te.enroll_status, 0) AS enroll_status
         FROM ted_exam_plan AS tep
                  LEFT JOIN ted_enroll AS te
                            ON te.exam_plan_id = tep.id
@@ -19,19 +18,19 @@
     </select>
     <select id="getAllDetailEnrollList" resultType="top.continew.admin.exam.model.resp.EnrollDetailResp">
 
-        SELECT tp.id                         AS projectId,
+        SELECT tp.id                                     AS projectId,
                tp.project_name,
-               tel.location_name             AS examPlace,
-               tep.image_url AS imageUrl,
+               tel.location_name                         AS examPlace,
+               tep.image_url                             AS imageUrl,
                TIMESTAMPDIFF(HOUR, start_time, end_time) AS exam_duration,
-            tep.exam_fee,
+               tep.exam_fee,
                tep.enroll_end_time,
                tep.exam_plan_name,
-               tep.start_time                AS exam_start_time,
+               tep.start_time                            AS exam_start_time,
                tep.redeme,
-               COALESCE(te.enroll_status, 0) AS enroll_status
+               COALESCE(te.enroll_status, 0)             AS enroll_status
 
-               -- 优化后的证书聚合（增加用户关联条件）
+        -- 优化后的证书聚合（增加用户关联条件）
         FROM ted_exam_plan as tep
                  LEFT JOIN ted_project AS tp
                            ON tep.exam_project_id = tp.id
@@ -75,7 +74,7 @@
                tep.start_time    AS exam_start_time,
                tep.redeme,
                te.enroll_status
-               -- 优化后的证书聚合（增加用户关联条件）
+        -- 优化后的证书聚合（增加用户关联条件）
         FROM ted_exam_plan as tep
                  LEFT JOIN ted_enroll AS te
                            ON te.exam_plan_id = tep.id
@@ -92,10 +91,10 @@
         SELECT su.nickname,
                su.phone AS phoneNumber,
                su.email,
-               sd.name AS deptName,
+               sd.name  AS deptName,
                su.avatar
         FROM sys_user su
-        LEFT JOIN sys_dept sd on su.dept_id = sd.id
+                 LEFT JOIN sys_dept sd on su.dept_id = sd.id
         WHERE su.id = #{userId}
     </select>
     <select id="getStudentDocumentList" resultType="java.lang.String">
@@ -146,16 +145,16 @@
                ep.start_time     as startTime,
                ep.end_time       as endTime
         from ted_enroll as e
-            left join ted_exam_plan as ep
-                on e.exam_plan_id = ep.id
+                 left join ted_exam_plan as ep
+                           on e.exam_plan_id = ep.id
         where e.user_id = #{userId}
           and e.exam_plan_id = #{examPlanId}
           and e.enroll_status != 3
           and e.is_deleted = 0
     </select>
     <select id="getEnrollPage" resultType="top.continew.admin.exam.model.resp.EnrollResp">
-        select te.id as id,
-            su.nickname        as nickName,
+        select te.id              as id,
+               su.nickname        as nickName,
                tep.exam_plan_name as examPlanName,
                tc.classroom_name  as classroomName,
                te.seat_id,
@@ -172,5 +171,14 @@
                  LEFT JOIN sys_user
                            ON ted_enroll.user_id = sys_user.id
             ${ew.customSqlSegment}
+    </select>
+    <select id="getWorkerApplyList" resultType="top.continew.admin.exam.model.resp.EnrollResp">
+        SELECT te.id,te.create_time, toc.class_name, su.nickname AS nick_name
+        FROM ted_enroll te
+                 LEFT JOIN ted_org_class toc
+                           ON te.class_id = toc.id AND toc.is_deleted = 0
+                 LEFT JOIN sys_user su
+                           ON te.user_id = su.id ${ew.customSqlSegment}
+        ORDER BY te.create_time DESC;
     </select>
 </mapper>

@@ -17,6 +17,7 @@
 package top.continew.admin.exam.service;
 
 import top.continew.admin.exam.model.resp.*;
+import top.continew.admin.exam.model.vo.ApplyListVO;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -25,6 +26,7 @@ import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.EnrollQuery;
 import top.continew.admin.exam.model.req.EnrollReq;
 
+import java.util.List;
 import java.util.Map;
 
 /**

@@ -20,7 +20,9 @@ import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import top.continew.starter.data.core.annotation.Query;
 import top.continew.starter.data.core.annotation.QueryIgnore;
+import top.continew.starter.data.core.enums.QueryType;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -49,5 +51,11 @@ public class EnrollQuery implements Serializable {
      */
     @QueryIgnore
     private String planName;
+
+    @Query(type = QueryType.EQ,columns = "te.exam_plan_id")
+    private Long planId;
+
+    @Query(type = QueryType.LIKE,columns = "toc.class_name")
+    private String className;
 
 }

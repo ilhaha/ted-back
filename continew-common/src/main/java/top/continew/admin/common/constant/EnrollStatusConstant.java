@@ -43,6 +43,11 @@ public class EnrollStatusConstant {
     public static final Integer EXPIRED = 3;
 
     /**
+     * 报名状态：审核中
+     */
+    public static final Integer UNDER_REVIEW = 4;
+
+    /**
      * 考试状态：未签到
      */
     public static final Integer NOT_SIGNED_IN = 0;

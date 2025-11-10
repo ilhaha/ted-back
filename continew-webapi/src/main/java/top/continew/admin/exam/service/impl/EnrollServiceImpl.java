@@ -17,6 +17,7 @@
 package top.continew.admin.exam.service.impl;
 
 import cn.crane4j.core.util.StringUtils;
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -30,12 +31,14 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.resp.*;
+import top.continew.admin.exam.model.vo.ApplyListVO;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.ExamPlanVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
@@ -236,7 +239,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
                 if (existing != null) {
                     // 如果之前有记录（比如上传资料时插入的状态=4），则只更新状态为已报名
-                    existing.setEnrollStatus(1L);
+                    existing.setEnrollStatus(EnrollStatusConstant.SIGNED_UP);
                     existing.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
                     existing.setSeatId(Long.valueOf(seatPart));
                     existing.setClassroomId(Long.valueOf(classroomId));
@@ -251,7 +254,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                     enrollDO.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
                     enrollDO.setSeatId(Long.valueOf(seatPart));
                     enrollDO.setClassroomId(Long.valueOf(classroomId));
-                    enrollDO.setEnrollStatus(1L); // 已报名
+                    enrollDO.setEnrollStatus(EnrollStatusConstant.SIGNED_UP); // 已报名
                     enrollDO.setIsDeleted(false);
                     enrollDO.setCreateTime(LocalDateTime.now());
                     enrollDO.setUpdateTime(LocalDateTime.now());
@@ -306,7 +309,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
                 if (existing != null) {
                     // 如果之前有记录（比如上传资料时插入的状态=4），则只更新状态为已报名
-                    existing.setEnrollStatus(1L);
+                    existing.setEnrollStatus(EnrollStatusConstant.SIGNED_UP);
                     existing.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
                     existing.setSeatId(Long.valueOf(seatPart));
                     existing.setClassroomId(Long.valueOf(classroomId));
@@ -321,7 +324,8 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                     enrollDO.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
                     enrollDO.setSeatId(Long.valueOf(seatPart));
                     enrollDO.setClassroomId(Long.valueOf(classroomId));
-                    enrollDO.setEnrollStatus(1L); // 已报名
+                    // 已报名
+                    enrollDO.setEnrollStatus(EnrollStatusConstant.SIGNED_UP);
                     enrollDO.setIsDeleted(false);
                     enrollDO.setCreateTime(LocalDateTime.now());
                     enrollDO.setUpdateTime(LocalDateTime.now());
@@ -530,6 +534,30 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         enrollMapper.deleteFromApplicant(examPlanId, userId);
     }
 
+    /**
+     * 重写删除
+     * @param ids
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(List<Long> ids) {
+        // 查出报名的信息
+        List<EnrollDO> enrollDOS = baseMapper.selectByIds(ids);
+        ValidationUtils.throwIfEmpty(enrollDOS,"未选择取消报名的数据！");
+        // 查出计划信息
+        List<ExamPlanDO> examPlanDOS = examPlanMapper.selectByIds(ids);
+        // 考试时间校验
+        for (ExamPlanDO examPlanDO : examPlanDOS) {
+            LocalDateTime examStartTime = examPlanDO.getStartTime();
+            ValidationUtils.throwIfNull(examStartTime, "考试开始时间为空，无法取消报名");
+            LocalDateTime now = LocalDateTime.now();
+            boolean canCancelByTime = ChronoUnit.DAYS.between(now, examStartTime) >= 5;
+            ValidationUtils.throwIf(!canCancelByTime, "距离考试不足5天，无法取消报名");
+        }
+        // TODO 加上删除缴费凭证（2025.11.10）
+        super.delete(ids);
+    }
+
     //重写后台管理端分页
     @Override
     public PageResp<EnrollResp> page(EnrollQuery query, PageQuery pageQuery) {
@@ -540,10 +568,18 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         if (query.getPlanName() != null) {
             queryWrapper.like("tep.exam_plan_name", query.getPlanName());
         }
-        queryWrapper.eq("te.is_deleted", 0).eq("te.enroll_Status", 1);
+        queryWrapper.eq("te.is_deleted", 0);
         super.sort(queryWrapper, pageQuery);
-        IPage<EnrollResp> page = baseMapper.getEnrollPage(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+        IPage<EnrollResp> page;
+        // 机构查看报名情况
+        if (ObjectUtil.isNotEmpty(query.getPlanId())) {
+            page = baseMapper.getWorkerApplyList(new Page<>(pageQuery.getPage(), pageQuery
+                    .getSize()), queryWrapper);
+        }else {
+            queryWrapper.eq("te.enroll_Status", 1);
+            page = baseMapper.getEnrollPage(new Page<>(pageQuery.getPage(), pageQuery
+                    .getSize()), queryWrapper);
+        }
         PageResp<EnrollResp> pageResp = PageResp.build(page, EnrollResp.class);
         pageResp.getList().forEach(this::fill);
         return pageResp;

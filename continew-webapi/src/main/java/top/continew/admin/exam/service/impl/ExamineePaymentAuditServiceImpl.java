@@ -1,5 +1,6 @@
 package top.continew.admin.exam.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -14,6 +15,7 @@ import top.continew.admin.exam.mapper.ExamPlanMapper;
 import top.continew.admin.exam.mapper.ExamineePaymentAuditMapper;
 import top.continew.admin.exam.mapper.ProjectMapper;
 import top.continew.admin.exam.model.dto.ExamPlanProjectPaymentDTO;
+import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.model.entity.ProjectDO;
@@ -39,6 +41,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -240,6 +243,44 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         return true;
     }
 
+
+    /**
+     * 生成作业人员缴费通知单
+     * @param enrollDOList
+     */
+    @Override
+    public void generatePaymentAudit(List<EnrollDO> enrollDOList) {
+        if (ObjectUtil.isEmpty(enrollDOList)) {
+            return;
+        }
+        // 根据考试计划ID查询项目缴费金额
+        Long planId = enrollDOList.get(0).getExamPlanId();
+        ExamPlanProjectPaymentDTO paymentInfoDTO = getExamPlanProjectPaymentInfo(planId);
+
+        // 构建缴费审核记录并入库
+        List<ExamineePaymentAuditDO> insertList = enrollDOList.stream().map(item -> {
+            ExamineePaymentAuditDO paymentAuditDO = new ExamineePaymentAuditDO();
+            Long candidateId = item.getUserId();
+            paymentAuditDO.setExamineeId(candidateId);
+            paymentAuditDO.setExamPlanId(planId);
+            Long enrollId = item.getId();
+            paymentAuditDO.setEnrollId(enrollId);
+            Long classId = item.getClassId();
+            paymentAuditDO.setClassId(classId);
+            paymentAuditDO.setPaymentAmount(paymentInfoDTO.getPaymentAmount());
+            String noticeNo = generateUniqueNoticeNo();
+            paymentAuditDO.setNoticeNo(noticeNo);
+            paymentAuditDO.setAuditStatus(0);
+            paymentAuditDO.setCreateTime(LocalDateTime.now());
+            paymentAuditDO.setIsDeleted(false);
+            paymentAuditDO.setAuditNoticeUrl(generateAuditNotice(planId,candidateId,paymentInfoDTO,noticeNo));
+            // TODO 生成上传缴费通知单二维码
+            return paymentAuditDO;
+        }).toList();
+
+        examineePaymentAuditMapper.insertBatch(insertList);
+    }
+
     /**
      * 处理退款审核逻辑（状态5 -> 状态6）
      * @param record 当前审核记录
@@ -284,6 +325,25 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         if (paymentInfoDTO == null) {
             throw new IllegalStateException("未找到考试计划缴费信息: " + examPlanId);
         }
+        String auditNoticeUrl = generateAuditNotice(examPlanId, examineeId, paymentInfoDTO, record.getNoticeNo());
+
+        // 更新当前记录
+        record.setAuditNoticeUrl(auditNoticeUrl);
+        examineePaymentAuditMapper.updateById(record);
+
+        // 返回更新后的记录（此处 record 已包括新 URL）
+        return record;
+    }
+
+    /**
+     * 生成通知单pdf
+     * @param examPlanId
+     * @param examineeId
+     * @param paymentInfoDTO
+     * @param noticeNo
+     * @return
+     */
+    private String generateAuditNotice(Long examPlanId, Long examineeId, ExamPlanProjectPaymentDTO paymentInfoDTO, String noticeNo) {
         // 生成 PDF
         byte[] pdfBytes = generatePaymentNotice(
                 examPlanId,
@@ -291,7 +351,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
                 paymentInfoDTO.getExamPlanName(),
                 paymentInfoDTO.getProjectName(),
                 paymentInfoDTO.getPaymentAmount().longValue(),
-                record.getNoticeNo()
+                noticeNo
         );
 
         // 封装为 MultipartFile
@@ -309,13 +369,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
             throw new IllegalStateException("文件上传失败");
         }
         String pdfUrl = fileInfoResp.getUrl();
-
-        // 更新当前记录
-        record.setAuditNoticeUrl(pdfUrl);
-        examineePaymentAuditMapper.updateById(record);
-
-        // 返回更新后的记录（此处 record 已包括新 URL）
-        return record;
+        return pdfUrl;
     }
 
 

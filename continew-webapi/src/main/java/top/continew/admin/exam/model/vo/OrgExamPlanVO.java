@@ -87,6 +87,11 @@ public class OrgExamPlanVO {
     private Integer actualCandidates;
 
     /**
+     * 考试人员类型
+     */
+    private Integer planType;
+
+    /**
      * 计划状态
      */
     private Integer status;

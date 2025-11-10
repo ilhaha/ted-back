@@ -19,7 +19,7 @@ package top.continew.admin.training.service;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
-import top.continew.admin.training.model.req.OrgApplyPreReq;
+import top.continew.admin.training.model.req.OrgApplyReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.vo.*;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -183,13 +183,13 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      * @param projectId 项目id
      * @return
      */
-    List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId);
+    List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId,Integer planType,Long planId);
 
     /**
-     * 机构预报名
+     * 机构给作业人员报名
      * @return
      */
-    Boolean applyPre(OrgApplyPreReq orgApplyPreReq);
+    Boolean apply(OrgApplyReq orgApplyPreReq);
 
     /**
      * 获取所有的机构作为选择器返回

@@ -40,6 +40,7 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
+import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.enums.SpecialCertificationApplicantEnum;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -240,7 +241,8 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             EnrollDO enroll = new EnrollDO();
             enroll.setExamPlanId(req.getPlanId());
             enroll.setUserId(user.getUserId());
-            enroll.setEnrollStatus(4L); // 审核中
+            // 审核中
+            enroll.setEnrollStatus(EnrollStatusConstant.UNDER_REVIEW);
             enroll.setIsDeleted(false);
             enroll.setCreateUser(user.getUserId());
             enroll.setUpdateUser(user.getUserId());
@@ -248,7 +250,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             enroll.setUpdateTime(LocalDateTime.now());
             enrollMapper.insert(enroll);
         } else {
-            existingEnroll.setEnrollStatus(4L);
+            existingEnroll.setEnrollStatus(EnrollStatusConstant.UNDER_REVIEW);
             existingEnroll.setUpdateTime(LocalDateTime.now());
             enrollMapper.updateById(existingEnroll);
         }

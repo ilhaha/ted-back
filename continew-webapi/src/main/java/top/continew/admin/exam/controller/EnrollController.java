@@ -19,6 +19,7 @@ package top.continew.admin.exam.controller;
 import jakarta.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.resp.*;
+import top.continew.admin.exam.model.vo.ApplyListVO;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
 import top.continew.starter.extension.crud.enums.Api;
@@ -35,6 +36,7 @@ import top.continew.admin.exam.service.EnrollService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
+import java.util.List;
 import java.util.Map;
 
 /**

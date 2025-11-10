@@ -17,11 +17,9 @@
 package top.continew.admin.training.model.req;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import org.hibernate.validator.constraints.Length;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -35,7 +33,7 @@ import java.util.List;
  */
 @Data
 @Schema(description = "机构预报名信息参数")
-public class OrgApplyPreReq implements Serializable {
+public class OrgApplyReq implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -53,8 +51,8 @@ public class OrgApplyPreReq implements Serializable {
     /**
      * 预报名考生名单
      */
-    @NotEmpty(message = "未选择报考考生")
-    private List<Long> candidateIds;
+    @NotEmpty(message = "预报名考生名单")
+    private List<List<Long>> candidateIds;
 
 
 }

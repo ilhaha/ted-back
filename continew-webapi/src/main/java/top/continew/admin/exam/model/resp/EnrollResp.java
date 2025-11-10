@@ -98,4 +98,10 @@ public class EnrollResp extends BaseResp {
      */
     @Schema(description = "准考证号")
     private String examNumber;
+
+    /**
+     * 报考班级名称
+     */
+    @Schema(description = "报考班级名称")
+    private String className;
 }

@@ -185,20 +185,26 @@
                c.id             AS classId,
                c.class_name     AS classLabel,
                occ.candidate_id AS candidateId,
-               su.nickname
-        FROM ted_org_class c
+               su.nickname      AS nickname
+        FROM ted_org_class_candidate occ
+                 JOIN ted_org_class c
+                      ON occ.class_id = c.id
+                          AND c.is_deleted = 0
+                          AND c.org_id = #{orgId}
+                          AND c.project_id = #{projectId}
+                          AND c.class_type = #{planType}
                  JOIN ted_project p
-                      ON c.project_id = p.id AND p.is_deleted = 0
-                 LEFT JOIN ted_org_class_candidate occ
-                           ON c.id = occ.class_id
-                 LEFT JOIN sys_user su
-                           ON occ.candidate_id = su.id
-                 LEFT JOIN ted_enroll_pre ep
-                           ON occ.candidate_id = ep.candidate_id AND ep.is_deleted = 0
-        WHERE c.is_deleted = 0
-          AND c.org_id = #{orgId}
-          AND c.project_id = #{projectId}
-          AND ep.id IS NULL
+                      ON c.project_id = p.id
+                          AND p.is_deleted = 0
+                 JOIN sys_user su
+                      ON occ.candidate_id = su.id
+        WHERE occ.is_deleted = 0
+          AND NOT EXISTS (SELECT 1
+                          FROM ted_enroll ee
+                          WHERE ee.user_id = occ.candidate_id
+                            AND ee.exam_plan_id = #{planId}
+                            AND ee.is_deleted = 0)
+        ORDER BY p.id, c.id, occ.candidate_id;
     </select>
     <select id="getOrgSelect" resultType="top.continew.admin.training.model.vo.SelectOrgVO">
         SELECT id AS `value`, `name` AS label

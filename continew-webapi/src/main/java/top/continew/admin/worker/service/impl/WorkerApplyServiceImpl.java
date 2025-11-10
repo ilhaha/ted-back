@@ -31,6 +31,8 @@ import top.continew.admin.document.mapper.DocumentTypeMapper;
 import top.continew.admin.document.model.dto.DocFileDTO;
 import top.continew.admin.document.model.dto.DocumentTypeDTO;
 import top.continew.admin.document.model.entity.DocumentTypeDO;
+import top.continew.admin.exam.mapper.EnrollMapper;
+import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.training.mapper.CandidateTypeMapper;
@@ -89,6 +91,9 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
     @Resource
     private DocumentTypeMapper documentTypeMapper;
+
+    @Resource
+    private EnrollMapper enrollMapper;
 
     /**
      * 根据身份证后六位、和班级id查询当前身份证报名信息
@@ -531,7 +536,6 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> ids) {
-        System.out.println(1111);
         // 1. 查出待删除数据
         List<WorkerApplyDO> workerApplyDOS = baseMapper.selectByIds(ids);
         if (CollUtil.isEmpty(workerApplyDOS)) {
@@ -565,6 +569,11 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                         new LambdaQueryWrapper<OrgClassCandidateDO>()
                                 .eq(OrgClassCandidateDO::getClassId, classId)
                                 .in(OrgClassCandidateDO::getCandidateId, candidateIds)
+                );
+                // 删除对应的报名记录
+                enrollMapper.delete( new LambdaQueryWrapper<EnrollDO>()
+                        .eq(EnrollDO::getClassId, classId)
+                        .in(EnrollDO::getUserId, candidateIds)
                 );
             }
         }

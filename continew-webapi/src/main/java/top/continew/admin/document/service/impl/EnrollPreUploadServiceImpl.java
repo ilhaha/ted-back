@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.document.mapper.DocumentMapper;
 import top.continew.admin.document.mapper.DocumentPreMapper;
@@ -197,7 +198,7 @@ public class EnrollPreUploadServiceImpl extends BaseServiceImpl<EnrollPreUploadM
                         EnrollDO enrollDO = new EnrollDO();
                         enrollDO.setUserId(dto.getCandidatesId());
                         enrollDO.setExamPlanId(dto.getPlanId());
-                        enrollDO.setEnrollStatus(1L);
+                        enrollDO.setEnrollStatus(EnrollStatusConstant.SIGNED_UP);
                         enrollDO.setCreateUser(dto.getCandidatesId());
                         enrollDO.setCreateTime(LocalDateTime.now());
                         enrollDO.setUpdateUser(dto.getCandidatesId());

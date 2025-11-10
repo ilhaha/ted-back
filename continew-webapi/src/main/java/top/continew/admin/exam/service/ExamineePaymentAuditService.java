@@ -1,12 +1,15 @@
 package top.continew.admin.exam.service;
 
 import top.continew.admin.document.model.req.DocumentAuditReq;
+import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.ExamineePaymentAuditQuery;
 import top.continew.admin.exam.model.req.ExamineePaymentAuditReq;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditDetailResp;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
+
+import java.util.List;
 
 /**
  * 考生缴费审核业务接口
@@ -57,4 +60,10 @@ public interface ExamineePaymentAuditService extends BaseService<ExamineePayment
      */
 
     boolean reviewPayment(ExamineePaymentAuditResp examineePaymentAuditResp);
+
+    /**
+     * 生成作业人员缴费通知单
+     * @param enrollDOList
+     */
+    void generatePaymentAudit(List<EnrollDO> enrollDOList);
 }
