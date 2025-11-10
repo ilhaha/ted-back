@@ -5,6 +5,7 @@ import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import top.continew.starter.data.core.annotation.Query;
+import top.continew.starter.data.core.annotation.QueryIgnore;
 import top.continew.starter.data.core.enums.QueryType;
 
 import java.io.Serial;
@@ -45,4 +46,20 @@ public class WorkerApplyQuery implements Serializable {
     @Schema(description = "审核状态:0待审核,1已生效,2未通过")
     @Query(type = QueryType.EQ,columns = "twa.status")
     private Integer status;
+
+    /**
+     * 来源，0扫码报考，1机构报考
+     */
+    @Schema(description = "来源，0扫码报考，1机构报考")
+    @Query(type = QueryType.EQ,columns = "twa.apply_type")
+    private Integer applyType;
+
+
+    /**
+     * 是否是机构查询
+     */
+    @Schema(description = "是否是机构查询")
+    @QueryIgnore
+    private Boolean isOrgQuery;
+
 }

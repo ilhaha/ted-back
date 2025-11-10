@@ -38,6 +38,7 @@ import top.continew.admin.training.mapper.OrgClassCandidateMapper;
 import top.continew.admin.training.model.entity.CandidateTypeDO;
 import top.continew.admin.training.model.entity.OrgClassCandidateDO;
 import top.continew.admin.worker.mapper.WorkerApplyDocumentMapper;
+import top.continew.admin.worker.model.dto.WorkerApplyDocAndNameDTO;
 import top.continew.admin.worker.model.entity.WorkerApplyDocumentDO;
 import top.continew.admin.worker.model.req.*;
 import top.continew.admin.worker.model.resp.*;
@@ -265,7 +266,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 candidateTypes.add(typeDO);
             }
 
-            // 8. 批量插入候选人与类型
+            // 8. 批量插入用户与类型
             orgClassCandidateMapper.insertBatch(classCandidates);
             candidateTypeMapper.insertBatch(candidateTypes);
         }
@@ -438,10 +439,11 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         QueryWrapper<WorkerApplyDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("twa.is_deleted", 0);
 
-        IPage<WorkerApplyDetailResp> page = baseMapper.page(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+        IPage<WorkerApplyDetailResp> page = baseMapper.page(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
         List<WorkerApplyDetailResp> records = page.getRecords();
-        if (!ObjectUtil.isEmpty(records)) {
+
+        if (CollUtil.isNotEmpty(records)) {
+            // 解密身份证号、手机号
             page.setRecords(records.stream().map(item -> {
                 String idCardNumberDB = item.getIdCardNumber();
                 String idCardNumber = aesWithHMAC.verifyAndDecrypt(idCardNumberDB);
@@ -449,11 +451,44 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 item.setPhone(aesWithHMAC.verifyAndDecrypt(item.getPhone()));
                 return item;
             }).toList());
+
+            // 机构报名附带资料映射
+            if (query.getIsOrgQuery()) {
+                List<Long> workerApplyIds = records.stream()
+                        .map(WorkerApplyDetailResp::getId)
+                        .filter(Objects::nonNull)
+                        .toList();
+
+                if (CollUtil.isNotEmpty(workerApplyIds)) {
+                    List<WorkerApplyDocAndNameDTO> docList = workerApplyDocumentMapper.selectDocAndName(workerApplyIds);
+
+                    // 报名ID → (资料名称 → URL)
+                    Map<Long, Map<String, String>> workerDocMap = docList.stream()
+                            .collect(Collectors.groupingBy(
+                                    WorkerApplyDocAndNameDTO::getWorkerApplyId, // 按 worker_apply_id 分组
+                                    LinkedHashMap::new, // 保持顺序
+                                    Collectors.toMap(
+                                            WorkerApplyDocAndNameDTO::getTypeName,
+                                            WorkerApplyDocAndNameDTO::getDocPath,
+                                            (a, b) -> a + "," + b,
+                                            LinkedHashMap::new
+                                    )
+                            ));
+
+                    // 注入到响应对象
+                    records.forEach(item -> {
+                        Map<String, String> docMap = workerDocMap.getOrDefault(item.getId(), Collections.emptyMap());
+                        item.setDocMap(docMap);
+                    });
+                }
+            }
         }
+
         PageResp<WorkerApplyResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
         return build;
     }
+
 
     /**
      * 判断是否已报名，并返回匹配到的身份证号
@@ -485,5 +520,56 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             }
         }
         return null;
+    }
+
+
+
+    /**
+     * 重写删除
+     * @param ids
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(List<Long> ids) {
+        System.out.println(1111);
+        // 1. 查出待删除数据
+        List<WorkerApplyDO> workerApplyDOS = baseMapper.selectByIds(ids);
+        if (CollUtil.isEmpty(workerApplyDOS)) {
+            return;
+        }
+
+        // 2. 删除关联资料
+        workerApplyDocumentMapper.delete(
+                new LambdaQueryWrapper<WorkerApplyDocumentDO>()
+                        .in(WorkerApplyDocumentDO::getWorkerApplyId, ids)
+        );
+
+        // 3. 构建班级 -> 身份证号映射
+        Map<Long, List<String>> classIdAndIdCardMap = workerApplyDOS.stream()
+                .collect(Collectors.groupingBy(
+                        WorkerApplyDO::getClassId,
+                        Collectors.mapping(WorkerApplyDO::getIdCardNumber, Collectors.toList())
+                ));
+
+        // 4. 删除班级与考生关联表（逐班精确删除）
+        for (Map.Entry<Long, List<String>> entry : classIdAndIdCardMap.entrySet()) {
+            Long classId = entry.getKey();
+            List<String> idCards = entry.getValue();
+            List<Long> candidateIds = userMapper.selectList(
+                            new LambdaQueryWrapper<UserDO>().in(UserDO::getUsername, idCards))
+                    .stream()
+                    .map(UserDO::getId)
+                    .toList();
+            if (CollUtil.isNotEmpty(candidateIds)) {
+                orgClassCandidateMapper.delete(
+                        new LambdaQueryWrapper<OrgClassCandidateDO>()
+                                .eq(OrgClassCandidateDO::getClassId, classId)
+                                .in(OrgClassCandidateDO::getCandidateId, candidateIds)
+                );
+            }
+        }
+
+        // 5. 删除主表
+        super.delete(ids);
     }
 }

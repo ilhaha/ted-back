@@ -1,0 +1,57 @@
+package top.continew.admin.training.model.resp;
+
+import lombok.Data;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import com.alibaba.excel.annotation.ExcelIgnoreUnannotated;
+import com.alibaba.excel.annotation.ExcelProperty;
+
+import top.continew.admin.common.model.resp.BaseDetailResp;
+
+import java.io.Serial;
+import java.time.*;
+import java.math.BigDecimal;
+
+/**
+ * 机构培训价格（仅核心字段：主键、八大类ID、机构ID、价格）详情信息
+ *
+ * @author ilhaha
+ * @since 2025/11/10 08:55
+ */
+@Data
+@ExcelIgnoreUnannotated
+@Schema(description = "机构培训价格（仅核心字段：主键、八大类ID、机构ID、价格）详情信息")
+public class OrgTrainingPriceDetailResp extends BaseDetailResp {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 八大类ID（关联八大类字典表主键）
+     */
+    @Schema(description = "八大类ID（关联八大类字典表主键）")
+    @ExcelProperty(value = "八大类ID（关联八大类字典表主键）")
+    private Long categoryId;
+
+    /**
+     * 机构ID（关联机构表主键）
+     */
+    @Schema(description = "机构ID（关联机构表主键）")
+    @ExcelProperty(value = "机构ID（关联机构表主键）")
+    private Long orgId;
+
+    /**
+     * 培训价格（元，精确到分，对应“价格表”核心需求）
+     */
+    @Schema(description = "培训价格（元，精确到分，对应“价格表”核心需求）")
+    @ExcelProperty(value = "培训价格（元，精确到分，对应“价格表”核心需求）")
+    private BigDecimal price;
+
+    /**
+     * 是否删除（0否，1是）
+     */
+    @Schema(description = "是否删除（0否，1是）")
+    @ExcelProperty(value = "是否删除（0否，1是）")
+    private Boolean isDeleted;
+}

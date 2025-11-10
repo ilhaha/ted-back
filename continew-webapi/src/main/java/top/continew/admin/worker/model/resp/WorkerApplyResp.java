@@ -11,6 +11,7 @@ import top.continew.starter.security.mask.enums.MaskType;
 
 import java.io.Serial;
 import java.time.*;
+import java.util.Map;
 
 /**
  * 作业人员报名信息
@@ -128,4 +129,11 @@ public class WorkerApplyResp extends BaseResp {
      */
     @Schema(description = "审核意见或退回原因")
     private String remark;
+
+    /**
+     * 资料名称与资料路径映射
+     */
+    @Schema(description = "资料名称与资料路径映射")
+    @ExcelProperty(value = "资料名称与资料路径映射")
+    private Map<String, String> docMap;
 }

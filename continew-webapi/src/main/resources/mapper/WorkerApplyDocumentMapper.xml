@@ -13,4 +13,22 @@
         GROUP BY tdt.id, tdt.type_name
         ORDER BY tdt.id ASC;
     </select>
+    <select id="selectDocAndName" resultType="top.continew.admin.worker.model.dto.WorkerApplyDocAndNameDTO">
+        SELECT
+        twad.worker_apply_id,
+        twad.doc_path,
+        tdt.type_name
+        FROM ted_worker_apply_document twad
+        LEFT JOIN ted_document_type tdt
+        ON twad.type_id = tdt.id
+        AND tdt.is_deleted = 0
+        WHERE twad.is_deleted = 0
+        <if test="workerApplyIds != null and workerApplyIds.size > 0">
+            AND twad.worker_apply_id IN
+            <foreach collection="workerApplyIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        </if>
+    </select>
+
 </mapper>
