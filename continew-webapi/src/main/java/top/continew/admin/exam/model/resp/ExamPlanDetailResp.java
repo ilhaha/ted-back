@@ -137,6 +137,13 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     private Integer status;
 
     /**
+     * 机构类型，0作业人员，1检验人员
+     */
+    @Schema(description = "机构类型，0作业人员，1检验人员")
+    @ExcelProperty(value = "机构类型，0作业人员，1检验人员")
+    private Integer planType;
+
+    /**
      * 确定最终考试时间以及地点状态
      */
     @Schema(description = "确定最终考试时间以及地点状态")

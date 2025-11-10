@@ -107,6 +107,12 @@ ExamPlanResp extends BaseResp {
     private String projectName;
 
     /**
+     * 机构类型，0作业人员，1检验人员
+     */
+    @Schema(description = "机构类型，0作业人员，1检验人员")
+    private Integer planType;
+
+    /**
      * 计划状态
      */
     @Schema(description = "计划状态")

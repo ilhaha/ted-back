@@ -77,6 +77,11 @@ public class ExamPlanDO extends BaseDO {
     private Integer actualCandidates;
 
     /**
+     * 机构类型，0作业人员，1检验人员
+     */
+    private Integer planType;
+
+    /**
      * 计划状态
      */
     private Integer status;

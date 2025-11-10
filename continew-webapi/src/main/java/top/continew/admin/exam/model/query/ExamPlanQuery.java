@@ -70,6 +70,13 @@ public class ExamPlanQuery implements Serializable {
     private String approvedUserString;
 
     /**
+     * 考试人员类型
+     */
+    @Query(type = QueryType.EQ, columns = "tep.plan_type")
+    private Integer planType;
+
+
+    /**
      * 计划状态
      */
     @Query(type = QueryType.EQ, columns = "tep.status")
