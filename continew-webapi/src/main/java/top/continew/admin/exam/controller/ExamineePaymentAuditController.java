@@ -6,6 +6,7 @@ import jakarta.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
+import top.continew.admin.exam.model.req.PaymentAuditConfirmReq;
 import top.continew.admin.exam.model.req.PaymentInfoReq;
 import top.continew.admin.exam.model.resp.PaymentInfoVO;
 import top.continew.admin.util.Result;
@@ -34,6 +35,19 @@ import top.continew.starter.web.model.R;
 @RestController
 @CrudRequestMapping(value = "/exam/examineePaymentAudit", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE, Api.EXPORT})
 public class ExamineePaymentAuditController extends BaseController<ExamineePaymentAuditService, ExamineePaymentAuditResp, ExamineePaymentAuditDetailResp, ExamineePaymentAuditQuery, ExamineePaymentAuditReq> {
+
+    /**
+     * 扫码确认提交作业人员缴费信息
+     *
+     * @param paymentAuditConfirmReq
+     * @return
+     */
+    @SaIgnore
+    @PostMapping("/payment/qrcode/confirm")
+    public Boolean paymentAuditConfirm(@Validated @RequestBody PaymentAuditConfirmReq paymentAuditConfirmReq) {
+        return baseService.paymentAuditConfirm(paymentAuditConfirmReq);
+    }
+
 
     /**
      * 扫码查询作业人员缴费信息

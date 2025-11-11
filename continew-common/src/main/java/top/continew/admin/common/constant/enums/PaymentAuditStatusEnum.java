@@ -21,24 +21,11 @@ public enum PaymentAuditStatusEnum {
     REFUND_REJECTED(7, "退款驳回");
 
     @EnumValue
-    private final int value;
+    private final Integer value;
     private final String desc;
 
-    PaymentAuditStatusEnum(int value, String desc) {
+    PaymentAuditStatusEnum(Integer value, String desc) {
         this.value = value;
         this.desc = desc;
-    }
-
-    /**
-     * 根据 value 获取枚举
-     */
-    public static PaymentAuditStatusEnum fromCode(Integer value) {
-        if (value == null) return null;
-        for (PaymentAuditStatusEnum status : values()) {
-            if (status.value == value) {
-                return status;
-            }
-        }
-        throw new IllegalArgumentException("未知的审核状态 value：" + value);
     }
 }

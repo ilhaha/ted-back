@@ -46,6 +46,11 @@ public class CacheConstants {
     public static final String WORKER_QRCODE_APPLY_CAPTCHA_KEY_PREFIX = "WORKER_QRCODE_APPLY_CAPTCHA" + DELIMITER;
 
     /**
+     * 作业人员扫码上传考试缴费凭证前缀
+     */
+    public static final String WORKER_QRCODE_PAY_CAPTCHA_KEY_PREFIX = "WORKER_QRCODE_PAY_CAPTCHA" + DELIMITER;
+
+    /**
      * 用户缓存键前缀
      */
     public static final String USER_KEY_PREFIX = "USER" + DELIMITER;

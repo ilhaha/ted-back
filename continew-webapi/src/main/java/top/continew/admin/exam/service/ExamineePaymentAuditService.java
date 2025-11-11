@@ -3,6 +3,7 @@ package top.continew.admin.exam.service;
 import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
+import top.continew.admin.exam.model.req.PaymentAuditConfirmReq;
 import top.continew.admin.exam.model.req.PaymentInfoReq;
 import top.continew.admin.exam.model.resp.PaymentInfoVO;
 import top.continew.starter.extension.crud.service.BaseService;
@@ -79,4 +80,12 @@ public interface ExamineePaymentAuditService extends BaseService<ExamineePayment
      * @return
      */
     PaymentInfoVO getPaymentInfoByQrcode(PaymentInfoReq paymentInfoReq);
+
+    /**
+     * 扫码确认提交作业人员缴费信息
+     *
+     * @param paymentAuditConfirmReq
+     * @return
+     */
+    Boolean paymentAuditConfirm(PaymentAuditConfirmReq paymentAuditConfirmReq);
 }

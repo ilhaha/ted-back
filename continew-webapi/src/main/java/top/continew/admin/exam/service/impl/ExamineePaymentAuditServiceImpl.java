@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.extra.qrcode.QrCodeUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.constant.enums.PaymentAuditStatusEnum;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.EnrollMapper;
@@ -27,6 +29,7 @@ import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.exam.model.query.ExamineePaymentAuditQuery;
 import top.continew.admin.exam.model.req.ExamineePaymentAuditReq;
+import top.continew.admin.exam.model.req.PaymentAuditConfirmReq;
 import top.continew.admin.exam.model.req.PaymentInfoReq;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditDetailResp;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
@@ -345,14 +348,21 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     @Override
     public PaymentInfoVO getPaymentInfoByQrcode(PaymentInfoReq paymentInfoReq) {
         // 解密并转换为Long
-        Long planId = NumberUtil.toLong(aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getPlanId()));
-        Long candidateId = NumberUtil.toLong(aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getCandidateId()));
-        Long enrollId = NumberUtil.toLong(aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getEnrollId()));
-        Long classId = NumberUtil.toLong(aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getClassId()));
+        String planIdAes = aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getPlanId());
+        String candidateIdAes = aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getCandidateId());
+        String enrollIdAes = aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getEnrollId());
+        String classIdAes = aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getClassId());
+
 
         // 参数完整性校验
-        ValidationUtils.throwIf(ObjectUtil.isNull(planId) || ObjectUtil.isNull(candidateId)
-                || ObjectUtil.isNull(enrollId) || ObjectUtil.isNull(classId),"二维码已被篡改或参数缺失，请重新获取");
+        ValidationUtils.throwIf(ObjectUtil.isNull(planIdAes) || ObjectUtil.isNull(candidateIdAes)
+                || ObjectUtil.isNull(enrollIdAes) || ObjectUtil.isNull(classIdAes),"二维码已被篡改或参数缺失，请重新获取");
+
+        Long planId = NumberUtil.toLong(planIdAes);
+        Long candidateId = NumberUtil.toLong(candidateIdAes);
+        Long enrollId = NumberUtil.toLong(enrollIdAes);
+        Long classId = NumberUtil.toLong(classIdAes);
+
 
         // 查询报名信息
         EnrollDO enrollDO = enrollMapper.selectById(enrollId);
@@ -375,6 +385,28 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         BeanUtil.copyProperties(auditDO, paymentInfoVO);
 
         return paymentInfoVO;
+    }
+
+    /**
+     * 扫码确认提交作业人员缴费信息
+     *
+     * @param paymentAuditConfirmReq
+     * @return
+     */
+    @Override
+    public Boolean paymentAuditConfirm(PaymentAuditConfirmReq paymentAuditConfirmReq) {
+        ExamineePaymentAuditDO examineePaymentAuditDO = baseMapper.selectById(paymentAuditConfirmReq.getId());
+        ValidationUtils.throwIfEmpty(examineePaymentAuditDO,"未找到报名信息");
+        // 不能重复提交待审核状态
+        Integer PAID_PENDING_REVIEW = PaymentAuditStatusEnum.PAID_PENDING_REVIEW.getValue();
+        ValidationUtils.throwIf(PAID_PENDING_REVIEW.equals(paymentAuditConfirmReq.getAuditStatus()) &&
+                PAID_PENDING_REVIEW.equals(examineePaymentAuditDO.getAuditStatus()),"您已提交过缴费凭证，请勿重复提交！");
+        return baseMapper.update(new LambdaUpdateWrapper<ExamineePaymentAuditDO>()
+                .set(ExamineePaymentAuditDO::getAuditStatus,paymentAuditConfirmReq.getAuditStatus())
+                .set(ExamineePaymentAuditDO::getPaymentTime,LocalDateTime.now())
+                .set(ExamineePaymentAuditDO::getPaymentProofUrl,paymentAuditConfirmReq.getPaymentProofUrl())
+                .set(ExamineePaymentAuditDO::getRejectReason,null)
+                .eq(ExamineePaymentAuditDO::getId,examineePaymentAuditDO.getId())) > 0;
     }
 
     /**

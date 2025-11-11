@@ -311,6 +311,7 @@ aliyun:
     enrollNotice: SMS_481035129
     phoneConnectedCode: SMS_486145105
     workerQRCodeApply: SMS_497870064
+    workerQRCodePay: SMS_498305469
   endpoint: dysmsapi.aliyuncs.com
   ocr:
     endpoint: ocr-api.cn-hangzhou.aliyuncs.com

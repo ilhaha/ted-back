@@ -35,12 +35,15 @@ import com.anji.captcha.service.CaptchaService;
 import com.wf.captcha.base.Captcha;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.dreamlu.mica.core.utils.NumberUtil;
 import org.springframework.http.HttpHeaders;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -48,10 +51,13 @@ import top.continew.admin.auth.model.resp.CaptchaResp;
 import top.continew.admin.common.config.properties.CaptchaProperties;
 import top.continew.admin.common.constant.CacheConstants;
 import top.continew.admin.common.constant.SysConstants;
+import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.config.ali.AliYunConfig;
 import top.continew.admin.constant.SmsConstants;
 import top.continew.admin.system.enums.OptionCategoryEnum;
+import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.service.OptionService;
 import top.continew.starter.cache.redisson.util.RedisUtils;
 import top.continew.starter.captcha.graphic.core.GraphicCaptchaService;
@@ -94,6 +100,12 @@ public class CaptchaController {
     private final CaptchaService behaviorCaptchaService;
     private final GraphicCaptchaService graphicCaptchaService;
     private final OptionService optionService;
+
+    @Resource
+    private UserMapper userMapper;
+
+    @Resource
+    private AESWithHMAC aesWithHMAC;
 
     //注入阿里云短信
     private final AsyncClient smsAsyncClient;
@@ -183,7 +195,76 @@ public class CaptchaController {
     }
 
     /**
-     * 获取短信验证码
+     * 作业人员获取上传考试缴费凭证短信验证码
+     *
+     * <p>
+     * 限流规则：<br>
+     * 1.同一号码同一模板，1分钟2条，1小时8条，24小时20条 <br>
+     * 2、同一号码所有模板 24 小时 100 条 <br>
+     * 3、同一 IP 每分钟限制发送 30 条
+     * </p>
+     *
+     * @param phone      手机号
+     * @param captchaReq 行为验证码信息
+     * @return /
+     */
+    @Operation(summary = "获取短信验证码", description = "发送验证码到指定手机号")
+    @GetMapping("/pay/sms")
+    @RateLimiters({
+            @RateLimiter(name = CacheConstants.WORKER_QRCODE_PAY_CAPTCHA_KEY_PREFIX + "MIN", key = "#phone + ':' + T(cn.hutool.extra.spring.SpringUtil).getProperty('captcha.sms.templateId')", rate = 2, interval = 1, unit = TimeUnit.MINUTES, message = "获取验证码操作太频繁，请稍后再试"),
+            @RateLimiter(name = CacheConstants.WORKER_QRCODE_PAY_CAPTCHA_KEY_PREFIX + "HOUR", key = "#phone + ':' + T(cn.hutool.extra.spring.SpringUtil).getProperty('captcha.sms.templateId')", rate = 8, interval = 1, unit = TimeUnit.HOURS, message = "获取验证码操作太频繁，请稍后再试"),
+            @RateLimiter(name = CacheConstants.WORKER_QRCODE_PAY_CAPTCHA_KEY_PREFIX + "DAY'", key = "#phone + ':' + T(cn.hutool.extra.spring.SpringUtil).getProperty('captcha.sms.templateId')", rate = 20, interval = 24, unit = TimeUnit.HOURS, message = "获取验证码操作太频繁，请稍后再试"),
+            @RateLimiter(name = CacheConstants.WORKER_QRCODE_PAY_CAPTCHA_KEY_PREFIX, key = "#phone", rate = 100, interval = 24, unit = TimeUnit.HOURS, message = "获取验证码操作太频繁，请稍后再试"),
+            @RateLimiter(name = CacheConstants.WORKER_QRCODE_PAY_CAPTCHA_KEY_PREFIX, key = "#phone", rate = 30, interval = 1, unit = TimeUnit.MINUTES, type = LimitType.IP, message = "获取验证码操作太频繁，请稍后再试")})
+    public R getPaySmsCaptcha(@NotBlank(message = "手机号不能为空") @Pattern(regexp = RegexPool.MOBILE, message = "手机号格式错误") String phone,
+                           CaptchaVO captchaReq,@NotNull(message = "二维码信息被篡改") String candidateId) {
+        // 校验用的是不是当前考生的手机号
+        String candidateIdAes = aesWithHMAC.verifyAndDecrypt(candidateId);
+        ValidationUtils.throwIfNull(candidateIdAes,"二维码信息被篡改");
+        UserDO userDO = userMapper.selectById(NumberUtil.toLong(candidateIdAes));
+        ValidationUtils.throwIfEmpty(userDO,"未找到报名信息");
+//        ValidationUtils.throwIf(!userDO.getPhone().equals(aesWithHMAC.encryptAndSign(phone)),
+//                "您输入的手机号与报名手机号不一致，请确认后重试");
+        ResponseModel verificationRes = behaviorCaptchaService.verification(captchaReq);
+
+        ValidationUtils.throwIfNotEqual(verificationRes.getRepCode(), RepCodeEnum.SUCCESS.getCode(), verificationRes
+                .getRepMsg());
+        CaptchaProperties.CaptchaSms captchaSms = captchaProperties.getSms();//这里也是~云的，要改的到时 CaptchaProperties类
+        String captcha = RandomUtil.randomNumbers(4);
+        Long expirationInMinutes = captchaSms.getExpirationInMinutes();//expirationInMinutes 获取验证码有效期​(1)
+        //        构建短信验证参数（1）(2)改为阿里云
+        Map<String, String> messageMap = new LinkedHashMap<>();
+        messageMap.put("code", captcha);
+        String params = JSON.toJSONString(messageMap);
+        SendSmsRequest request = SendSmsRequest.builder()
+                .phoneNumbers(phone)
+                .signName(smsConfig.getSignName())
+                .templateCode(smsConfig.getTemplateCodes().get(SmsConstants.WORKER_QRCODE_PAY_TEMPLATE))
+                .templateParam(params)
+                .build();
+        //异步发送
+        // 3. 仅在短信发送成功时写入Redis
+        CompletableFuture<SendSmsResponse> future = smsAsyncClient.sendSms(request);
+        future.thenAccept(response -> {
+            if ("OK".equals(response.getBody().getCode())) {
+                RedisUtils.set(CacheConstants.WORKER_QRCODE_PAY_CAPTCHA_KEY_PREFIX + phone, captcha, Duration
+                        .ofMinutes(expirationInMinutes));
+
+            } else {
+                log.error("短信发送失败 | phone: {} | code: {}", phone, response.getBody().getCode());
+            }
+        }).exceptionally(ex -> {
+            log.error("短信发送异常 | phone: {}", phone, ex);
+            return null;
+        });
+
+        // 4. 立即返回（不等待异步操作完成）
+        return R.ok("发送请求已受理，验证码有效期 %s 分钟".formatted(expirationInMinutes));
+
+    }
+
+    /**
+     * 作业人员获取短信验证码进行报名
      *
      * <p>
      * 限流规则：<br>
@@ -306,6 +387,8 @@ public class CaptchaController {
 
     }
 
+
+
     @GetMapping("/getSmsCaptchaStatus")
     public boolean getSmsCaptchaStatus(String phone, String captcha) {
         String rawPhone = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(phone));
@@ -327,7 +410,22 @@ public class CaptchaController {
         String captchaKey = CacheConstants.WORKER_QRCODE_APPLY_CAPTCHA_KEY_PREFIX + rawPhone;
         String captchaRedis = RedisUtils.get(captchaKey);
         ValidationUtils.throwIfNull(captchaRedis, "验证码已过期");
-        return true;
+        return captchaRedis.equals(captcha);
+    }
+
+    /**
+     * 验证作业人员手机验证码，用于上传考试缴费凭证
+     * @param phone
+     * @param captcha
+     * @return
+     */
+    @GetMapping("/pay/getSmsCaptchaStatus")
+    public boolean getPaySmsCaptchaStatus(String phone, String captcha) {
+        String rawPhone = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(phone));
+        String captchaKey = CacheConstants.WORKER_QRCODE_PAY_CAPTCHA_KEY_PREFIX + rawPhone;
+        String captchaRedis = RedisUtils.get(captchaKey);
+        ValidationUtils.throwIfNull(captchaRedis, "验证码已过期");
+        return captchaRedis.equals(captcha);
     }
 
 }
