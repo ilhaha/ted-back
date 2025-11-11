@@ -291,6 +291,7 @@
         FROM ted_candidate_type
         WHERE candidate_id = #{id}
         AND type = 0
+        AND is_deleted = 0
     </select>
 
     <insert id="addInvigilatesTime">

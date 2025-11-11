@@ -1,6 +1,7 @@
 package top.continew.admin.exam.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.extra.qrcode.QrCodeUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ExamPlanMapper;
 import top.continew.admin.exam.mapper.ExamineePaymentAuditMapper;
@@ -29,6 +31,8 @@ import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.FileService;
+import top.continew.admin.training.mapper.OrgClassMapper;
+import top.continew.admin.training.model.entity.OrgClassDO;
 import top.continew.admin.util.ExcelUtilReactive;
 import top.continew.admin.util.InMemoryMultipartFile;
 import top.continew.starter.core.exception.BusinessException;
@@ -38,7 +42,14 @@ import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -67,8 +78,20 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
 
     private final FileService fileService;
 
-    @Value("${excel.template.url1}")
+    @Resource
+    private OrgClassMapper orgClassMapper;
+
+    @Value("${excel.template.examination-payment-notice.inspector.url}")
     private String excelTemplateUrl;
+
+    @Value("${excel.template.examination-payment-notice.worker.url}")
+    private String workerExamNoticeTemplateUrl;
+
+    @Value("${qrcode.url}")
+    private String qrcodeUrl;
+
+    @Resource
+    private AESWithHMAC aesWithHMAC;
 
     @Override
     public Boolean verifyPaymentAudit(Long examineeId) {
@@ -93,7 +116,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         paymentAuditDO.setExamPlanId(examPlanId);
         paymentAuditDO.setEnrollId(enrollId);
         paymentAuditDO.setPaymentAmount(paymentInfoDTO.getPaymentAmount());
-        paymentAuditDO.setNoticeNo(generateUniqueNoticeNo());
+        paymentAuditDO.setNoticeNo(excelUtilReactive.generateUniqueNoticeNo(paymentInfoDTO.getProjectCode()));
         paymentAuditDO.setAuditStatus(0); // 待缴费状态
         paymentAuditDO.setCreateTime(LocalDateTime.now());
         paymentAuditDO.setIsDeleted(false);
@@ -268,18 +291,52 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
             Long classId = item.getClassId();
             paymentAuditDO.setClassId(classId);
             paymentAuditDO.setPaymentAmount(paymentInfoDTO.getPaymentAmount());
-            String noticeNo = generateUniqueNoticeNo();
+            String noticeNo = excelUtilReactive.generateUniqueNoticeNo(paymentInfoDTO.getProjectCode());
             paymentAuditDO.setNoticeNo(noticeNo);
             paymentAuditDO.setAuditStatus(0);
             paymentAuditDO.setCreateTime(LocalDateTime.now());
             paymentAuditDO.setIsDeleted(false);
-            paymentAuditDO.setAuditNoticeUrl(generateAuditNotice(planId,candidateId,paymentInfoDTO,noticeNo));
+            OrgClassDO orgClassDO = orgClassMapper.selectById(classId);
+            paymentAuditDO.setAuditNoticeUrl(generateAuditNotice(planId,candidateId,paymentInfoDTO,noticeNo,orgClassDO.getClassName()));
+
             // TODO 生成上传缴费通知单二维码
             return paymentAuditDO;
         }).toList();
 
         examineePaymentAuditMapper.insertBatch(insertList);
     }
+
+    /**
+     * 生成二维码内容
+     */
+//    private String buildQrContent(Long classId) throws UnsupportedEncodingException {
+//        String encryptedClassId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String.valueOf(classId)), StandardCharsets.UTF_8);
+//        return qrcodeUrl + "?classId=" + encryptedClassId;
+//    }
+
+    /**
+     * 生成二维码并上传，返回 URL
+     */
+//    private String generateAndUploadQr(Long candidateId, String qrContent) throws IOException {
+//        BufferedImage image = QrCodeUtil.generate(qrContent, 300, 300);
+//        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+//            ImageIO.write(image, "png", baos);
+//            byte[] bytes = baos.toByteArray();
+//
+//            MultipartFile file = new InMemoryMultipartFile(
+//                    "file",
+//                    candidateId + ".png",
+//                    "image/png",
+//                    bytes
+//            );
+//
+//            GeneralFileReq fileReq = new GeneralFileReq();
+//            fileReq.setType("pic");
+//
+//            FileInfoResp fileInfo = excelUtilReactive.uploadService.upload(file, fileReq);
+//            return fileInfo.getUrl();
+//        }
+//    }
 
     /**
      * 处理退款审核逻辑（状态5 -> 状态6）
@@ -325,7 +382,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         if (paymentInfoDTO == null) {
             throw new IllegalStateException("未找到考试计划缴费信息: " + examPlanId);
         }
-        String auditNoticeUrl = generateAuditNotice(examPlanId, examineeId, paymentInfoDTO, record.getNoticeNo());
+        String auditNoticeUrl = generateAuditNotice(examPlanId, examineeId, paymentInfoDTO, record.getNoticeNo(),null);
 
         // 更新当前记录
         record.setAuditNoticeUrl(auditNoticeUrl);
@@ -335,6 +392,9 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         return record;
     }
 
+
+
+
     /**
      * 生成通知单pdf
      * @param examPlanId
@@ -343,7 +403,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
      * @param noticeNo
      * @return
      */
-    private String generateAuditNotice(Long examPlanId, Long examineeId, ExamPlanProjectPaymentDTO paymentInfoDTO, String noticeNo) {
+    private String generateAuditNotice(Long examPlanId, Long examineeId, ExamPlanProjectPaymentDTO paymentInfoDTO, String noticeNo,String className) {
         // 生成 PDF
         byte[] pdfBytes = generatePaymentNotice(
                 examPlanId,
@@ -351,7 +411,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
                 paymentInfoDTO.getExamPlanName(),
                 paymentInfoDTO.getProjectName(),
                 paymentInfoDTO.getPaymentAmount().longValue(),
-                noticeNo
+                noticeNo,
+                className
         );
 
         // 封装为 MultipartFile
@@ -376,57 +437,33 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     @Override
     public byte[] generatePaymentNotice(Long examPlanId, Long examineeId,
                                         String examPlanName, String projectName,
-                                        Long paymentAmount,String noticeNo) {
+                                        Long paymentAmount,String noticeNo,String className) {
         ValidationUtils.throwIfNull(examPlanId, "考试计划ID不能为空");
         ValidationUtils.throwIfNull(examineeId, "考生ID不能为空");
         ValidationUtils.throwIfNull(examPlanName, "考试名称不能为空");
         ValidationUtils.throwIfNull(projectName, "收费项目不能为空");
         ValidationUtils.throwIfNull(paymentAmount, "缴费金额不能为空");
 
+        boolean isWorker = ObjectUtil.isNotEmpty(className);
+
         String candidateName = userMapper.selectNicknameById(examineeId);
 
         Map<String, Object> dataMap = new HashMap<>();
-        dataMap.put("noticeNo", getSafeValue(noticeNo));
-        dataMap.put("candidateName", getSafeValue(candidateName));
-        dataMap.put("examPlanName", getSafeValue(examPlanName));
-        dataMap.put("projectName", getSafeValue(projectName));
-        dataMap.put("paymentAmount", getSafeValue(String.valueOf(paymentAmount)));
-        dataMap.putAll(splitAmountToUpper(paymentAmount.intValue()));
-
+        dataMap.put("noticeNo", excelUtilReactive.getSafeValue(noticeNo));
+        dataMap.put("candidateName", excelUtilReactive.getSafeValue(candidateName));
+        dataMap.put("examPlanName", excelUtilReactive.getSafeValue(examPlanName));
+        dataMap.put("projectName", excelUtilReactive.getSafeValue(projectName));
+        dataMap.put("paymentAmount", excelUtilReactive.getSafeValue(String.valueOf(paymentAmount)));
+        if (isWorker) {
+            dataMap.put("applyClassName", excelUtilReactive.getSafeValue(String.valueOf(className)));
+        }
+        dataMap.putAll(excelUtilReactive.splitAmountToUpper(paymentAmount.intValue()));
         // 阻塞生成 PDF
-        return excelUtilReactive.generatePdfBytesSync(dataMap, excelTemplateUrl , new byte[0]);
-
-    }
-
-    private String generateUniqueNoticeNo() {
-        String prefix = "TZSB_PAY_";
-        String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
-        String randomNum = String.valueOf((int) (Math.random() * 1000000));
-        return prefix + timestamp + "_" + randomNum;
-    }
-
-    private Map<String, String> splitAmountToUpper(int totalAmount) {
-        Map<String, String> upperMap = new HashMap<>(5);
-        int wan = (totalAmount / 10000) % 10;
-        int qian = (totalAmount / 1000) % 10;
-        int bai = (totalAmount / 100) % 10;
-        int shi = (totalAmount / 10) % 10;
-        int yuan = totalAmount % 10;
-        upperMap.put("paymentAmountWan", digitToChineseUpper(wan));
-        upperMap.put("paymentAmountQian", digitToChineseUpper(qian));
-        upperMap.put("paymentAmountBai", digitToChineseUpper(bai));
-        upperMap.put("paymentAmountShi", digitToChineseUpper(shi));
-        upperMap.put("paymentAmountYuan", digitToChineseUpper(yuan));
-        return upperMap;
-    }
-
-    private String digitToChineseUpper(int digit) {
-        String[] upperNums = {"零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"};
-        return (digit >= 0 && digit <= 9) ? upperNums[digit] : upperNums[0];
-    }
-
-    private String getSafeValue(String value) {
-        return value == null ? "" : value.trim();
+        if (isWorker) {
+            return excelUtilReactive.generatePdfBytesSync(dataMap, workerExamNoticeTemplateUrl, new byte[0],6,8,30,31);
+        }else {
+            return excelUtilReactive.generatePdfBytesSync(dataMap, excelTemplateUrl, new byte[0],3,3,1,5);
+        }
     }
 
     // 根据考试计划ID查询项目缴费金额
@@ -459,6 +496,6 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         ValidationUtils.throwIfBlank(projectName, "项目名称不能为空");
         ValidationUtils.throwIfNull(paymentAmount, "项目未设置缴费金额");
 
-        return new ExamPlanProjectPaymentDTO(examPlanName, projectName, paymentAmount);
+        return new ExamPlanProjectPaymentDTO(examPlanName, projectName, paymentAmount,projectDO.getProjectCode());
     }
 }

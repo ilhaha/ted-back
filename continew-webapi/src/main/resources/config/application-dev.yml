@@ -347,10 +347,15 @@ aes:
 # Excel 模板配置
 excel:
   template:
-    url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/10/22/68f8c4095814e0d894c63935.xlsx
-    url1: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/6/10/inspector_exam_fee_notice_template.xlsx
-  output:
-    path: ./excel/tedExport/
+    # 准考证模板
+    admission-ticket:
+      url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/10/22/68f8c4095814e0d894c63935.xlsx
+    # 考试缴费通知单模板
+    examination-payment-notice:
+      inspector:
+        url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/6/10/inspector_exam_fee_notice_template.xlsx
+      worker:
+        url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/11/11/worker_exam_fee_notice_template.xlsx
 
 qrcode:
   url: http://localhost:5173/worker/apply/upload

@@ -29,7 +29,7 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
     private final ExcelUtilReactive excelUtilReactive;
     private final RestTemplate restTemplate = new RestTemplate(); // 同步下载照片
 
-    @Value("${excel.template.url}")
+    @Value("${excel.template.admission-ticket.url}")
     private String excelTemplateUrl;
 
     // 完全同步执行，适配MVC

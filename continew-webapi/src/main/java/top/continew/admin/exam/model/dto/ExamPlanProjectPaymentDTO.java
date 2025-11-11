@@ -15,10 +15,13 @@ public class ExamPlanProjectPaymentDTO {
     private String projectName;
     /** 缴费金额（元） */
     private BigDecimal paymentAmount;
+    /** 项目编号 */
+    private String projectCode;
 
-    public ExamPlanProjectPaymentDTO(String examPlanName, String projectName, BigDecimal paymentAmount) {
+    public ExamPlanProjectPaymentDTO(String examPlanName, String projectName, BigDecimal paymentAmount,String projectCode) {
         this.examPlanName = examPlanName;
         this.projectName = projectName;
         this.paymentAmount = paymentAmount;
+        this.projectCode = projectCode;
     }
 }

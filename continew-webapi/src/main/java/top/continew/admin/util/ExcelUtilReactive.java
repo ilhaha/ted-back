@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -107,8 +108,17 @@ public class ExcelUtilReactive {
         }
     }
 
-    // 插入照片（同步）
-    public byte[] insertPhotoToExcelBytesSync(byte[] excelBytes, byte[] photoBytes) {
+    /**
+     * 插入照片（同步）
+     * @param excelBytes 模板Excel字节流
+     * @param photoBytes 需要插入的图片字节流
+     * @param startCol 开始单元格列数
+     * @param endCol 结束单元格列数
+     * @param startRow 开始行
+     * @param endRow 结束行
+     * @return
+     */
+    public byte[] insertPhotoToExcelBytesSync(byte[] excelBytes, byte[] photoBytes, int startCol, int endCol, int startRow, int endRow) {
         try {
             if (photoBytes == null || photoBytes.length == 0) {
                 log.info("没有有效照片，直接返回Excel原始字节");
@@ -122,11 +132,6 @@ public class ExcelUtilReactive {
                 Sheet sheet = workbook.getSheetAt(0);
                 Drawing<?> drawing = sheet.createDrawingPatriarch();
                 CreationHelper helper = workbook.getCreationHelper();
-
-                int startCol = 3; // D列
-                int endCol = 3;
-                int startRow = 1; // 第2行
-                int endRow = 5;   // 第6行
 
                 // 适配合并单元格
                 for (int i = 0; i < sheet.getNumMergedRegions(); i++) {
@@ -189,9 +194,9 @@ public class ExcelUtilReactive {
     }
 
     // 生成PDF字节流（同步）
-    public byte[] generatePdfBytesSync(Map<String, Object> dataMap, String templateUrl, byte[] photoBytes) {
+    public byte[] generatePdfBytesSync(Map<String, Object> dataMap, String templateUrl, byte[] photoBytes, int startCol, int endCol, int startRow, int endRow) {
         byte[] excelBytes = fillTemplateToBytesSync(dataMap, templateUrl);
-        byte[] excelWithPhoto = insertPhotoToExcelBytesSync(excelBytes, photoBytes);
+        byte[] excelWithPhoto = insertPhotoToExcelBytesSync(excelBytes, photoBytes, startCol, endCol, startRow, endRow);
         return convertExcelBytesToPdfBytesSync(excelWithPhoto);
     }
 
@@ -204,7 +209,7 @@ public class ExcelUtilReactive {
                 templateUrl, dataMap.size(), photoBytes.length / 1024);
 
         try {
-            byte[] pdfBytes = generatePdfBytesSync(dataMap, templateUrl, photoBytes);
+            byte[] pdfBytes = generatePdfBytesSync(dataMap, templateUrl, photoBytes,3,3,1,5);
             String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
             log.info("生成PDF响应完成，文件名={}，大小={}KB", encodedName, pdfBytes.length / 1024);
 
@@ -222,5 +227,37 @@ public class ExcelUtilReactive {
                     .contentType(MediaType.TEXT_PLAIN)
                     .body(errorMsg.getBytes(StandardCharsets.UTF_8));
         }
+    }
+
+    public String generateUniqueNoticeNo(String prefix) {
+        String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
+        String randomNum = String.valueOf((int) (Math.random() * 1000000));
+        return prefix + timestamp + "_" + randomNum;
+    }
+
+    public Map<String, String> splitAmountToUpper(int totalAmount) {
+        Map<String, String> upperMap = new HashMap<>(5);
+        int wan = (totalAmount / 10000) % 10;
+        int qian = (totalAmount / 1000) % 10;
+        int bai = (totalAmount / 100) % 10;
+        int shi = (totalAmount / 10) % 10;
+        int yuan = totalAmount % 10;
+        upperMap.put("paymentAmountWan", digitToChineseUpper(wan));
+        upperMap.put("paymentAmountQian", digitToChineseUpper(qian));
+        upperMap.put("paymentAmountBai", digitToChineseUpper(bai));
+        upperMap.put("paymentAmountShi", digitToChineseUpper(shi));
+        upperMap.put("paymentAmountYuan", digitToChineseUpper(yuan));
+        return upperMap;
+    }
+
+    public String digitToChineseUpper(int digit) {
+        String[] upperNums = {"零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"};
+        return (digit >= 0 && digit <= 9) ? upperNums[digit] : upperNums[0];
+    }
+
+
+
+    public String getSafeValue(String value) {
+        return value == null ? "" : value.trim();
     }
 }
