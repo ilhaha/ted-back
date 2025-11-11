@@ -30,6 +30,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
@@ -83,6 +84,7 @@ import top.continew.admin.training.model.req.OrgApplyReq;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.vo.*;
 import top.continew.admin.util.ExcelMediaUtils;
+import top.continew.admin.util.ExcelUtilReactive;
 import top.continew.admin.util.InMemoryMultipartFile;
 import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
@@ -181,6 +183,15 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Resource
     private ExamineePaymentAuditService examineePaymentAuditService;
+
+
+    @Resource
+    private OrgTrainingPriceMapper orgTrainingPriceMapper;
+    @Resource
+    private OrgTrainingPaymentAuditMapper orgTrainingPaymentAuditMapper;
+
+    @Resource
+    private final ExcelUtilReactive excelUtilReactive;
 
     private static final long EXPIRE_TIME = 7;  // 过期时间（天）
 
@@ -507,9 +518,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     public AgencyStatusVO getAgencyStatus(Long orgId) {
         if (orgId == null)
             throw new BusinessException("请选择机构");
+        Long userId = TokenLocalThreadUtil.get().getUserId();
 
         // 调用 Mapper，获取包含 status 和 remark 的结果
-        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, TokenLocalThreadUtil.get().getUserId(),null);
+        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId,userId,null);
 
         // 无数据时，返回默认值（status=0，remark为空）
         if (agencyStatusVO == null) {
@@ -522,8 +534,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Integer studentAddAgency(Long orgId, Long projectId) {
-        // 基础参数校验
+        // 参数校验
         if (orgId == null) {
             throw new BusinessException("请选择机构");
         }
@@ -535,43 +548,92 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             throw new BusinessException("用户未登录");
         }
 
-        //  查询用户-机构-项目的关联记录（需确保Mapper支持该查询）
+        // 查询机构-考生-项目关联状态
         AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, userId, projectId);
         if (agencyStatusVO != null) {
             Integer status = agencyStatusVO.getStatus();
-            // 已存在有效关联（状态>0），返回-1
+
+            //  已存在有效关联
             if (status != null && status > 0) {
                 return -1;
             }
-            // 已存在无效关联（状态=-1），执行更新
+
+            //  已存在无效关联，执行恢复
             if (status != null && status == -1) {
                 OrgCandidateDO updateDO = new OrgCandidateDO();
                 updateDO.setId(agencyStatusVO.getId());
-                updateDO.setStatus(1); // 恢复为有效状态
+                updateDO.setPaymentStatus(0);
+                updateDO.setStatus(1);
                 updateDO.setUpdateUser(userId);
                 updateDO.setUpdateTime(LocalDateTime.now());
-                updateDO.setRemark(null); // 清空备注
+                updateDO.setRemark(null);
 
-                // 执行更新
                 int updateCount = orgCandidateMapper.update(updateDO,
                         new LambdaUpdateWrapper<OrgCandidateDO>().eq(OrgCandidateDO::getId, agencyStatusVO.getId()));
+
+                // 更新成功后也插入培训缴费通知单
+                if (updateCount > 0) {
+                    OrgCandidateDO recovered = new OrgCandidateDO();
+                    recovered.setId(agencyStatusVO.getId());
+                    insertTrainingPaymentNotice(orgId, projectId, userId, recovered);
+                }
                 return updateCount;
             }
         }
 
         // 无关联记录，执行插入
         OrgCandidateDO insertDO = new OrgCandidateDO();
-        insertDO.setOrgId(orgId); // 机构ID
-        insertDO.setCandidateId(userId); // 考生ID（当前用户）
-        insertDO.setProjectId(projectId); // 项目ID
-        insertDO.setStatus(1); // 关联状态：有效
-        insertDO.setCreateUser(userId); // 创建人
-        insertDO.setCreateTime(LocalDateTime.now()); // 创建时间
-        insertDO.setUpdateTime(LocalDateTime.now()); // 更新时间
+        insertDO.setOrgId(orgId);
+        insertDO.setCandidateId(userId);
+        insertDO.setProjectId(projectId);
+        insertDO.setPaymentStatus(0);
+        insertDO.setStatus(1);
+        insertDO.setCreateUser(userId);
+        insertDO.setCreateTime(LocalDateTime.now());
+        insertDO.setUpdateTime(LocalDateTime.now());
 
-        // 执行插入
         int insertResult = orgCandidateMapper.insert(insertDO);
-        return Math.toIntExact(insertResult > 0 ? insertDO.getId() : -2);
+
+        // 插入成功后生成培训缴费通知单
+        if (insertResult > 0) {
+            insertTrainingPaymentNotice(orgId, projectId, userId, insertDO);
+            return Math.toIntExact(insertDO.getId());
+        }
+
+        return -2;
+    }
+
+    /**
+     * 封装：插入培训缴费通知单
+     */
+    private void insertTrainingPaymentNotice(Long orgId, Long projectId, Long userId, OrgCandidateDO insertDO) {
+        OrgTrainingPaymentAuditDO orgTrainingPaymentAuditDO = new OrgTrainingPaymentAuditDO();
+        orgTrainingPaymentAuditDO.setOrgId(orgId);
+        orgTrainingPaymentAuditDO.setCandidateId(userId);
+        orgTrainingPaymentAuditDO.setProjectId(projectId);
+
+        // 关联培训价格
+        OrgTrainingPriceDO exist = orgTrainingPriceMapper.selectOne(
+                new LambdaQueryWrapper<OrgTrainingPriceDO>()
+                        .eq(OrgTrainingPriceDO::getOrgId, orgId)
+                        .eq(OrgTrainingPriceDO::getProjectId, projectId)
+                        .eq(OrgTrainingPriceDO::getIsDeleted, 0)
+        );
+        if (exist == null) {
+            throw new BusinessException("未找到培训价格信息");
+        }
+
+        orgTrainingPaymentAuditDO.setTrainingId(exist.getId());
+        orgTrainingPaymentAuditDO.setAuditStatus(0);
+        orgTrainingPaymentAuditDO.setPaymentAmount(exist.getPrice());
+        orgTrainingPaymentAuditDO.setEnrollId(insertDO.getId());
+
+        // 生成通知单编号
+        String prefix = String.valueOf(projectMapper.getProjectDetail(projectId).getProjectCode());
+        orgTrainingPaymentAuditDO.setNoticeNo(excelUtilReactive.generateUniqueNoticeNo(prefix));
+
+        // 插入缴费通知单
+        orgTrainingPaymentAuditMapper.insert(orgTrainingPaymentAuditDO);
     }
 
     // 学生退出机构

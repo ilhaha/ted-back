@@ -15,8 +15,10 @@ import top.continew.admin.exam.model.entity.CategoryDO;
 import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.training.mapper.OrgMapper;
 import top.continew.admin.training.mapper.OrgTrainingPriceMapper;
+import top.continew.admin.training.mapper.OrgUserMapper;
 import top.continew.admin.training.model.entity.OrgDO;
 import top.continew.admin.training.model.entity.OrgTrainingPriceDO;
+import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.admin.training.model.query.OrgTrainingPriceQuery;
 import top.continew.admin.training.model.req.OrgTrainingPriceReq;
 import top.continew.admin.training.model.resp.OrgTrainingPriceDetailResp;
@@ -54,6 +56,8 @@ public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<
 
     @Resource
     private ProjectMapper projectMapper;
+    @Resource
+    private OrgUserMapper orgUserMapper;
 
     /**
      * 重写page
@@ -101,12 +105,16 @@ public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<
     public Long add(OrgTrainingPriceReq req) {
         validateParam(req);
 
-        Long orgId = TokenLocalThreadUtil.get().getUserId();
-
+        TedOrgUser user = orgUserMapper.selectOne(
+                new LambdaQueryWrapper<TedOrgUser>()
+                        .eq(TedOrgUser::getUserId,TokenLocalThreadUtil.get().getUserId())
+                        .eq(TedOrgUser::getIsDeleted, 0)
+                        .select(TedOrgUser::getOrgId)
+        );
         // 校验唯一约束（org_id + project_id 不能重复）
         OrgTrainingPriceDO exist = this.getOne(
                 new LambdaQueryWrapper<OrgTrainingPriceDO>()
-                        .eq(OrgTrainingPriceDO::getOrgId, orgId)
+                        .eq(OrgTrainingPriceDO::getOrgId, user.getOrgId())
                         .eq(OrgTrainingPriceDO::getProjectId, req.getProjectId())
                         .eq(OrgTrainingPriceDO::getIsDeleted, 0)
         );
@@ -118,7 +126,7 @@ public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<
 
         // 构建持久化实体
         OrgTrainingPriceDO entity = new OrgTrainingPriceDO();
-        entity.setOrgId(orgId);
+        entity.setOrgId(user.getOrgId());
         entity.setProjectId(req.getProjectId());
         entity.setPrice(req.getPrice());
 

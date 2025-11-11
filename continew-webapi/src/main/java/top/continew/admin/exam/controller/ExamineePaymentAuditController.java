@@ -31,8 +31,6 @@ import top.continew.starter.web.model.R;
 @RestController
 @CrudRequestMapping(value = "/exam/examineePaymentAudit", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE, Api.EXPORT})
 public class ExamineePaymentAuditController extends BaseController<ExamineePaymentAuditService, ExamineePaymentAuditResp, ExamineePaymentAuditDetailResp, ExamineePaymentAuditQuery, ExamineePaymentAuditReq> {
-    @Resource
-    private ExamineePaymentAuditService examineePaymentAuditService;
     /**
      * 根据考试计划ID和考生ID查询缴费审核信息
      */

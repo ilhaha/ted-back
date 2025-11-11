@@ -447,7 +447,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ExamineePaymentAuditDO getByExamPlanIdAndExamineeId(Long examPlanId, Long examineeId) {
-        // 1. 先查找当前记录
+        // 先查找当前记录
         ExamineePaymentAuditDO record = examineePaymentAuditMapper.selectOne(
                 new LambdaQueryWrapper<ExamineePaymentAuditDO>()
                         .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
@@ -545,7 +545,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         if (isWorker) {
             dataMap.put("applyClassName", excelUtilReactive.getSafeValue(String.valueOf(className)));
         }
-        dataMap.putAll(excelUtilReactive.splitAmountToUpper(paymentAmount.intValue()));
+        dataMap.putAll(excelUtilReactive.splitAmountToUpper(BigDecimal.valueOf(paymentAmount.intValue())));
         // 阻塞生成 PDF
         if (isWorker) {
             return excelUtilReactive.generatePdfBytesSync(dataMap, workerExamNoticeTemplateUrl, photoBytes, 7, 8, 21, 22);

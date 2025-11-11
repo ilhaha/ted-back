@@ -79,13 +79,15 @@
     </select>
 
     <select id="getAgencyStatus" resultType="top.continew.admin.training.model.vo.AgencyStatusVO">
-        select id, org_id, status, remark
+        select id, org_id, status, remark,payment_status
         from ted_org_candidate
         where is_deleted = 0
-          and org_id = #{orgId}
-          and candidate_id = #{userId}
-          and project_id = #{projectId}
-          limit 1
+        and org_id = #{orgId}
+        and candidate_id = #{userId}
+        <if test="projectId != null">
+            and project_id = #{projectId}
+        </if>
+        limit 1
     </select>
     <select id="selectByUserId" resultType="top.continew.admin.training.model.resp.OrgDetailResp">
         SELECT org.*, -- 改用org代替to

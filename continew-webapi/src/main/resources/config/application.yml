@@ -299,7 +299,7 @@ management.health:
     enabled: false
 
 aliyun:
-  accessKeyPath: D:\work\ted\token.properties
+  accessKeyPath: E:\ted\token.properties
   keyId: ALIBABA_CLOUD_ACCESS_KEY_ID
   keySecret: ALIBABA_CLOUD_ACCESS_KEY_SECRET
   region: cn-hangzhou

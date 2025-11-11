@@ -29,7 +29,7 @@ public class OrgTrainingPaymentAuditDO extends BaseDO {
     private Long orgId;
 
     /**
-     * 关联培训ID（关联机构培训价格表主键）
+     * 关联培训价格ID（关联机构培训价格表主键）
      */
     private Long trainingId;
 

@@ -33,9 +33,9 @@ public class OrgTrainingPriceReq implements Serializable {
     private Long projectId;
 
     /**
-     * 机构ID（关联机构表主键）
+     * 机构ID
      */
-    @Schema(description = "机构ID（关联机构表主键）")
+    @Schema(description = "机构ID")
     private Long orgId;
 
     /**

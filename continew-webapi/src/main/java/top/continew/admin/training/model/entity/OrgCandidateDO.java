@@ -48,6 +48,11 @@ public class OrgCandidateDO extends BaseDO {
     private Integer status;
 
     /**
+     * 状态 (负1-拒绝, 0-退出，1-待通过，2-已加入)
+     */
+    private Integer paymentStatus;
+
+    /**
      * 审核备注
      */
     private String remark;

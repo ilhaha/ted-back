@@ -20,6 +20,7 @@ import reactor.netty.http.client.HttpClient;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -235,18 +236,39 @@ public class ExcelUtilReactive {
         return prefix + timestamp + "_" + randomNum;
     }
 
-    public Map<String, String> splitAmountToUpper(int totalAmount) {
-        Map<String, String> upperMap = new HashMap<>(5);
-        int wan = (totalAmount / 10000) % 10;
-        int qian = (totalAmount / 1000) % 10;
-        int bai = (totalAmount / 100) % 10;
-        int shi = (totalAmount / 10) % 10;
-        int yuan = totalAmount % 10;
+    public Map<String, String> splitAmountToUpper(BigDecimal totalAmount) {
+        Map<String, String> upperMap = new HashMap<>(7);
+
+        // 校验金额合法性（非负）
+        if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("金额不能为负数！");
+        }
+
+        //元转分（避免浮点数误差，1元=100分），四舍五入保留整数分
+        int totalAmountFen = totalAmount.multiply(new BigDecimal("100"))
+                .setScale(0, BigDecimal.ROUND_HALF_UP)
+                .intValue();
+
+        // 计算元及以上（万、千、百、十、元）：总元数 = 总分 / 100
+        int yuanTotal = totalAmountFen / 100;
+        int wan = (yuanTotal / 10000) % 10;    // 万位（如 12345元 → 1）
+        int qian = (yuanTotal / 1000) % 10;   // 千位（如 12345元 → 2）
+        int bai = (yuanTotal / 100) % 10;     // 百位（如 12345元 → 3）
+        int shi = (yuanTotal / 10) % 10;      // 十位（如 12345元 → 4）
+        int yuan = yuanTotal % 10;            // 个位（如 12345元 → 5）
+
+        //计算角、分（关键！从总分中提取）
+        int jiao = (totalAmountFen / 10) % 10; // 角位（如 100078分 → 7）
+        int fen = totalAmountFen % 10;         // 分位（如 100078分 → 8）
+
+        // 转换为中文大写并存入Map
         upperMap.put("paymentAmountWan", digitToChineseUpper(wan));
         upperMap.put("paymentAmountQian", digitToChineseUpper(qian));
         upperMap.put("paymentAmountBai", digitToChineseUpper(bai));
         upperMap.put("paymentAmountShi", digitToChineseUpper(shi));
         upperMap.put("paymentAmountYuan", digitToChineseUpper(yuan));
+        upperMap.put("paymentAmountJiao", digitToChineseUpper(jiao));
+        upperMap.put("paymentAmountFen", digitToChineseUpper(fen));
         return upperMap;
     }
 
