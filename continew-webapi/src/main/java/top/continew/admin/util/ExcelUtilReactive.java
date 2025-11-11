@@ -180,9 +180,9 @@ public class ExcelUtilReactive {
                 com.aspose.cells.Workbook workbook = new com.aspose.cells.Workbook(in);
                 PdfSaveOptions options = new PdfSaveOptions();
                 options.setCompliance(com.aspose.cells.PdfCompliance.PDF_A_1_B);
+                options.setAllColumnsInOnePagePerSheet(true);
+                options.setOnePagePerSheet(true);
                 workbook.save(out, options);
-                workbook.dispose();
-
                 byte[] pdfBytes = out.toByteArray();
                 log.info("Excel转PDF完成，大小={}KB", pdfBytes.length / 1024);
                 return pdfBytes;

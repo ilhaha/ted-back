@@ -356,6 +356,10 @@ excel:
         url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/6/10/inspector_exam_fee_notice_template.xlsx
       worker:
         url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/11/11/worker_exam_fee_notice_template.xlsx
+    training-payment-notice:
+      # 检查人员培训通知的模板
+      inspector:
+        url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/11/11/inspector_training_fee_notice_template.xlsx
 
 qrcode:
   url: http://localhost:5173/worker/apply/upload

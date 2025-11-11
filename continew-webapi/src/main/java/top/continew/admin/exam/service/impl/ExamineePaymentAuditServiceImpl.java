@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -31,6 +32,7 @@ import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.FileService;
+import top.continew.admin.system.service.UploadService;
 import top.continew.admin.training.mapper.OrgClassMapper;
 import top.continew.admin.training.model.entity.OrgClassDO;
 import top.continew.admin.util.ExcelUtilReactive;
@@ -43,6 +45,7 @@ import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -54,6 +57,8 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -92,6 +97,11 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
 
     @Resource
     private AESWithHMAC aesWithHMAC;
+
+    @Resource
+    private UploadService uploadService;
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Override
     public Boolean verifyPaymentAudit(Long examineeId) {
@@ -138,7 +148,6 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         pageResp.getList().forEach(this::fill);
         return pageResp;
     }
-
 
 
     @Override
@@ -199,7 +208,6 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     }
 
 
-
     @Override
     public boolean reviewPayment(ExamineePaymentAuditResp req) {
         // 校验传入参数
@@ -245,7 +253,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
                 handleRefundAudit(record, newStatus);
                 break;
             case 6:  // 已退款
-                    throw new BusinessException("已退款，不能再次审核");
+                throw new BusinessException("已退款，不能再次审核");
             case 7:  // 退款驳回
                 if (newStatus == 2) {
                     record.setAuditStatus(6); // 已退款
@@ -269,9 +277,11 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
 
     /**
      * 生成作业人员缴费通知单
+     *
      * @param enrollDOList
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void generatePaymentAudit(List<EnrollDO> enrollDOList) {
         if (ObjectUtil.isEmpty(enrollDOList)) {
             return;
@@ -279,6 +289,10 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         // 根据考试计划ID查询项目缴费金额
         Long planId = enrollDOList.get(0).getExamPlanId();
         ExamPlanProjectPaymentDTO paymentInfoDTO = getExamPlanProjectPaymentInfo(planId);
+
+        List<Long> classIds = enrollDOList.stream().map(EnrollDO::getClassId).distinct().toList();
+        Map<Long, OrgClassDO> classMap = orgClassMapper.selectBatchIds(classIds)
+                .stream().collect(Collectors.toMap(OrgClassDO::getId, Function.identity()));
 
         // 构建缴费审核记录并入库
         List<ExamineePaymentAuditDO> insertList = enrollDOList.stream().map(item -> {
@@ -289,6 +303,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
             Long enrollId = item.getId();
             paymentAuditDO.setEnrollId(enrollId);
             Long classId = item.getClassId();
+            OrgClassDO orgClass = classMap.get(classId);
             paymentAuditDO.setClassId(classId);
             paymentAuditDO.setPaymentAmount(paymentInfoDTO.getPaymentAmount());
             String noticeNo = excelUtilReactive.generateUniqueNoticeNo(paymentInfoDTO.getProjectCode());
@@ -296,10 +311,17 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
             paymentAuditDO.setAuditStatus(0);
             paymentAuditDO.setCreateTime(LocalDateTime.now());
             paymentAuditDO.setIsDeleted(false);
-            OrgClassDO orgClassDO = orgClassMapper.selectById(classId);
-            paymentAuditDO.setAuditNoticeUrl(generateAuditNotice(planId,candidateId,paymentInfoDTO,noticeNo,orgClassDO.getClassName()));
-
-            // TODO 生成上传缴费通知单二维码
+            try {
+                // 生成二维码内容
+                String qrContent = buildQrContent(classId, candidateId);
+                // 生成二维码并上传
+                String qrUrl = generateAndUploadQr(candidateId, qrContent);
+                paymentAuditDO.setQrcodeUploadUrl(qrUrl);
+                byte[] photoBytes = loadPhotoSync(qrUrl);
+                paymentAuditDO.setAuditNoticeUrl(generateAuditNotice(planId, candidateId, paymentInfoDTO, noticeNo, orgClass.getClassName(), photoBytes));
+            } catch (Exception e) {
+                throw new RuntimeException("生成或上传二维码失败");
+            }
             return paymentAuditDO;
         }).toList();
 
@@ -307,40 +329,106 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     }
 
     /**
-     * 生成二维码内容
+     * 将图片URL转成字节流
+     *
+     * @param photoUrl
+     * @return
      */
-//    private String buildQrContent(Long classId) throws UnsupportedEncodingException {
-//        String encryptedClassId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String.valueOf(classId)), StandardCharsets.UTF_8);
-//        return qrcodeUrl + "?classId=" + encryptedClassId;
-//    }
+    private byte[] loadPhotoSync(String photoUrl) {
+        if (photoUrl == null || photoUrl.isEmpty()) {
+            log.warn("照片 URL 为空，返回空字节数组");
+            return new byte[0];
+        }
+        byte[] photoBytes = restTemplate.getForObject(photoUrl, byte[].class);
+        return photoBytes != null ? photoBytes : new byte[0];
+    }
+
+
+    /**
+     * 构建二维码内容（带加密）
+     */
+    private String buildQrContent(Long classId, Long candidateId) throws UnsupportedEncodingException {
+        String encryptedClassId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String.valueOf(classId)), StandardCharsets.UTF_8);
+        String encryptedCandidateId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String.valueOf(candidateId)), StandardCharsets.UTF_8);
+        return qrcodeUrl + "?classId=" + encryptedClassId + "&candidateId=" + encryptedCandidateId;
+    }
 
     /**
      * 生成二维码并上传，返回 URL
      */
-//    private String generateAndUploadQr(Long candidateId, String qrContent) throws IOException {
-//        BufferedImage image = QrCodeUtil.generate(qrContent, 300, 300);
-//        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-//            ImageIO.write(image, "png", baos);
-//            byte[] bytes = baos.toByteArray();
-//
-//            MultipartFile file = new InMemoryMultipartFile(
-//                    "file",
-//                    candidateId + ".png",
-//                    "image/png",
-//                    bytes
-//            );
-//
-//            GeneralFileReq fileReq = new GeneralFileReq();
-//            fileReq.setType("pic");
-//
-//            FileInfoResp fileInfo = excelUtilReactive.uploadService.upload(file, fileReq);
-//            return fileInfo.getUrl();
-//        }
-//    }
+    private String generateAndUploadQr(Long candidateId, String qrContent) throws IOException {
+        // 1. 生成二维码
+        BufferedImage qrImage = QrCodeUtil.generate(qrContent, 300, 300);
+
+        // 2. 在二维码上添加文字
+        String text = "缴费凭证"; // 你可以替换成 candidateName 或其他文字
+        BufferedImage qrWithText = addTextToQrCenter(qrImage, text);
+
+        // 3. 转为字节流并上传
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            ImageIO.write(qrWithText, "png", baos);
+            byte[] bytes = baos.toByteArray();
+
+            MultipartFile file = new InMemoryMultipartFile(
+                    "file",
+                    candidateId + ".png",
+                    "image/png",
+                    bytes
+            );
+
+            GeneralFileReq fileReq = new GeneralFileReq();
+            fileReq.setType("pic");
+
+            FileInfoResp fileInfo = uploadService.upload(file, fileReq);
+            return fileInfo.getUrl();
+        }
+    }
+
+    /**
+     * 在二维码中央绘制文字
+     */
+    private BufferedImage addTextToQrCenter(BufferedImage qrImage, String text) {
+        int width = qrImage.getWidth();
+        int height = qrImage.getHeight();
+
+        // 创建可编辑图层
+        BufferedImage combined = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = combined.createGraphics();
+
+        // 先画原二维码
+        g2d.drawImage(qrImage, 0, 0, null);
+
+        // 设置文字样式
+        g2d.setColor(Color.BLACK); // 字体颜色，可改为白色或其他
+        g2d.setFont(new Font("微软雅黑", Font.BOLD, 22));
+
+        // 计算文字位置（居中）
+        FontMetrics fm = g2d.getFontMetrics();
+        int textWidth = fm.stringWidth(text);
+        int textHeight = fm.getAscent();
+
+        int x = (width - textWidth) / 2;
+        int y = (height + textHeight) / 2;
+
+        // 绘制文字背景（为了提高识别率）
+        g2d.setColor(new Color(255, 255, 255, 180)); // 半透明白色背景
+        int padding = 4;
+        g2d.fillRoundRect(x - padding, y - textHeight, textWidth + padding * 2, textHeight + padding, 8, 8);
+
+        // 绘制文字
+        g2d.setColor(Color.BLACK);
+        g2d.drawString(text, x, y - 4);
+
+        g2d.dispose();
+        return combined;
+    }
+
+
 
     /**
      * 处理退款审核逻辑（状态5 -> 状态6）
-     * @param record 当前审核记录
+     *
+     * @param record    当前审核记录
      * @param newStatus 提交的新审核状态
      */
     private void handleRefundAudit(ExamineePaymentAuditDO record, Integer newStatus) {
@@ -382,7 +470,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         if (paymentInfoDTO == null) {
             throw new IllegalStateException("未找到考试计划缴费信息: " + examPlanId);
         }
-        String auditNoticeUrl = generateAuditNotice(examPlanId, examineeId, paymentInfoDTO, record.getNoticeNo(),null);
+        String auditNoticeUrl = generateAuditNotice(examPlanId, examineeId, paymentInfoDTO, record.getNoticeNo(), null, new byte[0]);
 
         // 更新当前记录
         record.setAuditNoticeUrl(auditNoticeUrl);
@@ -393,17 +481,16 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     }
 
 
-
-
     /**
      * 生成通知单pdf
+     *
      * @param examPlanId
      * @param examineeId
      * @param paymentInfoDTO
      * @param noticeNo
      * @return
      */
-    private String generateAuditNotice(Long examPlanId, Long examineeId, ExamPlanProjectPaymentDTO paymentInfoDTO, String noticeNo,String className) {
+    private String generateAuditNotice(Long examPlanId, Long examineeId, ExamPlanProjectPaymentDTO paymentInfoDTO, String noticeNo, String className, byte[] photoBytes) {
         // 生成 PDF
         byte[] pdfBytes = generatePaymentNotice(
                 examPlanId,
@@ -412,7 +499,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
                 paymentInfoDTO.getProjectName(),
                 paymentInfoDTO.getPaymentAmount().longValue(),
                 noticeNo,
-                className
+                className,
+                photoBytes
         );
 
         // 封装为 MultipartFile
@@ -437,7 +525,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     @Override
     public byte[] generatePaymentNotice(Long examPlanId, Long examineeId,
                                         String examPlanName, String projectName,
-                                        Long paymentAmount,String noticeNo,String className) {
+                                        Long paymentAmount, String noticeNo, String className, byte[] photoBytes) {
         ValidationUtils.throwIfNull(examPlanId, "考试计划ID不能为空");
         ValidationUtils.throwIfNull(examineeId, "考生ID不能为空");
         ValidationUtils.throwIfNull(examPlanName, "考试名称不能为空");
@@ -460,9 +548,9 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         dataMap.putAll(excelUtilReactive.splitAmountToUpper(paymentAmount.intValue()));
         // 阻塞生成 PDF
         if (isWorker) {
-            return excelUtilReactive.generatePdfBytesSync(dataMap, workerExamNoticeTemplateUrl, new byte[0],6,8,30,31);
-        }else {
-            return excelUtilReactive.generatePdfBytesSync(dataMap, excelTemplateUrl, new byte[0],3,3,1,5);
+            return excelUtilReactive.generatePdfBytesSync(dataMap, workerExamNoticeTemplateUrl, photoBytes, 7, 8, 21, 22);
+        } else {
+            return excelUtilReactive.generatePdfBytesSync(dataMap, excelTemplateUrl, photoBytes, 3, 3, 1, 5);
         }
     }
 
@@ -496,6 +584,6 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         ValidationUtils.throwIfBlank(projectName, "项目名称不能为空");
         ValidationUtils.throwIfNull(paymentAmount, "项目未设置缴费金额");
 
-        return new ExamPlanProjectPaymentDTO(examPlanName, projectName, paymentAmount,projectDO.getProjectCode());
+        return new ExamPlanProjectPaymentDTO(examPlanName, projectName, paymentAmount, projectDO.getProjectCode());
     }
 }
