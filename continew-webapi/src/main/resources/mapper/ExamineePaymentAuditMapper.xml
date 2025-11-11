@@ -2,17 +2,31 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="top.continew.admin.exam.mapper.ExamineePaymentAuditMapper">
 
-        <select id="getExamineePaymentAudits" resultType="top.continew.admin.exam.model.resp.ExamineePaymentAuditResp">
-            SELECT
-                tepa.*,
-                su.nickname AS examineeName,
-                tep.exam_plan_name AS planName
-            FROM ted_examinee_payment_audit tepa
-                     LEFT JOIN sys_user su
-                               ON tepa.examinee_id = su.id
-                     LEFT JOIN ted_exam_plan tep
-                               ON tepa.exam_plan_id = tep.id
-                ${ew.customSqlSegment}
-        </select>
+    <select id="getExamineePaymentAudits" resultType="top.continew.admin.exam.model.resp.ExamineePaymentAuditResp">
+        SELECT tepa.*,
+               su.nickname        AS examineeName,
+               tep.exam_plan_name AS planName
+        FROM ted_examinee_payment_audit tepa
+                 LEFT JOIN sys_user su
+                           ON tepa.examinee_id = su.id
+                 LEFT JOIN ted_exam_plan tep
+                           ON tepa.exam_plan_id = tep.id
+            ${ew.customSqlSegment}
+    </select>
+    <select id="selectPaymentPersonInfo" resultType="top.continew.admin.exam.model.resp.PaymentInfoVO">
+        SELECT toc.class_name, tp.project_name, tp.project_code, tc.`name` AS category_name, su.nickname
+        FROM ted_org_class_candidate tocc
+                 LEFT JOIN ted_org_class toc
+                           ON tocc.class_id = toc.id AND toc.is_deleted = 0
+                 LEFT JOIN ted_project tp
+                           ON toc.project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN ted_category tc
+                           ON tp.category_id = tc.id AND tp.is_deleted = 0
+                 LEFT JOIN sys_user su
+                           ON tocc.candidate_id = su.id
+        WHERE tocc.candidate_id = #{candidateId}
+          AND tocc.class_id = #{classId}
+          AND tocc.is_deleted = 0
+    </select>
 
 </mapper>

@@ -157,7 +157,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Resource
     private OrgUserMapper orgUserMapper;
 
-    @Value("${qrcode.url}")
+    @Value("${qrcode.worker.upload.apply-doc.url}")
     private String qrcodeUrl;
 
     @Resource
@@ -1071,6 +1071,15 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         List<List<Long>> projectClassCandidateList = orgApplyPreReq.getCandidateIds();
         ValidationUtils.throwIfEmpty(projectClassCandidateList,"未选择报考考生！");
 
+        Set<Long> seen = new HashSet<>();
+        for (int i = 0; i < projectClassCandidateList.size(); i++) {
+            List<Long> innerList = projectClassCandidateList.get(i);
+            ValidationUtils.throwIf(innerList.size() < 2,"未选择报考考生！");
+            Long value = innerList.get(2);
+            UserDO userDO = userMapper.selectById(value);
+            ValidationUtils.throwIf(!seen.add(value),userDO.getNickname()+ "存在与两个班级，只能由一个班级进行报考");
+        }
+
         // 计算最大人数
         ExamPlanVO examPlanVO = new ExamPlanVO();
         BeanUtils.copyProperties(examPlanDO, examPlanVO);
@@ -1106,7 +1115,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             String existedNames = String.join("、",
                     userMapper.selectByIds(existedCandidateIds)
                             .stream().map(UserDO::getNickname).toList());
-            throw new BusinessException("以下考生已预报名该考试计划：" + existedNames);
+            throw new BusinessException("以下考生已报名该考试计划：" + existedNames);
         }
 
         // 插入报名表

@@ -59,7 +59,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
     @Resource
     private OrgUserMapper orgUserMapper;
 
-    @Value("${qrcode.url}")
+    @Value("${qrcode.worker.upload.apply-doc.url}")
     private String qrcodeUrl;
 
     @Resource

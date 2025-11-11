@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
+import top.continew.admin.exam.model.resp.PaymentInfoVO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 
@@ -32,4 +33,5 @@ public interface ExamineePaymentAuditMapper extends BaseMapper<ExamineePaymentAu
     void deleteFromPayment(@Param("examPlanId") Long examPlanId, @Param("userId") Long userId);
 
 
+    PaymentInfoVO selectPaymentPersonInfo(@Param("candidateId") Long candidateId, @Param("classId") Long classId);
 }

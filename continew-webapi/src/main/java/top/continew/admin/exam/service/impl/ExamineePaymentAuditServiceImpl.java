@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
+import net.dreamlu.mica.core.utils.BeanUtil;
+import net.dreamlu.mica.core.utils.NumberUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.exam.mapper.EnrollMapper;
 import top.continew.admin.exam.mapper.ExamPlanMapper;
 import top.continew.admin.exam.mapper.ExamineePaymentAuditMapper;
 import top.continew.admin.exam.mapper.ProjectMapper;
@@ -24,8 +27,10 @@ import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.exam.model.query.ExamineePaymentAuditQuery;
 import top.continew.admin.exam.model.req.ExamineePaymentAuditReq;
+import top.continew.admin.exam.model.req.PaymentInfoReq;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditDetailResp;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
+import top.continew.admin.exam.model.resp.PaymentInfoVO;
 import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
@@ -102,6 +107,9 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     private UploadService uploadService;
 
     private final RestTemplate restTemplate = new RestTemplate();
+
+    @Resource
+    private EnrollMapper enrollMapper;
 
     @Override
     public Boolean verifyPaymentAudit(Long examineeId) {
@@ -326,6 +334,47 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         }).toList();
 
         examineePaymentAuditMapper.insertBatch(insertList);
+    }
+
+    /**
+     * 扫码查询作业人员缴费信息
+     *
+     * @param paymentInfoReq
+     * @return
+     */
+    @Override
+    public PaymentInfoVO getPaymentInfoByQrcode(PaymentInfoReq paymentInfoReq) {
+        // 解密并转换为Long
+        Long planId = NumberUtil.toLong(aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getPlanId()));
+        Long candidateId = NumberUtil.toLong(aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getCandidateId()));
+        Long enrollId = NumberUtil.toLong(aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getEnrollId()));
+        Long classId = NumberUtil.toLong(aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getClassId()));
+
+        // 参数完整性校验
+        ValidationUtils.throwIf(ObjectUtil.isNull(planId) || ObjectUtil.isNull(candidateId)
+                || ObjectUtil.isNull(enrollId) || ObjectUtil.isNull(classId),"二维码已被篡改或参数缺失，请重新获取");
+
+        // 查询报名信息
+        EnrollDO enrollDO = enrollMapper.selectById(enrollId);
+        ValidationUtils.throwIfNull(enrollDO,"未找到报名信息");
+
+        // 查询缴费记录
+        ExamineePaymentAuditDO auditDO = baseMapper.selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                .eq(ExamineePaymentAuditDO::getExamPlanId, planId)
+                .eq(ExamineePaymentAuditDO::getExamineeId, candidateId)
+                .eq(ExamineePaymentAuditDO::getEnrollId, enrollId)
+                .eq(ExamineePaymentAuditDO::getClassId, classId)
+        );
+        ValidationUtils.throwIfNull(auditDO, "未找到报名信息");
+
+        // 查询个人信息
+        PaymentInfoVO paymentInfoVO = baseMapper.selectPaymentPersonInfo(candidateId, classId);
+        ValidationUtils.throwIfNull(paymentInfoVO, "未找到报名信息");
+
+        // 合并缴费记录
+        BeanUtil.copyProperties(auditDO, paymentInfoVO);
+
+        return paymentInfoVO;
     }
 
     /**

@@ -64,15 +64,6 @@ public class OrgCandidateServiceImpl extends BaseServiceImpl<OrgCandidateMapper,
     @Resource
     private OrgCandidateMapper orgCandidateMapper;
 
-    @Value("${qrcode.url}")
-    private String qrcodeUrl;
-
-    @Resource
-    private UploadService uploadService;
-
-    @Resource
-    private AESWithHMAC aesWithHMAC;
-
     /**
      * 重写分页
      * @param query

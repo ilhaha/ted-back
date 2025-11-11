@@ -54,10 +54,8 @@ import top.continew.admin.exam.service.EnrollService;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -190,8 +188,6 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         EnrollInfoResp enrollInfoResp = enrollMapper.getEnrollInfo(userTokenDo.getUserId());
         enrollInfoResp.setDocumentList(enrollMapper.getStudentDocumentList(userTokenDo.getUserId()));
-        //输出en
-        System.out.println(enrollInfoResp);
         return enrollInfoResp;
     }
 
@@ -541,22 +537,43 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> ids) {
-        // 查出报名的信息
-        List<EnrollDO> enrollDOS = baseMapper.selectByIds(ids);
-        ValidationUtils.throwIfEmpty(enrollDOS,"未选择取消报名的数据！");
-        // 查出计划信息
-        List<ExamPlanDO> examPlanDOS = examPlanMapper.selectByIds(ids);
-        // 考试时间校验
-        for (ExamPlanDO examPlanDO : examPlanDOS) {
-            LocalDateTime examStartTime = examPlanDO.getStartTime();
+        // 1️ 查询报名信息
+        List<EnrollDO> enrollDOList = baseMapper.selectByIds(ids);
+        ValidationUtils.throwIfEmpty(enrollDOList, "未选择取消报名的数据！");
+
+        // 2️ 获取考试计划ID集合（用于查询计划信息）
+        Set<Long> planIds = enrollDOList.stream()
+                .map(EnrollDO::getExamPlanId)
+                .collect(Collectors.toSet());
+
+        // 3️ 批量查询考试计划信息
+        List<ExamPlanDO> examPlanList = examPlanMapper.selectBatchIds(planIds);
+        Map<Long, ExamPlanDO> planMap = examPlanList.stream()
+                .collect(Collectors.toMap(ExamPlanDO::getId, Function.identity()));
+
+        // 4️ 考试时间校验
+        LocalDateTime now = LocalDateTime.now();
+        for (EnrollDO enroll : enrollDOList) {
+            ExamPlanDO plan = planMap.get(enroll.getExamPlanId());
+            ValidationUtils.throwIfNull(plan, "找不到对应的考试计划：" + enroll.getExamPlanId());
+            LocalDateTime examStartTime = plan.getStartTime();
             ValidationUtils.throwIfNull(examStartTime, "考试开始时间为空，无法取消报名");
-            LocalDateTime now = LocalDateTime.now();
-            boolean canCancelByTime = ChronoUnit.DAYS.between(now, examStartTime) >= 5;
-            ValidationUtils.throwIf(!canCancelByTime, "距离考试不足5天，无法取消报名");
+            boolean canCancel = ChronoUnit.DAYS.between(now, examStartTime) >= 5;
+            ValidationUtils.throwIf(!canCancel, "距离考试不足5天，无法取消报名");
         }
-        // TODO 加上删除缴费凭证（2025.11.10）
+
+        // 5️ 批量删除缴费审核记录
+        // 构造批量条件：同一语句删除多条
+        examineePaymentAuditMapper.delete(
+                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .in(ExamineePaymentAuditDO::getEnrollId,
+                                enrollDOList.stream().map(EnrollDO::getId).toList())
+        );
+
+        // 6️ 删除报名记录（父类批量删除）
         super.delete(ids);
     }
+
 
     //重写后台管理端分页
     @Override
