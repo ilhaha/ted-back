@@ -19,7 +19,7 @@ import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 * @since 2025/11/04 10:17
 */
 public interface ExamineePaymentAuditMapper extends BaseMapper<ExamineePaymentAuditDO> {
-    /**
+    /** 
      * page查询缴费审核信息表
      */
     IPage<ExamineePaymentAuditResp> getExamineePaymentAudits(@Param("page") Page<ExamineePaymentAuditResp> page,

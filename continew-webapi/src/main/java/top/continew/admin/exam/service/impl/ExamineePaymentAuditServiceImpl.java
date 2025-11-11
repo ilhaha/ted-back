@@ -150,7 +150,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     @Override
     public PageResp<ExamineePaymentAuditResp> page(ExamineePaymentAuditQuery query, PageQuery pageQuery) {
         QueryWrapper<ExamineePaymentAuditDO> queryWrapper = this.buildQueryWrapper(query);
-        queryWrapper.eq("tepa.is_deleted", 0);
+        queryWrapper.eq("tepa.is_deleted", 0)
+                .eq("tep.is_deleted",0);
         super.sort(queryWrapper, pageQuery);
         IPage<ExamineePaymentAuditResp> page = baseMapper.getExamineePaymentAudits(
                 new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper

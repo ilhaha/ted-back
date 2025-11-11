@@ -1,6 +1,9 @@
 package top.continew.admin.training.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
@@ -8,11 +11,14 @@ import org.aspectj.weaver.ast.Or;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ProjectMapper;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.model.entity.ProjectDO;
+import top.continew.admin.exam.model.query.ExamineePaymentAuditQuery;
+import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.FileService;
@@ -24,6 +30,8 @@ import top.continew.admin.util.ExcelUtilReactive;
 import top.continew.admin.util.InMemoryMultipartFile;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.training.mapper.OrgTrainingPaymentAuditMapper;
 import top.continew.admin.training.model.entity.OrgTrainingPaymentAuditDO;
@@ -153,6 +161,7 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class) // 关键：添加事务，异常时回滚所有操作
     public Boolean uploadTrainingPaymentProof(OrgTrainingPaymentAuditResp req) {
         // 参数校验
         if (req.getOrgId() == null || req.getEnrollId() == null) {
@@ -221,6 +230,119 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
         }
         return true;
 
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean reviewTrainingPayment(OrgTrainingPaymentAuditResp req) {
+        // 校验传入参数
+        if (req.getId() == null || req.getEnrollId() == null || req.getCandidateId() == null) {
+            throw new BusinessException("审核请求参数缺失！");
+        }
+        // 查找对应记录
+        OrgTrainingPaymentAuditDO record = orgTrainingPaymentAuditMapper.selectOne(
+                new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
+                        .eq(OrgTrainingPaymentAuditDO::getId, req.getId())
+                        .eq(OrgTrainingPaymentAuditDO::getEnrollId, req.getEnrollId())
+                        .eq(OrgTrainingPaymentAuditDO::getCandidateId, req.getCandidateId())
+                        .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false)
+                        .last("LIMIT 1")
+        );
+
+        if (record == null) {
+            throw new BusinessException("未找到对应的缴费审核记录！");
+        }
+        Integer currentStatus = record.getAuditStatus();
+        Integer newStatus = req.getAuditStatus();
+        if (newStatus == null || (!newStatus.equals(2) && !newStatus.equals(3))) {
+            throw new BusinessException("非法的审核状态！");
+        }
+        // 根据状态流转规则进行处理
+        switch (currentStatus) {
+            case 0:  // 待缴费
+                throw new BusinessException("考生还没有上传缴费凭证");
+            case 1:  // 已缴费待审核
+                record.setAuditStatus(newStatus);
+                break;
+            case 2:  // 审核通过
+                if (newStatus == 2) {
+                    throw new BusinessException("已审核，无需再次审核");
+                }
+                record.setAuditStatus(3);
+                break;
+            case 3:  // 审核驳回
+            case 4:  // 补正审核
+                record.setAuditStatus(newStatus);
+                break;
+            case 5:  // 退款审核
+                handleRefundAudit(record, newStatus);
+                break;
+            case 6:  // 已退款
+                throw new BusinessException("已退款，不能再次审核");
+            case 7:  // 退款驳回
+                if (newStatus == 2) {
+                    record.setAuditStatus(6); // 已退款
+                }
+                break;
+            default:
+                throw new BusinessException("未知的审核状态！");
+        }
+        // 审核数据更新
+        record.setRejectReason(req.getRejectReason());
+        record.setAuditorId(TokenLocalThreadUtil.get().getUserId());
+        record.setAuditTime(LocalDateTime.now());
+        int result = orgTrainingPaymentAuditMapper.updateById(record);
+        if (result <= 0) {
+            throw new BusinessException("审核更新失败，请稍后重试！");
+        }
+
+        //同步更新考生表（使用 record 最终状态）
+        Integer finalStatus = record.getAuditStatus();
+        OrgCandidateDO candidateDO = new OrgCandidateDO();
+        candidateDO.setId(req.getEnrollId());
+        candidateDO.setPaymentStatus(finalStatus);
+        candidateDO.setUpdateTime(LocalDateTime.now());
+
+        int candidateResult = orgCandidateMapper.updateById(candidateDO);
+        if (candidateResult <= 0) {
+            throw new BusinessException("更新考生状态失败（与缴费审核状态同步）！");
+        }
+
+        return true;
+    }
+
+
+    /**
+     * 处理退款审核逻辑（状态5 -> 状态6）
+     *
+     * @param record    当前审核记录
+     * @param newStatus 提交的新审核状态
+     */
+    private void handleRefundAudit(OrgTrainingPaymentAuditDO record, Integer newStatus) {
+        if (newStatus == 2) {
+            record.setAuditStatus(6); // 已退款
+            // ... 业务待定
+
+
+        } else if (newStatus == 3) {
+            record.setAuditStatus(7); // 退款驳回
+        } else {
+            throw new BusinessException("非法的退款审核状态！");
+        }
+    }
+
+    @Override
+    public PageResp<OrgTrainingPaymentAuditResp> page(OrgTrainingPaymentAuditQuery query, PageQuery pageQuery) {
+        QueryWrapper<OrgTrainingPaymentAuditDO> queryWrapper = this.buildQueryWrapper(query);
+        queryWrapper.eq("ttpa.is_deleted", 0)
+                .eq("tp.is_deleted",0);
+        super.sort(queryWrapper, pageQuery);
+        IPage<OrgTrainingPaymentAuditResp> page = baseMapper.getTrainingPaymentAudits(
+                new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper
+        );
+        PageResp<OrgTrainingPaymentAuditResp> pageResp = PageResp.build(page, super.getListClass());
+        pageResp.getList().forEach(this::fill);
+        return pageResp;
     }
 
 }

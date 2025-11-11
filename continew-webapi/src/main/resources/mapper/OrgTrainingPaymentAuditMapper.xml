@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="top.continew.admin.training.mapper.OrgTrainingPaymentAuditMapper">
+        <select id="getTrainingPaymentAudits" resultType="top.continew.admin.training.model.resp.OrgTrainingPaymentAuditResp">
+            SELECT ttpa.*,
+                   su.nickname        AS candidateName,
+                   tp.project_name AS projectName
+            FROM ted_org_training_payment_audit ttpa
+                     LEFT JOIN sys_user su
+                               ON ttpa.candidate_id = su.id
+                     LEFT JOIN ted_project tp
+                               ON ttpa.project_id = tp.id
+                ${ew.customSqlSegment}
+        </select>
 </mapper>

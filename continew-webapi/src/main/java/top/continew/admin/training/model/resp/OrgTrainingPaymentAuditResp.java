@@ -41,11 +41,25 @@ public class OrgTrainingPaymentAuditResp extends BaseResp {
     @Schema(description = "关联八大类项目ID（关联八大类字典表主键）")
     private Long projectId;
 
+
+    /**
+     * 关联八大类项目名称（关联八大类字典表主键）
+     */
+    @Schema(description = "关联八大类项目名称（关联八大类字典表主键）")
+    private String projectName;
+
     /**
      * 考生ID（缴费考生，关联用户表主键）
      */
     @Schema(description = "考生ID（缴费考生，关联用户表主键）")
     private Long candidateId;
+
+
+    /**
+     * 培训考生名称（缴费考生，关联用户表主键）
+     */
+    @Schema(description = "培训考生名称（缴费考生，关联用户表主键）")
+    private String candidateName;
 
     /**
      * 关联报名记录ID（关联机构培训报名记录表主键）

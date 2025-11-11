@@ -37,4 +37,15 @@ public interface OrgTrainingPaymentAuditService extends BaseService<OrgTrainingP
     Boolean uploadTrainingPaymentProof(OrgTrainingPaymentAuditResp orgTrainingPaymentAuditResp);
 
 
+
+    /**
+     * 审核培训缴费资料
+     *
+     * @param orgTrainingPaymentAuditResp 审核请求对象
+     * @return true=审核成功，false=失败
+     */
+
+    boolean reviewTrainingPayment(OrgTrainingPaymentAuditResp orgTrainingPaymentAuditResp);
+
+
 }
