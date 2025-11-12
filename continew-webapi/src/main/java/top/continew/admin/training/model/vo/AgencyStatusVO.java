@@ -9,4 +9,5 @@ public class AgencyStatusVO {
     private Integer paymentStatus;
     private Integer status;
     private String remark;
+    private Long projectId;
 }

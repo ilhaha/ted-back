@@ -2,6 +2,7 @@ package top.continew.admin.training.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import org.apache.poi.ss.formula.functions.T;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
@@ -61,6 +62,14 @@ public class OrgTrainingPaymentAuditController extends BaseController<OrgTrainin
     public R<Boolean> reviewTrainingPayment(@RequestBody @Validated OrgTrainingPaymentAuditResp orgTrainingPaymentAuditResp) {
         boolean result = baseService.reviewTrainingPayment(orgTrainingPaymentAuditResp);
         return R.ok(result);
+    }
+
+    /**
+     * 培训缴费退费
+     */
+    @PostMapping("/refundTrainingPayment")
+    public Boolean refundTrainingPayment(@RequestParam Long id) {
+        return baseService.refundTrainingPayment(id);
     }
 
 }

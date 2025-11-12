@@ -47,5 +47,12 @@ public interface OrgTrainingPaymentAuditService extends BaseService<OrgTrainingP
 
     boolean reviewTrainingPayment(OrgTrainingPaymentAuditResp orgTrainingPaymentAuditResp);
 
+    /**
+     * 培训缴费退费
+     * @param id 缴费记录ID
+     * @return 是否退费成功
+     */
+    Boolean refundTrainingPayment(Long id);
+
 
 }

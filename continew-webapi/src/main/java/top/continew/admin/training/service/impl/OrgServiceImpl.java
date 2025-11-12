@@ -34,6 +34,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
+import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.exception.AuthException;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -117,6 +118,7 @@ import java.util.stream.Collectors;
  * @author Anton
  * @since 2025/04/07 10:53
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, OrgDetailResp, OrgQuery, OrgReq> implements OrgService {
@@ -521,7 +523,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         Long userId = TokenLocalThreadUtil.get().getUserId();
 
         // 调用 Mapper，获取包含 status 和 remark 的结果
-        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId,userId,null);
+        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, userId);
 
         // 无数据时，返回默认值（status=0，remark为空）
         if (agencyStatusVO == null) {
@@ -549,29 +551,36 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         }
 
         // 查询机构-考生-项目关联状态
-        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, userId, projectId);
+        AgencyStatusVO agencyStatusVO = orgMapper.getAgencyStatus(orgId, userId);
         if (agencyStatusVO != null) {
             Integer status = agencyStatusVO.getStatus();
+            Long existProjectId = agencyStatusVO.getProjectId();
 
-            //  已存在有效关联
+            // 如果已存在其他项目的申请
+            if (existProjectId != null && !existProjectId.equals(projectId)) {
+                String projectName = projectMapper.getProjectDetail(existProjectId).getProjectName();
+                throw new BusinessException("您已申请【" + projectName + "】，请撤回申请后再申请其他项目");
+            }
+
+            // 已存在有效关联（status > 0）
             if (status != null && status > 0) {
                 return -1;
             }
 
-            //  已存在无效关联，执行恢复
+            // 已存在无效关联（status == -1） -> 执行恢复
             if (status != null && status == -1) {
                 OrgCandidateDO updateDO = new OrgCandidateDO();
                 updateDO.setId(agencyStatusVO.getId());
-                updateDO.setPaymentStatus(0);
                 updateDO.setStatus(1);
                 updateDO.setUpdateUser(userId);
                 updateDO.setUpdateTime(LocalDateTime.now());
                 updateDO.setRemark(null);
 
                 int updateCount = orgCandidateMapper.update(updateDO,
-                        new LambdaUpdateWrapper<OrgCandidateDO>().eq(OrgCandidateDO::getId, agencyStatusVO.getId()));
+                        new LambdaUpdateWrapper<OrgCandidateDO>()
+                                .eq(OrgCandidateDO::getId, agencyStatusVO.getId()));
 
-                // 更新成功后也插入培训缴费通知单
+                // 更新成功后插入培训缴费通知单（如不存在）
                 if (updateCount > 0) {
                     OrgCandidateDO recovered = new OrgCandidateDO();
                     recovered.setId(agencyStatusVO.getId());
@@ -604,36 +613,48 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
     /**
-     * 封装：插入培训缴费通知单
+     * 封装：插入培训缴费通知单（防止重复）
      */
     private void insertTrainingPaymentNotice(Long orgId, Long projectId, Long userId, OrgCandidateDO insertDO) {
-        OrgTrainingPaymentAuditDO orgTrainingPaymentAuditDO = new OrgTrainingPaymentAuditDO();
-        orgTrainingPaymentAuditDO.setOrgId(orgId);
-        orgTrainingPaymentAuditDO.setCandidateId(userId);
-        orgTrainingPaymentAuditDO.setProjectId(projectId);
+        // 检查是否已有通知单
+        OrgTrainingPaymentAuditDO existNotice = orgTrainingPaymentAuditMapper.selectOne(
+                new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
+                        .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
+                        .eq(OrgTrainingPaymentAuditDO::getCandidateId, userId)
+                        .eq(OrgTrainingPaymentAuditDO::getProjectId, projectId)
+                        .eq(OrgTrainingPaymentAuditDO::getEnrollId, insertDO.getId())
+                        .eq(OrgTrainingPaymentAuditDO::getIsDeleted, 0)
+        );
 
-        // 关联培训价格
-        OrgTrainingPriceDO exist = orgTrainingPriceMapper.selectOne(
+        // 已存在则跳过
+        if (existNotice != null) {
+            return;
+        }
+
+        // 未存在则创建新通知单
+        OrgTrainingPriceDO existPrice = orgTrainingPriceMapper.selectOne(
                 new LambdaQueryWrapper<OrgTrainingPriceDO>()
                         .eq(OrgTrainingPriceDO::getOrgId, orgId)
                         .eq(OrgTrainingPriceDO::getProjectId, projectId)
                         .eq(OrgTrainingPriceDO::getIsDeleted, 0)
         );
-        if (exist == null) {
+        if (existPrice == null) {
             throw new BusinessException("未找到培训价格信息");
         }
 
-        orgTrainingPaymentAuditDO.setTrainingId(exist.getId());
-        orgTrainingPaymentAuditDO.setAuditStatus(0);
-        orgTrainingPaymentAuditDO.setPaymentAmount(exist.getPrice());
-        orgTrainingPaymentAuditDO.setEnrollId(insertDO.getId());
+        OrgTrainingPaymentAuditDO auditDO = new OrgTrainingPaymentAuditDO();
+        auditDO.setOrgId(orgId);
+        auditDO.setCandidateId(userId);
+        auditDO.setProjectId(projectId);
+        auditDO.setTrainingId(existPrice.getId());
+        auditDO.setAuditStatus(0);
+        auditDO.setPaymentAmount(existPrice.getPrice());
+        auditDO.setEnrollId(insertDO.getId());
 
-        // 生成通知单编号
         String prefix = String.valueOf(projectMapper.getProjectDetail(projectId).getProjectCode());
-        orgTrainingPaymentAuditDO.setNoticeNo(excelUtilReactive.generateUniqueNoticeNo(prefix));
+        auditDO.setNoticeNo(excelUtilReactive.generateUniqueNoticeNo(prefix));
 
-        // 插入缴费通知单
-        orgTrainingPaymentAuditMapper.insert(orgTrainingPaymentAuditDO);
+        orgTrainingPaymentAuditMapper.insert(auditDO);
     }
 
     // 学生退出机构
@@ -644,6 +665,32 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             throw new BusinessException("请选择机构");
         }
         Long userId = TokenLocalThreadUtil.get().getUserId();
+// 查找考生提交加入机构的申请记录
+        LambdaQueryWrapper<OrgCandidateDO> candidateQuery = new LambdaQueryWrapper<>();
+        candidateQuery.eq(OrgCandidateDO::getCandidateId, userId)
+                .eq(OrgCandidateDO::getOrgId, orgId)
+                .eq(OrgCandidateDO::getStatus, 2) // 2 = 已加入
+                .eq(OrgCandidateDO::getIsDeleted, false);
+
+        OrgCandidateDO application = orgCandidateMapper.selectOne(candidateQuery);
+
+        if (application == null) {
+            throw new BusinessException("未找到考生加入机构的申请记录");
+        }
+
+//  查询考生是否已缴费且已退费
+        LambdaQueryWrapper<OrgTrainingPaymentAuditDO> paymentQuery = new LambdaQueryWrapper<>();
+        paymentQuery.eq(OrgTrainingPaymentAuditDO::getCandidateId, userId)
+                .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
+                .eq(OrgTrainingPaymentAuditDO::getAuditStatus, 6) // 6 = 已退费
+                .eq(OrgTrainingPaymentAuditDO::getEnrollId, application.getId())
+                .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false);
+
+        Long refundedCount = orgTrainingPaymentAuditMapper.selectCount(paymentQuery);
+
+        if (refundedCount == 0) {
+            throw new BusinessException("请先联系机构管理员退费后才能退出机构");
+        }
 
         // 查询该考生在当前机构下的所有未完成预报名记录（多个考试计划）
         LambdaQueryWrapper<EnrollPreDO> enrollPreQueryWrapper = new LambdaQueryWrapper<>();
@@ -675,7 +722,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         }
 
         // 退出机构
-        int orgAffectedRows = orgMapper.studentQuitAgency(orgId, userId);
+        int orgAffectedRows = orgMapper.studentQuitAgency(orgId, userId, application.getId());
         if (orgAffectedRows <= 0) {
             throw new BusinessException("退出机构失败");
         }
@@ -692,6 +739,32 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         if (candidateId == null) {
             throw new BusinessException("学生ID不能为空");
         }
+
+        // 查找学生提交的加入机构申请记录
+        LambdaQueryWrapper<OrgCandidateDO> candidateQuery = new LambdaQueryWrapper<>();
+        candidateQuery.eq(OrgCandidateDO::getCandidateId, candidateId)
+                .eq(OrgCandidateDO::getOrgId, orgId)
+                .eq(OrgCandidateDO::getStatus, 2) // 2 = 已加入
+                .eq(OrgCandidateDO::getIsDeleted, false);
+
+        OrgCandidateDO candidateRecord = orgCandidateMapper.selectOne(candidateQuery);
+        if (candidateRecord == null) {
+            throw new BusinessException("未找到该学生在机构的有效申请记录");
+        }
+
+        // 判断该学生是否已退费
+        LambdaQueryWrapper<OrgTrainingPaymentAuditDO> paymentQuery = new LambdaQueryWrapper<>();
+        paymentQuery.eq(OrgTrainingPaymentAuditDO::getCandidateId, candidateId)
+                .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
+                .eq(OrgTrainingPaymentAuditDO::getEnrollId, candidateRecord.getId())
+                .eq(OrgTrainingPaymentAuditDO::getAuditStatus, 6) // 6 = 已退费
+                .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false);
+
+        Long refundedCount = orgTrainingPaymentAuditMapper.selectCount(paymentQuery);
+        if (refundedCount == 0) {
+            throw new BusinessException("该学生尚未退费，无法从机构中移除");
+        }
+
 
         // 检查学生在该机构下是否存在未结束的考试计划
         LambdaQueryWrapper<EnrollPreDO> enrollPreQueryWrapper = new LambdaQueryWrapper<>();
@@ -721,7 +794,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         }
 
         // 退出机构
-        int orgAffectedRows = orgMapper.studentQuitAgency(orgId, candidateId);
+        int orgAffectedRows = orgMapper.studentQuitAgency(orgId, candidateId, candidateRecord.getId());
         if (orgAffectedRows <= 0) {
             throw new BusinessException("移除学生失败");
         }
@@ -731,12 +804,67 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Integer studentDelAgency(Long orgId) {
-        if (orgId == null)
+        if (orgId == null) {
             throw new BusinessException("请选择机构");
+        }
+
         Long userId = TokenLocalThreadUtil.get().getUserId();
-        return orgMapper.studentDelAgency(orgId, userId);
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+
+        // 查找考生提交加入机构的申请记录
+        OrgCandidateDO candidateRecord = orgCandidateMapper.selectOne(
+                new LambdaQueryWrapper<OrgCandidateDO>()
+                        .eq(OrgCandidateDO::getOrgId, orgId)
+                        .eq(OrgCandidateDO::getCandidateId, userId)
+                        .eq(OrgCandidateDO::getIsDeleted, false)
+        );
+
+        if (candidateRecord == null) {
+            throw new BusinessException("未找到有效的机构申请记录，无法撤回");
+        }
+
+        Long enrollId = candidateRecord.getId();
+
+        // 查询缴费记录（同一考生 + 机构 + 申请记录）
+        List<OrgTrainingPaymentAuditDO> payments = orgTrainingPaymentAuditMapper.selectList(
+                new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
+                        .eq(OrgTrainingPaymentAuditDO::getCandidateId, userId)
+                        .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
+                        .eq(OrgTrainingPaymentAuditDO::getEnrollId, enrollId)
+                        .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false)
+        );
+
+        if (!payments.isEmpty()) {
+            // 检查是否有已审核通过（2）的记录（即：已缴费但未退费）
+            boolean hasApproved = payments.stream()
+                    .anyMatch(p -> p.getAuditStatus() != null && p.getAuditStatus() == 2);
+            if (hasApproved) {
+                throw new BusinessException("请先联系管理员退款后，再撤回申请");
+            }
+
+            // 删除所有未退费的缴费记录（逻辑删除）
+            int delPayment = orgTrainingPaymentAuditMapper.trainingDelByEnrollId(enrollId, orgId, userId);
+            if (delPayment > 0) {
+                log.info("撤回申请：删除缴费记录 {} 条，enrollId={}, orgId={}, userId={}", delPayment, enrollId, orgId, userId);
+            } else {
+                log.info("撤回申请：未发现可删除的缴费记录（可能已退费或本就无缴费），enrollId={}, orgId={}, userId={}", enrollId, orgId, userId);
+            }
+
+        }
+
+        // 删除机构申请（OrgCandidate）
+        int delAgency = orgMapper.studentDelAgency(orgId, userId);
+        if (delAgency <= 0) {
+            throw new BusinessException("撤回申请失败：未找到要删除的数据");
+        }
+
+        return delAgency;
     }
+
 
     @Override
     public Integer approveStudent(Long orgId, Long userId) {
@@ -1005,10 +1133,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @return
      */
     @Override
-    public List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId,Integer planType,Long planId) {
+    public List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId, Integer planType, Long planId) {
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         OrgDTO orgDTO = orgMapper.getOrgId(userTokenDo.getUserId());
-        List<OrgProjectClassCandidateVO> flatList = baseMapper.getSelectProjectClassCandidate(orgDTO.getId(), projectId,planType,planId);
+        List<OrgProjectClassCandidateVO> flatList = baseMapper.getSelectProjectClassCandidate(orgDTO.getId(), projectId, planType, planId);
 
         // 组装层级结构
         Map<Long, ProjectCategoryVO> projectMap = new LinkedHashMap<>();
@@ -1050,6 +1178,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     /**
      * 机构给作业人员报名
+     *
      * @return
      */
     @Override
@@ -1069,15 +1198,15 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         // 空检查
         List<List<Long>> projectClassCandidateList = orgApplyPreReq.getCandidateIds();
-        ValidationUtils.throwIfEmpty(projectClassCandidateList,"未选择报考考生！");
+        ValidationUtils.throwIfEmpty(projectClassCandidateList, "未选择报考考生！");
 
         Set<Long> seen = new HashSet<>();
         for (int i = 0; i < projectClassCandidateList.size(); i++) {
             List<Long> innerList = projectClassCandidateList.get(i);
-            ValidationUtils.throwIf(innerList.size() < 2,"未选择报考考生！");
+            ValidationUtils.throwIf(innerList.size() < 2, "未选择报考考生！");
             Long value = innerList.get(2);
             UserDO userDO = userMapper.selectById(value);
-            ValidationUtils.throwIf(!seen.add(value),userDO.getNickname()+ "存在与两个班级，只能由一个班级进行报考");
+            ValidationUtils.throwIf(!seen.add(value), userDO.getNickname() + "存在与两个班级，只能由一个班级进行报考");
         }
 
         // 计算最大人数
@@ -1134,7 +1263,6 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         return true;
     }
-
 
 
     /**
@@ -1392,13 +1520,13 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             List<String> expectedHeaders = getExcelHeader(classId);
 
             // ============ 阶段1：模板与表头校验 ============
-            validateTemplate(sheet, classId,expectedHeaders);
+            validateTemplate(sheet, classId, expectedHeaders);
 
             // ============ 阶段2：行级校验（仅检查存在性） ============
-            validateRowsBeforeUpload(workbook, sheet,expectedHeaders);
+            validateRowsBeforeUpload(workbook, sheet, expectedHeaders);
 
             // ============ 阶段3：上传校验============
-            ParsedExcelResultVO parsedExcelResultVO = parse(workbook, sheet, classId,expectedHeaders);
+            ParsedExcelResultVO parsedExcelResultVO = parse(workbook, sheet, classId, expectedHeaders);
 
             List<ParsedSuccessVO> successList = parsedExcelResultVO.getSuccessList();
             List<ParsedErrorVO> failedList = parsedExcelResultVO.getFailedList();
@@ -1442,7 +1570,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @param classId
      * @return
      */
-    private ParsedExcelResultVO parse(XSSFWorkbook workbook, XSSFSheet sheet, Long classId,List<String> expectedHeaders) {
+    private ParsedExcelResultVO parse(XSSFWorkbook workbook, XSSFSheet sheet, Long classId, List<String> expectedHeaders) {
         ParsedExcelResultVO result = new ParsedExcelResultVO();
         List<ParsedSuccessVO> successList = new ArrayList<>();
         List<ParsedErrorVO> failedList = new ArrayList<>();
@@ -1498,7 +1626,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                     String header = expectedHeaders.get(col);
                     ExcelUploadFileResultDTO pic = ExcelMediaUtils.excelUploadFile(
                             workbook, sheet, rowIndex, col, uploadService, WorkerPictureTypeEnum.GENERAL_PHOTO.getValue());
-                    docMap.put(header,pic.getDocUrl());
+                    docMap.put(header, pic.getDocUrl());
                 }
                 worker.setDocMap(docMap);
                 successList.add(worker);
@@ -1611,7 +1739,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @param sheet
      * @param classId
      */
-    private void validateTemplate(XSSFSheet sheet, Long classId,List<String> expectedHeaders) {
+    private void validateTemplate(XSSFSheet sheet, Long classId, List<String> expectedHeaders) {
         String sheetName = sheet.getSheetName();
         if (!String.valueOf(classId).equals(sheetName)) {
             throw new BusinessException("导入模板与所选班级不匹配或模板已被修改");
@@ -1648,7 +1776,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @param workbook
      * @param sheet
      */
-    private void validateRowsBeforeUpload(XSSFWorkbook workbook, XSSFSheet sheet,List<String> expectedHeaders) {
+    private void validateRowsBeforeUpload(XSSFWorkbook workbook, XSSFSheet sheet, List<String> expectedHeaders) {
 
         Set<String> phoneSet = new HashSet<>();
         int rowCount = sheet.getPhysicalNumberOfRows();

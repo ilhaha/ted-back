@@ -2,12 +2,14 @@ package top.continew.admin.training.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import org.aspectj.weaver.ast.Or;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -310,6 +312,56 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
 
         return true;
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean refundTrainingPayment(Long id) {
+        if (id == null) {
+            throw new BusinessException("缴费记录ID不能为空");
+        }
+
+        // 查询缴费记录
+        OrgTrainingPaymentAuditDO payment = orgTrainingPaymentAuditMapper.selectById(id);
+        if (payment == null) {
+            throw new BusinessException("缴费记录不存在");
+        }
+
+        // 判断是否已退费
+        if (payment.getAuditStatus() != null && payment.getAuditStatus() == 6) {
+            throw new BusinessException("该记录已退费");
+        }
+
+        // 执行退费操作：更新培训缴费审核表
+        OrgTrainingPaymentAuditDO update = new OrgTrainingPaymentAuditDO();
+        update.setId(id);
+        update.setAuditStatus(6); // 6 = 已退费
+        update.setAuditTime(LocalDateTime.now());
+        update.setUpdateUser(TokenLocalThreadUtil.get().getUserId());
+        int rows = orgTrainingPaymentAuditMapper.updateById(update);
+
+        if (rows > 0) {
+            // 同步更新考生申请加入机构表的缴费状态
+            Long candidateId = payment.getCandidateId();
+            Long projectId = payment.getProjectId();
+            Long orgId = payment.getOrgId();
+
+            OrgCandidateDO orgCandidate = new OrgCandidateDO();
+            orgCandidate.setPaymentStatus(6); // 已退款
+            orgCandidate.setUpdateTime(LocalDateTime.now());
+
+            orgCandidateMapper.update(orgCandidate,
+                    new LambdaUpdateWrapper<OrgCandidateDO>()
+                            .eq(OrgCandidateDO::getId,payment.getEnrollId())
+                            .eq(OrgCandidateDO::getCandidateId, candidateId)
+                            .eq(OrgCandidateDO::getProjectId, projectId)
+                            .eq(OrgCandidateDO::getOrgId, orgId)
+                            .eq(OrgCandidateDO::getIsDeleted,false)
+            );
+        }
+
+        return rows > 0;
+    }
+
 
 
     /**

@@ -79,14 +79,11 @@
     </select>
 
     <select id="getAgencyStatus" resultType="top.continew.admin.training.model.vo.AgencyStatusVO">
-        select id, org_id, status, remark,payment_status
+        select id, org_id, status, remark,payment_status,project_id
         from ted_org_candidate
         where is_deleted = 0
         and org_id = #{orgId}
         and candidate_id = #{userId}
-        <if test="projectId != null">
-            and project_id = #{projectId}
-        </if>
         limit 1
     </select>
     <select id="selectByUserId" resultType="top.continew.admin.training.model.resp.OrgDetailResp">
@@ -297,6 +294,7 @@
             status     = 0
         WHERE org_id = #{orgId}
           AND candidate_id = #{userId}
+          AND id = #{Id}
           AND is_deleted = 0
     </update>
 

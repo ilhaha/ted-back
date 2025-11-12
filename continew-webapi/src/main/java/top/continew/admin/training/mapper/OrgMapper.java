@@ -67,7 +67,7 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
     OrgDetailResp getOrgDetail(@Param("orgId") Long orgId);
 
     //  AgencyStatusVO，接收多字段
-    AgencyStatusVO getAgencyStatus(@Param("orgId") Long orgId, @Param("userId") Long userId, @Param("projectId") Long projectId);
+    AgencyStatusVO getAgencyStatus(@Param("orgId") Long orgId, @Param("userId") Long userId);
     @Insert("insert into ted_org_candidate values (null, #{orgId}, #{userId}, #{projectId}, 1, null,1,1, now(), now() 0)")
     Integer studentAddAgency(@Param("orgId") Long orgId, @Param("userId") Long userId, @Param("projectId") Long projectId);
 
@@ -77,7 +77,7 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
     @Delete("update ted_org_candidate set is_deleted = 1,status = 3 where org_id = #{orgId} and candidate_id = #{userId}")
     Integer studentDelAgency(@Param("orgId") Long orgId, @Param("userId") Long userId );
 
-    Integer studentQuitAgency(@Param("orgId") Long orgId, @Param("userId") Long userId);
+    Integer studentQuitAgency(@Param("orgId") Long orgId, @Param("userId") Long userId,@Param("Id") Long Id);
 
     Integer studentQuitAgencyClass(@Param("orgId") Long orgId, @Param("userId") Long userId  );
 
