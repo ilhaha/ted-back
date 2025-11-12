@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 import top.continew.admin.training.model.resp.OrgClassDetailResp;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
+import top.continew.admin.training.model.vo.SelectClassVO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.training.model.entity.OrgClassDO;
 
@@ -21,4 +22,6 @@ public interface OrgClassMapper extends BaseMapper<OrgClassDO> {
     IPage<OrgClassDetailResp> page(@Param("page") Page page, @Param("ew") QueryWrapper<OrgClassDO> queryWrapper);
 
     List<ProjectCategoryVO> getSelectClassByProjectIds(List<Long> projectIds);
+
+    List<SelectClassVO> getSelectClassByProject(@Param("projectId") Long projectId, @Param("classType") Integer classType);
 }

@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service;
 
+import org.springframework.http.ResponseEntity;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ApplyListVO;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
@@ -120,4 +121,19 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      * @param examPlanId 计划id
      */
     void cancelEnroll(Long examPlanId);
+
+    /**
+     * 下载某个考试的缴费通知单
+     * @param enrollId
+     * @return
+     */
+    ResponseEntity<byte[]> downloadAuditNotice(Long enrollId);
+
+    /**
+     * 下载某个班级的考试缴费通知单
+     * @param classId
+     * @param planId
+     * @return
+     */
+    ResponseEntity<byte[]> downloadBatchAuditNotice(Long classId, Long planId);
 }

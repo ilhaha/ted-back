@@ -173,12 +173,40 @@
             ${ew.customSqlSegment}
     </select>
     <select id="getWorkerApplyList" resultType="top.continew.admin.exam.model.resp.EnrollResp">
-        SELECT te.id,te.create_time, toc.class_name, su.nickname AS nick_name
+        SELECT te.id,
+               te.create_time,
+               toc.class_name,
+               su.nickname AS nick_name,
+               tepa.payment_time,
+               tepa.audit_notice_url,
+               tepa.payment_proof_url,
+               tepa.qrcode_upload_url,
+               tepa.audit_status,
+               tepa.reject_reason,
+               tepa.notice_no
         FROM ted_enroll te
                  LEFT JOIN ted_org_class toc
                            ON te.class_id = toc.id AND toc.is_deleted = 0
                  LEFT JOIN sys_user su
-                           ON te.user_id = su.id ${ew.customSqlSegment}
+                           ON te.user_id = su.id
+                 LEFT JOIN ted_examinee_payment_audit tepa
+                           ON te.id = tepa.enroll_id AND tepa.is_deleted = 0 ${ew.customSqlSegment}
         ORDER BY te.create_time DESC;
+    </select>
+    <select id="selectAuditNoticeToClass"
+            resultType="top.continew.admin.exam.model.resp.WorkerAuditNoticeResp">
+        SELECT
+            tepa.audit_notice_url,
+            su.nickname
+        FROM ted_examinee_payment_audit tepa
+                 JOIN ted_enroll te
+                      ON tepa.enroll_id = te.id
+                          AND te.is_deleted = 0
+                 JOIN sys_user su
+                      ON te.user_id = su.id
+        WHERE
+            tepa.is_deleted = 0
+          AND tepa.class_id = #{classId}
+          AND te.exam_plan_id = #{planId}
     </select>
 </mapper>

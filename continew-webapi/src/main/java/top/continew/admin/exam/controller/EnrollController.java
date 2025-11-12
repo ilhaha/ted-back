@@ -17,6 +17,10 @@
 package top.continew.admin.exam.controller;
 
 import jakarta.annotation.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ApplyListVO;
@@ -36,6 +40,7 @@ import top.continew.admin.exam.service.EnrollService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -51,6 +56,27 @@ import java.util.Map;
 public class EnrollController extends BaseController<EnrollService, EnrollResp, EnrollDetailResp, EnrollQuery, EnrollReq> {
     @Resource
     private EnrollService enrollService;
+
+    /**
+     * 下载某个班级的考试缴费通知单
+     * @param classId
+     * @param planId
+     * @return
+     */
+    @GetMapping("/download/batch/auditNotice/{classId}/{planId}")
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable("classId") Long classId, @PathVariable("planId") Long planId) {
+        return enrollService.downloadBatchAuditNotice(classId,planId);
+    }
+
+    /**
+     * 下载某个考试的缴费通知单
+     * @param enrollId
+     * @return
+     */
+    @GetMapping("/download/auditNotice/{enrollId}")
+    public ResponseEntity<byte[]> downloadAuditNotice(@PathVariable("enrollId") Long enrollId) {
+        return enrollService.downloadAuditNotice(enrollId);
+    }
 
     //    /**
     //     * 考生报名

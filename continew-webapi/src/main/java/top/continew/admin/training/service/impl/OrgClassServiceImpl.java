@@ -24,6 +24,7 @@ import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.UploadService;
 import top.continew.admin.training.mapper.OrgUserMapper;
 import top.continew.admin.training.model.entity.OrgDO;
+import top.continew.admin.training.model.vo.SelectClassVO;
 import top.continew.admin.util.InMemoryMultipartFile;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
@@ -45,6 +46,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * 培训机构班级业务实现
@@ -188,5 +190,16 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
             FileInfoResp fileInfo = uploadService.upload(file, fileReq);
             return fileInfo.getUrl();
         }
+    }
+
+    /**
+     * 根据项目类型和班级类型获取班级选择器
+     * @param projectId
+     * @param classType
+     * @return
+     */
+    @Override
+    public List<SelectClassVO> getSelectClassByProject(Long projectId, Integer classType) {
+        return baseMapper.getSelectClassByProject(projectId,classType);
     }
 }

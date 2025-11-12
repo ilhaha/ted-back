@@ -1,5 +1,6 @@
 package top.continew.admin.training.controller;
 
+import top.continew.admin.training.model.vo.SelectClassVO;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +15,8 @@ import top.continew.admin.training.model.resp.OrgClassDetailResp;
 import top.continew.admin.training.model.resp.OrgClassResp;
 import top.continew.admin.training.service.OrgClassService;
 
+import java.util.List;
+
 /**
  * 培训机构班级管理 API
  *
@@ -23,4 +26,16 @@ import top.continew.admin.training.service.OrgClassService;
 @Tag(name = "培训机构班级管理 API")
 @RestController
 @CrudRequestMapping(value = "/training/orgClass", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE, Api.EXPORT})
-public class OrgClassController extends BaseController<OrgClassService, OrgClassResp, OrgClassDetailResp, OrgClassQuery, OrgClassReq> {}
+public class OrgClassController extends BaseController<OrgClassService, OrgClassResp, OrgClassDetailResp, OrgClassQuery, OrgClassReq> {
+
+    /**
+     * 根据项目类型和班级类型获取班级选择器
+     * @param projectId
+     * @param classType
+     * @return
+     */
+    @GetMapping("/select/{projectId}/{classType}")
+    public List<SelectClassVO> getSelectClassByProject(@PathVariable("projectId") Long projectId, @PathVariable("classType") Integer classType){
+        return baseService.getSelectClassByProject(projectId,classType);
+    }
+}

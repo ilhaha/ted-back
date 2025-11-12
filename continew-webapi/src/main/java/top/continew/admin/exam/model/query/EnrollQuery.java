@@ -55,7 +55,7 @@ public class EnrollQuery implements Serializable {
     @Query(type = QueryType.EQ,columns = "te.exam_plan_id")
     private Long planId;
 
-    @Query(type = QueryType.LIKE,columns = "toc.class_name")
-    private String className;
+    @Query(type = QueryType.EQ,columns = "toc.id")
+    private Long classId;
 
 }

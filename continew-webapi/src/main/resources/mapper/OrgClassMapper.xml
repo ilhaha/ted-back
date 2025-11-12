@@ -21,4 +21,11 @@
             #{id}
         </foreach>
     </select>
+    <select id="getSelectClassByProject" resultType="top.continew.admin.training.model.vo.SelectClassVO">
+        SELECT id AS `value`, class_name AS `label`
+        FROM ted_org_class
+        WHERE project_id = #{projectId}
+          AND class_type = #{classType}
+          AND is_deleted = 0
+    </select>
 </mapper>

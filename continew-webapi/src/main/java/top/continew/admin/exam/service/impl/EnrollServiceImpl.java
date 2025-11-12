@@ -18,19 +18,26 @@ package top.continew.admin.exam.service.impl;
 
 import cn.crane4j.core.util.StringUtils;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import net.dreamlu.mica.core.result.R;
 import org.apache.catalina.User;
 import org.springframework.beans.BeanUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
@@ -42,6 +49,8 @@ import top.continew.admin.exam.model.vo.ApplyListVO;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.ExamPlanVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
+import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.entity.UserDO;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -51,12 +60,19 @@ import top.continew.admin.exam.model.query.EnrollQuery;
 import top.continew.admin.exam.model.req.EnrollReq;
 import top.continew.admin.exam.service.EnrollService;
 
+import java.io.ByteArrayOutputStream;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * 考生报名表业务实现
@@ -87,6 +103,12 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     @Resource
     private ExamineePaymentAuditMapper examineePaymentAuditMapper;
+
+    @Resource
+    private UserMapper userMapper;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+
 
     /**
      * 获取报名相关所有信息
@@ -529,6 +551,81 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         enrollMapper.deleteFromEnroll(examPlanId, userId);
         enrollMapper.deleteFromApplicant(examPlanId, userId);
     }
+
+    /**
+     * 下载某个考试的缴费通知单
+     * @param enrollId
+     * @return
+     */
+    @Override
+    public ResponseEntity<byte[]> downloadAuditNotice(Long enrollId) {
+        EnrollDO enrollDO = baseMapper.selectById(enrollId);
+        ValidationUtils.throwIfNull(enrollDO,"未查询到报名信息");
+        ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper
+                .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getEnrollId, enrollId));
+        ValidationUtils.throwIfNull(examineePaymentAuditDO,"未生成缴费通知单");
+        String auditNoticeUrl = examineePaymentAuditDO.getAuditNoticeUrl();
+        ValidationUtils.throwIfNull(auditNoticeUrl, "未生成缴费通知单");
+        try {
+            // 使用 RestTemplate 下载远程文件
+            byte[] pdfBytes = restTemplate.getForObject(new URI(auditNoticeUrl), byte[].class);
+            // 设置 HTTP 头
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 下载某个班级的考试缴费通知单
+     * @param classId
+     * @param planId
+     * @return
+     */
+    @Override
+    public ResponseEntity<byte[]> downloadBatchAuditNotice(Long classId, Long planId) {
+        List<WorkerAuditNoticeResp> auditNoticeList = baseMapper.selectAuditNoticeToClass(classId, planId);
+        ValidationUtils.throwIfEmpty(auditNoticeList, "该班级下未查询到报名信息");
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ZipOutputStream zos = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
+
+            for (WorkerAuditNoticeResp notice : auditNoticeList) {
+                String url = notice.getAuditNoticeUrl();
+                String nickname = notice.getNickname();
+
+                if (StrUtil.isBlank(url)) continue;
+
+                byte[] pdfBytes = restTemplate.getForObject(new URI(url), byte[].class);
+                if (pdfBytes == null || pdfBytes.length == 0) continue;
+
+                String entryName = nickname + "_缴费通知单_" + new Date().getTime() + ".pdf";
+
+                zos.putNextEntry(new ZipEntry(entryName));
+                zos.write(pdfBytes);
+                zos.closeEntry();
+            }
+
+            zos.finish();
+
+            byte[] zipBytes = baos.toByteArray();
+
+            // 设置 HTTP 响应头
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            return new ResponseEntity<>(zipBytes, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+
 
     /**
      * 重写删除
