@@ -24,6 +24,7 @@ import top.continew.admin.training.model.req.OrgTrainingPriceReq;
 import top.continew.admin.training.model.resp.OrgTrainingPriceDetailResp;
 import top.continew.admin.training.model.resp.OrgTrainingPriceResp;
 import top.continew.admin.training.service.OrgTrainingPriceService;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.query.SortQuery;
@@ -65,19 +66,42 @@ public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<
 
     @Override
     public PageResp<OrgTrainingPriceResp> page(OrgTrainingPriceQuery query, PageQuery pageQuery) {
-        //  调用父类分页查询
+        //  获取当前登录用户ID
+        Long userId = TokenLocalThreadUtil.get().getUserId();
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+
+        //  根据用户ID查机构ID
+        Long orgId = orgUserMapper.selectOne(
+                new LambdaQueryWrapper<TedOrgUser>()
+                        .eq(TedOrgUser::getUserId, userId)
+                        .eq(TedOrgUser::getIsDeleted, false)
+                        .select(TedOrgUser::getOrgId)
+        ) != null ? orgUserMapper.selectOne(
+                new LambdaQueryWrapper<TedOrgUser>()
+                        .eq(TedOrgUser::getUserId, userId)
+                        .eq(TedOrgUser::getIsDeleted, false)
+                        .select(TedOrgUser::getOrgId)
+        ).getOrgId() : null;
+
+        if (orgId == null) {
+            throw new BusinessException("未找到所属机构，请联系管理员");
+        }
+
+        // 在查询条件中设置机构ID，确保只查本机构
+        query.setOrgId(orgId);
+
+        // 执行分页查询（父类 page 会使用 orgId 过滤）
         PageResp<OrgTrainingPriceResp> pageResp = super.page(query, pageQuery);
 
-        // 获取当前机构名称
+        //  获取机构名称
         String orgName = TokenLocalThreadUtil.get().getNickname();
-
-        //填充附加字段（机构名、八大类名）
+        // 填充机构名和项目名
         if (pageResp.getList() != null && !pageResp.getList().isEmpty()) {
             for (OrgTrainingPriceResp record : pageResp.getList()) {
-                // 设置机构名称
                 record.setOrgName(orgName);
 
-                // 查询八大类名称
                 if (record.getProjectId() != null) {
                     ProjectDO projectDO = projectMapper.selectOne(
                             new LambdaQueryWrapper<ProjectDO>()
@@ -107,7 +131,7 @@ public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<
 
         TedOrgUser user = orgUserMapper.selectOne(
                 new LambdaQueryWrapper<TedOrgUser>()
-                        .eq(TedOrgUser::getUserId,TokenLocalThreadUtil.get().getUserId())
+                        .eq(TedOrgUser::getUserId, TokenLocalThreadUtil.get().getUserId())
                         .eq(TedOrgUser::getIsDeleted, 0)
                         .select(TedOrgUser::getOrgId)
         );
