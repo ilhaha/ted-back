@@ -150,8 +150,14 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     @Override
     public PageResp<ExamineePaymentAuditResp> page(ExamineePaymentAuditQuery query, PageQuery pageQuery) {
         QueryWrapper<ExamineePaymentAuditDO> queryWrapper = this.buildQueryWrapper(query);
-        queryWrapper.eq("tepa.is_deleted", 0)
-                .eq("tep.is_deleted",0);
+        queryWrapper.eq("tepa.is_deleted", 0);
+        if (query.getIsWorker()) {
+            queryWrapper.isNotNull("tepa.class_id")
+                    .isNotNull("tepa.qrcode_upload_url");
+        }else {
+            queryWrapper.isNull("tepa.class_id")
+                    .isNull("tepa.qrcode_upload_url");
+        }
         super.sort(queryWrapper, pageQuery);
         IPage<ExamineePaymentAuditResp> page = baseMapper.getExamineePaymentAudits(
                 new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper

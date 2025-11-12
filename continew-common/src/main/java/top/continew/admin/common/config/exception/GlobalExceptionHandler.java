@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import top.continew.starter.core.exception.BadRequestException;
 import top.continew.starter.core.exception.BusinessException;
+import top.continew.starter.security.limiter.exception.RateLimiterException;
 import top.continew.starter.web.model.R;
 
 /**
@@ -43,6 +44,16 @@ import top.continew.starter.web.model.R;
 @Order(99)
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * 拦截获取短信验证码异常
+     * @param e
+     * @return
+     */
+    @ExceptionHandler(RateLimiterException.class)
+    public R handleRateLimitException(RateLimiterException e) {
+        return R.fail(String.valueOf(HttpStatus.BAD_REQUEST.value()), e.getMessage());
+    }
 
     /**
      * 拦截业务异常

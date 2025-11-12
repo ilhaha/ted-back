@@ -10,7 +10,7 @@
                  LEFT JOIN sys_user su
                            ON tepa.examinee_id = su.id
                  LEFT JOIN ted_exam_plan tep
-                           ON tepa.exam_plan_id = tep.id
+                           ON tepa.exam_plan_id = tep.id AND tep.is_deleted = 0
             ${ew.customSqlSegment}
     </select>
     <select id="selectPaymentPersonInfo" resultType="top.continew.admin.exam.model.resp.PaymentInfoVO">

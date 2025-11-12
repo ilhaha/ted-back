@@ -223,8 +223,8 @@ public class CaptchaController {
         ValidationUtils.throwIfNull(candidateIdAes,"二维码信息被篡改");
         UserDO userDO = userMapper.selectById(NumberUtil.toLong(candidateIdAes));
         ValidationUtils.throwIfEmpty(userDO,"未找到报名信息");
-//        ValidationUtils.throwIf(!userDO.getPhone().equals(aesWithHMAC.encryptAndSign(phone)),
-//                "您输入的手机号与报名手机号不一致，请确认后重试");
+        ValidationUtils.throwIf(!userDO.getPhone().equals(aesWithHMAC.encryptAndSign(phone)),
+                "您输入的手机号与报名手机号不一致，请确认后重试");
         ResponseModel verificationRes = behaviorCaptchaService.verification(captchaReq);
 
         ValidationUtils.throwIfNotEqual(verificationRes.getRepCode(), RepCodeEnum.SUCCESS.getCode(), verificationRes

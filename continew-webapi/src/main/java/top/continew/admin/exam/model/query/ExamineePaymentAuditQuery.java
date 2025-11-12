@@ -5,6 +5,7 @@ import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import top.continew.starter.data.core.annotation.Query;
+import top.continew.starter.data.core.annotation.QueryIgnore;
 import top.continew.starter.data.core.enums.QueryType;
 
 import java.io.Serial;
@@ -60,5 +61,9 @@ public class ExamineePaymentAuditQuery implements Serializable {
     @Schema(description = "考试计划名称查询")
     @Query(type = QueryType.LIKE,columns = "tep.exam_plan_name")
     private String planName; // 考试计划名称查询
+
+    @Schema(description = "是否是审核作业人员缴费")
+    @QueryIgnore
+    private Boolean isWorker;
 
 }
