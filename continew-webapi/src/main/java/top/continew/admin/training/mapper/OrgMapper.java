@@ -99,7 +99,7 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
 
     List<ProjectCategoryVO> getAllCategoryByOrgId(@Param("orgId") Long orgId);
 
-    List<OrgProjectClassVO> getSelectProjectClass(@Param("orgId") Long orgId, @Param("projectId") Long projectId);
+    List<OrgProjectClassVO> getSelectProjectClass(@Param("orgId") Long orgId, @Param("projectId") Long projectId, @Param("classType") Integer classType);
 
     List<OrgProjectClassCandidateVO> getSelectProjectClassCandidate(@Param("orgId") Long orgId,
                                                                     @Param("projectId") Long projectId,

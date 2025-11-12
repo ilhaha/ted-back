@@ -1098,9 +1098,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @return
      */
     @Override
-    public List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId) {
+    public List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId,Integer classType) {
         // 查询原始数据（项目 + 班级）
-        List<OrgProjectClassVO> flatList = baseMapper.getSelectProjectClass(orgId, projectId);
+        List<OrgProjectClassVO> flatList = baseMapper.getSelectProjectClass(orgId, projectId,classType);
 
         // 按项目分组
         Map<Long, ProjectCategoryVO> projectMap = new LinkedHashMap<>();

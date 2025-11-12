@@ -699,7 +699,7 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
         roleDOQueryWrapper.select("id").eq("name", "机构人员");
         RoleDO orgRoleDO = roleMapper.selectOne(roleDOQueryWrapper);
         QueryWrapper<RoleDO> roleDOQueryWrapper1 = new QueryWrapper<>();
-        roleDOQueryWrapper1.select("id").eq("name", "考生");
+        roleDOQueryWrapper1.select("id").eq("name", "检验人员");
         RoleDO userRoleDO1 = roleMapper.selectOne(roleDOQueryWrapper1);
         QueryWrapper<RoleDO> roleDOQueryWrapper2 = new QueryWrapper<>();
         roleDOQueryWrapper2.select("id").eq("name", "系统管理员");

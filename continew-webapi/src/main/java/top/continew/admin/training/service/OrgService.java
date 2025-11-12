@@ -176,7 +176,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      * 获取机构对应的项目-班级级联选择
      * @return
      */
-    List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId);
+    List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId,Integer classType);
 
     /**
      * 根据报考状态获取机构对应的项目-班级-考生级联选择 （预报名）

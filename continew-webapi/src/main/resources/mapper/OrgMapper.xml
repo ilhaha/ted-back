@@ -79,12 +79,11 @@
     </select>
 
     <select id="getAgencyStatus" resultType="top.continew.admin.training.model.vo.AgencyStatusVO">
-        select id, org_id, status, remark,payment_status,project_id
+        select id, org_id, status, remark, payment_status, project_id
         from ted_org_candidate
         where is_deleted = 0
-        and org_id = #{orgId}
-        and candidate_id = #{userId}
-        limit 1
+          and org_id = #{orgId}
+          and candidate_id = #{userId} limit 1
     </select>
     <select id="selectByUserId" resultType="top.continew.admin.training.model.resp.OrgDetailResp">
         SELECT org.*, -- 改用org代替to
@@ -176,6 +175,7 @@
         WHERE c.is_deleted = 0
           AND c.org_id = #{orgId}
           AND c.project_id = #{projectId}
+          AND c.class_type = #{classType}
     </select>
     <select id="getSelectProjectClassCandidate"
             resultType="top.continew.admin.training.model.vo.OrgProjectClassCandidateVO">

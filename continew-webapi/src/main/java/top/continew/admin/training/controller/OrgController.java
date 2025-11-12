@@ -133,9 +133,11 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
      * 获取机构对应的项目-班级级联选择
      * @return
      */
-    @GetMapping("/select/project/class")
-    public List<ProjectCategoryVO> getSelectProjectClass(@RequestParam Long orgId,@RequestParam Long projectId){
-        return orgService.getSelectProjectClass(orgId,projectId);
+    @GetMapping("/select/project/class/{classType}")
+    public List<ProjectCategoryVO> getSelectProjectClass(@RequestParam Long orgId,
+                                                         @RequestParam Long projectId,
+                                                         @PathVariable("classType") Integer classType){
+        return orgService.getSelectProjectClass(orgId,projectId,classType);
     }
 
     /**
