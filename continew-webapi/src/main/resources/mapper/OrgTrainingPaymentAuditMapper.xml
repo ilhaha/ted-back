@@ -16,12 +16,10 @@
 
     <update id="trainingDelByEnrollId" parameterType="map">
         UPDATE ted_org_training_payment_audit
-        SET
-            is_deleted = 1,
+        SET is_deleted  = 1,
             update_user = #{userId},
             update_time = NOW()
-        WHERE
-            enroll_id = #{enrollId}
+        WHERE enroll_id = #{enrollId}
           AND org_id = #{orgId}
           AND candidate_id = #{userId}
           AND is_deleted = 0

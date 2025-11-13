@@ -73,4 +73,9 @@ public class OrgTrainingPaymentAuditQuery implements Serializable {
     @Schema(description = "缴费金额（元）")
     @Query(type = QueryType.EQ)
     private BigDecimal paymentAmount;
+
+    /**
+     * 培训考生姓名
+     */
+    private String candidateName;
 }

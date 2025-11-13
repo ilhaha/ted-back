@@ -1,5 +1,6 @@
 package top.continew.admin.training.service.impl;
 
+import cn.crane4j.core.util.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -385,10 +386,17 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
 
     @Override
     public PageResp<OrgTrainingPaymentAuditResp> page(OrgTrainingPaymentAuditQuery query, PageQuery pageQuery) {
+        String candidateName = query.getCandidateName();
+        query.setCandidateName(null);
         QueryWrapper<OrgTrainingPaymentAuditDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("ttpa.is_deleted", 0)
-                .eq("tp.is_deleted",0);
+                .eq("tp.is_deleted", 0);
+
+        if (StringUtils.isNotBlank(candidateName)) {
+            queryWrapper.like("su.nickname", candidateName);
+        }
         super.sort(queryWrapper, pageQuery);
+
         IPage<OrgTrainingPaymentAuditResp> page = baseMapper.getTrainingPaymentAudits(
                 new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper
         );
@@ -396,5 +404,4 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
         pageResp.getList().forEach(this::fill);
         return pageResp;
     }
-
 }
