@@ -47,6 +47,11 @@ public class OrgClassDO extends BaseDO {
     private String qrcodeApplyUrl;
 
     /**
+     * 状态，0招生找，1停止招生
+     */
+    private Integer status;
+
+    /**
      * 是否删除 0-未删除 1-已删除
      */
     private Integer isDeleted;

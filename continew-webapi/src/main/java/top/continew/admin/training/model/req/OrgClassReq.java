@@ -53,4 +53,10 @@ public class OrgClassReq implements Serializable {
      */
     @Schema(description = "班级类型，0作业人员班级，1检验人员班级")
     private Integer classType;
+
+    /**
+     * 状态，0招生找，1停止招生
+     */
+    @Schema(description = "状态，0招生找，1停止招生")
+    private Integer status;
 }

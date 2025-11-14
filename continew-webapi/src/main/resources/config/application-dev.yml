@@ -366,7 +366,7 @@ qrcode:
     upload:
       # 作业人员上传报考资料URL
       apply-doc:
-        url: http://localhost:5173/worker/apply/upload
+        url: http://192.168.1.178:5173/worker/apply/upload
       # 作业人员上传缴费凭证
       payment-voucher:
-        url: http://localhost:5174/worker/payment-voucher/upload
+        url: http://192.168.1.178:5174/worker/payment-voucher/upload

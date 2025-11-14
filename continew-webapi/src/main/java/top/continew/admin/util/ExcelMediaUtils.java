@@ -158,15 +158,6 @@ public class ExcelMediaUtils {
     }
 
 
-    /**
-     * 解析指定行的 OLE 附件，并可选择是否上传 OSS
-     *
-     * @param workbook      Excel XSSFWorkbook
-     * @param targetRow     目标行索引（0-based）
-     * @param uploadService 上传服务
-     * @param upload        是否执行上传（true=上传到OSS，false=仅检测是否存在）
-     * @return Map<" 行_列 ", 原文件名, URL>
-     */
     public static Map<String, List<String>> getOleAttachmentMapAndUpload(
             XSSFWorkbook workbook,
             int targetRow,
@@ -201,10 +192,14 @@ public class ExcelMediaUtils {
                     byte[] fileBytes = ole10Native.getDataBuffer();
                     String originalFileName = ole10Native.getFileName();
 
-                    if (originalFileName == null || originalFileName.isEmpty()) {
-                        originalFileName = targetRow + "_" + anchor.getCol1();
-                    } else {
+                    // 若有文件名，先尝试转码
+                    if (originalFileName != null && !originalFileName.isEmpty()) {
+                        originalFileName = new String(originalFileName.getBytes("ISO-8859-1"), "GBK");
+                        // 去掉路径，只保留文件名
                         originalFileName = Paths.get(originalFileName).getFileName().toString();
+                    } else {
+                        // 没有文件名，使用自定义命名
+                        originalFileName = targetRow + "_" + anchor.getCol1();
                     }
 
                     String ext = "";

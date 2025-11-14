@@ -24,22 +24,4 @@ public class ProjectNeedUploadDocVO {
      */
     private String docPath;
 
-    /**
-     * 八大类名称
-     */
-    private String categoryName;
-
-
-    /**
-     * 项目名称
-     */
-    private String projectName;
-
-
-    /**
-     * 项目代码
-     */
-    private String projectCode;
-
-
 }

@@ -59,6 +59,12 @@ public class OrgClassResp extends BaseResp {
     private Integer classType;
 
     /**
+     * 状态，0招生找，1停止招生
+     */
+    @Schema(description = "状态，0招生找，1停止招生")
+    private Integer status;
+
+    /**
      * 更新人id
      */
     @Schema(description = "更新人id")

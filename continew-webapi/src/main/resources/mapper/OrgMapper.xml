@@ -173,6 +173,7 @@
                       ON c.project_id = p.id
                           AND p.is_deleted = 0
         WHERE c.is_deleted = 0
+          AND c.status = 0
           AND c.org_id = #{orgId}
           AND c.project_id = #{projectId}
           AND c.class_type = #{classType}

@@ -331,7 +331,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
             paymentAuditDO.setIsDeleted(false);
             try {
                 // 生成二维码内容
-                String qrContent = buildQrContent(classId, candidateId);
+                String qrContent = buildQrContent(classId, candidateId,enrollId,planId);
                 // 生成二维码并上传
                 String qrUrl = generateAndUploadQr(candidateId, qrContent);
                 paymentAuditDO.setQrcodeUploadUrl(qrUrl);
@@ -435,81 +435,55 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     /**
      * 构建二维码内容（带加密）
      */
-    private String buildQrContent(Long classId, Long candidateId) throws UnsupportedEncodingException {
-        String encryptedClassId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String.valueOf(classId)), StandardCharsets.UTF_8);
-        String encryptedCandidateId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String.valueOf(candidateId)), StandardCharsets.UTF_8);
-        return qrcodeUrl + "?classId=" + encryptedClassId + "&candidateId=" + encryptedCandidateId;
+    private String buildQrContent(Long classId, Long candidateId, Long enrollId, Long planId) {
+        Map<String, Long> params = Map.of(
+                "classId", classId,
+                "candidateId", candidateId,
+                "enrollId", enrollId,
+                "planId", planId
+        );
+
+        String query = params.entrySet().stream()
+                .map(e -> e.getKey() + "=" + encode(aesWithHMAC.encryptAndSign(String.valueOf(e.getValue()))))
+                .collect(Collectors.joining("&"));
+
+        return qrcodeUrl + "?" + query;
+    }
+
+    private String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     /**
      * 生成二维码并上传，返回 URL
      */
     private String generateAndUploadQr(Long candidateId, String qrContent) throws IOException {
-        // 1. 生成二维码
+
+        // 1. 生成二维码（300x300）
         BufferedImage qrImage = QrCodeUtil.generate(qrContent, 300, 300);
 
-        // 2. 在二维码上添加文字
-        String text = "缴费凭证"; // 你可以替换成 candidateName 或其他文字
-        BufferedImage qrWithText = addTextToQrCenter(qrImage, text);
+        // 2. 转为字节流
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(qrImage, "png", baos);
+        byte[] bytes = baos.toByteArray();
 
-        // 3. 转为字节流并上传
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            ImageIO.write(qrWithText, "png", baos);
-            byte[] bytes = baos.toByteArray();
+        // 3. 封装成 MultipartFile
+        MultipartFile file = new InMemoryMultipartFile(
+                "file",
+                candidateId + ".png",
+                "image/png",
+                bytes
+        );
 
-            MultipartFile file = new InMemoryMultipartFile(
-                    "file",
-                    candidateId + ".png",
-                    "image/png",
-                    bytes
-            );
+        // 4. 上传文件
+        GeneralFileReq req = new GeneralFileReq();
+        req.setType("pic");
 
-            GeneralFileReq fileReq = new GeneralFileReq();
-            fileReq.setType("pic");
+        FileInfoResp resp = uploadService.upload(file, req);
 
-            FileInfoResp fileInfo = uploadService.upload(file, fileReq);
-            return fileInfo.getUrl();
-        }
+        return resp.getUrl();
     }
 
-    /**
-     * 在二维码中央绘制文字
-     */
-    private BufferedImage addTextToQrCenter(BufferedImage qrImage, String text) {
-        int width = qrImage.getWidth();
-        int height = qrImage.getHeight();
-
-        // 创建可编辑图层
-        BufferedImage combined = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = combined.createGraphics();
-
-        // 先画原二维码
-        g2d.drawImage(qrImage, 0, 0, null);
-
-        // 设置文字样式
-        g2d.setColor(Color.BLACK); // 字体颜色，可改为白色或其他
-        g2d.setFont(new Font("微软雅黑", Font.BOLD, 22));
-
-        // 计算文字位置（居中）
-        FontMetrics fm = g2d.getFontMetrics();
-        int textWidth = fm.stringWidth(text);
-        int textHeight = fm.getAscent();
-
-        int x = (width - textWidth) / 2;
-        int y = (height + textHeight) / 2;
-
-        // 绘制文字背景（为了提高识别率）
-        g2d.setColor(new Color(255, 255, 255, 180)); // 半透明白色背景
-        int padding = 4;
-        g2d.fillRoundRect(x - padding, y - textHeight, textWidth + padding * 2, textHeight + padding, 8, 8);
-
-        // 绘制文字
-        g2d.setColor(Color.BLACK);
-        g2d.drawString(text, x, y - 4);
-
-        g2d.dispose();
-        return combined;
-    }
 
 
 

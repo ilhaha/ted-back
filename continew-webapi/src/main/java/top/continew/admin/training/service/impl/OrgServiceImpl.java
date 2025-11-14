@@ -1098,9 +1098,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @return
      */
     @Override
-    public List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId,Integer classType) {
+    public List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId, Integer classType) {
         // 查询原始数据（项目 + 班级）
-        List<OrgProjectClassVO> flatList = baseMapper.getSelectProjectClass(orgId, projectId,classType);
+        List<OrgProjectClassVO> flatList = baseMapper.getSelectProjectClass(orgId, projectId, classType);
 
         // 按项目分组
         Map<Long, ProjectCategoryVO> projectMap = new LinkedHashMap<>();
@@ -1537,6 +1537,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             // 删除数据库已存在身份证，将已存在的移到失败列表
             removeExistingIdCards(successList, failedList, classId);
 
+            // 删除数据库中电话号码与当前身份证导入的手机号不匹配的记录，将已存在的移到失败列表
+            removeMismatchPhoneRecords(successList, failedList);
+
             // 对列表的身份证和手机号进行脱敏
             if (ObjectUtil.isNotEmpty(successList)) {
                 successList.forEach(item -> {
@@ -1687,6 +1690,149 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             }
         }
     }
+
+
+    /**
+     * 移除身份证与手机号绑定不一致的记录（基于 worker_apply 表）
+     * <p>
+     * 逻辑：
+     * - worker_apply 表中若已存在某身份证
+     * - 则该身份证已绑定一个手机号
+     * - 若当前 Excel 上传的手机号与数据库手机号不同
+     * → 判定为手机号冲突
+     */
+
+    private void removeMismatchPhoneRecords(List<ParsedSuccessVO> successList,
+                                            List<ParsedErrorVO> failedList) {
+
+        if (CollUtil.isEmpty(successList)) {
+            return;
+        }
+
+        // 1. 收集所有加密身份证 + 加密手机号
+        List<String> encryptedIdCards = successList.stream()
+                .map(item -> aesWithHMAC.encryptAndSign(item.getIdCardNumber()))
+                .toList();
+
+        List<String> encryptedPhones = successList.stream()
+                .map(item -> aesWithHMAC.encryptAndSign(item.getPhone()))
+                .toList();
+
+        // 2. 查询数据库 —— 身份证
+        List<WorkerApplyDO> existByIdCard = workerApplyMapper.selectList(
+                new LambdaQueryWrapper<WorkerApplyDO>()
+                        .in(WorkerApplyDO::getIdCardNumber, encryptedIdCards)
+        );
+
+        // 3. 查询数据库 —— 手机号
+        List<WorkerApplyDO> existByPhone = workerApplyMapper.selectList(
+                new LambdaQueryWrapper<WorkerApplyDO>()
+                        .in(WorkerApplyDO::getPhone, encryptedPhones)
+        );
+
+        // 4. 构建映射（允许重复 key，保留第一条）
+        Map<String, String> dbIdCardToPhoneMap = existByIdCard.stream()
+                .collect(Collectors.toMap(
+                        WorkerApplyDO::getIdCardNumber,
+                        WorkerApplyDO::getPhone,
+                        (v1, v2) -> v1  // 遇到重复身份证时保留第一条
+                ));
+
+        Map<String, String> dbPhoneToIdCardMap = existByPhone.stream()
+                .collect(Collectors.toMap(
+                        WorkerApplyDO::getPhone,
+                        WorkerApplyDO::getIdCardNumber,
+                        (v1, v2) -> v1  // 遇到重复手机号时保留第一条
+                ));
+
+        // 5. 遍历导入数据
+        Iterator<ParsedSuccessVO> iterator = successList.iterator();
+        while (iterator.hasNext()) {
+            ParsedSuccessVO item = iterator.next();
+
+            String encryptedIdCard = aesWithHMAC.encryptAndSign(item.getIdCardNumber());
+            String encryptedPhone = aesWithHMAC.encryptAndSign(item.getPhone());
+
+            // 校验 1：身份证已绑定但手机号不一致
+            String dbPhone = dbIdCardToPhoneMap.get(encryptedIdCard);
+            if (dbPhone != null && !dbPhone.equals(encryptedPhone)) {
+
+                moveToFailedList(failedList, item,
+                        "该人员已有报名已绑定手机号 "
+                                + maskPhone(aesWithHMAC.verifyAndDecrypt(dbPhone))
+                                + "，与导入手机号不一致");
+
+                iterator.remove();
+                continue;
+            }
+
+            // 校验 2：手机号已被别人绑定
+            String dbIdCard = dbPhoneToIdCardMap.get(encryptedPhone);
+            if (dbIdCard != null && !dbIdCard.equals(encryptedIdCard)) {
+
+                moveToFailedList(failedList, item,
+                        "导入手机号已被其他人员绑定，不能重复使用");
+
+                iterator.remove();
+            }
+        }
+    }
+
+
+    /**
+     * 移动到失败列表的工具方法
+     */
+    private void moveToFailedList(List<ParsedErrorVO> failedList,
+                                  ParsedSuccessVO item,
+                                  String message) {
+        ParsedErrorVO error = new ParsedErrorVO();
+        error.setRowNum(item.getRowNum());
+        error.setExcelName(item.getExcelName());
+        error.setPhone(item.getPhone());
+        error.setErrorMessage(message);
+        failedList.add(error);
+    }
+
+    /**
+     * 手机号脱敏
+     */
+    private String maskPhone(String phone) {
+        return CharSequenceUtil.replaceByCodePoint(phone, 3, phone.length() - 4, '*');
+    }
+
+
+//    // 2. 查询数据库中已存在的身份证 -> 手机号
+//    List<UserDO> userDOS = userMapper.selectList(
+//            new LambdaQueryWrapper<UserDO>()
+//                    .in(UserDO::getUsername, idCards)
+//    );
+//        if (CollUtil.isEmpty(userDOS)) {
+//        return; // 数据库没有匹配身份证，不做处理
+//    }
+//
+//    // 3. 构建身份证 -> 数据库手机号 map
+//    Map<String, String> dbIdCardToPhoneMap = userDOS.stream()
+//            .collect(Collectors.toMap(UserDO::getUsername, UserDO::getPhone));
+//    // 4. 检查是否手机号不一致
+//    Iterator<ParsedSuccessVO> iterator = successList.iterator();
+//        while (iterator.hasNext()) {
+//        ParsedSuccessVO item = iterator.next();
+//        String idCard = aesWithHMAC.encryptAndSign(item.getIdCardNumber());
+//        String importPhone = aesWithHMAC.encryptAndSign(item.getPhone());
+//
+//        String dbPhone = dbIdCardToPhoneMap.get(idCard);
+//        if (dbPhone != null && !dbPhone.equals(importPhone)) {
+//            // 移到失败列表
+//            ParsedErrorVO error = new ParsedErrorVO();
+//            error.setRowNum(item.getRowNum());
+//            error.setPhone(item.getPhone());
+//            String dbPhoneVerify = aesWithHMAC.verifyAndDecrypt(dbPhone);
+//            error.setErrorMessage("已绑定" + CharSequenceUtil.replaceByCodePoint(dbPhoneVerify, 3, dbPhoneVerify.length() - 4, '*') + "手机号，与导入手机号不一致");
+//            error.setExcelName(item.getExcelName());
+//            failedList.add(error);
+//            iterator.remove();
+//        }
+//    }
 
 
     /**
