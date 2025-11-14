@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -24,6 +25,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
+import net.dreamlu.mica.core.utils.ObjectUtil;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.*;
 
@@ -33,6 +35,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.PlanConstant;
+import top.continew.admin.common.constant.enums.ExamPlanTypeEnum;
+import top.continew.admin.common.constant.enums.PaymentAuditStatusEnum;
+import top.continew.admin.common.constant.enums.PlanFinalConfirmedStatus;
+import top.continew.admin.common.constant.enums.SpecialCertificationApplicantAuditStatusEnum;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.DateUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -105,6 +111,9 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Resource
     private ExamineePaymentAuditMapper examineePaymentAuditMapper;
 
+    @Resource
+    private ExamPlanClassroomMapper examPlanClassroomMapper;
+
     @Override
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
         QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(query);
@@ -124,6 +133,14 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Override
     public ExamPlanDetailResp get(Long id) {
         ExamPlanDetailResp examPlanDetailResp = baseMapper.selectDetailById(id);
+        ValidationUtils.throwIfNull(examPlanDetailResp,"未查询到考试计划信息");
+        // 查询计划对应的考场信息
+        LambdaQueryWrapper<ExamPlanClassroomDO> examPlanClassroomDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        examPlanClassroomDOLambdaQueryWrapper.eq(ExamPlanClassroomDO::getPlanId,id).select(ExamPlanClassroomDO::getClassroomId);
+        List<ExamPlanClassroomDO> examPlanClassroomDOS = examPlanClassroomMapper.selectList(examPlanClassroomDOLambdaQueryWrapper);
+        if (ObjectUtil.isNotEmpty(examPlanClassroomDOS)) {
+            examPlanDetailResp.setClassroomId(examPlanClassroomDOS.stream().map(ExamPlanClassroomDO::getClassroomId).collect(Collectors.toList()));
+        }
         this.fill(examPlanDetailResp);
         return examPlanDetailResp;
     }
@@ -544,12 +561,13 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
     /**
      * 机构获取符合自身八大类的考试计划
+     *
      * @param pageQuery
      * @param examPlanQuery
      * @return
      */
     @Override
-    public PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery,PageQuery pageQuery) {
+    public PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery, PageQuery pageQuery) {
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(examPlanQuery);
         queryWrapper.eq("tep.is_deleted", 0);
@@ -567,6 +585,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
     /**
      * 解析日期
+     *
      * @param text
      * @param fieldName
      * @param rowNum
@@ -577,7 +596,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         try {
             return LocalDateTime.parse(text.trim(), formatter);
         } catch (DateTimeParseException e) {
-            throw new BusinessException("第" + rowNum + "行：" + fieldName +" [ "+ text + " ] 日期错误");
+            throw new BusinessException("第" + rowNum + "行：" + fieldName + " [ " + text + " ] 日期错误");
         }
     }
 
@@ -590,46 +609,76 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         return cell.getStringCellValue().trim();
     }
 
-
+    /**
+     * 重新update
+     *
+     * @param req
+     * @param id
+     */
     @Override
     public void update(ExamPlanReq req, Long id) {
+        // 1. 查询考试计划
+        ExamPlanDO examPlanDO = baseMapper.selectById(id);
+        ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划");
+
+        // 2. 解析报名时间段
         List<String> enrollList = req.getEnrollList();
+        if (CollUtil.isEmpty(enrollList) || enrollList.size() < 2) {
+            ValidationUtils.validate("报名时间列表不完整");
+        }
         req.setEnrollStartTime(DateUtil.parse(enrollList.get(0)));
         req.setEnrollEndTime(DateUtil.parse(enrollList.get(1)));
+
+        // 校验报名结束时间不能晚于考试开始时间
+        ValidationUtils.throwIf(!DateUtil.validateEnrollmentTime(req.getEnrollEndTime(), req.getStartTime()),
+                "报名结束时间不能晚于考试开始时间");
+
+        // 3. 校验最终确定考试时间及地点状态
+        ValidationUtils.throwIf(
+                PlanFinalConfirmedStatus.CONFIRMED.getValue().equals(req.getIsFinalConfirmed()),
+                "最终确定考试时间及地点已确认"
+        );
+
+        // 4. 如果是巡检类型，校验报名人员是否全部审核通过
+        if (ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType())) {
+            long pendingCount = specialCertificationApplicantMapper.selectCount(
+                    new LambdaQueryWrapper<SpecialCertificationApplicantDO>()
+                            .eq(SpecialCertificationApplicantDO::getPlanId, id)
+                            .notIn(SpecialCertificationApplicantDO::getStatus,
+                                    Arrays.asList(
+                                            SpecialCertificationApplicantAuditStatusEnum.APPROVED.getValue(),
+                                            SpecialCertificationApplicantAuditStatusEnum.FAKE_MATERIAL.getValue()
+                                    ))
+            );
+            ValidationUtils.throwIf(pendingCount > 0,
+                    "存在未审核考试报名申请，请审核后再确认考试时间或地点");
+        }
+
+        // 5. 校验考试人员缴费状态
+        long unpaidCount = examineePaymentAuditMapper.selectCount(
+                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId, id)
+                        .notIn(ExamineePaymentAuditDO::getAuditStatus,
+                                Arrays.asList(
+                                        PaymentAuditStatusEnum.APPROVED.getValue(),
+                                        PaymentAuditStatusEnum.REFUNDED.getValue()
+                                ))
+        );
+        ValidationUtils.throwIf(unpaidCount > 0,
+                "存在考试人员未提交缴费通知单或审核未通过，请到考生缴费审核管理完成审核");
+
+        // 6. 计算考试结束时间
         ProjectDO projectDO = projectMapper.selectById(req.getExamProjectId());
+        ValidationUtils.throwIfNull(projectDO, "未查询到考试项目");
+
         req.setStartTime(req.getStartTime());
         req.setEndTime(req.getStartTime().plusMinutes(projectDO.getExamDuration()));
-        if (!DateUtil.validateEnrollmentTime(req.getEnrollEndTime(), req.getStartTime()))
-            ValidationUtils.validate("报名结束时间不能晚于考试开始时间");
+        req.setIsFinalConfirmed(PlanFinalConfirmedStatus.CONFIRMED.getValue());
 
-        //判定最终确定考试时间以及地点状态
-        if (req.getIsFinalConfirmed() == null || req.getIsFinalConfirmed() == 1) {
-            throw new BusinessException("最终确定考试时间以及地点状态已确认");
-        }
-        //判断该考试计划申请考试人员是否已全部审核通过
-        SpecialCertificationApplicantDO specialCertificationApplicantDO = specialCertificationApplicantMapper.selectOne(
-                new LambdaQueryWrapper<SpecialCertificationApplicantDO>()
-                        .eq(SpecialCertificationApplicantDO::getPlanId,id)
-                        .eq(SpecialCertificationApplicantDO::getIsDeleted,false)
-                        .select(SpecialCertificationApplicantDO::getStatus)
-        );
-        ValidationUtils.throwIfNull(specialCertificationApplicantDO, "未找到考生申请该考试计划，请确认是否有人申请考试本计划");
-        ValidationUtils.throwIf(!Objects.equals(specialCertificationApplicantDO.getStatus(), 1),
-                "存在未审核考试报名申请，请审核后再确认考试时间或地址");
-
-        //判断该考试计划申请考试人员是否缴费审核通过
-        ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper.selectOne(
-                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                        .eq(ExamineePaymentAuditDO::getExamPlanId,id)
-                        .eq(ExamineePaymentAuditDO::getIsDeleted,false)
-                        .select(ExamineePaymentAuditDO::getAuditStatus)
-        );
-        ValidationUtils.throwIfNull(examineePaymentAuditDO, "存在考试人员未提交缴费通知单或是审核未通过，请到考生审核缴费管理审核完成");
-        ValidationUtils.throwIf(!Objects.equals(examineePaymentAuditDO.getAuditStatus(), 2),
-                "存在考试人员未提交缴费通知单或是审核未通过，请到考生审核缴费管理审核完成");
-        req.setIsFinalConfirmed(1);
+        // 7. 执行更新
         super.update(req, id);
     }
+
 
     @Transactional
     @Override

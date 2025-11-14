@@ -327,7 +327,7 @@ public class CaptchaController {
                     .anyMatch(apply -> encryptPhone.equals(apply.getPhone()));
             ValidationUtils.throwIf(
                     !match,
-                    "该手机号与身份证信息不匹配，请使用报名时绑定的手机号"
+                    "该身份证对应的报名信息已绑定手机号，当前填写的手机号不一致"
             );
         }
 

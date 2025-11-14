@@ -17,6 +17,7 @@
 package top.continew.admin.exam.model.resp;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,6 +29,7 @@ import top.continew.admin.common.model.resp.BaseDetailResp;
 
 import java.io.Serial;
 import java.time.*;
+import java.util.List;
 
 /**
  * 考试计划详情信息
@@ -189,6 +191,13 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     @Schema(description = "考试费用")
     @ExcelProperty(value = "考试费用")
     private Long examFee;
+
+    /**
+     * 考场id列表
+     */
+    @Schema(description = "考场ID列表")
+    @ExcelProperty(value = "考场ID列表")
+    private List<Long> classroomId;
 
     //    /**
     //     * 描述
