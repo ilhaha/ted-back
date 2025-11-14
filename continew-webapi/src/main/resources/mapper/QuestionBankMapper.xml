@@ -9,6 +9,7 @@
             t4.`name` AS knowledge_type_name,
             t1.question_type,
             t1.question,
+            t1.exam_type,
             t1.attachment,
             t1.create_user,
             t1.update_user,
@@ -39,6 +40,7 @@
             t1.category_id,
             t1.sub_category_id,
             t1.knowledge_type_id,
+            t1.exam_type,
             t2.name AS category_name,
             t3.project_name AS project_name,
             t4.name AS knowledge_type_name

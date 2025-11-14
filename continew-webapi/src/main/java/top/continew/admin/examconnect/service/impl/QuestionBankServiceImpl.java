@@ -163,6 +163,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             String[] headers = {
                     "题目标题",
                     "题目类型（0单选，1判断，2多选）",
+                    "考试类型（0-未指定，1-作业人员考试，2-无损/有损检验人员考试）",
                     "选项A", "是否正确答案",
                     "选项B", "是否正确答案",
                     "选项C", "是否正确答案",
@@ -191,8 +192,8 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             statsStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 
             // 合并单元格，让统计信息跨列显示（更美观）
-            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 1)); // 合并“题目标题”“题目类型”列
-            sheet.addMergedRegion(new CellRangeAddress(1, 1, 2, 9)); // 合并“选项A-选项D”列
+            sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 1)); // 保持不变：合并“题目标题”“题目类型”列
+            sheet.addMergedRegion(new CellRangeAddress(1, 1, 2, 10)); // 合并“考试类型”+“所有选项列”
 
             XSSFCell statsCell = statsRow.createCell(0);
             statsCell.setCellValue(
@@ -207,16 +208,17 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             int rowIndex = 2;
             for (QuestionBankResp q : questions) {
                 XSSFRow row = sheet.createRow(rowIndex++);
-                row.createCell(0).setCellValue(q.getQuestion());
-                row.createCell(1).setCellValue(q.getQuestionType());
+                row.createCell(0).setCellValue(q.getQuestion()); // 题目标题（列0）
+                row.createCell(1).setCellValue(q.getQuestionType()); // 题目类型（列1）
+                row.createCell(2).setCellValue(q.getExamType() != null ? q.getExamType() : 0);
 
-                // 选项填充（最多四个）
+                // 选项填充
                 List<OptionDTO> opts = q.getOptions();
                 if (opts != null && !opts.isEmpty()) {
                     for (int j = 0; j < opts.size() && j < 4; j++) {
                         OptionDTO opt = opts.get(j);
-                        row.createCell(2 + j * 2).setCellValue(opt.getQuestion());
-                        row.createCell(3 + j * 2).setCellValue(opt.getIsCorrect() ? "是" : "否");
+                        row.createCell(3 + j * 2).setCellValue(opt.getQuestion()); // 选项内容（列3、5、7、9）
+                        row.createCell(4 + j * 2).setCellValue(opt.getIsCorrect() ? "是" : "否"); // 是否正确（列4、6、8、10）
                     }
                 }
             }
@@ -487,6 +489,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         questionBankDO.setCategoryId(categoryIds.get(0));
         questionBankDO.setSubCategoryId(categoryIds.get(1));
         questionBankDO.setKnowledgeTypeId(categoryIds.get(2));
+        questionBankDO.setExamType(req.getExamType());
         questionBankDO.setAttachment(req.getImageUrl());
         questionBankDO.setCreateUser(userId);
         questionBankDO.setUpdateTime(LocalDateTime.now());
@@ -529,6 +532,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         questionBankDO.setQuestionType(req.getQuestionType());
         List<Long> categoryIds = req.getCategoryId();
         ValidationUtils.throwIf(categoryIds.size() != 3, "请选择正确的分类");
+        questionBankDO.setExamType(req.getExamType());
         questionBankDO.setCategoryId(categoryIds.get(0));
         questionBankDO.setSubCategoryId(categoryIds.get(1));
         questionBankDO.setKnowledgeTypeId(categoryIds.get(2));

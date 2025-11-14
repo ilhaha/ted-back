@@ -34,5 +34,11 @@ public class QuestionDTO {
      * 题目类型
      */
     private int questionType;
+
+    /**
+     * 考试类型
+     */
+    private Long examType;
+
     private List<OptionDTO> options;
 }

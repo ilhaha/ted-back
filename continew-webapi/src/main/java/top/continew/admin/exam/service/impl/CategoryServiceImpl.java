@@ -309,6 +309,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             questionBankDO.setQuestionType(item.getQuestionType());
             questionBankDO.setQuestion(item.getTitle());
             questionBankDO.setOptions(item.getOptions());
+            questionBankDO.setExamType(item.getExamType());
             return questionBankDO;
         }).collect(Collectors.toList());
 
@@ -367,13 +368,15 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
                 // 解析基础信息
                 question.setTitle(parseRequiredString(row.getCell(0), "题目标题", rowIdx));
                 question.setQuestionType(parseQuestionType(row.getCell(1), rowIdx));
+                Cell examTypeCell = row.getCell(2);
+                question.setExamType(parseExamType(examTypeCell, rowIdx));
 
                 // 动态解析选项和答案
                 parseDynamicOptions(row, question, rowIdx);
 
                 questions.add(question);
             } catch (BusinessException e) {
-                throw new BusinessException("第" + (rowIdx + 1) + "行数据错误：" + e.getMessage());
+                throw new BusinessException("第" + (rowIdx + 1) + "列数据错误：" + e.getMessage());
             }
         }
         return questions;
@@ -382,7 +385,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     // 动态解析选项方法
     private void parseDynamicOptions(Row row, QuestionDTO question, int rowIdx) {
         List<OptionDTO> options = new ArrayList<>();
-        int colIdx = 2; // 从第三列开始解析选项
+        int colIdx = 3; // 从第四列开始解析选项
 
         while (colIdx < row.getLastCellNum()) {
             Cell optionCell = row.getCell(colIdx);
@@ -418,6 +421,77 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         validateOptionsByType(question.getQuestionType(), options, rowIdx);
         question.setOptions(options);
     }
+
+    //解析考试类型
+    public static Long parseExamType(Cell cell, int rowIdx) {
+        // 1. 校验单元格是否为空
+        if (cell == null || cell.getCellType() == CellType.BLANK) {
+            throw new BusinessException(String.format("第%d列【考试类型】字段不能为空", rowIdx));
+        }
+
+        Integer examTypeCode = null;
+        try {
+            // 2. 按数字解析（优先：Excel填0/1/2直接识别）
+            if (cell.getCellType() == CellType.NUMERIC) {
+                // 数字转int（避免小数，比如填2.0会转为2）
+                int code = (int) Math.round(cell.getNumericCellValue());
+                // 校验数字是否在合法范围内（0/1/2）
+                if (code == 0 || code == 1 || code == 2) {
+                    examTypeCode = code;
+                }
+            }
+            // 3. 按文字解析（兼容Excel填中文的场景）
+            else if (cell.getCellType() == CellType.STRING) {
+                String desc = cell.getStringCellValue().trim();
+                // 文字与编码的映射（匹配规则：包含关键词即可）
+                if (desc.contains("未指定")) {
+                    examTypeCode = 0;
+                } else if (desc.contains("作业人员")) {
+                    examTypeCode = 1;
+                } else if (desc.contains("无损") || desc.contains("有损") || desc.contains("检验")) {
+                    examTypeCode = 2;
+                }
+            }
+
+            // 4. 校验解析结果是否合法
+            if (examTypeCode == null) {
+                String cellValue = getCellOriginalValue(cell);
+                throw new BusinessException(
+                        String.format("第%d行【考试类型】值不合法：%s。允许值：\n数字：0(未指定)、1(作业人员考试)、2(无损/有损检验人员考试)\n文字：未指定、作业人员考试、无损/有损检验",
+                                rowIdx, cellValue)
+                );
+            }
+
+            // 5. 转为Long类型返回（匹配后端实体类的Long字段）
+            return examTypeCode.longValue();
+
+        } catch (Exception e) {
+            // 6. 统一捕获异常，封装报错信息
+            String cellValue = getCellOriginalValue(cell);
+            throw new BusinessException(
+                    String.format("第%d行【考试类型】解析失败：%s。原因：%s",
+                            rowIdx, cellValue, e.getMessage()), e
+            );
+        }
+    }
+
+    /**
+     * 辅助方法：获取单元格原始值（用于报错提示）
+     */
+    private static String getCellOriginalValue(Cell cell) {
+        if (cell == null) return "";
+        switch (cell.getCellType()) {
+            case NUMERIC:
+                return String.valueOf(cell.getNumericCellValue());
+            case STRING:
+                return cell.getStringCellValue().trim();
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            default:
+                return "不支持的单元格类型（仅支持数字/文字）";
+        }
+    }
+
 
     // 答案标记解析
     private boolean parseAnswerFlag(String flag, int rowIdx, int colIdx) {

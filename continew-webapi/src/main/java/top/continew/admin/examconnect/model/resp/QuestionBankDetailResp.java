@@ -66,6 +66,14 @@ public class QuestionBankDetailResp extends BaseDetailResp {
     private Long subCategoryId;
 
     /**
+     * 考试类型（0-未指定，1-作业人员考试，2-无损/有损检验人员考试，可后续扩展）
+     */
+    @Schema(description = "考试类型")
+    @ExcelProperty(value = "考试类型")
+    private Long examType;
+
+
+    /**
      * 知识类型ID
      */
     @Schema(description = "知识类型ID")

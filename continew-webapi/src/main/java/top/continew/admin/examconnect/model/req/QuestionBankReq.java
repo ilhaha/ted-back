@@ -66,6 +66,14 @@ public class QuestionBankReq implements Serializable {
     @Schema(description = "题目")
     private String question;
 
+
+    /**
+     * 考试类型（0-未指定，1-作业人员考试，2-无损/有损检验人员考试，可后续扩展）
+     */
+    @NotNull(message = "考试类型不能为空")
+    @Schema(description = "考试类型")
+    private Long examType;
+
     /**
      * 题目类型
      * 0~3
