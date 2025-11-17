@@ -129,7 +129,7 @@ public class OrgDetailResp extends BaseDetailResp {
     /**
      * 机构用户电话
      */
-    @FieldEncrypt
+//    @FieldEncrypt
     @Schema(description = "机构用户电话")
     private String phone;
 }

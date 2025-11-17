@@ -187,7 +187,7 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
     List<InvigilatorVO> listInvigilatorsByPlanId(@Param(Constants.WRAPPER) QueryWrapper<UserDO> queryWrapper);
 
     @Select("select * from sys_user where phone = #{ phone }")
-    UserDO getUserByPhone(@FieldEncrypt @Param("phone") String phone);
+    UserDO getUserByPhone(@Param("phone") String phone);
 
     IPage<UserResp> getStudentList(@Param("page") Page<UserDO> page,
                                    @Param(Constants.WRAPPER) QueryWrapper<UserDO> queryWrapper);
