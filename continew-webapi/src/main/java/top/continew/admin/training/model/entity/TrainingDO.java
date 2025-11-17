@@ -69,10 +69,10 @@ public class TrainingDO extends BaseDO {
     //     */
     //    private String expertName;
 
-    /**
-     * 费用
-     */
-    private BigDecimal fee;
+//    /**
+//     * 费用
+//     */
+//    private BigDecimal fee;
 
     /**
      * 培训描述

@@ -67,11 +67,11 @@ public class TrainingResp extends BaseResp {
     @Schema(description = "专家名字")
     private String expertName;
 
-    /**
-     * 费用
-     */
-    @Schema(description = "费用")
-    private BigDecimal fee;
+//    /**
+//     * 费用
+//     */
+//    @Schema(description = "费用")
+//    private BigDecimal fee;
 
     /**
      * 培训描述

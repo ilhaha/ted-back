@@ -365,9 +365,12 @@ excel:
 qrcode:
   worker:
     upload:
-      # 作业人员上传报考资料URL
       apply-doc:
         url: http://192.168.1.178:5173/worker/apply/upload
-      # 作业人员上传缴费凭证
       payment-voucher:
         url: http://192.168.1.178:5174/worker/payment-voucher/upload
+
+  training:
+    checkin:
+      # 培训签到二维码页面 URL
+      url: http://192.168.1.117:5174/h5/checkin

@@ -40,20 +40,27 @@ public class UserInfoAdvice {
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
-    private String[] PREFIX_FILTER_URI = {"/auth/", "/code/generator/", "/system/message/", "/common/"};
+    private String[] PREFIX_FILTER_URI = {
+            "/auth/",
+            "/code/generator/",
+            "/system/message/",
+            "/common/",
+            "/training/trainingCheckin/do"
+    };
 
     @ModelAttribute
     public void logRequest(HttpServletRequest request) {
-        // 前缀过滤
         String requestURI = request.getRequestURI();
-        for (String prefix : PREFIX_FILTER_URI)
-            if (requestURI.startsWith(prefix))
-                return;
 
-        log.info("收到请求, 存放用户信息: {} {}", request.getMethod(), requestURI);
+        for (String prefix : PREFIX_FILTER_URI) {
+            if (requestURI.contains(prefix)) {
+                return;
+            }
+        }
+
+        // 需要登录的接口正常获取 TokenLocalThread 信息
         String key = RedisConstant.USER_TOKEN + StpUtil.getTokenValue();
-        UserTokenDo userInfo = (UserTokenDo)redisTemplate.opsForValue().get(key);
-        // 将用户信息存入ThreadLocal中
+        UserTokenDo userInfo = (UserTokenDo) redisTemplate.opsForValue().get(key);
         TokenLocalThreadUtil.set(userInfo);
     }
 

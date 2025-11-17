@@ -71,12 +71,12 @@ public class TrainingReq implements Serializable {
     //    @NotBlank(message = "专家名字不能为空")
     private String expertName;
 
-    /**
-     * 费用
-     */
-    @Schema(description = "费用")
-    @NotNull(message = "专家费用不能为空")
-    private BigDecimal fee;
+//    /**
+//     * 费用
+//     */
+//    @Schema(description = "费用")
+//    @NotNull(message = "专家费用不能为空")
+//    private BigDecimal fee;
 
     /**
      * 培训描述

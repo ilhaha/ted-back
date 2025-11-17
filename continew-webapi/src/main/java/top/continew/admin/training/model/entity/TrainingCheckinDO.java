@@ -55,5 +55,5 @@ public class TrainingCheckinDO extends BaseDO {
     /**
      * 1：正常签到 2: 过期二维码 3：伪造二维码
      */
-    private Boolean status;
+    private Integer status;
 }

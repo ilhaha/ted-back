@@ -1,5 +1,10 @@
 package top.continew.admin.training.controller;
+import cn.dev33.satoken.annotation.SaIgnore;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
+import org.springframework.beans.factory.annotation.Autowired;
+import top.continew.admin.training.model.dto.CheckinRequest;
+import top.continew.admin.util.SignUtil;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +19,8 @@ import top.continew.admin.training.model.resp.TrainingCheckinDetailResp;
 import top.continew.admin.training.model.resp.TrainingCheckinResp;
 import top.continew.admin.training.service.TrainingCheckinService;
 
+import java.util.Map;
+
 /**
  * 培训签到记录管理 API
  *
@@ -23,4 +30,39 @@ import top.continew.admin.training.service.TrainingCheckinService;
 @Tag(name = "培训签到记录管理 API")
 @RestController
 @CrudRequestMapping(value = "/training/trainingCheckin", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE, Api.EXPORT})
-public class TrainingCheckinController extends BaseController<TrainingCheckinService, TrainingCheckinResp, TrainingCheckinDetailResp, TrainingCheckinQuery, TrainingCheckinReq> {}
+public class TrainingCheckinController extends BaseController<TrainingCheckinService, TrainingCheckinResp, TrainingCheckinDetailResp, TrainingCheckinQuery, TrainingCheckinReq> {
+
+
+    @Autowired
+    private TrainingCheckinService trainingCheckinService;
+
+    /**
+     * 生成签到二维码地址
+     */
+    @GetMapping("/qrcode")
+    public Object generateQRCode(@RequestParam Long trainingId) {
+
+        String url = trainingCheckinService.generateQRCode(trainingId);
+
+        return Map.of("url", url);
+    }
+
+    /**
+     * H5 签到
+     */
+    @SaIgnore
+    @PostMapping("/do")
+    public Object doCheckin(@RequestBody CheckinRequest req) {
+        boolean ok = trainingCheckinService.doCheckin(
+                req.getRealName(),
+                req.getIdCard(),
+                req.getTrainingId(),
+                req.getOrgId(),
+                req.getTs(),
+                req.getSign()
+        );
+
+        return Map.of("success", ok, "msg", "签到成功");
+    }
+
+}

@@ -12,4 +12,8 @@ import top.continew.admin.training.model.resp.TrainingCheckinResp;
  * @author ilhaha
  * @since 2025/11/17 11:31
  */
-public interface TrainingCheckinService extends BaseService<TrainingCheckinResp, TrainingCheckinDetailResp, TrainingCheckinQuery, TrainingCheckinReq> {}
+public interface TrainingCheckinService extends BaseService<TrainingCheckinResp, TrainingCheckinDetailResp, TrainingCheckinQuery, TrainingCheckinReq> {
+    String generateQRCode(Long trainingId);
+
+    boolean doCheckin(String realName, String idCard, Long trainingId, Long orgId, Long ts, String sign);
+}

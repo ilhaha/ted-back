@@ -907,7 +907,7 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
             .title(req.getTitle())
             .description(req.getDescription())
             .expertId(expertDO.getId())
-            .fee(req.getFee())
+//            .fee(req.getFee())
             .coverPath(req.getCoverPath())
             .build();
         trainingMapper.insert(trainingDO);

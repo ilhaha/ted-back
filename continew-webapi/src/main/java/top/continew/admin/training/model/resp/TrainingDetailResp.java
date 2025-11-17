@@ -75,12 +75,12 @@ public class TrainingDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "专家名字")
     private String expertName;
 
-    /**
-     * 费用
-     */
-    @Schema(description = "费用")
-    @ExcelProperty(value = "费用")
-    private BigDecimal fee;
+//    /**
+//     * 费用
+//     */
+//    @Schema(description = "费用")
+//    @ExcelProperty(value = "费用")
+//    private BigDecimal fee;
 
     /**
      * 专家费用
