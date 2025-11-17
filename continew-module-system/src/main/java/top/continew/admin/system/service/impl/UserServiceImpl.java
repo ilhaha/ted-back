@@ -24,10 +24,7 @@ import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.io.resource.ResourceUtil;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.map.MapUtil;
-import cn.hutool.core.util.CharsetUtil;
-import cn.hutool.core.util.EnumUtil;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.util.*;
 import cn.hutool.extra.validation.ValidationUtil;
 import cn.hutool.http.ContentType;
 import cn.hutool.json.JSONUtil;
@@ -179,6 +176,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         CheckUtils.throwIf(StrUtil.isNotBlank(email) && this.isEmailExists(email, null), errorMsgTemplate, email);
         // 获取手机号
         String phone = req.getPhone();
+        boolean match = ReUtil.isMatch("^1[3-9]\\d{9}$", phone);
+        CheckUtils.throwIf(!match, "手机号格式不正确: [{}]", phone);
         // 如果手机号已存在，则抛出异常
         CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(phone, null), errorMsgTemplate, phone);
     }
@@ -201,6 +200,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         String email = req.getEmail();
         CheckUtils.throwIf(StrUtil.isNotBlank(email) && this.isEmailExists(email, id), errorMsgTemplate, email);
         String phone = req.getPhone();
+        boolean match = ReUtil.isMatch("^1[3-9]\\d{9}$", phone);
+        CheckUtils.throwIf(!match, "手机号格式不正确: [{}]", phone);
         CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(phone, id), errorMsgTemplate, phone);
         DisEnableStatusEnum newStatus = req.getStatus();
         CheckUtils.throwIf(DisEnableStatusEnum.DISABLE.equals(newStatus) && ObjectUtil.equal(id, UserContextHolder

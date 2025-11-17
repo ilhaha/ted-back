@@ -109,6 +109,7 @@
         </foreach>
         AND #{startTime} &lt; DATE_SUB(tep.end_time, INTERVAL 30 MINUTE)
         AND #{endTime} &gt; DATE_ADD(tep.start_time, INTERVAL 30 MINUTE)
+        AND tep.id != #{planId}
     </select>
     <select id="getPlanLocationIdsById" resultType="java.lang.Long">
         SELECT DISTINCT tlc.location_id

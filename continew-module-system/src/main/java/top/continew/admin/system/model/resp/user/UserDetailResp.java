@@ -121,7 +121,7 @@ public class UserDetailResp extends BaseDetailResp {
      */
     @Schema(description = "手机号码", example = "13811111111")
     @ExcelProperty(value = "手机号码", order = 10)
-    @FieldEncrypt
+//    @FieldEncrypt
     private String phone;
 
     /**

@@ -16,6 +16,8 @@
 
 package top.continew.admin.exam.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -24,6 +26,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
+import net.dreamlu.mica.core.utils.ObjectUtil;
 import org.springframework.beans.BeanUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -32,26 +35,23 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import top.continew.admin.exam.mapper.ExamPlanClassroomMapper;
-import top.continew.admin.exam.mapper.ExamPlanMapper;
-import top.continew.admin.exam.mapper.LocationClassroomMapper;
+import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
+import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
-import top.continew.admin.exam.model.entity.ExamPlanClassroomDO;
-import top.continew.admin.exam.model.entity.ExamPlanDO;
-import top.continew.admin.exam.model.entity.LocationClassroomDO;
+import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.service.ExamPlanService;
 import top.continew.starter.core.exception.BusinessException;
+import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
-import top.continew.admin.exam.mapper.ClassroomMapper;
-import top.continew.admin.exam.model.entity.ClassroomDO;
 import top.continew.admin.exam.model.query.ClassroomQuery;
 import top.continew.admin.exam.model.req.ClassroomReq;
 import top.continew.admin.exam.service.ClassroomService;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -82,6 +82,8 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
 
     @Resource
     private ExamPlanMapper examPlanMapper;
+
+    private final PlanClassroomMapper planClassroomMapper;
 
 
     @Override
@@ -131,18 +133,46 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
         wrapper.in("classroom_id", ids);
         locationClassroomMapper.delete(wrapper);
     }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(ClassroomReq req, Long id) {
-        // 查询旧考场
+        // 1. 查询旧考场
         ClassroomDO oldClassroom = classroomMapper.selectById(id);
-        if (oldClassroom == null) {
-            throw new BusinessException("未找到对应的考场记录");
-        }
-
+        ValidationUtils.throwIfNull(oldClassroom, "未找到对应的考场记录");
 
         Long oldMax = Optional.ofNullable(oldClassroom.getMaxCandidates()).orElse(0L);
         Long newMax = Optional.ofNullable(req.getMaxCandidates()).orElse(0L);
+
+        // 2. 如果新容量 < 旧容量，需要校验是否已被确认考试计划占用
+        if (newMax < oldMax) {
+
+            // 查该考场绑定了哪些考试计划
+            List<Long> planIds = planClassroomMapper.selectList(
+                            new LambdaQueryWrapper<PlancalssroomDO>()
+                                    .select(PlancalssroomDO::getPlanId)
+                                    .eq(PlancalssroomDO::getClassroomId, id)
+                    )
+                    .stream()
+                    .map(PlancalssroomDO::getPlanId)
+                    .toList();
+
+            if (CollUtil.isNotEmpty(planIds)) {
+
+                // 查是否有已确认考试的计划
+                boolean hasConfirmed = examPlanMapper.exists(
+                        new LambdaQueryWrapper<ExamPlanDO>()
+                                .in(ExamPlanDO::getId, planIds)
+                                .eq(ExamPlanDO::getStatus, ExamPlanStatusEnum.IN_FORCE.getValue())
+                );
+
+                ValidationUtils.throwIf(
+                        hasConfirmed,
+                        "该考场已有已确认的考试计划，容量不能设置得小于原容量：" + oldMax
+                );
+            }
+        }
+
         boolean capacityChanged = !newMax.equals(oldMax);
 
         //  若容量变化则批量更新 plan

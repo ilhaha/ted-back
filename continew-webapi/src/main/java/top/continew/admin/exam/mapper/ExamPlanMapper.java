@@ -24,7 +24,6 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.entity.UserNamesDO;
-import top.continew.admin.exam.model.resp.EnrollStatusResp;
 import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -70,7 +69,8 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
     @Select("select id,nickname from sys_user")
     List<UserNamesDO> selectUserNames();
 
-    Integer hasClassroomTimeConflict(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime, @Param("classroomId") List<Long> classroomId);
+    Integer hasClassroomTimeConflict(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime,
+                                     @Param("classroomId") List<Long> classroomId, @Param("planId") Long planId);
 
     List<Long> getPlanLocationIdsById(@Param("planIds") List<Long> planIds);
 

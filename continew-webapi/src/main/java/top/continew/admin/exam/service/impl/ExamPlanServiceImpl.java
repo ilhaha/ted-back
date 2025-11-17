@@ -114,6 +114,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Resource
     private ExamPlanClassroomMapper examPlanClassroomMapper;
 
+
     @Override
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
         QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(query);
@@ -133,10 +134,10 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Override
     public ExamPlanDetailResp get(Long id) {
         ExamPlanDetailResp examPlanDetailResp = baseMapper.selectDetailById(id);
-        ValidationUtils.throwIfNull(examPlanDetailResp,"未查询到考试计划信息");
+        ValidationUtils.throwIfNull(examPlanDetailResp, "未查询到考试计划信息");
         // 查询计划对应的考场信息
         LambdaQueryWrapper<ExamPlanClassroomDO> examPlanClassroomDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        examPlanClassroomDOLambdaQueryWrapper.eq(ExamPlanClassroomDO::getPlanId,id).select(ExamPlanClassroomDO::getClassroomId);
+        examPlanClassroomDOLambdaQueryWrapper.eq(ExamPlanClassroomDO::getPlanId, id).select(ExamPlanClassroomDO::getClassroomId);
         List<ExamPlanClassroomDO> examPlanClassroomDOS = examPlanClassroomMapper.selectList(examPlanClassroomDOLambdaQueryWrapper);
         if (ObjectUtil.isNotEmpty(examPlanClassroomDOS)) {
             examPlanDetailResp.setClassroomId(examPlanClassroomDOS.stream().map(ExamPlanClassroomDO::getClassroomId).collect(Collectors.toList()));
@@ -159,7 +160,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         // 判断计划考试时间对应的考场是否空闲
         ValidationUtils.throwIf(hasClassroomTimeConflict(examPlanDO.getStartTime(),
                         examPlanDO.getEndTime(),
-                        examPlanSaveReq.getClassroomId()) > 0,
+                        examPlanSaveReq.getClassroomId(),null) > 0,
                 "所选考场在所选时间段前后30分钟内已有考试计划，请调整考试时间或更换考场。");
         BeanUtils.copyProperties(examPlanSaveReq, examPlanDO);
         //填充最大人数字段 根据考场id获取最大人数
@@ -182,8 +183,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
      * @param classroomId
      * @return
      */
-    private Integer hasClassroomTimeConflict(LocalDateTime startTime, LocalDateTime endTime, List<Long> classroomId) {
-        return baseMapper.hasClassroomTimeConflict(startTime, endTime, classroomId);
+    private Integer hasClassroomTimeConflict(LocalDateTime startTime, LocalDateTime endTime, List<Long> classroomId,Long planId) {
+        return baseMapper.hasClassroomTimeConflict(startTime, endTime, classroomId,planId);
     }
 
     /**
@@ -303,7 +304,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
      * @return
      */
     @Override
-    public String updatePlanExamClassroom(Long planId, List<Long> classroomId) {
+    public Boolean updatePlanExamClassroom(Long planId, List<Long> classroomId) {
         examPlanMapper.deletePLanExamClassroom(planId);
         examPlanMapper.savePlanClassroom(planId, classroomId);
         // 通过考场id获取最大人数
@@ -314,8 +315,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         examPlanDO.setId(planId);
         examPlanDO.setMaxCandidates(Math.toIntExact(count));
         examPlanMapper.updateById(examPlanDO);
-
-        return null;
+        return true;
     }
 
     @Override
@@ -505,7 +505,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
             // 数据库时间冲突校验
             for (ExamPlanExcelRowDTO row : rowList) {
-                boolean conflict = hasClassroomTimeConflict(row.getExamStartTime(), row.getExamEndTime(), row.getClassroomIds()) > 0;
+                boolean conflict = hasClassroomTimeConflict(row.getExamStartTime(), row.getExamEndTime(), row.getClassroomIds(),null) > 0;
                 if (conflict) {
                     throw new BusinessException("第" + row.getRowIndex() + "行：所选考场在系统中存在时间冲突");
                 }
@@ -616,6 +616,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
      * @param id
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void update(ExamPlanReq req, Long id) {
         // 1. 查询考试计划
         ExamPlanDO examPlanDO = baseMapper.selectById(id);
@@ -633,13 +634,32 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ValidationUtils.throwIf(!DateUtil.validateEnrollmentTime(req.getEnrollEndTime(), req.getStartTime()),
                 "报名结束时间不能晚于考试开始时间");
 
+        // 考试开始时间不能早于当前时间
+        ValidationUtils.throwIf(
+                req.getStartTime().isBefore(LocalDateTime.now()),
+                "考试开始时间不能早于当前时间"
+        );
+
         // 3. 校验最终确定考试时间及地点状态
         ValidationUtils.throwIf(
                 PlanFinalConfirmedStatus.CONFIRMED.getValue().equals(req.getIsFinalConfirmed()),
                 "最终确定考试时间及地点已确认"
         );
 
-        // 4. 如果是巡检类型，校验报名人员是否全部审核通过
+        // 4.如果是新的考场人数小于之前的考场人数，无法成功
+        LambdaQueryWrapper<ExamineePaymentAuditDO> examineePaymentAuditDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        examineePaymentAuditDOLambdaQueryWrapper.eq(ExamineePaymentAuditDO::getExamPlanId, id)
+                .eq(ExamineePaymentAuditDO::getAuditStatus, PaymentAuditStatusEnum.APPROVED.getValue());
+        Long candidateCount = examineePaymentAuditMapper.selectCount(examineePaymentAuditDOLambdaQueryWrapper);
+        Long totalCapacity = classroomMapper.selectByIds(req.getClassroomId())
+                .stream()
+                .mapToLong(ClassroomDO::getMaxCandidates)
+                .sum();
+        ValidationUtils.throwIf(
+                candidateCount > totalCapacity,
+                String.format("已报名 %d 人，但所选考场最多只能容纳 %d 人，请重新选择考场", candidateCount, totalCapacity)
+        );
+        // 5. 如果是巡检类型，校验报名人员是否全部审核通过
         if (ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType())) {
             long pendingCount = specialCertificationApplicantMapper.selectCount(
                     new LambdaQueryWrapper<SpecialCertificationApplicantDO>()
@@ -654,7 +674,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                     "存在未审核考试报名申请，请审核后再确认考试时间或地点");
         }
 
-        // 5. 校验考试人员缴费状态
+        // 6. 校验考试人员缴费状态
         long unpaidCount = examineePaymentAuditMapper.selectCount(
                 new LambdaQueryWrapper<ExamineePaymentAuditDO>()
                         .eq(ExamineePaymentAuditDO::getExamPlanId, id)
@@ -667,7 +687,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ValidationUtils.throwIf(unpaidCount > 0,
                 "存在考试人员未提交缴费通知单或审核未通过，请到考生缴费审核管理完成审核");
 
-        // 6. 计算考试结束时间
+        // 7. 计算考试结束时间
         ProjectDO projectDO = projectMapper.selectById(req.getExamProjectId());
         ValidationUtils.throwIfNull(projectDO, "未查询到考试项目");
 
@@ -675,8 +695,17 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         req.setEndTime(req.getStartTime().plusMinutes(projectDO.getExamDuration()));
         req.setIsFinalConfirmed(PlanFinalConfirmedStatus.CONFIRMED.getValue());
 
-        // 7. 执行更新
+        // 8.在选择的考试的时间，考场有没有是否有别的考试
+        ValidationUtils.throwIf(
+                hasClassroomTimeConflict(req.getStartTime(), req.getEndTime(), req.getClassroomId(),id) > 0,
+                "所选考场在所选时间段前后30分钟内已有考试计划，请调整考试时间或更换考场。"
+        );
+
+        // 9. 执行更新
         super.update(req, id);
+
+        // 10.修改考场和计划关系
+        updatePlanExamClassroom(id, req.getClassroomId());
     }
 
 

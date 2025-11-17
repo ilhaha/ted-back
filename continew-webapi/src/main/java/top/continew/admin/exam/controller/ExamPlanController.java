@@ -97,7 +97,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     @Operation(summary = "修改考试计划考场")
     @PutMapping("/classroom/{planId}")
-    public String updatePlanExamClassroom(@PathVariable("planId") Long planId, @RequestBody List<Long> classroomId) {
+    public Boolean updatePlanExamClassroom(@PathVariable("planId") Long planId, @RequestBody List<Long> classroomId) {
         return examPlanService.updatePlanExamClassroom(planId, classroomId);
     }
 

@@ -330,6 +330,7 @@ examine:
     init-password: yxt@123!#
   userRole:
     candidatesId: 547888897925840930
+    workerId: 547888897925840949
     invigilatorId: 547888897925840935
     organizationId: 547888897925840936
   deptId:

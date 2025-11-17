@@ -70,7 +70,7 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @param classroomId
      * @return
      */
-    String updatePlanExamClassroom(Long planId, List<Long> classroomId);
+    Boolean updatePlanExamClassroom(Long planId, List<Long> classroomId);
 
     /**
      * 查找考场id
