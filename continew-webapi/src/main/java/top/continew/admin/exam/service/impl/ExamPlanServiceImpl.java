@@ -35,10 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.PlanConstant;
-import top.continew.admin.common.constant.enums.ExamPlanTypeEnum;
-import top.continew.admin.common.constant.enums.PaymentAuditStatusEnum;
-import top.continew.admin.common.constant.enums.PlanFinalConfirmedStatus;
-import top.continew.admin.common.constant.enums.SpecialCertificationApplicantAuditStatusEnum;
+import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.DateUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -57,6 +54,10 @@ import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
 import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
 import top.continew.admin.invigilate.model.enums.InvigilateStatus;
+import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.query.UserQuery;
+import top.continew.admin.system.model.vo.InvigilatorVO;
+import top.continew.admin.system.service.UserService;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -114,6 +115,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Resource
     private ExamPlanClassroomMapper examPlanClassroomMapper;
 
+    private final UserService userService;
+
 
     @Override
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
@@ -160,7 +163,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         // 判断计划考试时间对应的考场是否空闲
         ValidationUtils.throwIf(hasClassroomTimeConflict(examPlanDO.getStartTime(),
                         examPlanDO.getEndTime(),
-                        examPlanSaveReq.getClassroomId(),null) > 0,
+                        examPlanSaveReq.getClassroomId(), null) > 0,
                 "所选考场在所选时间段前后30分钟内已有考试计划，请调整考试时间或更换考场。");
         BeanUtils.copyProperties(examPlanSaveReq, examPlanDO);
         //填充最大人数字段 根据考场id获取最大人数
@@ -183,8 +186,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
      * @param classroomId
      * @return
      */
-    private Integer hasClassroomTimeConflict(LocalDateTime startTime, LocalDateTime endTime, List<Long> classroomId,Long planId) {
-        return baseMapper.hasClassroomTimeConflict(startTime, endTime, classroomId,planId);
+    private Integer hasClassroomTimeConflict(LocalDateTime startTime, LocalDateTime endTime, List<Long> classroomId, Long planId) {
+        return baseMapper.hasClassroomTimeConflict(startTime, endTime, classroomId, planId);
     }
 
     /**
@@ -505,7 +508,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
             // 数据库时间冲突校验
             for (ExamPlanExcelRowDTO row : rowList) {
-                boolean conflict = hasClassroomTimeConflict(row.getExamStartTime(), row.getExamEndTime(), row.getClassroomIds(),null) > 0;
+                boolean conflict = hasClassroomTimeConflict(row.getExamStartTime(), row.getExamEndTime(), row.getClassroomIds(), null) > 0;
                 if (conflict) {
                     throw new BusinessException("第" + row.getRowIndex() + "行：所选考场在系统中存在时间冲突");
                 }
@@ -640,6 +643,9 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 "考试开始时间不能早于当前时间"
         );
 
+        Integer invigilatorCount = req.getInvigilatorCount();
+        ValidationUtils.throwIf(invigilatorCount < req.getClassroomId().size(), "所设置的监考员人数不足以分配到全部考场");
+
         // 3. 校验最终确定考试时间及地点状态
         ValidationUtils.throwIf(
                 PlanFinalConfirmedStatus.CONFIRMED.getValue().equals(req.getIsFinalConfirmed()),
@@ -697,7 +703,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 8.在选择的考试的时间，考场有没有是否有别的考试
         ValidationUtils.throwIf(
-                hasClassroomTimeConflict(req.getStartTime(), req.getEndTime(), req.getClassroomId(),id) > 0,
+                hasClassroomTimeConflict(req.getStartTime(), req.getEndTime(), req.getClassroomId(), id) > 0,
                 "所选考场在所选时间段前后30分钟内已有考试计划，请调整考试时间或更换考场。"
         );
 
@@ -706,6 +712,55 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 10.修改考场和计划关系
         updatePlanExamClassroom(id, req.getClassroomId());
+
+        // 11.随机分配监考人员
+        // 获取所选时间段有空闲的监考人员
+        UserQuery query = new UserQuery();
+        List<InvigilatorVO> invigilates = userService.getInvigilates(query, id);
+        ValidationUtils.throwIf(
+                ObjectUtil.isEmpty(invigilates) || invigilates.size() < req.getInvigilatorCount(),
+                "当前时间段可分配的监考员数量不足"
+        );
+        Collections.shuffle(invigilates);
+        List<InvigilatorVO> assignedInvigilates = invigilates.subList(0, invigilatorCount);
+        // 还要随机分配给classRoomNum
+        List<Long> classroomIds = req.getClassroomId();
+        Map<Long, List<InvigilatorVO>> assignmentMap = new HashMap<>();
+
+        // 初始化 map
+        classroomIds.forEach(cid -> assignmentMap.put(cid, new ArrayList<>()));
+
+        // 第一轮：确保每个考场至少分配一个监考员
+        for (int i = 0; i < classroomIds.size(); i++) {
+            assignmentMap.get(classroomIds.get(i)).add(assignedInvigilates.get(i));
+        }
+
+        // 剩余监考员继续随机分配
+        for (int i = classroomIds.size(); i < assignedInvigilates.size(); i++) {
+            Long randomClassroomId = classroomIds.get(new Random().nextInt(classroomIds.size()));
+            assignmentMap.get(randomClassroomId).add(assignedInvigilates.get(i));
+        }
+
+        List<PlanInvigilateDO> records = new ArrayList<>();
+
+        for (Map.Entry<Long, List<InvigilatorVO>> entry : assignmentMap.entrySet()) {
+            Long classroomId = entry.getKey();
+            List<InvigilatorVO> list = entry.getValue();
+
+            for (InvigilatorVO invigilator : list) {
+                PlanInvigilateDO record = new PlanInvigilateDO();
+                // 考试计划 ID
+                record.setExamPlanId(id);
+                // 监考员 ID
+                record.setInvigilatorId(invigilator.getId());
+                // 考场号
+                record.setClassroomId(classroomId);
+                // 监考状态
+                record.setInvigilateStatus(InvigilateStatusEnum.NOT_START.getValue());
+                records.add(record);
+            }
+        }
+        planInvigilateMapper.insertBatch(records);
     }
 
 

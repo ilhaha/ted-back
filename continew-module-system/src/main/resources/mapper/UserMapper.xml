@@ -293,6 +293,16 @@
         AND type = 0
         AND is_deleted = 0
     </select>
+    <select id="listInvigilatorsByPlanId" resultType="top.continew.admin.system.model.vo.InvigilatorVO">
+        select u.id,
+               u.nickname
+        from sys_user as u
+                 left join sys_user_role as ur
+                           on u.id = ur.user_id
+                 left join sys_role as r
+                           on ur.role_id = r.id
+            ${ew.customSqlSegment}
+    </select>
 
     <insert id="addInvigilatesTime">
         insert into ted_plan_invigilate

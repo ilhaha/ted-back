@@ -118,7 +118,7 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
      * @param id    ID
      * @return 用户数量
      */
-    Long selectCountByPhone(@FieldEncrypt @Param("phone") String phone, @Param("id") Long id);
+    Long selectCountByPhone(@Param("phone") String phone, @Param("id") Long id);
 
     /**
      * 通过用户id查询部门 角色信息
@@ -183,6 +183,8 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
 
     IPage<InvigilatorVO> getInvigilates(@Param(Constants.WRAPPER) QueryWrapper<UserDO> queryWrapper,
                                         @Param("page") Page<UserDO> page);
+
+    List<InvigilatorVO> listInvigilatorsByPlanId(@Param(Constants.WRAPPER) QueryWrapper<UserDO> queryWrapper);
 
     @Select("select * from sys_user where phone = #{ phone }")
     UserDO getUserByPhone(@FieldEncrypt @Param("phone") String phone);

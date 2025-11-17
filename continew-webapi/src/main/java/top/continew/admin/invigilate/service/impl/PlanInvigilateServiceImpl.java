@@ -308,7 +308,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         //1.2.1 查出考试计划对应的监考人员(注意还要增加一个监考状态的判断)的手机号码和查询考试计划详情，获取考试名称
         String captcha = RandomUtil.randomNumbers(6);
         //1.2.2 增加了考场的功能后就必须先拿出考场号了（）
-        String classRoomId = planInvigilateDO.getClassroomId();
+        Long classRoomId = planInvigilateDO.getClassroomId();
         List<Long> userIds = planInvigilateMapper.selectByExamId(examId, classRoomId);//查出监考员ids
 
         QueryWrapper<UserDO> queryWrapper = new QueryWrapper<>();
@@ -355,6 +355,16 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         if (unboundUsers.size() > 0)
             return statueConstant.EXAM_PASSWORD_SEND_CONTENT;
         return statueConstant.EXAM_PASSWORD_SEND_SUCCESS;
+    }
+
+    /**
+     * 根据计划id获取计划分配的监考员信息
+     * @param planId
+     * @return
+     */
+    @Override
+    public List<InvigilatorAssignResp> getListByPlanId(Long planId) {
+        return baseMapper.getListByPlanId(planId);
     }
 
 }

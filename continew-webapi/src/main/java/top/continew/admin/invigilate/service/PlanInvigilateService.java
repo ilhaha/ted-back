@@ -107,4 +107,10 @@ public interface PlanInvigilateService extends BaseService<PlanInvigilateResp, P
 
     String getPassword(Long examId);
 
+    /**
+     * 根据计划id获取计划分配的监考员信息
+     * @param planId
+     * @return
+     */
+    List<InvigilatorAssignResp> getListByPlanId(Long planId);
 }

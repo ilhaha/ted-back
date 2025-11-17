@@ -32,6 +32,8 @@ import top.continew.admin.invigilate.model.query.PlanInvigilateQuery;
 import top.continew.admin.invigilate.model.req.PlanInvigilateReq;
 import top.continew.admin.invigilate.service.PlanInvigilateService;
 
+import java.util.List;
+
 /**
  * 考试计划监考人员关联管理 API
  *
@@ -43,6 +45,16 @@ import top.continew.admin.invigilate.service.PlanInvigilateService;
 @RequestMapping("/invigilate")
 @Slf4j
 public class PlanInvigilateController extends BaseController<PlanInvigilateService, PlanInvigilateResp, PlanInvigilateDetailResp, PlanInvigilateQuery, PlanInvigilateReq> {
+
+    /**
+     * 根据计划id获取计划分配的监考员信息
+     * @param planId
+     * @return
+     */
+    @GetMapping("/by/planId/{planId}")
+    public List<InvigilatorAssignResp> getListByPlanId(@PathVariable("planId") Long planId) {
+        return baseService.getListByPlanId(planId);
+    }
 
     /**
      * 根据监考人员Id查询

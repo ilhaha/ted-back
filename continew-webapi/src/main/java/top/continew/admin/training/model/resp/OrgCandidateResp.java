@@ -54,7 +54,7 @@ public class OrgCandidateResp extends BaseResp {
     @Schema(description = "状态 (负1-拒绝, 0-退出，1-待通过，2-已加入)")
     private Integer status;
 
-    @FieldEncrypt
+//    @FieldEncrypt
     @Schema(description = "考生手机号")
     private String phoneNumber;
 

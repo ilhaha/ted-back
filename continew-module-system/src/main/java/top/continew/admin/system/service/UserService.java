@@ -178,6 +178,14 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
     PageResp<InvigilatorVO> getInvigilates(UserQuery query, PageQuery pageQuery, Long examPlanId, String nickname);
 
     /**
+     * 查找所有同一个部门的监考人员(供随机分配监考员使用)
+     *
+     * @param examPlanId 计划id
+     * @return 监考人员
+     */
+    List<InvigilatorVO> getInvigilates(UserQuery query, Long examPlanId);
+
+    /**
      * 查看监考人员
      * 
      * @param examPlanId    计划id

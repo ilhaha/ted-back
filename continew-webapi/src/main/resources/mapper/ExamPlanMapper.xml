@@ -14,6 +14,8 @@
                tep.plan_type,
                tep.status,
                tep.approval_time,
+               tep.enroll_start_time,
+               tep.enroll_end_time,
                tep.create_user,
                tep.update_user,
                tep.is_final_confirmed,

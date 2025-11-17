@@ -107,7 +107,6 @@ public class ExamPlanDO extends BaseDO {
     /**
      * 报名结束时间
      */
-    ;
     private LocalDateTime enrollEndTime;
     /**
      * 描述

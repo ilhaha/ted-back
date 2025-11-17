@@ -36,7 +36,9 @@ import top.continew.admin.exam.mapper.ExamineePaymentAuditMapper;
 import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.mapper.UserRoleMapper;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.system.model.entity.UserRoleDO;
 import top.continew.admin.training.mapper.CandidateTypeMapper;
 import top.continew.admin.training.mapper.OrgClassCandidateMapper;
 import top.continew.admin.training.mapper.OrgClassMapper;
@@ -85,6 +87,9 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Value("${examine.deptId.examCenterId}")
     private Long examCenterId;
 
+    @Value("${examine.userRole.workerId}")
+    private Long workerId;
+
     @Resource
     private WorkerApplyDocumentMapper workerApplyDocumentMapper;
 
@@ -105,6 +110,9 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
     @Resource
     private ExamineePaymentAuditMapper examineePaymentAuditMapper;
+
+    @Resource
+    private UserRoleMapper userRoleMapper;
 
     /**
      * 根据身份证后六位、和班级id查询当前身份证报名信息
@@ -316,6 +324,15 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             if (CollUtil.isNotEmpty(newUsers)) {
                 userMapper.insertBatch(newUsers);
                 newUsers.forEach(u -> userMap.put(u.getUsername(), u));
+
+                // 添加角色
+                List<UserRoleDO> userRoleDOS = newUsers.stream().map(item -> {
+                    UserRoleDO userRoleDO = new UserRoleDO();
+                    userRoleDO.setRoleId(workerId);
+                    userRoleDO.setUserId(item.getId());
+                    return userRoleDO;
+                }).toList();
+                userRoleMapper.insertBatch(userRoleDOS);
             }
 
             // 7. 构建候选人 & 类型数据
@@ -347,6 +364,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 .set(!ObjectUtils.isEmpty(remark), WorkerApplyDO::getRemark, remark)
                 .set(WorkerApplyDO::getStatus, req.getStatus())
                 .in(WorkerApplyDO::getId, req.getReviewIds()));
+
         return true;
     }
 

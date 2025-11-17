@@ -126,6 +126,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     private final OptionService optionService;
     private final UserRoleService userRoleService;
     private final RoleService roleService;
+    private final AESWithHMAC aesWithHMAC;
 
     @Resource
     private DeptService deptService;
@@ -148,8 +149,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     @Resource
     private RedisTemplate redisTemplate;
 
-    @Resource
-    private AESWithHMAC aesWithHMAC;
 
     @Override
     public PageResp<UserResp> page(UserQuery query, PageQuery pageQuery) {
@@ -543,6 +542,17 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     }
 
     @Override
+    public List<InvigilatorVO> getInvigilates(UserQuery query, Long examPlanId) {
+        // 查找考试计划发布部门id
+        Long deptId = userMapper.getDeptIdByExamPlanId(examPlanId, ExamPlanStatusEnum.IN_FORCE);
+        QueryWrapper<UserDO> qw = this.buildQueryWrapper(query);
+        qw.eq("u.dept_id", deptId)
+                .eq("r.id", invigilatorId);
+        List<InvigilatorVO> invigilatesList = userMapper.listInvigilatorsByPlanId(qw);
+        return invigilatesList;
+    }
+
+    @Override
     public List<InvigilatorVO> viewInvigilate(Long examPlanId,
                                               Long classroomId,
                                               List<Long> invigilateIds,
@@ -910,7 +920,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
      * @return 是否存在
      */
     public boolean isPhoneExists(String phone, Long id) {
-        Long count = baseMapper.selectCountByPhone(phone, id);
+        Long count = baseMapper.selectCountByPhone(aesWithHMAC.encryptAndSign(phone), id);
         return null != count && count > 0;
     }
 

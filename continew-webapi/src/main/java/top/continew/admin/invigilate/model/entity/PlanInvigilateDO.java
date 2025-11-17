@@ -78,5 +78,5 @@ public class PlanInvigilateDO extends BaseIdDO {
     /**
      * 考场号
      */
-    private String classroomId;
+    private Long classroomId;
 }

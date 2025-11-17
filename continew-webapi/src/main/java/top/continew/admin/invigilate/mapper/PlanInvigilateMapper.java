@@ -23,6 +23,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import top.continew.admin.invigilate.model.entity.Grades;
+import top.continew.admin.invigilate.model.resp.InvigilatorAssignResp;
 import top.continew.admin.invigilate.model.resp.InvigilatorPlanResp;
 import top.continew.admin.invigilate.model.resp.InvigilateExamDetailResp;
 import top.continew.starter.data.mp.base.BaseMapper;
@@ -156,8 +157,15 @@ public interface PlanInvigilateMapper extends BaseMapper<PlanInvigilateDO> {
     PlanInvigilateDO selectByUserId(Long userId, Long examId);
 
     @Select("select invigilator_id from ted_plan_invigilate where  exam_plan_id= #{examId} AND classroom_id=#{classRoomId}")
-    List<Long> selectByExamId(Long examId, String classRoomId);
+    List<Long> selectByExamId(Long examId, Long classRoomId);
 
     @Select("update ted_plan_invigilate set exam_password=#{captcha} ${ew.customSqlSegment}   ")
     void deductBalanceByIds(String captcha, @Param(Constants.WRAPPER) QueryWrapper<PlanInvigilateDO> wrapper);
+
+    /**
+     * 根据计划id获取计划分配的监考员信息
+     * @param planId
+     * @return
+     */
+    List<InvigilatorAssignResp> getListByPlanId(@Param("planId") Long planId);
 }
