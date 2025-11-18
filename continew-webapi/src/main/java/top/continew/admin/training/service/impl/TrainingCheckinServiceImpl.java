@@ -1,37 +1,49 @@
 package top.continew.admin.training.service.impl;
 
+import cn.hutool.poi.excel.ExcelUtil;
+import cn.hutool.poi.excel.ExcelWriter;
+import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import org.springframework.util.StringUtils;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.training.mapper.OrgCandidateMapper;
 import top.continew.admin.training.mapper.OrgUserMapper;
-import top.continew.admin.training.model.entity.OrgCandidateDO;
-import top.continew.admin.training.model.entity.OrgTrainingPaymentAuditDO;
-import top.continew.admin.training.model.entity.TedOrgUser;
+import top.continew.admin.training.mapper.TrainingMapper;
+import top.continew.admin.training.model.dto.TrainingCheckinExportDTO;
+import top.continew.admin.training.model.entity.*;
 import top.continew.admin.util.SignUtil;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.training.mapper.TrainingCheckinMapper;
-import top.continew.admin.training.model.entity.TrainingCheckinDO;
 import top.continew.admin.training.model.query.TrainingCheckinQuery;
 import top.continew.admin.training.model.req.TrainingCheckinReq;
 import top.continew.admin.training.model.resp.TrainingCheckinDetailResp;
 import top.continew.admin.training.model.resp.TrainingCheckinResp;
 import top.continew.admin.training.service.TrainingCheckinService;
 
+import java.io.IOException;
+import java.net.URLEncoder;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 培训签到记录业务实现
@@ -59,6 +71,9 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
     private OrgUserMapper orgUserMapper;
     @Value("${qrcode.training.checkin.url}")
     private String trainingCheckinUrl;
+
+    @Resource
+    private TrainingMapper trainingMapper;
 
 
     @Override
@@ -99,8 +114,8 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
             throw new BusinessException("二维码参数无效（疑似伪造）");
         }
 
-        //  校验是否过期（5分钟）
-        if (System.currentTimeMillis() - ts > 5 * 60 * 1000) {
+        //  校验是否过期（3分钟）
+        if (System.currentTimeMillis() - ts > 3 * 60 * 1000) {
             throw new BusinessException("二维码已过期，请刷新二维码");
         }
 
@@ -128,7 +143,7 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
         );
 
         if (cand == null) {
-            throw new BusinessException("你未报名此培训，无法签到");
+            throw new BusinessException("你未报名此培训机构，无法签到");
         }
 
         // 今天开始时间和结束时间
@@ -147,7 +162,7 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
         );
 
         if (existed != null) {
-            throw new RuntimeException("你今天已签到，无需重复签到");
+            throw new BusinessException("你今天已签到，无需重复签到");
         }
 
         // 插入签到记录
@@ -165,4 +180,69 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
 
         return true;
     }
+
+
+    @Override
+    public void exportExcel(TrainingCheckinQuery query, HttpServletResponse response) {
+        // 查询签到记录
+        LambdaQueryWrapper<TrainingCheckinDO> wrapper = new LambdaQueryWrapper<>();
+        if (query.getTrainingId() != null) {
+            wrapper.eq(TrainingCheckinDO::getTrainingId, query.getTrainingId());
+        }
+        if (query.getCheckinTime() != null) {
+            // 前端传的是 LocalDate
+            LocalDate date = query.getCheckinTime().toLocalDate();
+            wrapper.ge(TrainingCheckinDO::getCheckinTime, date.atStartOfDay());
+            wrapper.le(TrainingCheckinDO::getCheckinTime, date.atTime(23, 59, 59));
+        }
+        List<TrainingCheckinDO> checkinList = trainingCheckinMapper.selectList(wrapper);
+
+        if (checkinList.isEmpty()) {
+            throw new RuntimeException("没有符合条件的签到记录");
+        }
+
+        // 查询用户信息
+        Set<Long> candidateIds = checkinList.stream()
+                .map(TrainingCheckinDO::getCandidateId)
+                .collect(Collectors.toSet());
+        List<UserDO> users = userMapper.selectBatchIds(candidateIds);
+        Map<Long, UserDO> userMap = users.stream()
+                .collect(Collectors.toMap(UserDO::getId, u -> u));
+
+        // 查询培训名称
+        Set<Long> trainingIds = checkinList.stream()
+                .map(TrainingCheckinDO::getTrainingId)
+                .collect(Collectors.toSet());
+        List<TrainingDO> trainings = trainingMapper.selectBatchIds(trainingIds);
+        Map<Long, String> trainingMap = trainings.stream()
+                .collect(Collectors.toMap(TrainingDO::getId, TrainingDO::getTitle));
+
+
+        // 构造 DTO 列表，并自动生成序号
+        List<TrainingCheckinExportDTO> exportList = new ArrayList<>();
+        for (int i = 0; i < checkinList.size(); i++) {
+            TrainingCheckinDO record = checkinList.get(i);
+            UserDO user = userMap.get(record.getCandidateId());
+            TrainingCheckinExportDTO dto = new TrainingCheckinExportDTO();
+            dto.setIndex(i + 1); // 序号从 1 开始
+            dto.setTrainingName(trainingMap.get(record.getTrainingId()));
+            dto.setCandidateName(user != null ? user.getNickname() : "");
+            dto.setCheckinTime(record.getCheckinTime()); // 原始 LocalDateTime
+            exportList.add(dto);
+        }
+
+
+        // 导出 Excel
+        try (ExcelWriter writer = ExcelUtil.getWriter(true)) {
+            writer.write(exportList, true);
+            String fileName = URLEncoder.encode("培训签到记录.xlsx", "UTF-8");
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8");
+            response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+            writer.flush(response.getOutputStream(), true);
+        } catch (Exception e) {
+            throw new RuntimeException("导出 Excel 失败", e);
+        }
+    }
+
+
 }

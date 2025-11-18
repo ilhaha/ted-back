@@ -1,10 +1,9 @@
 package top.continew.admin.training.controller;
 import cn.dev33.satoken.annotation.SaIgnore;
 
-import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import top.continew.admin.training.model.dto.CheckinRequest;
-import top.continew.admin.util.SignUtil;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,6 +17,7 @@ import top.continew.admin.training.model.req.TrainingCheckinReq;
 import top.continew.admin.training.model.resp.TrainingCheckinDetailResp;
 import top.continew.admin.training.model.resp.TrainingCheckinResp;
 import top.continew.admin.training.service.TrainingCheckinService;
+import top.continew.starter.web.model.R;
 
 import java.util.Map;
 
@@ -63,6 +63,12 @@ public class TrainingCheckinController extends BaseController<TrainingCheckinSer
         );
 
         return Map.of("success", ok, "msg", "签到成功");
+    }
+
+    /** 导出培训签到记录（Excel） */
+    @GetMapping("/exportExcel")
+    public void exportExcel(TrainingCheckinQuery query, HttpServletResponse response) {
+        trainingCheckinService.exportExcel(query, response);
     }
 
 }
