@@ -28,6 +28,7 @@ import top.continew.admin.exam.model.resp.EnrollStatusResp;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.service.ProjectService;
+import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -62,6 +63,38 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     @Resource
     private ExamPlanService examPlanService;
+
+    /**
+     * 中心主任确认考试
+     * @param planId
+     * @param isFinalConfirmed
+     * @return
+     */
+    @PostMapping("/conform/{planId}/{isFinalConfirmed}")
+    public Boolean centerDirectorConform(@PathVariable("planId") Long planId, @PathVariable("isFinalConfirmed") Integer isFinalConfirmed) {
+        return baseService.centerDirectorConform(planId,isFinalConfirmed);
+    }
+
+    /**
+     * 获取可用监考员
+     * @param planId
+     * @return
+     */
+    @GetMapping("/available/invigilator/{planId}/{rejectedInvigilatorId}")
+    public List<AvailableInvigilatorResp> getAvailableInvigilator(@PathVariable("planId") Long planId,@PathVariable("rejectedInvigilatorId") Long rejectedInvigilatorId) {
+        return baseService.getAvailableInvigilator(planId,rejectedInvigilatorId);
+    }
+
+    /**
+     * 重新随机分配考试计划的监考员
+     * @param planId
+     * @param invigilatorNum
+     * @return
+     */
+    @PostMapping("/rest/random/invigilator/{planId}/{invigilatorNum}")
+    public Boolean reRandomInvigilators(@PathVariable("planId") Long planId, @PathVariable("invigilatorNum") Integer invigilatorNum) {
+        return examPlanService.reRandomInvigilators(planId,invigilatorNum);
+    }
 
     /**
      * 机构获取符合自身八大类的考试计划

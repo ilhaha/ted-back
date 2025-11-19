@@ -25,11 +25,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
+import net.dreamlu.mica.core.exception.ServiceException;
 import net.dreamlu.mica.core.utils.ObjectUtil;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.*;
 
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +56,8 @@ import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
 import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
 import top.continew.admin.invigilate.model.enums.InvigilateStatus;
+import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
+import top.continew.admin.invigilate.model.resp.InvigilatorAssignResp;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.query.UserQuery;
 import top.continew.admin.system.model.vo.InvigilatorVO;
@@ -115,7 +119,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Resource
     private ExamPlanClassroomMapper examPlanClassroomMapper;
 
-    private final UserService userService;
+    @Value("${examine.userRole.invigilatorId}")
+    private Long invigilatorId;
 
 
     @Override
@@ -648,7 +653,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 3. 校验最终确定考试时间及地点状态
         ValidationUtils.throwIf(
-                PlanFinalConfirmedStatus.CONFIRMED.getValue().equals(req.getIsFinalConfirmed()),
+                PlanFinalConfirmedStatus.DIRECTOR_PENDING.getValue().equals(req.getIsFinalConfirmed()),
                 "最终确定考试时间及地点已确认"
         );
 
@@ -699,7 +704,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         req.setStartTime(req.getStartTime());
         req.setEndTime(req.getStartTime().plusMinutes(projectDO.getExamDuration()));
-        req.setIsFinalConfirmed(PlanFinalConfirmedStatus.CONFIRMED.getValue());
+        req.setIsFinalConfirmed(PlanFinalConfirmedStatus.DIRECTOR_PENDING.getValue());
 
         // 8.在选择的考试的时间，考场有没有是否有别的考试
         ValidationUtils.throwIf(
@@ -707,6 +712,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 "所选考场在所选时间段前后30分钟内已有考试计划，请调整考试时间或更换考场。"
         );
 
+        req.setAssignType(InvigilatorAssignTypeEnum.RANDOM_FIRST.getValue());
         // 9. 执行更新
         super.update(req, id);
 
@@ -714,49 +720,51 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         updatePlanExamClassroom(id, req.getClassroomId());
 
         // 11.随机分配监考人员
+        randomInvigilator(req.getClassroomId(), examPlanDO.getStartTime(), examPlanDO.getEndTime(), id, invigilatorCount);
+    }
+
+    private void randomInvigilator(List<Long> classroomIds, LocalDateTime startTime, LocalDateTime endTime, Long planId, Integer invigilatorNum) {
         // 获取所选时间段有空闲的监考人员
-        UserQuery query = new UserQuery();
-        List<InvigilatorVO> invigilates = userService.getInvigilates(query, id);
+        List<AvailableInvigilatorResp> availableInvigilatorList = planInvigilateMapper.selectAvailableInvigilators(startTime, endTime, planId, invigilatorId, null);
         ValidationUtils.throwIf(
-                ObjectUtil.isEmpty(invigilates) || invigilates.size() < req.getInvigilatorCount(),
+                ObjectUtil.isEmpty(availableInvigilatorList) || availableInvigilatorList.size() < invigilatorNum,
                 "当前时间段可分配的监考员数量不足"
         );
-        Collections.shuffle(invigilates);
-        List<InvigilatorVO> assignedInvigilates = invigilates.subList(0, invigilatorCount);
+        Collections.shuffle(availableInvigilatorList);
+        List<AvailableInvigilatorResp> assignedAvailableInvigilatorList = availableInvigilatorList.subList(0, invigilatorNum);
         // 还要随机分配给classRoomNum
-        List<Long> classroomIds = req.getClassroomId();
-        Map<Long, List<InvigilatorVO>> assignmentMap = new HashMap<>();
+        Map<Long, List<AvailableInvigilatorResp>> assignmentMap = new HashMap<>();
 
         // 初始化 map
         classroomIds.forEach(cid -> assignmentMap.put(cid, new ArrayList<>()));
 
         // 第一轮：确保每个考场至少分配一个监考员
         for (int i = 0; i < classroomIds.size(); i++) {
-            assignmentMap.get(classroomIds.get(i)).add(assignedInvigilates.get(i));
+            assignmentMap.get(classroomIds.get(i)).add(assignedAvailableInvigilatorList.get(i));
         }
 
         // 剩余监考员继续随机分配
-        for (int i = classroomIds.size(); i < assignedInvigilates.size(); i++) {
+        for (int i = classroomIds.size(); i < assignedAvailableInvigilatorList.size(); i++) {
             Long randomClassroomId = classroomIds.get(new Random().nextInt(classroomIds.size()));
-            assignmentMap.get(randomClassroomId).add(assignedInvigilates.get(i));
+            assignmentMap.get(randomClassroomId).add(assignedAvailableInvigilatorList.get(i));
         }
 
         List<PlanInvigilateDO> records = new ArrayList<>();
 
-        for (Map.Entry<Long, List<InvigilatorVO>> entry : assignmentMap.entrySet()) {
+        for (Map.Entry<Long, List<AvailableInvigilatorResp>> entry : assignmentMap.entrySet()) {
             Long classroomId = entry.getKey();
-            List<InvigilatorVO> list = entry.getValue();
+            List<AvailableInvigilatorResp> list = entry.getValue();
 
-            for (InvigilatorVO invigilator : list) {
+            for (AvailableInvigilatorResp invigilatorResp : list) {
                 PlanInvigilateDO record = new PlanInvigilateDO();
                 // 考试计划 ID
-                record.setExamPlanId(id);
+                record.setExamPlanId(planId);
                 // 监考员 ID
-                record.setInvigilatorId(invigilator.getId());
+                record.setInvigilatorId(invigilatorResp.getId());
                 // 考场号
                 record.setClassroomId(classroomId);
                 // 监考状态
-                record.setInvigilateStatus(InvigilateStatusEnum.NOT_START.getValue());
+                record.setInvigilateStatus(InvigilateStatusEnum.TO_CONFIRM.getValue());
                 records.add(record);
             }
         }
@@ -782,4 +790,119 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             examPlanMapper.batchUpdatePlanMaxCandidates(planList);
         }
     }
+
+    /**
+     * 重新随机分配考试计划的监考员
+     *
+     * @param planId
+     * @param invigilatorNum
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean reRandomInvigilators(Long planId, Integer invigilatorNum) {
+        ExamPlanDO examPlanDO = baseMapper.selectById(planId);
+        ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划");
+        // 1. 先删除原监考员
+        planInvigilateMapper.delete(
+                new LambdaQueryWrapper<PlanInvigilateDO>()
+                        .eq(PlanInvigilateDO::getExamPlanId, planId)
+        );
+
+        // 2. 查询所有考场 classroomId
+        List<Long> classroomIds = planClassroomMapper.selectList(
+                        new LambdaQueryWrapper<PlancalssroomDO>()
+                                .eq(PlancalssroomDO::getPlanId, planId)
+                                .select(PlancalssroomDO::getClassroomId)
+                )
+                .stream()
+                .map(PlancalssroomDO::getClassroomId)
+                .toList();
+
+        // 3. 随机分配监考逻辑
+        randomInvigilator(classroomIds, examPlanDO.getStartTime(), examPlanDO.getEndTime(), planId, invigilatorNum);
+        // 4.修改计划分配监考员类型
+        baseMapper.update(new LambdaUpdateWrapper<ExamPlanDO>().set(ExamPlanDO::getAssignType, InvigilatorAssignTypeEnum.RANDOM_SECOND.getValue())
+                .eq(ExamPlanDO::getId, planId));
+        return true;
+    }
+
+    /**
+     * 获取可用监考员
+     *
+     * @param planId
+     * @return
+     */
+    @Override
+    public List<AvailableInvigilatorResp> getAvailableInvigilator(Long planId, Long rejectedInvigilatorId) {
+        // 1. 查询考试计划
+        ExamPlanDO examPlanDO = baseMapper.selectById(planId);
+        ValidationUtils.throwIfNull(examPlanDO, "未查询到计划信息");
+
+        // 2. 查询空闲监考员（包含状态=5可以忽略冲突）
+        List<AvailableInvigilatorResp> availableInvigilatorResps = planInvigilateMapper.
+                selectAvailableInvigilators(examPlanDO.getStartTime(), examPlanDO.getEndTime(), planId, invigilatorId, rejectedInvigilatorId);
+
+        // 3. 查询已经安排的监考员（非被拒绝状态）
+        List<Long> assignedInvigilatorIds = planInvigilateMapper.selectList(new LambdaQueryWrapper<PlanInvigilateDO>()
+                        .eq(PlanInvigilateDO::getExamPlanId, planId)
+                        .ne(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.REJECTED.getValue())
+                        .select(PlanInvigilateDO::getInvigilatorId))
+                .stream()
+                .map(PlanInvigilateDO::getInvigilatorId)
+                .toList();
+
+        // 4. 过滤已经安排的监考员
+        if (ObjectUtil.isNotEmpty(assignedInvigilatorIds)) {
+            availableInvigilatorResps = availableInvigilatorResps.stream()
+                    .filter(resp -> !assignedInvigilatorIds.contains(resp.getId()))
+                    .toList();
+        }
+
+        // 5. 返回最终可用监考员列表
+        return availableInvigilatorResps;
+    }
+
+    /**
+     * 中心主任确认考试
+     *
+     * @param planId
+     * @param isFinalConfirmed
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean centerDirectorConform(Long planId, Integer isFinalConfirmed) {
+        // 查询计划
+        ExamPlanDO examPlanDO = baseMapper.selectById(planId);
+        ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划信息");
+
+        // 查询监考员列表
+        List<InvigilatorAssignResp> invigilatorList =
+                planInvigilateMapper.getListByPlanId(planId);
+        ValidationUtils.throwIfEmpty(invigilatorList, "未选择监考员");
+
+        // 检查监考员确认状态
+        for (InvigilatorAssignResp inv : invigilatorList) {
+            ValidationUtils.throwIf(!InvigilateStatusEnum.NOT_START.getValue()
+                    .equals(inv.getInvigilateStatus()),"存在监考员未确认监考或无法参加监考");
+        }
+        // 创建更新包装器
+        LambdaUpdateWrapper<ExamPlanDO> update = new LambdaUpdateWrapper<>();
+        update.eq(ExamPlanDO::getId, planId)
+                .set(ExamPlanDO::getIsFinalConfirmed, isFinalConfirmed);
+
+        // 若驳回，清空监考员及随机分配类型
+        if (PlanFinalConfirmedStatus.DIRECTOR_REJECTED.getValue().equals(isFinalConfirmed)) {
+            update.set(ExamPlanDO::getAssignType, null);
+            // 删除监考员分配
+            planInvigilateMapper.delete(
+                    new LambdaQueryWrapper<PlanInvigilateDO>()
+                            .eq(PlanInvigilateDO::getExamPlanId, planId));
+        }
+
+        return baseMapper.update(update) > 0;
+    }
+
+
 }

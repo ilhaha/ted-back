@@ -39,6 +39,7 @@ import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -197,8 +198,8 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
     List<InvigilatorVO> viewInvigilate(Long examPlanId,
                                        Long classroomId,
                                        List<Long> invigilateIds,
-                                       String startTime,
-                                       String endTime);
+                                       LocalDateTime startTime,
+                                       LocalDateTime endTime);
 
     /**
      * 获取已在监考的监考人员
@@ -326,4 +327,5 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      * @return
      */
     Boolean isWorker(Long id);
+
 }

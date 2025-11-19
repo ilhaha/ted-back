@@ -93,6 +93,10 @@ public class ExamPlanReq implements Serializable {
     private LocalDateTime endTime;
     private Integer isFinalConfirmed;
     private Integer invigilatorCount;
+    /**
+     * 监考员分配类型（1：第一次随机分配 2：第二次随机分配 3：管理员指派）
+     */
+    private Integer assignType;
 
 
 }

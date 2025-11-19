@@ -61,12 +61,8 @@ public class PlanInvigilateDO extends BaseIdDO {
     @TableField(exist = false)
     private LocalDateTime endTime;
 
-    //    /**
-    //     * 监考状态（0：未确认，1：已确认，2：已完成）
-    //     */
-    //    private Integer invigilateStatus;
     /**
-     * 监考状态（0：未监考，1：待录入，2：待审核， 3：已完成）
+     * 监监考状态（0：待监考，1：待录入，2：待审核，3：已完成，4待监考员确认，5监考员拒绝监考）
      */
     private Integer invigilateStatus;
 

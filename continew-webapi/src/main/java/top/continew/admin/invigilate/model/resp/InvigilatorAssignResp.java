@@ -6,6 +6,11 @@ import lombok.Data;
 public class InvigilatorAssignResp {
 
     /**
+     * id
+     */
+    private Long id;
+
+    /**
      * 监考员昵称
      */
     private String nickname;

@@ -18,6 +18,7 @@ package top.continew.admin.invigilate.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.invigilate.model.req.ExamScoreSubmitReq;
@@ -45,6 +46,26 @@ import java.util.List;
 @RequestMapping("/invigilate")
 @Slf4j
 public class PlanInvigilateController extends BaseController<PlanInvigilateService, PlanInvigilateResp, PlanInvigilateDetailResp, PlanInvigilateQuery, PlanInvigilateReq> {
+
+    /**
+     * 更换监考员
+     * @param req
+     * @return
+     */
+    @PostMapping("/replace")
+    public Boolean replace(@Validated @RequestBody PlanInvigilateReq req) {
+        return baseService.replace(req);
+    }
+
+    /**
+     * 监考员无法参加监考
+     * @param planId
+     * @return
+     */
+    @PostMapping("/rejected/{planId}")
+    public Boolean rejected(@PathVariable("planId") Long planId) {
+        return baseService.rejected(planId);
+    }
 
     /**
      * 根据计划id获取计划分配的监考员信息

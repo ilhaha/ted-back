@@ -24,6 +24,7 @@ import com.aliyun.sdk.service.dysmsapi20170525.AsyncClient;
 import com.aliyun.sdk.service.dysmsapi20170525.models.SendSmsRequest;
 import com.aliyun.sdk.service.dysmsapi20170525.models.SendSmsResponse;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.RequiredArgsConstructor;
 
@@ -33,6 +34,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import top.continew.admin.common.constant.enums.InvigilateStatusEnum;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.config.ali.AliYunConfig;
@@ -53,6 +55,7 @@ import top.continew.admin.statemachine.invigilate.context.BatchReviewContext;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.starter.core.exception.BusinessException;
+import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
 import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
@@ -365,6 +368,36 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
     @Override
     public List<InvigilatorAssignResp> getListByPlanId(Long planId) {
         return baseMapper.getListByPlanId(planId);
+    }
+
+    /**
+     * 监考员无法参加监考
+     * @param planId
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean rejected(Long planId) {
+        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+        return baseMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>().eq(PlanInvigilateDO::getExamPlanId,planId)
+                .eq(PlanInvigilateDO::getInvigilatorId,userTokenDo.getUserId())
+                .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.REJECTED.getValue())) > 0;
+    }
+
+    /**
+     * 更换监考员
+     * @param req
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean replace(PlanInvigilateReq req) {
+        Long planInvigilateId = req.getId();
+        PlanInvigilateDO planInvigilateDO = baseMapper.selectById(planInvigilateId);
+        ValidationUtils.throwIfNull(planInvigilateDO,"未查询到记录");
+        return baseMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>().eq(PlanInvigilateDO::getId,planInvigilateId)
+                        .set(PlanInvigilateDO::getInvigilatorId,req.getInvigilateId())
+                .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.TO_CONFIRM.getValue())) > 0;
     }
 
 }

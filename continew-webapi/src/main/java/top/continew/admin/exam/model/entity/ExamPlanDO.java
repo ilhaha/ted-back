@@ -87,9 +87,14 @@ public class ExamPlanDO extends BaseDO {
     private Integer status;
 
     /**
-     * 确定最终考试时间以及地点状态
+     * 最终确认时间地点（0：待管理员确定 1：待中心主任确定 3：中心主任确定 4：中心主任驳回）
      */
     private Integer isFinalConfirmed;
+
+    /**
+     * 监考员分配类型（1：第一次随机分配 2：第二次随机分配 3：管理员指派）
+     */
+    private Integer assignType;
 
     /**
      * 审批人ID列表

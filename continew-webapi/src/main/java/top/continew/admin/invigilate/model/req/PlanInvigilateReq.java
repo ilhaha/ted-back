@@ -16,6 +16,8 @@
 
 package top.continew.admin.invigilate.model.req;
 
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,4 +38,10 @@ public class PlanInvigilateReq implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
+
+    @NotNull(message = "未选择需要更改监考员的数据")
+    private Long id;
+
+    @NotNull(message = "未选择新的监考员")
+    private Long invigilateId;
 }

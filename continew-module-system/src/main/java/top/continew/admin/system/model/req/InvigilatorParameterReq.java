@@ -18,6 +18,7 @@ package top.continew.admin.system.model.req;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -31,8 +32,8 @@ public class InvigilatorParameterReq {
 
     private List<Long> invigilateIds;
 
-    private String startTime;
+    private LocalDateTime startTime;
 
-    private String endTime;
+    private LocalDateTime endTime;
 
 }

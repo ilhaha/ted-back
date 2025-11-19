@@ -113,6 +113,12 @@ ExamPlanResp extends BaseResp {
     private Integer planType;
 
     /**
+     * 监考员分配类型（1：第一次随机分配 2：第二次随机分配 3：管理员指派）
+     */
+    @Schema(description = "监考员分配类型（1：第一次随机分配 2：第二次随机分配 3：管理员指派）")
+    private Integer assignType;
+
+    /**
      * 计划状态
      */
     @Schema(description = "计划状态")

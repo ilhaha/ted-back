@@ -101,6 +101,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -556,8 +557,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     public List<InvigilatorVO> viewInvigilate(Long examPlanId,
                                               Long classroomId,
                                               List<Long> invigilateIds,
-                                              String startTime,
-                                              String endTime) {
+                                              LocalDateTime startTime,
+                                              LocalDateTime endTime) {
         ValidationUtils.throwIfNull(invigilateIds, "请选择监考人");
         Long deptId = userMapper.getDeptIdByExamPlanId(examPlanId, ExamPlanStatusEnum.IN_FORCE);
         // 通过考试计划发布部门id查询监考人员信息和时间
@@ -577,7 +578,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
             return invigilatorVOList;
         }
         // 返回符合时间条件的监考人员信息与时间
-        return isInvigilate(sortInvigilatorVO(invigilatorVOList), startTime, endTime, examPlanId);
+        return isInvigilate(invigilatorVOList, startTime, endTime, examPlanId);
     }
 
     @Override
@@ -1001,26 +1002,26 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
      * @param invigilatesAndTime 监考人信息
      * @return 排序后的数据
      */
-    private List<InvigilatorVO> sortInvigilatorVO(List<InvigilatorVO> invigilatesAndTime) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        invigilatesAndTime.forEach(items -> {
-            List<InvigilatorTimeVO> invigilateTime = items.getInvigilateTime();
-            for (int i = 0; i < invigilateTime.size() - 1; i++) {
-                for (int j = 0; j < invigilateTime.size() - 1; j++) {
-                    try {
-                        long time1 = sdf.parse(invigilateTime.get(j).getStartTime()).getTime();
-                        long time2 = sdf.parse(invigilateTime.get(j + 1).getStartTime()).getTime();
-                        if (time1 > time2) {
-                            Collections.swap(invigilateTime, j, j + 1);
-                        }
-                    } catch (ParseException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
-        });
-        return invigilatesAndTime;
-    }
+//    private List<InvigilatorVO> sortInvigilatorVO(List<InvigilatorVO> invigilatesAndTime) {
+//        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+//        invigilatesAndTime.forEach(items -> {
+//            List<InvigilatorTimeVO> invigilateTime = items.getInvigilateTime();
+//            for (int i = 0; i < invigilateTime.size() - 1; i++) {
+//                for (int j = 0; j < invigilateTime.size() - 1; j++) {
+//                    try {
+//                        long time1 = sdf.parse(invigilateTime.get(j).getStartTime()).getTime();
+//                        long time2 = sdf.parse(invigilateTime.get(j + 1).getStartTime()).getTime();
+//                        if (time1 > time2) {
+//                            Collections.swap(invigilateTime, j, j + 1);
+//                        }
+//                    } catch (ParseException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                }
+//            }
+//        });
+//        return invigilatesAndTime;
+//    }
 
     /**
      * 监考人是否符合时间条件
@@ -1030,53 +1031,58 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
      * @param endTime            考试结束时间
      * @return 符合时间条件的监考人信息
      */
-    private List<InvigilatorVO> isInvigilate(List<InvigilatorVO> invigilatesAndTime,
-                                             String startTime,
-                                             String endTime,
-                                             Long examPlanId) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        List<InvigilatorVO> list = new ArrayList<>();
-        invigilatesAndTime.forEach(items -> {
-            // 使用Set记录时间位置
-            Set<Long> isOverlap = new HashSet<>();
-            List<InvigilatorTimeVO> invigilateTime = items.getInvigilateTime();
-            // 当前监考是否已在某个考试计划，默认不存在
-            AtomicBoolean isExist = new AtomicBoolean(false);
-            // 遍历所有考试计划存入Set中
-            invigilateTime.forEach(item -> {
-                try {
-                    // 考试开始时间，获取分钟
-                    long examStartTime = sdf.parse(item.getStartTime()).getTime() / 1000 / 60;
-                    // 考试结束时间
-                    long examEndTime = sdf.parse(item.getEndTime()).getTime() / 1000 / 60;
-                    // 从考试时间下标开始，遍历到考试结束时间结束，延长十分钟(休息时间)
-                    for (int i = (int)examStartTime; i <= examEndTime + 10; i++) {
-                        isOverlap.add((long)i);
-                    }
-                    // 判断当前监考人监考计划是否和当前考试计划相同
-                    if (item.getPlanId() == examPlanId) {
-                        isExist.set(true);
-                    }
-                } catch (ParseException e) {
-                    throw new RuntimeException(e);
+    private List<InvigilatorVO> isInvigilate(
+            List<InvigilatorVO> invigilatesAndTime,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            Long examPlanId) {
+
+        List<InvigilatorVO> resultList = new ArrayList<>();
+
+        // 当前考试开始结束分钟（从 Epoch 到分钟）
+        long newStart = startTime.atZone(ZoneId.systemDefault()).toEpochSecond() / 60;
+        long newEnd = endTime.atZone(ZoneId.systemDefault()).toEpochSecond() / 60;
+
+        invigilatesAndTime.forEach(invigilator -> {
+
+            Set<Long> occupyMinutes = new HashSet<>();
+            AtomicBoolean existedPlan = new AtomicBoolean(false);
+
+            // 遍历监考员的所有监考时间
+            for (InvigilatorTimeVO vo : invigilator.getInvigilateTime()) {
+
+                LocalDateTime oldStart = vo.getStartTime();
+                LocalDateTime oldEnd = vo.getEndTime();
+
+                long oldStartMin = oldStart.atZone(ZoneId.systemDefault()).toEpochSecond() / 60;
+                long oldEndMin = oldEnd.atZone(ZoneId.systemDefault()).toEpochSecond() / 60;
+
+                // 结束时间延长 10 分钟用于缓冲
+                for (long m = oldStartMin; m <= oldEndMin + 10; m++) {
+                    occupyMinutes.add(m);
                 }
-            });
-            try {
-                // 当前考试时间
-                long examStartTime = sdf.parse(startTime).getTime() / 1000 / 60;
-                long examEndTime = sdf.parse(endTime).getTime() / 1000 / 60;
-                InvigilatorVO invigilatorVO = new InvigilatorVO();
-                invigilatorVO.setId(items.getId());
-                invigilatorVO.setNickname(items.getNickname());
-                invigilatorVO.setInvigilateTime(items.getInvigilateTime());
-                // 存在相同计划或者时间重叠设置为false
-                invigilatorVO.setInvigilatorState(!isOverlap.contains(examStartTime) && !isOverlap
-                    .contains(examEndTime) && !isExist.get());
-                list.add(invigilatorVO);
-            } catch (ParseException e) {
-                throw new RuntimeException(e);
+
+                // 判断是否同一个考试计划
+                if (Objects.equals(vo.getPlanId(), examPlanId)) {
+                    existedPlan.set(true);
+                }
             }
+
+            // 计算是否有冲突
+            boolean noConflict = !occupyMinutes.contains(newStart)
+                    && !occupyMinutes.contains(newEnd)
+                    && !existedPlan.get();
+
+            InvigilatorVO newVO = new InvigilatorVO();
+            newVO.setId(invigilator.getId());
+            newVO.setNickname(invigilator.getNickname());
+            newVO.setInvigilateTime(invigilator.getInvigilateTime());
+            newVO.setInvigilatorState(noConflict);
+
+            resultList.add(newVO);
         });
-        return list;
+
+        return resultList;
     }
+
 }

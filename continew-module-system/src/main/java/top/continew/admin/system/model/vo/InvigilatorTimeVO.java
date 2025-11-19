@@ -18,6 +18,8 @@ package top.continew.admin.system.model.vo;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class InvigilatorTimeVO {
 
@@ -29,8 +31,8 @@ public class InvigilatorTimeVO {
 
     private String classroomName;// 考场名称
 
-    private String startTime;// 监考时间开始时间
+    private LocalDateTime startTime;// 监考时间开始时间
 
-    private String endTime;// 监考时间结束时间
+    private LocalDateTime endTime;// 监考时间结束时间
 
 }

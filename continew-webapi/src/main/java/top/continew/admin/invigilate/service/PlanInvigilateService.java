@@ -113,4 +113,19 @@ public interface PlanInvigilateService extends BaseService<PlanInvigilateResp, P
      * @return
      */
     List<InvigilatorAssignResp> getListByPlanId(Long planId);
+
+    /**
+     * 监考员无法参加监考
+     * @param planId
+     * @return
+     */
+    Boolean rejected(Long planId);
+
+    /**
+     * 更换监考员
+     * @param req
+     * @return
+     */
+    Boolean replace(PlanInvigilateReq req);
+
 }

@@ -139,6 +139,13 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     private Integer status;
 
     /**
+     * 监考员分配类型（1：第一次随机分配 2：第二次随机分配 3：管理员指派）
+     */
+    @Schema(description = "监考员分配类型（1：第一次随机分配 2：第二次随机分配 3：管理员指派）")
+    @ExcelProperty(value = "监考员分配类型（1：第一次随机分配 2：第二次随机分配 3：管理员指派）")
+    private Integer assignType;
+
+    /**
      * 机构类型，0作业人员，1检验人员
      */
     @Schema(description = "机构类型，0作业人员，1检验人员")

@@ -26,6 +26,7 @@ import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.resp.EnrollStatusResp;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
+import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
@@ -109,4 +110,28 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
     PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery,PageQuery pageQuery);
 
     void batchUpdatePlanMaxCandidates(List<ExamPlanDTO> planList);
+
+    /**
+     * 重新随机分配考试计划的监考员
+     * @param planId
+     * @param invigilatorNum
+     * @return
+     */
+    Boolean reRandomInvigilators(Long planId, Integer invigilatorNum);
+
+    /**
+     * 获取可用监考员
+     * @param planId
+     * @return
+     */
+    List<AvailableInvigilatorResp> getAvailableInvigilator(Long planId,Long rejectedInvigilatorId);
+
+    /**
+     * 中心主任确认考试
+     * @param planId
+     * @param isFinalConfirmed
+     * @return
+     */
+    Boolean centerDirectorConform(Long planId, Integer isFinalConfirmed);
+
 }

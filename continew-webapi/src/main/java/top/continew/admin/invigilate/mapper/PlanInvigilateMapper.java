@@ -23,12 +23,14 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import top.continew.admin.invigilate.model.entity.Grades;
+import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
 import top.continew.admin.invigilate.model.resp.InvigilatorAssignResp;
 import top.continew.admin.invigilate.model.resp.InvigilatorPlanResp;
 import top.continew.admin.invigilate.model.resp.InvigilateExamDetailResp;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -70,8 +72,29 @@ public interface PlanInvigilateMapper extends BaseMapper<PlanInvigilateDO> {
      * @param examId
      * @return
      */
-    @Select("select tep.exam_plan_name,tep.image_url,tep.start_time,tep.end_time,tep.redeme,tel.location_name,tpi.invigilate_status from ted_plan_invigilate tpi " + "inner join ted_exam_plan tep on tep.id = tpi.exam_plan_id " + "inner join ted_exam_location tel on tep.location_id = tel.id " + "where tpi.invigilator_id = #{invigilatorId} and tpi.exam_plan_id = #{examId} and tep.is_deleted = 0")
-    InvigilateExamDetailResp queryExamDetail(Long invigilatorId, Long examId);
+    @Select("""
+                SELECT 
+                    tep.exam_plan_name, 
+                    tep.start_time, 
+                    tep.end_time, 
+                    tep.redeme, 
+                    tel.location_name, 
+                    tpi.invigilate_status
+                FROM ted_plan_invigilate tpi
+                INNER JOIN ted_exam_plan tep 
+                    ON tep.id = tpi.exam_plan_id AND tep.is_deleted = 0
+                INNER JOIN ted_classroom tc
+                    ON tpi.classroom_id = tc.id AND tc.is_deleted = 0
+                INNER JOIN ted_location_classroom tlc
+                    ON tc.id = tlc.classroom_id AND tlc.is_deleted = 0
+                INNER JOIN ted_exam_location tel 
+                    ON tlc.location_id = tel.id AND tel.is_deleted = 0
+                WHERE tpi.invigilator_id = #{invigilatorId}
+                  AND tpi.exam_plan_id = #{examId}
+            """)
+    InvigilateExamDetailResp queryExamDetail(@Param("invigilatorId") Long invigilatorId,
+                                             @Param("examId") Long examId);
+
 
     /**
      * 更新监考状态 根据examPlanId
@@ -164,8 +187,15 @@ public interface PlanInvigilateMapper extends BaseMapper<PlanInvigilateDO> {
 
     /**
      * 根据计划id获取计划分配的监考员信息
+     *
      * @param planId
      * @return
      */
     List<InvigilatorAssignResp> getListByPlanId(@Param("planId") Long planId);
+
+    List<AvailableInvigilatorResp> selectAvailableInvigilators(@Param("startTime") LocalDateTime startTime,
+                                                               @Param("endTime") LocalDateTime endTime,
+                                                               @Param("planId") Long planId,
+                                                               @Param("invigilatorRole") Long invigilatorRole,
+                                                               @Param("rejectedInvigilatorId") Long rejectedInvigilatorId);
 }

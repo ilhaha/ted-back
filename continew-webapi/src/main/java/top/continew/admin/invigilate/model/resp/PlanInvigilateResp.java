@@ -69,9 +69,9 @@ public class PlanInvigilateResp extends BaseResp {
     //    private Integer invigilateStatus;
 
     /**
-     * 监考状态（0：未监考，1：待录入，2：待审核， 3：已完成）
+     * 监考状态（0：待监考，1：待录入，2：待审核， 3：已完成）
      */
-    @Schema(description = " 监考状态（0：未监考，1：待录入，2：待审核， 3：已完成）")
+    @Schema(description = " 监考状态（0：待监考，1：待录入，2：待审核， 3：已完成）")
     private Integer invigilateStatus;
 
 }

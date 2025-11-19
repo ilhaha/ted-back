@@ -27,7 +27,7 @@
         registration_progress = IF(review_status != 1, VALUES(registration_progress), registration_progress);
     </insert>
     <select id="getListByPlanId" resultType="top.continew.admin.invigilate.model.resp.InvigilatorAssignResp">
-        SELECT su.nickname,tpi.invigilator_id,tc.id AS classroom_id,tc.classroom_name,tpi.invigilate_status
+        SELECT su.nickname, tpi.invigilator_id, tc.id AS classroom_id, tc.classroom_name, tpi.invigilate_status,tpi.id
         from ted_plan_invigilate tpi
                  LEFT JOIN ted_classroom tc
                            ON tpi.classroom_id = tc.id AND tc.is_deleted = 0
@@ -35,4 +35,29 @@
                            ON tpi.invigilator_id = su.id
         where tpi.exam_plan_id = #{planId}
     </select>
+    <select id="selectAvailableInvigilators"
+            resultType="top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp">
+        SELECT su.id, su.nickname
+        FROM sys_user su
+        JOIN sys_user_role sur
+        ON su.id = sur.user_id
+        AND sur.role_id = #{invigilatorRole}
+        WHERE NOT EXISTS (
+        SELECT 1
+        FROM ted_plan_invigilate tpi
+        JOIN ted_exam_plan tep
+        ON tpi.exam_plan_id = tep.id
+        AND tep.id != #{planId}
+        AND tep.is_final_confirmed IN (1, 2)
+        AND tep.start_time &lt; DATE_ADD(#{endTime}, INTERVAL 30 MINUTE)
+        AND tep.end_time &gt; DATE_SUB(#{startTime}, INTERVAL 30 MINUTE)
+        WHERE tpi.invigilator_id = su.id
+        AND tpi.invigilate_status != 5
+        )
+        <if test="rejectedInvigilatorId != null">
+            AND su.id != #{rejectedInvigilatorId}
+        </if>
+    </select>
+
+
 </mapper>

@@ -7,10 +7,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum PlanFinalConfirmedStatus {
 
-    UNCONFIRMED(0, "最终考试时间地点未确定"),
-    CONFIRMED(1, "最终考试时间地点已确定");
+    ADMIN_PENDING(0, "待管理员确定"),
+    DIRECTOR_PENDING(1, "待中心主任确定"),
+    DIRECTOR_CONFIRMED(2, "中心主任确定"),
+    DIRECTOR_REJECTED(3, "中心主任驳回");
 
     private final Integer value;
     private final String description;
-
 }
+

@@ -18,7 +18,10 @@ package top.continew.admin.invigilate.model.enums;
 
 public enum InvigilateStatus {
 
-    NOT_INVIGILATED(0, "未监考"), PENDING_ENTRY(1, "待录入"), PENDING_REVIEW(2, "待审核"), COMPLETED(3, "已完成");
+    NOT_INVIGILATED(0, "待监考"),
+    PENDING_ENTRY(1, "待录入"),
+    PENDING_REVIEW(2, "待审核"),
+    COMPLETED(3, "已完成");
 
     private final long code;
     private final String description;

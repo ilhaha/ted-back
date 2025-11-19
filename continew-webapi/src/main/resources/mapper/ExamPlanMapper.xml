@@ -12,6 +12,7 @@
                tep.max_candidates,
                tep.actual_candidates,
                tep.plan_type,
+               tep.assign_type,
                tep.status,
                tep.approval_time,
                tep.enroll_start_time,
