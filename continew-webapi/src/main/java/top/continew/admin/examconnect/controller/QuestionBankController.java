@@ -51,9 +51,16 @@ import java.util.List;
     Api.EXPORT})
 public class QuestionBankController extends BaseController<QuestionBankService, QuestionBankResp, QuestionBankDetailResp, QuestionBankQuery, QuestionBankReq> {
 
+    @Operation(summary = "考生获取试卷")
+    @GetMapping("/candidate/paper/{planId}/{userId}")
+    public ExamPaperVO getCandidateParer( @PathVariable("planId") Long planId,
+                                          @PathVariable("userId") Long userId) {
+        return baseService.getCandidatePaper(planId,userId);
+    }
+
     @Operation(summary = "生成考试计划试卷")
     @GetMapping("/generate/exam/{planId}")
-    public Boolean generateExamQuestionBank(@PathVariable("planId") Long planId) {
+    public ExamPaperVO generateExamQuestionBank(@PathVariable("planId") Long planId) {
         return baseService.generateExamQuestionBank(planId);
     }
 

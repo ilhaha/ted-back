@@ -31,6 +31,7 @@ import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.*;
 
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -121,6 +122,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
     @Value("${examine.userRole.invigilatorId}")
     private Long invigilatorId;
+
+    private final ExamAsyncService examAsyncService;
 
 
     @Override
@@ -878,31 +881,50 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划信息");
 
         // 查询监考员列表
-        List<InvigilatorAssignResp> invigilatorList =
-                planInvigilateMapper.getListByPlanId(planId);
+        List<InvigilatorAssignResp> invigilatorList = planInvigilateMapper.getListByPlanId(planId);
         ValidationUtils.throwIfEmpty(invigilatorList, "未选择监考员");
 
-        // 检查监考员确认状态
-        for (InvigilatorAssignResp inv : invigilatorList) {
-            ValidationUtils.throwIf(!InvigilateStatusEnum.NOT_START.getValue()
-                    .equals(inv.getInvigilateStatus()),"存在监考员未确认监考或无法参加监考");
+        // 检查监考员确认状态 —— 只有主任确认才需要校验
+        if (PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue().equals(isFinalConfirmed)) {
+            for (InvigilatorAssignResp inv : invigilatorList) {
+                ValidationUtils.throwIf(
+                        !InvigilateStatusEnum.NOT_START.getValue().equals(inv.getInvigilateStatus()),
+                        "存在监考员未确认监考或无法参加监考"
+                );
+            }
         }
-        // 创建更新包装器
-        LambdaUpdateWrapper<ExamPlanDO> update = new LambdaUpdateWrapper<>();
-        update.eq(ExamPlanDO::getId, planId)
+
+        // 更新构造器
+        LambdaUpdateWrapper<ExamPlanDO> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(ExamPlanDO::getId, planId)
                 .set(ExamPlanDO::getIsFinalConfirmed, isFinalConfirmed);
 
-        // 若驳回，清空监考员及随机分配类型
+        // 情况 1：主任驳回
         if (PlanFinalConfirmedStatus.DIRECTOR_REJECTED.getValue().equals(isFinalConfirmed)) {
-            update.set(ExamPlanDO::getAssignType, null);
-            // 删除监考员分配
+
+            updateWrapper.set(ExamPlanDO::getAssignType, null);
+
+            // 删除监考员绑定
             planInvigilateMapper.delete(
                     new LambdaQueryWrapper<PlanInvigilateDO>()
-                            .eq(PlanInvigilateDO::getExamPlanId, planId));
+                            .eq(PlanInvigilateDO::getExamPlanId, planId)
+            );
         }
 
-        return baseMapper.update(update) > 0;
+        // 执行更新
+        boolean success = baseMapper.update(updateWrapper) > 0;
+
+        // 情况 2：主任确认，且是工种考试
+        if (success &&
+                PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue().equals(isFinalConfirmed) &&
+                ExamPlanTypeEnum.WORKER.getValue().equals(examPlanDO.getPlanType())) {
+            // 异步生成准考证号，不阻塞前端
+            examAsyncService.generateAdmissionTicket(examPlanDO);
+        }
+
+        return success;
     }
+
 
 
 }

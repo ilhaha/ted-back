@@ -47,7 +47,7 @@ public interface QuestionBankService extends BaseService<QuestionBankResp, Quest
      * @param planId
      * @return
      */
-    Boolean generateExamQuestionBank(Long planId);
+    ExamPaperVO generateExamQuestionBank(Long planId);
     /**
      * 导出题库为 Excel 文件
      *
@@ -58,4 +58,11 @@ public interface QuestionBankService extends BaseService<QuestionBankResp, Quest
      */
     byte[] exportQuestionsExcel(Long categoryId, Long subCategoryId, Long knowledgeTypeId) throws IOException;
 
+    /**
+     * 考生获取试卷
+     * @param planId
+     * @param userId
+     * @return
+     */
+    ExamPaperVO getCandidatePaper(Long planId, Long userId);
 }

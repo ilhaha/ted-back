@@ -166,10 +166,10 @@
             ${ew.customSqlSegment}
     </select>
     <select id="getExamCandidates" resultType="top.continew.admin.exam.model.vo.ExamCandidateVO">
-        SELECT sys_user.id, sys_user.username, sys_user.nickname, ted_enroll.exam_number, ted_enroll.exam_status
-        FROM ted_enroll
+        SELECT sys_user.id, sys_user.username, sys_user.nickname, te.exam_number, te.exam_status
+        FROM ted_enroll te
                  LEFT JOIN sys_user
-                           ON ted_enroll.user_id = sys_user.id
+                           ON te.user_id = sys_user.id
             ${ew.customSqlSegment}
     </select>
     <select id="getWorkerApplyList" resultType="top.continew.admin.exam.model.resp.EnrollResp">

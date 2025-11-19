@@ -24,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.dromara.x.file.storage.spring.EnableFileStorage;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -47,6 +48,7 @@ import top.continew.starter.web.model.R;
 @SpringBootApplication
 @RequiredArgsConstructor
 @EnableScheduling
+@EnableAsync
 public class ContiNewAdminApplication {
 
     private final ProjectProperties projectProperties;

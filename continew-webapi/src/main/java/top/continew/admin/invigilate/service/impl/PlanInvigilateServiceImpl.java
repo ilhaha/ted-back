@@ -18,11 +18,13 @@ package top.continew.admin.invigilate.service.impl;
 
 import cn.crane4j.core.util.StringUtils;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
 import com.aliyun.sdk.service.dysmsapi20170525.AsyncClient;
 import com.aliyun.sdk.service.dysmsapi20170525.models.SendSmsRequest;
 import com.aliyun.sdk.service.dysmsapi20170525.models.SendSmsResponse;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -296,69 +298,88 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public String getPassword(Long examId) {
+        // 获取当前用户
+        Long userId = TokenLocalThreadUtil.get().getUserId();
 
-        //1.在关联表中判断是否有考试密码(避免多个监考员获取监考密码不同)(可以根据不同用户去查)
-        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
-        Long userId = userTokenDo.getUserId();
-        PlanInvigilateDO planInvigilateDO = planInvigilateMapper.selectByUserId(userId, examId);
+        // 1. 查询监考任务
+        List<PlanInvigilateDO> invigilateList = baseMapper.selectList(
+                new LambdaQueryWrapper<PlanInvigilateDO>()
+                        .eq(PlanInvigilateDO::getExamPlanId, examId)
+        );
+        ValidationUtils.throwIfEmpty(invigilateList, "无监考任务");
 
-        //1.1有，直接返回
-        if (planInvigilateDO.getExamPassword() != null) {
-            return statueConstant.EXAM_PASSWORD + planInvigilateDO.getExamPassword();
+        // 2. 获取当前监考员任务
+        PlanInvigilateDO currentTask = planInvigilateMapper.selectByUserId(userId, examId);
+        ValidationUtils.throwIfNull(currentTask, "未查询到监考任务");
+
+        // 绑定手机号检查
+        UserDO user = userMapper.selectById(userId);
+        if (StringUtils.isEmpty(user.getPhone())) {
+            return statueConstant.EXAM_PASSWORD_BIND_PHONE;
         }
-        //1.2没有就短信发送考试密码，并存储在数据库中
-        //1.2.1 查出考试计划对应的监考人员(注意还要增加一个监考状态的判断)的手机号码和查询考试计划详情，获取考试名称
-        String captcha = RandomUtil.randomNumbers(6);
-        //1.2.2 增加了考场的功能后就必须先拿出考场号了（）
-        Long classRoomId = planInvigilateDO.getClassroomId();
-        List<Long> userIds = planInvigilateMapper.selectByExamId(examId, classRoomId);//查出监考员ids
 
-        QueryWrapper<UserDO> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in("id", userIds);
-        List<UserDO> userDOList = userMapper.selectListByIds(queryWrapper);
-        List<String> unboundUsers = new ArrayList<>(); // 记录未绑定的监考员
-
+        // 查询考试计划名称
         String examPlanName = examPlanMapper.selectById(examId).getExamPlanName();
-        //检查是否有未绑定手机号的用户
-        List<String> phoneList = new ArrayList<>();
-        for (UserDO user : userDOList) {
-            if (StringUtils.isEmpty(user.getPhone())) {
-                if (Objects.equals(user.getId(), userId))
-                    return statueConstant.EXAM_PASSWORD_BIND_PHONE; // 是自己未绑定手机号，返回错误信息
-                else
-                    unboundUsers.add(user.getNickname());//记录那个监考员
-            }
-            phoneList.add(user.getPhone());
+
+        // 当前考场 ID
+        Long classroomId = currentTask.getClassroomId();
+
+        // 3. 查找是否已有监考员生成过密码
+        String existPassword = invigilateList.stream()
+                .map(PlanInvigilateDO::getExamPassword)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+
+        // 需要生成或复用的密码
+        String finalPassword = (existPassword != null) ? existPassword : RandomUtil.randomNumbers(6);
+
+        // 4. 当前用户如果没有密码 → 写库
+        if (currentTask.getExamPassword() == null) {
+            updateExamPassword(userId, examId, classroomId, finalPassword);
         }
-        //List<String> phoneList = userDOList.stream().map(item -> item.getPhone()).collect(Collectors.toList());//获取他们手机号
 
-        //1.2.2 写进数据库(保证一致性)
-        QueryWrapper<PlanInvigilateDO> wrapper = new QueryWrapper<PlanInvigilateDO>().in("invigilator_id", userIds);
-        wrapper.eq("invigilate_status", 0);
-        wrapper.eq("exam_plan_id", examId);
-        wrapper.eq("classroom_id", classRoomId);
-        planInvigilateMapper.deductBalanceByIds(captcha, wrapper);
+        // 5. 发送短信
+        sendExamPwdSms(user.getPhone(), examPlanName, finalPassword);
 
-        //1.2.3 发构建并发送短信
-        Map<String, String> messageMap = new LinkedHashMap<>();
-        messageMap.put("PlanName", examPlanName);
-        messageMap.put("code", captcha);
-        String params = JSON.toJSONString(messageMap);
-        String phones = String.join(",", phoneList);
+        return statueConstant.EXAM_PASSWORD_SEND_CONTENT;
+    }
+
+
+    /**
+     * 更新监考记录中的考试密码
+     */
+    private void updateExamPassword(Long userId, Long examId, Long classroomId, String pwd) {
+        planInvigilateMapper.deductBalanceByIds(
+                pwd,
+                new QueryWrapper<PlanInvigilateDO>()
+                        .eq("invigilator_id", userId)
+                        .eq("invigilate_status", InvigilateStatusEnum.TO_CONFIRM.getValue())
+                        .eq("exam_plan_id", examId)
+                        .eq("classroom_id", classroomId)
+        );
+    }
+
+    /**
+     * 发送开考密码短信
+     */
+    private void sendExamPwdSms(String phone, String planName, String password) {
+        Map<String, String> paramsMap = new LinkedHashMap<>();
+        paramsMap.put("PlanName", planName);
+        paramsMap.put("code", password);
 
         SendSmsRequest request = SendSmsRequest.builder()
-            .phoneNumbers(phones)
-            .signName(smsConfig.getSignName()) // "深圳一信通科技有限公司"
-            .templateCode(smsConfig.getTemplateCodes().get(SmsConstants.EXAM_NOTIFICATION_TEMPLATE)) // "SMS_480960164"
-            .templateParam(params) // 注意这里传验证码，不是有效期
-            .build();
-        //异步发送
-        CompletableFuture<SendSmsResponse> future = smsAsyncClient.sendSms(request);
-        if (unboundUsers.size() > 0)
-            return statueConstant.EXAM_PASSWORD_SEND_CONTENT;
-        return statueConstant.EXAM_PASSWORD_SEND_SUCCESS;
+                .phoneNumbers(phone)
+                .signName(smsConfig.getSignName())
+                .templateCode(smsConfig.getTemplateCodes().get(SmsConstants.EXAM_NOTIFICATION_TEMPLATE))
+                .templateParam(JSON.toJSONString(paramsMap))
+                .build();
+
+        smsAsyncClient.sendSms(request);
     }
+
 
     /**
      * 根据计划id获取计划分配的监考员信息

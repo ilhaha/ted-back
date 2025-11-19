@@ -21,6 +21,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
@@ -37,12 +38,8 @@ import top.continew.admin.common.constant.QuestionConstant;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
-import top.continew.admin.exam.mapper.CategoryMapper;
-import top.continew.admin.exam.mapper.ExamPlanMapper;
-import top.continew.admin.exam.mapper.ProjectMapper;
-import top.continew.admin.exam.model.entity.CategoryDO;
-import top.continew.admin.exam.model.entity.ExamPlanDO;
-import top.continew.admin.exam.model.entity.ProjectDO;
+import top.continew.admin.exam.mapper.*;
+import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.dto.OptionDTO;
 import top.continew.admin.exam.model.vo.CascadeOptionsVo;
 import top.continew.admin.examconnect.mapper.KnowledgeTypeMapper;
@@ -51,6 +48,8 @@ import top.continew.admin.examconnect.mapper.StepMapper;
 import top.continew.admin.examconnect.model.entity.KnowledgeTypeDO;
 import top.continew.admin.examconnect.model.entity.StepDO;
 import top.continew.admin.examconnect.model.resp.*;
+import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.entity.UserDO;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -102,6 +101,15 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
     @Resource
     private QuestionOptionMapper questionOptionMapper;
 
+    @Resource
+    private UserMapper userMapper;
+
+    @Resource
+    private EnrollMapper enrollMapper;
+
+    @Resource
+    private CandidateExamPaperMapper candidateExamPaperMapper;
+
     @Override
     public PageResp<QuestionBankResp> page(QuestionBankQuery query, PageQuery pageQuery) {
         QueryWrapper<QuestionBankDO> queryWrapper = this.buildQueryWrapper(query);
@@ -109,13 +117,14 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         super.sort(queryWrapper, pageQuery);
 
         IPage<QuestionBankResp> page = baseMapper.selectQuestionBankPage(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
 
         PageResp<QuestionBankResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
 
         return build;
     }
+
     /**
      * 导出题库 Excel
      */
@@ -233,6 +242,40 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         }
     }
 
+    /**
+     * 考生获取试卷
+     * @param planId
+     * @param userId
+     * @return
+     */
+    @Override
+    public ExamPaperVO getCandidatePaper(Long planId, Long userId) {
+
+        // 1. 查询报名表
+        EnrollDO enrollDO = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
+                .eq(EnrollDO::getExamPlanId, planId)
+                .eq(EnrollDO::getUserId, userId));
+        ValidationUtils.throwIfNull(enrollDO, "未报名该考试");
+
+        // 3. 查询试卷表
+        CandidateExamPaperDO candidateExamPaperDO = candidateExamPaperMapper.selectOne(
+                new LambdaQueryWrapper<CandidateExamPaperDO>()
+                        .eq(CandidateExamPaperDO::getEnrollId, enrollDO.getId()));
+        ValidationUtils.throwIfNull(candidateExamPaperDO, "未生成试卷，联系监考员生成试卷");
+
+        // 4. 反序列化 JSON
+        String paperJson = candidateExamPaperDO.getPaperJson();
+        ExamPaperVO examPaperVO = null;
+        try {
+            examPaperVO = new ObjectMapper().readValue(paperJson, ExamPaperVO.class);
+        } catch (Exception e) {
+            throw new RuntimeException("试卷 JSON 解析失败", e);
+        }
+
+        return examPaperVO;
+    }
+
+
     @Override
     public QuestionBankDetailResp get(Long id) {
         QuestionBankDetailResp questionBankDetailResp = super.get(id);
@@ -264,7 +307,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         List<CategoryDO> categoryDOList = categoryMapper.selectList(new QueryWrapper<CategoryDO>().eq("is_deleted", 0));
         List<ProjectDO> projectDOList = projectMapper.selectList(new QueryWrapper<ProjectDO>().eq("is_deleted", 0));
         List<KnowledgeTypeDO> knowledgeTypeDOList = knowledgeTypeMapper.selectList(new QueryWrapper<KnowledgeTypeDO>()
-            .eq("is_deleted", 0));
+                .eq("is_deleted", 0));
 
         List<CascadeOptionsVo> vos = new ArrayList<>();
 
@@ -353,106 +396,93 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
     }
 
     @Override
-    public Boolean generateExamQuestionBank(Long planId) {
-        ExamPaperVO examPaperVO = getPaperFromRedis(RedisConstant.EXAM_PAPER_KEY + planId);
-        if (ObjectUtil.isEmpty(examPaperVO)) {
-            // 1. 查出计划、项目、分类
-            ExamPlanDO examPlanDB = examPlanMapper.selectById(planId);
-            ProjectDO projectDB = projectMapper.selectById(examPlanDB.getExamProjectId());
-            CategoryDO categoryDB = categoryMapper.selectById(projectDB.getCategoryId());
-            Long topicNumber = categoryDB.getTopicNumber();
+    public ExamPaperVO generateExamQuestionBank(Long planId) {
+        ExamPaperVO examPaperVO = new ExamPaperVO();
+        // 1. 查出计划、项目、分类
+        ExamPlanDO examPlanDB = examPlanMapper.selectById(planId);
+        ProjectDO projectDB = projectMapper.selectById(examPlanDB.getExamProjectId());
+        CategoryDO categoryDB = categoryMapper.selectById(projectDB.getCategoryId());
+        Long topicNumber = categoryDB.getTopicNumber();
 
-            // 2. 查所有题目
-            List<QuestionBankDO> questionBankDBList = questionBankMapper
-                .selectList(new LambdaQueryWrapper<QuestionBankDO>().eq(QuestionBankDO::getCategoryId, projectDB
-                    .getCategoryId()).eq(QuestionBankDO::getSubCategoryId, projectDB.getId()));
-
-            // 3. 查知识库
-            List<KnowledgeTypeDO> knowledgeTypeDBList = knowledgeTypeMapper
+        // 2. 查所有题目
+        List<QuestionBankDO> questionBankDBList = questionBankMapper
+                .selectList(new LambdaQueryWrapper<QuestionBankDO>()
+                        .eq(QuestionBankDO::getCategoryId, projectDB.getCategoryId())
+                        .eq(QuestionBankDO::getSubCategoryId, projectDB.getId())
+                        .eq(QuestionBankDO::getExamType, examPlanDB.getPlanType() + 1));
+        // 3. 查知识库
+        List<KnowledgeTypeDO> knowledgeTypeDBList = knowledgeTypeMapper
                 .selectList(new LambdaQueryWrapper<KnowledgeTypeDO>().eq(KnowledgeTypeDO::getProjectId, projectDB
-                    .getId()));
+                        .getId()));
+        // 4. 抽题逻辑，分类收集
+        List<QuestionBankWithOptionVO> singleList = new ArrayList<>();
+        List<QuestionBankWithOptionVO> multipleList = new ArrayList<>();
+        List<QuestionBankWithOptionVO> judgeList = new ArrayList<>();
 
-            // 4. 抽题逻辑，分类收集
-            List<QuestionBankWithOptionVO> singleList = new ArrayList<>();
-            List<QuestionBankWithOptionVO> multipleList = new ArrayList<>();
-            List<QuestionBankWithOptionVO> judgeList = new ArrayList<>();
+        for (KnowledgeTypeDO knowledgeType : knowledgeTypeDBList) {
+            long count = topicNumber * knowledgeType.getProportion() / 100;
 
-            for (KnowledgeTypeDO knowledgeType : knowledgeTypeDBList) {
-                long count = topicNumber * knowledgeType.getProportion() / 100;
-
-                // 当前知识点下的题目
-                List<QuestionBankDO> source = questionBankDBList.stream()
+            // 当前知识点下的题目
+            List<QuestionBankDO> source = questionBankDBList.stream()
                     .filter(q -> Objects.equals(q.getKnowledgeTypeId(), knowledgeType.getId()))
                     .collect(Collectors.toList());
 
-                Collections.shuffle(source);
-                List<QuestionBankDO> selected = source.stream().limit(count).toList();
+            Collections.shuffle(source);
+            List<QuestionBankDO> selected = source.stream().limit(count).toList();
 
-                for (QuestionBankDO question : selected) {
-                    QuestionBankWithOptionVO questionVO = new QuestionBankWithOptionVO();
-                    BeanUtils.copyProperties(question, questionVO);
+            for (QuestionBankDO question : selected) {
+                QuestionBankWithOptionVO questionVO = new QuestionBankWithOptionVO();
+                BeanUtils.copyProperties(question, questionVO);
 
-                    // 设置知识点信息
-                    questionVO.setKnowledgeTypeId(knowledgeType.getId());
-                    questionVO.setKnowledgeTypeName(knowledgeType.getName());
-                    questionVO.setKnowledgeTypeTopicNumber(count);
+                // 设置知识点信息
+                questionVO.setKnowledgeTypeId(knowledgeType.getId());
+                questionVO.setKnowledgeTypeName(knowledgeType.getName());
+                questionVO.setKnowledgeTypeTopicNumber(count);
 
-                    // 加载选项
-                    List<StepDO> stepDOS = stepMapper.selectList(new LambdaQueryWrapper<StepDO>()
+                // 加载选项
+                List<StepDO> stepDOS = stepMapper.selectList(new LambdaQueryWrapper<StepDO>()
                         .eq(StepDO::getQuestionBankId, question.getId()));
 
-                    List<OptionVO> options = stepDOS.stream().map(step -> {
-                        OptionVO option = new OptionVO();
-                        option.setQuestion(step.getQuestion());
-                        option.setQuestionBankId(step.getQuestionBankId());
-                        option.setIsCorrectAnswer(step.getIsCorrectAnswer());
-                        option.setId(step.getId());
-                        return option;
-                    }).collect(Collectors.toList());
+                List<OptionVO> options = stepDOS.stream().map(step -> {
+                    OptionVO option = new OptionVO();
+                    option.setQuestion(step.getQuestion());
+                    option.setQuestionBankId(step.getQuestionBankId());
+                    option.setIsCorrectAnswer(step.getIsCorrectAnswer());
+                    option.setId(step.getId());
+                    return option;
+                }).collect(Collectors.toList());
 
-                    Collections.shuffle(options);
-                    questionVO.setOptions(options);
+                Collections.shuffle(options);
+                questionVO.setOptions(options);
 
-                    // 分类收集（题目类型：1-单选，2-多选，3-判断）
-                    Integer type = question.getQuestionType();
-                    if (type != null) {
-                        switch (type) {
-                            case QuestionConstant.QUESTION_TYPE_SINGLE_CHOICE -> singleList.add(questionVO);
-                            case QuestionConstant.QUESTION_TYPE_MULTIPLE_CHOICE -> multipleList.add(questionVO);
-                            case QuestionConstant.QUESTION_TYPE_TRUE_FALSE -> judgeList.add(questionVO);
-                        }
+                // 分类收集（题目类型：1-单选，2-多选，3-判断）
+                Integer type = question.getQuestionType();
+                if (type != null) {
+                    switch (type) {
+                        case QuestionConstant.QUESTION_TYPE_SINGLE_CHOICE -> singleList.add(questionVO);
+                        case QuestionConstant.QUESTION_TYPE_MULTIPLE_CHOICE -> multipleList.add(questionVO);
+                        case QuestionConstant.QUESTION_TYPE_TRUE_FALSE -> judgeList.add(questionVO);
                     }
                 }
             }
-            // 5. 合并题目列表：单选 -> 多选 -> 判断
-            List<QuestionBankWithOptionVO> questionVOList = new ArrayList<>();
-            questionVOList.addAll(singleList);
-            questionVOList.addAll(multipleList);
-            questionVOList.addAll(judgeList);
-
-            // 6. 构建试卷对象
-            examPaperVO = new ExamPaperVO();
-            examPaperVO.setTopicNumber(topicNumber);
-            examPaperVO.setQuestions(questionVOList);
-
-            LocalDateTime endTime = examPlanDB.getEndTime();
-
-            // 当前时间
-            LocalDateTime now = LocalDateTime.now();
-
-            // 过期时间：考试结束时间 + 30分钟
-            LocalDateTime expireAt = endTime.plusMinutes(30);
-
-            // 计算从当前时间到 expireAt 的 Duration
-            Duration ttl = Duration.between(now, expireAt);
-            savePaperToRedis(RedisConstant.EXAM_PAPER_KEY + planId, examPaperVO, ttl);
         }
-        return true;
+        // 5. 合并题目列表：单选 -> 多选 -> 判断
+        List<QuestionBankWithOptionVO> questionVOList = new ArrayList<>();
+        questionVOList.addAll(singleList);
+        questionVOList.addAll(multipleList);
+        questionVOList.addAll(judgeList);
+
+        // 6. 构建试卷对象
+        examPaperVO = new ExamPaperVO();
+        examPaperVO.setTopicNumber(topicNumber);
+        examPaperVO.setQuestions(questionVOList);
+
+        return examPaperVO;
     }
 
     /**
      * 将试卷存到redis
-     * 
+     *
      * @param key
      * @param examPaper
      */
@@ -462,14 +492,14 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
     /**
      * 从redis中取出试卷
-     * 
+     *
      * @param key
      * @return
      */
     private ExamPaperVO getPaperFromRedis(String key) {
         Object obj = redisTemplate.opsForValue().get(key);
         if (obj instanceof ExamPaperVO) {
-            return (ExamPaperVO)obj;
+            return (ExamPaperVO) obj;
         }
         return null;
     }

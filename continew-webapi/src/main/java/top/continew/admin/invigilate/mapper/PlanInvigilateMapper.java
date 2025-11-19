@@ -182,7 +182,7 @@ public interface PlanInvigilateMapper extends BaseMapper<PlanInvigilateDO> {
     @Select("select invigilator_id from ted_plan_invigilate where  exam_plan_id= #{examId} AND classroom_id=#{classRoomId}")
     List<Long> selectByExamId(Long examId, Long classRoomId);
 
-    @Select("update ted_plan_invigilate set exam_password=#{captcha} ${ew.customSqlSegment}   ")
+    @Select("update ted_plan_invigilate set exam_password=#{captcha} ,invigilate_status=0 ${ew.customSqlSegment}   ")
     void deductBalanceByIds(String captcha, @Param(Constants.WRAPPER) QueryWrapper<PlanInvigilateDO> wrapper);
 
     /**

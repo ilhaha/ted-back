@@ -491,9 +491,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         // 根据考试计划ID和考场ID查出考生的信息
         QueryWrapper<EnrollDO> queryWrapper = this.buildQueryWrapper(enrollQuery);
 
-        queryWrapper.eq("ted_enroll.is_deleted", 0);
-        queryWrapper.eq("ted_enroll.classroom_id", classroomId);
-        queryWrapper.eq("ted_enroll.exam_plan_id", planId);
+        queryWrapper.eq("te.is_deleted", 0);
+        queryWrapper.eq("te.classroom_id", classroomId);
+        queryWrapper.eq("te.exam_plan_id", planId);
         super.sort(queryWrapper, pageQuery);
 
         IPage<ExamCandidateVO> page = baseMapper.getExamCandidates(new Page<>(pageQuery.getPage(), pageQuery

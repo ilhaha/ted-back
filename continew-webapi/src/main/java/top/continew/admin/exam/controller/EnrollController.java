@@ -58,6 +58,11 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
     private EnrollService enrollService;
 
     /**
+     * 生成并下载作业人员班级准考证
+     */
+
+
+    /**
      * 下载某个班级的考试缴费通知单
      * @param classId
      * @param planId
