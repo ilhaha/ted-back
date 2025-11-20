@@ -104,4 +104,11 @@ public class EnrollDetailResp extends BaseDetailResp {
      */
     @Schema(description = "考试状态")
     private Integer enrollStatus;
+
+    /**
+     * 考试确认状态
+     */
+    @Schema(description = "考试确认状态")
+    private Integer isFinalConfirmed;
+
 }

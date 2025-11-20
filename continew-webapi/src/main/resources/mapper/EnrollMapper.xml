@@ -28,6 +28,7 @@
                tep.exam_plan_name,
                tep.start_time                            AS exam_start_time,
                tep.redeme,
+               tep.is_final_confirmed,
                COALESCE(te.enroll_status, 0)             AS enroll_status
 
         -- 优化后的证书聚合（增加用户关联条件）

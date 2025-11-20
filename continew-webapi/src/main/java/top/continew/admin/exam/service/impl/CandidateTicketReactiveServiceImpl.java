@@ -1,5 +1,6 @@
 package top.continew.admin.exam.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
@@ -7,16 +8,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.exam.mapper.CandidateExamPaperMapper;
+import top.continew.admin.exam.mapper.EnrollMapper;
 import top.continew.admin.exam.mapper.ExamIdcardMapper;
 import top.continew.admin.exam.mapper.ExamTicketMapper;
 import top.continew.admin.exam.model.dto.CandidateTicketDTO;
+import top.continew.admin.exam.model.entity.CandidateExamPaperDO;
+import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamIdcardDO;
+import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.service.CandidateTicketService;
+import top.continew.admin.examconnect.model.resp.ExamPaperVO;
+import top.continew.admin.examconnect.service.QuestionBankService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
@@ -28,6 +37,7 @@ import top.continew.admin.util.InMemoryMultipartFile;
 import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,6 +58,15 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
 
     @Value("${excel.template.admission-ticket.url}")
     private String excelTemplateUrl;
+
+    @Resource
+    private EnrollMapper enrollMapper;
+
+
+    private final QuestionBankService questionBankService;
+
+    private final CandidateExamPaperMapper candidateExamPaperMapper;
+
 
 
     @Override
@@ -103,14 +122,14 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
     @Override
     public ResponseEntity<byte[]> generateTicket(Long userId, String examNumber) {
         try {
-            // 1. 查询准考证数据（同步）
+            // 查询准考证数据
             String encryptedExamNumber = aesWithHMAC.encryptAndSign(examNumber);
             CandidateTicketDTO dto = examTicketMapper.findTicketByUserAndExamNumber(userId, encryptedExamNumber);
             if (dto == null) {
                 throw new RuntimeException("未找到该用户的准考证数据！");
             }
 
-            // 2. 查询照片URL（同步）
+            // 查询照片URL
             QueryWrapper<ExamIdcardDO> queryWrapper = new QueryWrapper<ExamIdcardDO>()
                     .eq("id_card_number", dto.getIdCard())
                     .eq("is_deleted", 0)
@@ -118,28 +137,68 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
             ExamIdcardDO idCard = examIdcardMapper.selectOne(queryWrapper);
             String photoUrl = idCard != null ? idCard.getFacePhoto() : null;
 
-            // 3. 解密并组装数据
+            // 解密并组装数据
             dto.setTicketId(examNumber);
             dto.setIdCard(aesWithHMAC.verifyAndDecrypt(dto.getIdCard()));
             Map<String, Object> dataMap = assembleData(dto);
-            log.info("照片 URL={}, 准考证数据Map={}", photoUrl, dataMap);
 
-            // 4. 同步下载照片
+            //查找考生报名信息
+            EnrollDO record = enrollMapper.selectOne(
+                    new LambdaQueryWrapper<EnrollDO>()
+                            .eq(EnrollDO::getUserId,userId)
+                            .eq(EnrollDO::getExamNumber,aesWithHMAC.encryptAndSign(examNumber))
+                            .select(EnrollDO::getExamPlanId,EnrollDO::getId)
+            );
+            // 异步生成试卷
+           asyncGenerateExamPaper(record.getExamPlanId(), record.getId());
+
+            // 下载照片
             byte[] photoBytes = loadPhotoSync(photoUrl);
-            log.info("下载照片完成，大小={}KB", photoBytes.length / 1024);
 
-            // 5. 同步生成PDF响应
+            //返回PDF响应
             String fileName = "准考证_" + examNumber + ".pdf";
             return excelUtilReactive.generatePdfResponseEntitySync(dataMap, excelTemplateUrl, photoBytes, fileName);
 
         } catch (Exception e) {
-            log.error("生成准考证失败：userId={}, examNumber={}", userId, examNumber, e);
+            log.error("生成准考证失败：", e);
             String errorMsg = "下载准考证失败：" + e.getMessage();
             return ResponseEntity.internalServerError()
                     .contentType(org.springframework.http.MediaType.TEXT_PLAIN)
-                    .body(errorMsg.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    .body(errorMsg.getBytes(StandardCharsets.UTF_8));
         }
     }
+
+
+    @Async
+    public void asyncGenerateExamPaper(Long planId, Long enrollId) {
+        try {
+            // 数据库检查是否已生成试卷
+            Long count = candidateExamPaperMapper.selectCount(
+                    new QueryWrapper<CandidateExamPaperDO>()
+                            .eq("enroll_id", enrollId)
+            );
+            if (count != null && count > 0) {
+                log.info("试卷已生成过，跳过 enrollId={}", enrollId);
+                return;
+            }
+            //  生成试卷
+            ObjectMapper objectMapper = new ObjectMapper();
+            ExamPaperVO examPaperVO = questionBankService.generateExamQuestionBank(planId);
+
+            CandidateExamPaperDO candidateExamPaperDO = new CandidateExamPaperDO();
+            candidateExamPaperDO.setPaperJson(objectMapper.writeValueAsString(examPaperVO));
+            candidateExamPaperDO.setEnrollId(enrollId);
+
+            candidateExamPaperMapper.insert(candidateExamPaperDO);
+
+            log.info("试卷生成成功 enrollId={}", enrollId);
+
+        } catch (Exception e) {
+            log.error("异步生成试卷失败 enrollId={}", enrollId, e);
+        }
+    }
+
+
 
     // 同步下载照片（适配MVC）
     private byte[] loadPhotoSync(String photoUrl) {

@@ -455,7 +455,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         // 校验考试计划
         ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
-        ValidationUtils.throwIf(examPlanDO == null || examPlanDO.getIsFinalConfirmed() != 1,
+        ValidationUtils.throwIf(examPlanDO == null || examPlanDO.getIsFinalConfirmed() != 2,
                 "考试计划考试时间和考试地点未最终确认，无法查看准考证信息");
 
         // 先查是否已生成准考证（避免重复生成）

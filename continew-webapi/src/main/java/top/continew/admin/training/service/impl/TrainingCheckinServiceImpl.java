@@ -234,6 +234,15 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
 
         // 导出 Excel
         try (ExcelWriter writer = ExcelUtil.getWriter(true)) {
+
+            // 设置表头别名
+            writer.addHeaderAlias("index", "序号");
+            writer.addHeaderAlias("trainingName", "培训课程名称");
+            writer.addHeaderAlias("candidateName", "考生姓名");
+            writer.addHeaderAlias("checkinTime", "签到时间");
+
+            writer.setOnlyAlias(true);
+
             writer.write(exportList, true);
             String fileName = URLEncoder.encode("培训签到记录.xlsx", "UTF-8");
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8");
