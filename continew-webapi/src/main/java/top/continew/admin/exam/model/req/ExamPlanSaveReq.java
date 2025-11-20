@@ -78,6 +78,12 @@ public class ExamPlanSaveReq {
     private Long locationId;
 
     /**
+     * 机构类型，0作业人员，1检验人员
+     */
+    @Schema(description = "机构类型，0作业人员，1检验人员")
+    private Integer planType;
+
+    /**
      * 最大考生数
      */
     @Schema(description = "最大考生数")
