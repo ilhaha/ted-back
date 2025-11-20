@@ -136,4 +136,20 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      * @return
      */
     ResponseEntity<byte[]> downloadBatchAuditNotice(Long classId, Long planId);
+
+
+    /**
+     * 下载某个考生的准考证
+     * @param enrollId
+     * @return
+     */
+    ResponseEntity<byte[]> downloadTicket(Long enrollId);
+
+    /**
+     * 下载某个班级的准考证
+     * @param classId
+     * @param planId
+     * @return
+     */
+    ResponseEntity<byte[]> downloadClassTicket(Long classId, Long planId);
 }

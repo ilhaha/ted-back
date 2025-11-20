@@ -58,8 +58,25 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
     private EnrollService enrollService;
 
     /**
-     * 生成并下载作业人员班级准考证
+     * 下载某个班级的准考证
+     * @param classId
+     * @param planId
+     * @return
      */
+    @GetMapping("/download/batch/ticket/{classId}/{planId}")
+    public ResponseEntity<byte[]> downloadClassTicket(@PathVariable("classId") Long classId, @PathVariable("planId") Long planId) {
+        return enrollService.downloadClassTicket(classId,planId);
+    }
+
+    /**
+     * 下载某个考生的准考证
+     * @param enrollId
+     * @return
+     */
+    @GetMapping("/download/ticket/{enrollId}")
+    public ResponseEntity<byte[]> downloadTicketUrl(@PathVariable("enrollId") Long enrollId) {
+        return enrollService.downloadTicket(enrollId);
+    }
 
 
     /**
@@ -74,7 +91,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
     }
 
     /**
-     * 下载某个考试的缴费通知单
+     * 下载某个考生的缴费通知单
      * @param enrollId
      * @return
      */

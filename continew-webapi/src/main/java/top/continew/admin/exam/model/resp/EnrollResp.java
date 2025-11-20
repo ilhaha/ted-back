@@ -141,4 +141,9 @@ public class EnrollResp extends BaseResp {
      */
     @Schema(description = "缴费通知单编号（格式：TZSB_PAY_时间戳_随机数）")
     private String noticeNo;
+
+    /**
+     * 准考证
+     */
+    private String ticketUrl;
 }

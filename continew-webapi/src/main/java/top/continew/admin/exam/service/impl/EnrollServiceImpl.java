@@ -51,6 +51,8 @@ import top.continew.admin.exam.model.vo.ExamPlanVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
+import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -108,6 +110,8 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     private UserMapper userMapper;
 
     private final RestTemplate restTemplate = new RestTemplate();
+
+    private final WorkerExamTicketMapper workerExamTicketMapper;
 
 
     /**
@@ -553,7 +557,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     }
 
     /**
-     * 下载某个考试的缴费通知单
+     * 下载某个考生的缴费通知单
      * @param enrollId
      * @return
      */
@@ -605,6 +609,83 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                 if (pdfBytes == null || pdfBytes.length == 0) continue;
 
                 String entryName = nickname + "_缴费通知单_" + new Date().getTime() + ".pdf";
+
+                zos.putNextEntry(new ZipEntry(entryName));
+                zos.write(pdfBytes);
+                zos.closeEntry();
+            }
+
+            zos.finish();
+
+            byte[] zipBytes = baos.toByteArray();
+
+            // 设置 HTTP 响应头
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            return new ResponseEntity<>(zipBytes, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 下载某个考生的准考证
+     * @param enrollId
+     * @return
+     */
+    @Override
+    public ResponseEntity<byte[]> downloadTicket(Long enrollId) {
+        LambdaQueryWrapper<WorkerExamTicketDO> workerExamTicketDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        workerExamTicketDOLambdaQueryWrapper.eq(WorkerExamTicketDO::getEnrollId, enrollId);
+        WorkerExamTicketDO workerExamTicketDO = workerExamTicketMapper.selectOne(workerExamTicketDOLambdaQueryWrapper);
+        ValidationUtils.throwIfNull(workerExamTicketDO,"还未生成准考证");
+        String ticketUrl = workerExamTicketDO.getTicketUrl();
+        ValidationUtils.throwIfNull(ticketUrl, "还未生成准考证");
+        try {
+            // 使用 RestTemplate 下载远程文件
+            byte[] pdfBytes = restTemplate.getForObject(new URI(ticketUrl), byte[].class);
+            // 设置 HTTP 头
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 下载某个班级的准考证
+     * @param classId
+     * @param planId
+     * @return
+     */
+    @Override
+    public ResponseEntity<byte[]> downloadClassTicket(Long classId, Long planId) {
+        LambdaQueryWrapper<EnrollDO> enrollDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        enrollDOLambdaQueryWrapper.eq(EnrollDO::getClassId, classId)
+                .eq(EnrollDO::getExamPlanId,planId);
+        List<EnrollDO> enrollDOS = baseMapper.selectList(enrollDOLambdaQueryWrapper);
+        ValidationUtils.throwIfEmpty(enrollDOS, "该班级未生成准考证");
+        List<Long> enrollIds = enrollDOS.stream().map(EnrollDO::getId).toList();
+        List<WorkerExamTicketDO> workerExamTicketDOS = workerExamTicketMapper.selectList(new LambdaQueryWrapper<WorkerExamTicketDO>().in(WorkerExamTicketDO::getEnrollId, enrollIds));
+        ValidationUtils.throwIfEmpty(workerExamTicketDOS, "该班级未生成准考证");
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ZipOutputStream zos = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
+
+            for (WorkerExamTicketDO workerExamTicketDO : workerExamTicketDOS) {
+                String url = workerExamTicketDO.getTicketUrl();
+                String nickname = workerExamTicketDO.getCandidateName();
+
+                if (StrUtil.isBlank(url)) continue;
+
+                byte[] pdfBytes = restTemplate.getForObject(new URI(url), byte[].class);
+                if (pdfBytes == null || pdfBytes.length == 0) continue;
+
+                String entryName = nickname + "_准考证_" + new Date().getTime() + ".pdf";
 
                 zos.putNextEntry(new ZipEntry(entryName));
                 zos.write(pdfBytes);

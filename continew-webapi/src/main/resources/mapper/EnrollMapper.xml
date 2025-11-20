@@ -30,12 +30,9 @@
                tep.redeme,
                tep.is_final_confirmed,
                COALESCE(te.enroll_status, 0)             AS enroll_status
-
-        -- 优化后的证书聚合（增加用户关联条件）
         FROM ted_exam_plan as tep
                  LEFT JOIN ted_project AS tp
                            ON tep.exam_project_id = tp.id
-            -- ⭐ 核心过滤条件
                  left join ted_enroll as te on te.exam_plan_id = tep.id and te.user_id = #{userId} and te.is_deleted = 0
                  LEFT JOIN ted.ted_exam_location AS tel
                            ON tep.location_id = tel.id and tel.is_deleted = 0
@@ -75,14 +72,12 @@
                tep.start_time    AS exam_start_time,
                tep.redeme,
                te.enroll_status
-        -- 优化后的证书聚合（增加用户关联条件）
         FROM ted_exam_plan as tep
                  LEFT JOIN ted_enroll AS te
                            ON te.exam_plan_id = tep.id
                                AND tep.is_deleted = 0
                  LEFT JOIN ted_project AS tp
                            ON tep.exam_project_id = tp.id
-            -- ⭐ 核心过滤条件
                  LEFT JOIN ted.ted_exam_location AS tel
                            ON tep.location_id = tel.id
         WHERE te.is_deleted = 0
@@ -191,7 +186,9 @@
                  LEFT JOIN sys_user su
                            ON te.user_id = su.id
                  LEFT JOIN ted_examinee_payment_audit tepa
-                           ON te.id = tepa.enroll_id AND tepa.is_deleted = 0 ${ew.customSqlSegment}
+                           ON te.id = tepa.enroll_id AND tepa.is_deleted = 0
+                 LEFT JOIN ted_worker_exam_ticket twet
+                           ON te.id = twet.enroll_id AND twet.is_deleted = 0 ${ew.customSqlSegment}
         ORDER BY te.create_time DESC;
     </select>
     <select id="selectAuditNoticeToClass"
