@@ -35,6 +35,7 @@ public interface ExamLocationService extends BaseService<ExamLocationResp, ExamL
 
     /**
      * 根据计划id获取计划对应的考试地点和考场信息
+     * 
      * @param planId
      * @return
      */

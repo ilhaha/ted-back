@@ -1,11 +1,25 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.exam.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import top.continew.admin.common.util.AESWithHMAC;
@@ -23,7 +37,6 @@ import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
-import top.continew.admin.worker.service.WorkerExamTicketService;
 
 import java.security.SecureRandom;
 import java.util.*;
@@ -49,10 +62,9 @@ public class ExamAsyncService {
 
     private final QuestionBankService questionBankService;
 
-    private final CandidateExamPaperMapper  candidateExamPaperMapper;
+    private final CandidateExamPaperMapper candidateExamPaperMapper;
 
     private static final SecureRandom RANDOM = new SecureRandom();
-
 
     /**
      * 异步生成准考证号（中心主任确认后）
@@ -75,11 +87,9 @@ public class ExamAsyncService {
             Collections.shuffle(classroomIds, RANDOM);
 
             // 2. 查询报名记录
-            List<EnrollDO> enrollList = enrollMapper.selectList(
-                    new LambdaQueryWrapper<EnrollDO>()
-                            .eq(EnrollDO::getExamPlanId, planId)
-                            .eq(EnrollDO::getIsDeleted, false)
-            );
+            List<EnrollDO> enrollList = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
+                .eq(EnrollDO::getExamPlanId, planId)
+                .eq(EnrollDO::getIsDeleted, false));
             if (enrollList.isEmpty()) {
                 log.warn("【跳过任务】考试计划 {} 无报名考生", planId);
                 return;
@@ -128,12 +138,8 @@ public class ExamAsyncService {
                 }
 
                 // 调用确实耗时的方法：生成 PDF
-                String ticketUrl = safeGenerateWorkerTicket(
-                        enroll.getUserId(),
-                        user.getUsername(),
-                        upd.getExamNumber(),
-                        enroll.getClassId()
-                );
+                String ticketUrl = safeGenerateWorkerTicket(enroll.getUserId(), user.getUsername(), upd
+                    .getExamNumber(), enroll.getClassId());
 
                 // 保存准考证表
                 WorkerExamTicketDO ticket = new WorkerExamTicketDO();
@@ -160,17 +166,12 @@ public class ExamAsyncService {
                 candidateExamPaperMapper.insertBatch(candidateExamPaperDOList);
             }
 
-            log.info("【准考证生成完成】考试计划 {}，成功处理 {} 条报名记录",
-                    planId, ticketSaveList.size());
+            log.info("【准考证生成完成】考试计划 {}，成功处理 {} 条报名记录", planId, ticketSaveList.size());
 
         } catch (Exception e) {
-            log.error("【准考证异步任务异常】计划 {}，错误：{}",
-                    planId, e.getMessage(), e);
+            log.error("【准考证异步任务异常】计划 {}，错误：{}", planId, e.getMessage(), e);
         }
     }
-
-
-
 
     /**
      * 为单个考生生成准考证 PDF（附带错误兜底）
@@ -179,12 +180,10 @@ public class ExamAsyncService {
         try {
             return candidateTicketReactiveService.generateWorkerTicket(userId, idCard, encryptedExamNo, classId);
         } catch (Exception e) {
-            log.error("【PDF生成失败】用户ID={} 身份证={} 考试号={}，失败原因：{}",
-                    userId, idCard, encryptedExamNo, e.getMessage());
+            log.error("【PDF生成失败】用户ID={} 身份证={} 考试号={}，失败原因：{}", userId, idCard, encryptedExamNo, e.getMessage());
             return null;
         }
     }
-
 
     /**
      * 选择一个座位未满的考场
@@ -199,5 +198,3 @@ public class ExamAsyncService {
         return null;
     }
 }
-
-

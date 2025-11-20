@@ -59,7 +59,7 @@ public class ExamLocationServiceImpl extends BaseServiceImpl<ExamLocationMapper,
         super.sort(queryWrapper, pageQuery);
 
         IPage<ExamLocationDetailResp> page = baseMapper.selectExamLocationPage(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+            .getSize()), queryWrapper);
 
         PageResp<ExamLocationResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
@@ -76,6 +76,7 @@ public class ExamLocationServiceImpl extends BaseServiceImpl<ExamLocationMapper,
 
     /**
      * 根据计划id获取计划对应的考试地点和考场信息
+     * 
      * @param planId
      * @return
      */

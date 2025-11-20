@@ -40,7 +40,6 @@ public interface ExamineeDocumentService extends BaseService<ExamineeDocumentRes
      */
     R studentUploadDocuments(StudentUploadDocumentsReq studentUploadDocumentsReq);
 
-
     /**
      * 考生重新上传资料
      *
@@ -48,6 +47,5 @@ public interface ExamineeDocumentService extends BaseService<ExamineeDocumentRes
      * @return
      */
     R studentReUploadDocument(StudentUploadDocumentsReq studentUploadDocumentsReq);
-
 
 }

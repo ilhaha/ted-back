@@ -1,7 +1,21 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.util;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
 import org.apache.poi.ooxml.POIXMLDocumentPart;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.*;
@@ -32,7 +46,8 @@ public class ExcelMediaUtils {
      * 判断整行是否为空
      */
     public static boolean isRowEmpty(Row row) {
-        if (row == null) return true;
+        if (row == null)
+            return true;
         for (Cell cell : row) {
             if (cell != null && cell.getCellType() != CellType.BLANK) {
                 return false;
@@ -41,19 +56,18 @@ public class ExcelMediaUtils {
         return true;
     }
 
-
     /**
      * 判断Excel中某个单元格是否有图片
      */
     public static boolean hasPicture(Workbook workbook, Sheet sheet, int row, int col) {
         if (workbook instanceof XSSFWorkbook) {
-            XSSFSheet xssfSheet = (XSSFSheet) sheet;
+            XSSFSheet xssfSheet = (XSSFSheet)sheet;
             for (POIXMLDocumentPart dr : xssfSheet.getRelations()) {
                 if (dr instanceof XSSFDrawing) {
-                    XSSFDrawing drawing = (XSSFDrawing) dr;
+                    XSSFDrawing drawing = (XSSFDrawing)dr;
                     for (XSSFShape shape : drawing.getShapes()) {
                         if (shape instanceof XSSFPicture) {
-                            XSSFPicture picture = (XSSFPicture) shape;
+                            XSSFPicture picture = (XSSFPicture)shape;
                             XSSFClientAnchor anchor = picture.getPreferredSize();
                             if (anchor.getRow1() == row && anchor.getCol1() == col) {
                                 return true;
@@ -65,7 +79,6 @@ public class ExcelMediaUtils {
         }
         return false;
     }
-
 
     /**
      * 上传指定单元格中的文件，并返回上传结果。
@@ -82,13 +95,12 @@ public class ExcelMediaUtils {
      * @return {@link ExcelUploadFileResultDTO} 包含上传后的图片 URL 和相关信息；如果单元格没有图片则返回 null
      * @throws RuntimeException 当上传失败或读取图片发生异常时抛出
      */
-    public static ExcelUploadFileResultDTO excelUploadFile(
-            Workbook workbook,
-            Sheet sheet,
-            int row,
-            int col,
-            UploadService uploadService,
-            Integer type) {
+    public static ExcelUploadFileResultDTO excelUploadFile(Workbook workbook,
+                                                           Sheet sheet,
+                                                           int row,
+                                                           int col,
+                                                           UploadService uploadService,
+                                                           Integer type) {
 
         ExcelUploadFileResultDTO dto = new ExcelUploadFileResultDTO();
 
@@ -98,16 +110,19 @@ public class ExcelMediaUtils {
                 return null;
             }
 
-            XSSFSheet xssfSheet = (XSSFSheet) sheet;
+            XSSFSheet xssfSheet = (XSSFSheet)sheet;
 
             for (POIXMLDocumentPart dr : xssfSheet.getRelations()) {
-                if (!(dr instanceof XSSFDrawing drawing)) continue;
+                if (!(dr instanceof XSSFDrawing drawing))
+                    continue;
 
                 for (XSSFShape shape : drawing.getShapes()) {
-                    if (!(shape instanceof XSSFPicture picture)) continue;
+                    if (!(shape instanceof XSSFPicture picture))
+                        continue;
 
                     XSSFClientAnchor anchor = picture.getPreferredSize();
-                    if (anchor.getRow1() != row || anchor.getCol1() != col) continue;
+                    if (anchor.getRow1() != row || anchor.getCol1() != col)
+                        continue;
 
                     // 获取图片数据
                     XSSFPictureData pictureData = picture.getPictureData();
@@ -117,12 +132,7 @@ public class ExcelMediaUtils {
                     String fileName = row + "_" + col + "." + ext;
 
                     // 上传文件（转 MultipartFile）
-                    MultipartFile file = new InMemoryMultipartFile(
-                            "file",
-                            fileName,
-                            pictureData.getMimeType(),
-                            data
-                    );
+                    MultipartFile file = new InMemoryMultipartFile("file", fileName, pictureData.getMimeType(), data);
                     // 身份证正面
                     if (WorkerPictureTypeEnum.ID_CARD_FRONT.getValue().equals(type)) {
                         IdCardFileInfoResp idCardFileInfoResp = uploadService.uploadIdCard(file, type);
@@ -137,7 +147,7 @@ public class ExcelMediaUtils {
                         dto.setValidEndDate(idCardFileInfoResp.getValidEndDate());
                     } else if (WorkerPictureTypeEnum.PASSPORT_PHOTO.getValue().equals(type)) {
                         // 如果是一寸照类型，先转换为标准一寸照片
-//                        file = IDPhotoConverter.convertToOneInchPhoto(file);
+                        //                        file = IDPhotoConverter.convertToOneInchPhoto(file);
                         IdCardFileInfoResp idCardFileInfoResp = uploadService.uploadIdCard(file, type);
                         dto.setFacePhoto(idCardFileInfoResp.getFacePhoto());
                     } else {
@@ -157,35 +167,39 @@ public class ExcelMediaUtils {
         return null;
     }
 
-
-    public static Map<String, List<String>> getOleAttachmentMapAndUpload(
-            XSSFWorkbook workbook,
-            int targetRow,
-            UploadService uploadService,
-            boolean upload) {
+    public static Map<String, List<String>> getOleAttachmentMapAndUpload(XSSFWorkbook workbook,
+                                                                         int targetRow,
+                                                                         UploadService uploadService,
+                                                                         boolean upload) {
 
         Map<String, List<String>> attachmentMap = new HashMap<>();
 
         for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
             XSSFSheet sheet = workbook.getSheetAt(i);
             XSSFDrawing drawing = sheet.getDrawingPatriarch();
-            if (drawing == null) continue;
+            if (drawing == null)
+                continue;
 
             for (XSSFShape shape : drawing.getShapes()) {
-                if (!(shape instanceof XSSFObjectData objData)) continue;
+                if (!(shape instanceof XSSFObjectData objData))
+                    continue;
 
-                XSSFClientAnchor anchor = (XSSFClientAnchor) shape.getAnchor();
-                if (anchor == null || anchor.getRow1() != targetRow) continue;
+                XSSFClientAnchor anchor = (XSSFClientAnchor)shape.getAnchor();
+                if (anchor == null || anchor.getRow1() != targetRow)
+                    continue;
 
                 String key = anchor.getRow1() + "_" + anchor.getCol1();
-                if (attachmentMap.containsKey(key)) continue;
+                if (attachmentMap.containsKey(key))
+                    continue;
 
                 try {
                     String ole2ClassName = objData.getOLE2ClassName();
-                    if (!"Package".equals(ole2ClassName)) continue;
+                    if (!"Package".equals(ole2ClassName))
+                        continue;
 
                     DirectoryEntry directory = objData.getDirectory();
-                    if (!(directory instanceof DirectoryNode directoryNode)) continue;
+                    if (!(directory instanceof DirectoryNode directoryNode))
+                        continue;
 
                     // 解析 OLE 内嵌文件
                     Ole10Native ole10Native = Ole10Native.createFromEmbeddedOleObject(directoryNode);
@@ -216,12 +230,7 @@ public class ExcelMediaUtils {
                         if (".doc".equals(ext) || ".docx".equals(ext)) {
                             contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
                         }
-                        MultipartFile file = new InMemoryMultipartFile(
-                                "file",
-                                fileName,
-                                contentType,
-                                fileBytes
-                        );
+                        MultipartFile file = new InMemoryMultipartFile("file", fileName, contentType, fileBytes);
 
                         GeneralFileReq fileReq = new GeneralFileReq();
                         FileInfoResp fileInfo = uploadService.upload(file, fileReq);

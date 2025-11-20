@@ -1,10 +1,24 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.training.service.impl;
 
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
-import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +27,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import org.springframework.util.StringUtils;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.system.mapper.UserMapper;
@@ -33,12 +46,10 @@ import top.continew.admin.training.model.resp.TrainingCheckinDetailResp;
 import top.continew.admin.training.model.resp.TrainingCheckinResp;
 import top.continew.admin.training.service.TrainingCheckinService;
 
-import java.io.IOException;
 import java.net.URLEncoder;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +65,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinMapper, TrainingCheckinDO, TrainingCheckinResp, TrainingCheckinDetailResp, TrainingCheckinQuery, TrainingCheckinReq> implements TrainingCheckinService {
-
 
     @Autowired
     private TrainingCheckinMapper trainingCheckinMapper;
@@ -75,39 +85,26 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
     @Resource
     private TrainingMapper trainingMapper;
 
-
     @Override
     public String generateQRCode(Long trainingId) {
 
         Long userId = TokenLocalThreadUtil.get().getUserId();
 
-        TedOrgUser org = orgUserMapper.selectOne(
-                new LambdaQueryWrapper<TedOrgUser>()
-                        .eq(TedOrgUser::getUserId, userId)
-                        .select(TedOrgUser::getOrgId)
-                        .last("LIMIT 1")
-        );
+        TedOrgUser org = orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>().eq(TedOrgUser::getUserId, userId)
+            .select(TedOrgUser::getOrgId)
+            .last("LIMIT 1"));
 
         long ts = System.currentTimeMillis();
         String sign = SignUtil.sign(ts);
 
-        String url = String.format(
-                "%s?trainingId=%s&orgId=%s&ts=%s&sign=%s",
-                trainingCheckinUrl,
-                trainingId,
-                org.getOrgId(),
-                ts,
-                sign
-        );
+        String url = String.format("%s?trainingId=%s&orgId=%s&ts=%s&sign=%s", trainingCheckinUrl, trainingId, org
+            .getOrgId(), ts, sign);
 
         return url;
     }
 
-
     @Override
-    public boolean doCheckin(String realName, String idCard,
-                             Long trainingId, Long orgId,
-                             Long ts, String sign) {
+    public boolean doCheckin(String realName, String idCard, Long trainingId, Long orgId, Long ts, String sign) {
 
         // 先校验二维码是否被伪造
         if (!SignUtil.verify(ts, sign)) {
@@ -121,12 +118,9 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
 
         //加密身份证号
         String encryptedIdcard = aesWithHMAC.encryptAndSign(idCard);
-        UserDO user = userMapper.selectOne(
-                new LambdaQueryWrapper<UserDO>()
-                        .eq(UserDO::getNickname, realName)
-                        .eq(UserDO::getUsername, encryptedIdcard)
-                        .last("LIMIT 1")
-        );
+        UserDO user = userMapper.selectOne(new LambdaQueryWrapper<UserDO>().eq(UserDO::getNickname, realName)
+            .eq(UserDO::getUsername, encryptedIdcard)
+            .last("LIMIT 1"));
 
         if (user == null) {
             throw new BusinessException("姓名或身份证不匹配");
@@ -134,13 +128,11 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
 
         Long userId = user.getId();
         //判断是否属于该培训
-        OrgCandidateDO cand = orgCandidateMapper.selectOne(
-                new LambdaQueryWrapper<OrgCandidateDO>()
-                        .eq(OrgCandidateDO::getCandidateId, userId)
-                        .eq(OrgCandidateDO::getOrgId, orgId)
-                        .eq(OrgCandidateDO::getStatus, 2)
-                        .last("LIMIT 1")
-        );
+        OrgCandidateDO cand = orgCandidateMapper.selectOne(new LambdaQueryWrapper<OrgCandidateDO>()
+            .eq(OrgCandidateDO::getCandidateId, userId)
+            .eq(OrgCandidateDO::getOrgId, orgId)
+            .eq(OrgCandidateDO::getStatus, 2)
+            .last("LIMIT 1"));
 
         if (cand == null) {
             throw new BusinessException("你未报名此培训机构，无法签到");
@@ -152,14 +144,12 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
         LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
 
         // 查询当天是否已签到
-        TrainingCheckinDO existed = trainingCheckinMapper.selectOne(
-                new LambdaQueryWrapper<TrainingCheckinDO>()
-                        .eq(TrainingCheckinDO::getTrainingId, trainingId)
-                        .eq(TrainingCheckinDO::getCandidateId, userId)
-                        .ge(TrainingCheckinDO::getCheckinTime, startOfDay)
-                        .le(TrainingCheckinDO::getCheckinTime, endOfDay)
-                        .last("LIMIT 1")
-        );
+        TrainingCheckinDO existed = trainingCheckinMapper.selectOne(new LambdaQueryWrapper<TrainingCheckinDO>()
+            .eq(TrainingCheckinDO::getTrainingId, trainingId)
+            .eq(TrainingCheckinDO::getCandidateId, userId)
+            .ge(TrainingCheckinDO::getCheckinTime, startOfDay)
+            .le(TrainingCheckinDO::getCheckinTime, endOfDay)
+            .last("LIMIT 1"));
 
         if (existed != null) {
             throw new BusinessException("你今天已签到，无需重复签到");
@@ -180,7 +170,6 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
 
         return true;
     }
-
 
     @Override
     public void exportExcel(TrainingCheckinQuery query, HttpServletResponse response) {
@@ -203,20 +192,16 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
 
         // 查询用户信息
         Set<Long> candidateIds = checkinList.stream()
-                .map(TrainingCheckinDO::getCandidateId)
-                .collect(Collectors.toSet());
+            .map(TrainingCheckinDO::getCandidateId)
+            .collect(Collectors.toSet());
         List<UserDO> users = userMapper.selectBatchIds(candidateIds);
-        Map<Long, UserDO> userMap = users.stream()
-                .collect(Collectors.toMap(UserDO::getId, u -> u));
+        Map<Long, UserDO> userMap = users.stream().collect(Collectors.toMap(UserDO::getId, u -> u));
 
         // 查询培训名称
-        Set<Long> trainingIds = checkinList.stream()
-                .map(TrainingCheckinDO::getTrainingId)
-                .collect(Collectors.toSet());
+        Set<Long> trainingIds = checkinList.stream().map(TrainingCheckinDO::getTrainingId).collect(Collectors.toSet());
         List<TrainingDO> trainings = trainingMapper.selectBatchIds(trainingIds);
         Map<Long, String> trainingMap = trainings.stream()
-                .collect(Collectors.toMap(TrainingDO::getId, TrainingDO::getTitle));
-
+            .collect(Collectors.toMap(TrainingDO::getId, TrainingDO::getTitle));
 
         // 构造 DTO 列表，并自动生成序号
         List<TrainingCheckinExportDTO> exportList = new ArrayList<>();
@@ -230,7 +215,6 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
             dto.setCheckinTime(record.getCheckinTime()); // 原始 LocalDateTime
             exportList.add(dto);
         }
-
 
         // 导出 Excel
         try (ExcelWriter writer = ExcelUtil.getWriter(true)) {
@@ -252,6 +236,5 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
             throw new RuntimeException("导出 Excel 失败", e);
         }
     }
-
 
 }

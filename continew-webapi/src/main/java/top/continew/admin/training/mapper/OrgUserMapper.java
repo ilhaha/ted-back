@@ -36,37 +36,37 @@ public interface OrgUserMapper extends BaseMapper<TedOrgUser> {
     Long selectByUserId(String userId);
 
     @Select("""
-    <script>
-        SELECT 
-            tou.org_id,
-            su.username,
-            su.nickname
-        FROM ted_org_user tou
-        LEFT JOIN sys_user su ON su.id = tou.user_id
-        WHERE tou.is_deleted = 0
-          AND tou.org_id IN 
-          <foreach collection='orgIds' item='id' open='(' separator=',' close=')'>
-            #{id}
-          </foreach>
-    </script>
-""")
+            <script>
+                SELECT
+                    tou.org_id,
+                    su.username,
+                    su.nickname
+                FROM ted_org_user tou
+                LEFT JOIN sys_user su ON su.id = tou.user_id
+                WHERE tou.is_deleted = 0
+                  AND tou.org_id IN
+                  <foreach collection='orgIds' item='id' open='(' separator=',' close=')'>
+                    #{id}
+                  </foreach>
+            </script>
+        """)
     List<Map<String, Object>> listAccountNamesByOrgIds(@Param("orgIds") List<Long> orgIds);
-
 
     /**
      * 根据用户id获取机构信息
+     * 
      * @param userId
      * @return
      */
     @Select("""
-    <script>
-       SELECT org.*
-       FROM ted_org org
-       LEFT JOIN ted_org_user tou
-       ON org.id = tou.org_id AND tou.is_deleted = 0
-       WHERE org.is_deleted = 0
-       AND tou.user_id = #{userId}
-    </script>
-""")
+            <script>
+               SELECT org.*
+               FROM ted_org org
+               LEFT JOIN ted_org_user tou
+               ON org.id = tou.org_id AND tou.is_deleted = 0
+               WHERE org.is_deleted = 0
+               AND tou.user_id = #{userId}
+            </script>
+        """)
     OrgDO selectOrgByUserId(@Param("userId") Long userId);
 }

@@ -59,10 +59,11 @@ public interface ExamLocationMapper extends BaseMapper<ExamLocationDO> {
 
     List<ProjectVo> getClassRoomSelect(@Param("projectId") Long projectId);
 
-    List<Map<String, Object>> selectClassroomList (@Param("projectId") Long projectId);
+    List<Map<String, Object>> selectClassroomList(@Param("projectId") Long projectId);
 
     /**
      * 根据计划id获取考试计划考试地点-考场详细信息
+     * 
      * @param planId
      * @return
      */

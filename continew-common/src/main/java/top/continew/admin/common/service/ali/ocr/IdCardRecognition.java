@@ -81,21 +81,19 @@ public class IdCardRecognition {
             }
 
             StaticCredentialProvider provider = StaticCredentialProvider.create(Credential.builder()
-                    .accessKeyId(ACCESS_KEY)
-                    .accessKeySecret(SECRET_ACCESS_KEY)
-                    .build());
+                .accessKeyId(ACCESS_KEY)
+                .accessKeySecret(SECRET_ACCESS_KEY)
+                .build());
 
             this.client = AsyncClient.builder()
-                    .region(REGION)
-                    .credentialsProvider(provider)
-                    .overrideConfiguration(ClientOverrideConfiguration.create()
-                            .setEndpointOverride(ENDPOINT))
-                    .build();
+                .region(REGION)
+                .credentialsProvider(provider)
+                .overrideConfiguration(ClientOverrideConfiguration.create().setEndpointOverride(ENDPOINT))
+                .build();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
 
     public IdCardDo uploadIdCard(InputStream is, boolean flag) throws Exception {
         return uploadIdCard(is, flag, null);

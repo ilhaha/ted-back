@@ -97,8 +97,6 @@ import top.continew.starter.web.util.FileUploadUtils;
 import top.continew.starter.core.util.SpringUtils;
 
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -149,7 +147,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
     @Resource
     private RedisTemplate redisTemplate;
-
 
     @Override
     public PageResp<UserResp> page(UserQuery query, PageQuery pageQuery) {
@@ -547,8 +544,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         // 查找考试计划发布部门id
         Long deptId = userMapper.getDeptIdByExamPlanId(examPlanId, ExamPlanStatusEnum.IN_FORCE);
         QueryWrapper<UserDO> qw = this.buildQueryWrapper(query);
-        qw.eq("u.dept_id", deptId)
-                .eq("r.id", invigilatorId);
+        qw.eq("u.dept_id", deptId).eq("r.id", invigilatorId);
         List<InvigilatorVO> invigilatesList = userMapper.listInvigilatorsByPlanId(qw);
         return invigilatesList;
     }
@@ -950,11 +946,11 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         ValidationUtils.throwIfNull(userDO, "二维码错误");
         UploadWhenUserInfoVO uploadWhenUserInfoVO = new UploadWhenUserInfoVO();
         // 先查是不是已上传过资料
-        EnrollPreInfoVO enrollPreInfoVO = baseMapper.getEnrollPreInfo(candidateId,planId);
+        EnrollPreInfoVO enrollPreInfoVO = baseMapper.getEnrollPreInfo(candidateId, planId);
         if (ObjectUtil.isEmpty(enrollPreInfoVO)) {
             // 获取考生未上传的资料类型
-            uploadWhenUserInfoVO.setUnuploadedDocumentTypes(baseMapper.getUnuploadedDocumentTypes(candidateId,planId));
-        }else {
+            uploadWhenUserInfoVO.setUnuploadedDocumentTypes(baseMapper.getUnuploadedDocumentTypes(candidateId, planId));
+        } else {
             uploadWhenUserInfoVO.setEnrollPreInfoVO(enrollPreInfoVO);
             // 查出考生已上传的资料
             uploadWhenUserInfoVO.setUploadedDocumentTypes(baseMapper.getUploadedDocumentTypes(enrollPreInfoVO.getId()));
@@ -1002,26 +998,26 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
      * @param invigilatesAndTime 监考人信息
      * @return 排序后的数据
      */
-//    private List<InvigilatorVO> sortInvigilatorVO(List<InvigilatorVO> invigilatesAndTime) {
-//        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//        invigilatesAndTime.forEach(items -> {
-//            List<InvigilatorTimeVO> invigilateTime = items.getInvigilateTime();
-//            for (int i = 0; i < invigilateTime.size() - 1; i++) {
-//                for (int j = 0; j < invigilateTime.size() - 1; j++) {
-//                    try {
-//                        long time1 = sdf.parse(invigilateTime.get(j).getStartTime()).getTime();
-//                        long time2 = sdf.parse(invigilateTime.get(j + 1).getStartTime()).getTime();
-//                        if (time1 > time2) {
-//                            Collections.swap(invigilateTime, j, j + 1);
-//                        }
-//                    } catch (ParseException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                }
-//            }
-//        });
-//        return invigilatesAndTime;
-//    }
+    //    private List<InvigilatorVO> sortInvigilatorVO(List<InvigilatorVO> invigilatesAndTime) {
+    //        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    //        invigilatesAndTime.forEach(items -> {
+    //            List<InvigilatorTimeVO> invigilateTime = items.getInvigilateTime();
+    //            for (int i = 0; i < invigilateTime.size() - 1; i++) {
+    //                for (int j = 0; j < invigilateTime.size() - 1; j++) {
+    //                    try {
+    //                        long time1 = sdf.parse(invigilateTime.get(j).getStartTime()).getTime();
+    //                        long time2 = sdf.parse(invigilateTime.get(j + 1).getStartTime()).getTime();
+    //                        if (time1 > time2) {
+    //                            Collections.swap(invigilateTime, j, j + 1);
+    //                        }
+    //                    } catch (ParseException e) {
+    //                        throw new RuntimeException(e);
+    //                    }
+    //                }
+    //            }
+    //        });
+    //        return invigilatesAndTime;
+    //    }
 
     /**
      * 监考人是否符合时间条件
@@ -1031,11 +1027,10 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
      * @param endTime            考试结束时间
      * @return 符合时间条件的监考人信息
      */
-    private List<InvigilatorVO> isInvigilate(
-            List<InvigilatorVO> invigilatesAndTime,
-            LocalDateTime startTime,
-            LocalDateTime endTime,
-            Long examPlanId) {
+    private List<InvigilatorVO> isInvigilate(List<InvigilatorVO> invigilatesAndTime,
+                                             LocalDateTime startTime,
+                                             LocalDateTime endTime,
+                                             Long examPlanId) {
 
         List<InvigilatorVO> resultList = new ArrayList<>();
 
@@ -1069,9 +1064,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
             }
 
             // 计算是否有冲突
-            boolean noConflict = !occupyMinutes.contains(newStart)
-                    && !occupyMinutes.contains(newEnd)
-                    && !existedPlan.get();
+            boolean noConflict = !occupyMinutes.contains(newStart) && !occupyMinutes.contains(newEnd) && !existedPlan
+                .get();
 
             InvigilatorVO newVO = new InvigilatorVO();
             newVO.setId(invigilator.getId());

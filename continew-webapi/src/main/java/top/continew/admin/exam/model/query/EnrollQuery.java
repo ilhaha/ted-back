@@ -52,10 +52,10 @@ public class EnrollQuery implements Serializable {
     @QueryIgnore
     private String planName;
 
-    @Query(type = QueryType.EQ,columns = "te.exam_plan_id")
+    @Query(type = QueryType.EQ, columns = "te.exam_plan_id")
     private Long planId;
 
-    @Query(type = QueryType.EQ,columns = "toc.id")
+    @Query(type = QueryType.EQ, columns = "toc.id")
     private Long classId;
 
 }

@@ -1,16 +1,31 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.exam.model.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * @author ilhaha
  * @Create 2025/10/16 15:31
  *
- * 机构获取符合自身八大类的考试计划VO
+ *         机构获取符合自身八大类的考试计划VO
  */
 @Data
 public class OrgExamPlanVO {
@@ -119,6 +134,5 @@ public class OrgExamPlanVO {
      * 剩余报名人数
      */
     private Integer remainingSlots;
-
 
 }

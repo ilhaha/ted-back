@@ -229,7 +229,8 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
     @Select("SELECT COUNT(1) FROM ted_org_user WHERE user_id = #{id}")
     boolean checkOrgUser(Long id);
 
-    List<UploadedDocumentTypeVO> getUnuploadedDocumentTypes(@Param("candidateId") String candidateId, @Param("planId") String planId);
+    List<UploadedDocumentTypeVO> getUnuploadedDocumentTypes(@Param("candidateId") String candidateId,
+                                                            @Param("planId") String planId);
 
     PlanInfoVO getPlanInfoByPlanId(@Param("planId") String planId);
 
@@ -238,6 +239,5 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
     List<UploadedDocumentTypeVO> getUploadedDocumentTypes(@Param("uploadPreId") Long uploadPreId);
 
     int getCandidateIdentity(@Param("id") Long id);
-
 
 }

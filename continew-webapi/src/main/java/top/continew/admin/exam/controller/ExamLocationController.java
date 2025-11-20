@@ -42,12 +42,12 @@ import java.util.List;
 @Tag(name = "考试地点管理 API")
 @RestController
 @CrudRequestMapping(value = "/exam/examLocation", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
-        Api.EXPORT})
+    Api.EXPORT})
 public class ExamLocationController extends BaseController<ExamLocationService, ExamLocationResp, ExamLocationDetailResp, ExamLocationQuery, ExamLocationReq> {
-
 
     /**
      * 根据计划id获取计划对应的考试地点和考场信息
+     * 
      * @param planId
      * @return
      */

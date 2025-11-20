@@ -23,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -209,16 +208,15 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
         // 收集题目文本（去空格、换行）
         List<String> questionTexts = questions.stream()
-                .map(QuestionDTO::getTitle)
-                .filter(Objects::nonNull)
-                .map(q -> q.trim().replaceAll("\\s+", ""))
-                .distinct()
-                .collect(Collectors.toList());
+            .map(QuestionDTO::getTitle)
+            .filter(Objects::nonNull)
+            .map(q -> q.trim().replaceAll("\\s+", ""))
+            .distinct()
+            .collect(Collectors.toList());
 
         // 查询数据库中同分类、同项目、同知识类型下的题目及其选项集合
-        List<Map<String, Object>> existingList = questionBankMapper.selectExistingQuestions(
-                questionTexts, categoryId, projectId, knowledgeTypeId
-        );
+        List<Map<String, Object>> existingList = questionBankMapper
+            .selectExistingQuestions(questionTexts, categoryId, projectId, knowledgeTypeId);
 
         if (existingList == null || existingList.isEmpty()) {
             return questions; // 数据库无重复，全部导入
@@ -226,46 +224,41 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
         // 构建数据库已有题目对应的选项集合映射 Map<题目, List<选项组合字符串>>
         final Map<String, List<String>> existingMap = existingList.stream()
-                .collect(Collectors.groupingBy(
-                        m -> ((String) m.get("question")).trim().replaceAll("\\s+", ""),
-                        Collectors.mapping(m -> {
-                            String ans = (String) m.get("allOptions");
-                            return ans == null ? "" : ans.trim().replaceAll("\\s+", "");
-                        }, Collectors.toList())
-                ));
+            .collect(Collectors.groupingBy(m -> ((String)m.get("question")).trim().replaceAll("\\s+", ""), Collectors
+                .mapping(m -> {
+                    String ans = (String)m.get("allOptions");
+                    return ans == null ? "" : ans.trim().replaceAll("\\s+", "");
+                }, Collectors.toList())));
 
         // 过滤出未重复的新题
-        List<QuestionDTO> newQuestions = questions.stream()
-                .filter(q -> {
-                    String qTitle = q.getTitle() == null ? "" : q.getTitle().trim().replaceAll("\\s+", "");
+        List<QuestionDTO> newQuestions = questions.stream().filter(q -> {
+            String qTitle = q.getTitle() == null ? "" : q.getTitle().trim().replaceAll("\\s+", "");
 
-                    // 组装 Excel 当前题目的选项集合（包括是否正确）
-                    String qOptions;
-                    if (q.getOptions() != null && !q.getOptions().isEmpty()) {
-                        qOptions = q.getOptions().stream()
-                                .map(opt -> {
-                                    String content = opt.getQuestion() == null ? "" : opt.getQuestion().trim().replaceAll("\\s+", "");
-                                    int correct = Boolean.TRUE.equals(opt.getIsCorrect()) ? 1 : 0;
-                                    return content + "[" + correct + "]";
-                                })
-                                .sorted() // 排序避免顺序差异
-                                .collect(Collectors.joining("、"));
-                    } else {
-                        qOptions = "";
-                    }
-
-                    List<String> existingOptionsList = existingMap.get(qTitle);
-                    if (existingOptionsList == null || existingOptionsList.isEmpty()) {
-                        return true; // 数据库中无此题目，直接导入
-                    }
-
-                    // 判断是否存在完全相同的选项集合（任意一条一致则视为重复）
-                    boolean duplicate = existingOptionsList.stream()
-                            .anyMatch(dbOptions -> compareOptionSets(dbOptions, qOptions));
-
-                    return !duplicate; // 不重复则保留导入
+            // 组装 Excel 当前题目的选项集合（包括是否正确）
+            String qOptions;
+            if (q.getOptions() != null && !q.getOptions().isEmpty()) {
+                qOptions = q.getOptions().stream().map(opt -> {
+                    String content = opt.getQuestion() == null ? "" : opt.getQuestion().trim().replaceAll("\\s+", "");
+                    int correct = Boolean.TRUE.equals(opt.getIsCorrect()) ? 1 : 0;
+                    return content + "[" + correct + "]";
                 })
-                .collect(Collectors.toList());
+                    .sorted() // 排序避免顺序差异
+                    .collect(Collectors.joining("、"));
+            } else {
+                qOptions = "";
+            }
+
+            List<String> existingOptionsList = existingMap.get(qTitle);
+            if (existingOptionsList == null || existingOptionsList.isEmpty()) {
+                return true; // 数据库中无此题目，直接导入
+            }
+
+            // 判断是否存在完全相同的选项集合（任意一条一致则视为重复）
+            boolean duplicate = existingOptionsList.stream()
+                .anyMatch(dbOptions -> compareOptionSets(dbOptions, qOptions));
+
+            return !duplicate; // 不重复则保留导入
+        }).collect(Collectors.toList());
 
         if (newQuestions.isEmpty()) {
             throw new BusinessException("所有题目（含选项）均已存在，无需重复导入");
@@ -273,29 +266,27 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         return newQuestions;
     }
 
-
-
-
     /**
      * 比较两个选项集合是否完全一致（忽略顺序、空格、大小写）
      */
     private boolean compareOptionSets(String dbOptions, String excelOptions) {
-        if (dbOptions == null && excelOptions == null) return true;
-        if (dbOptions == null || excelOptions == null) return false;
+        if (dbOptions == null && excelOptions == null)
+            return true;
+        if (dbOptions == null || excelOptions == null)
+            return false;
 
         Set<String> dbSet = Arrays.stream(dbOptions.split("[、,，;；]"))
-                .map(s -> s.trim().toUpperCase())
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toSet());
+            .map(s -> s.trim().toUpperCase())
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toSet());
 
         Set<String> excelSet = Arrays.stream(excelOptions.split("[、,，;；]"))
-                .map(s -> s.trim().toUpperCase())
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toSet());
+            .map(s -> s.trim().toUpperCase())
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toSet());
 
         return dbSet.equals(excelSet);
     }
-
 
     private void setQuestionBankMapper(Long knowledgeTypeId,
                                        List<QuestionDTO> questions,
@@ -434,7 +425,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             // 2. 按数字解析（优先：Excel填0/1/2直接识别）
             if (cell.getCellType() == CellType.NUMERIC) {
                 // 数字转int（避免小数，比如填2.0会转为2）
-                int code = (int) Math.round(cell.getNumericCellValue());
+                int code = (int)Math.round(cell.getNumericCellValue());
                 // 校验数字是否在合法范围内（0/1/2）
                 if (code == 0 || code == 1 || code == 2) {
                     examTypeCode = code;
@@ -456,10 +447,8 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             // 4. 校验解析结果是否合法
             if (examTypeCode == null) {
                 String cellValue = getCellOriginalValue(cell);
-                throw new BusinessException(
-                        String.format("第%d行【考试类型】值不合法：%s。允许值：\n数字：0(未指定)、1(作业人员考试)、2(无损/有损检验人员考试)\n文字：未指定、作业人员考试、无损/有损检验",
-                                rowIdx, cellValue)
-                );
+                throw new BusinessException(String
+                    .format("第%d行【考试类型】值不合法：%s。允许值：\n数字：0(未指定)、1(作业人员考试)、2(无损/有损检验人员考试)\n文字：未指定、作业人员考试、无损/有损检验", rowIdx, cellValue));
             }
 
             // 5. 转为Long类型返回（匹配后端实体类的Long字段）
@@ -468,10 +457,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         } catch (Exception e) {
             // 6. 统一捕获异常，封装报错信息
             String cellValue = getCellOriginalValue(cell);
-            throw new BusinessException(
-                    String.format("第%d行【考试类型】解析失败：%s。原因：%s",
-                            rowIdx, cellValue, e.getMessage()), e
-            );
+            throw new BusinessException(String.format("第%d行【考试类型】解析失败：%s。原因：%s", rowIdx, cellValue, e.getMessage()), e);
         }
     }
 
@@ -479,7 +465,8 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
      * 辅助方法：获取单元格原始值（用于报错提示）
      */
     private static String getCellOriginalValue(Cell cell) {
-        if (cell == null) return "";
+        if (cell == null)
+            return "";
         switch (cell.getCellType()) {
             case NUMERIC:
                 return String.valueOf(cell.getNumericCellValue());
@@ -491,7 +478,6 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
                 return "不支持的单元格类型（仅支持数字/文字）";
         }
     }
-
 
     // 答案标记解析
     private boolean parseAnswerFlag(String flag, int rowIdx, int colIdx) {

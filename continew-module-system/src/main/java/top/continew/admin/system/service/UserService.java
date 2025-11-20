@@ -323,6 +323,7 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
 
     /**
      * 判断考生是否是作业人员
+     * 
      * @param id
      * @return
      */

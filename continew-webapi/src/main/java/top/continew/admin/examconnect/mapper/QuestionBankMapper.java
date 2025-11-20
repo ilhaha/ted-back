@@ -46,11 +46,9 @@ public interface QuestionBankMapper extends BaseMapper<QuestionBankDO> {
                                             @Param("subCategoryId") Long subCategoryId,
                                             @Param("knowledgeTypeId") Long knowledgeTypeId);
 
-    List<Map<String, Object>> selectExistingQuestions(
-            @Param("questionTexts") List<String> questionTexts,
-            @Param("categoryId") Long categoryId,
-            @Param("projectId") Long projectId,
-            @Param("knowledgeTypeId") Long knowledgeTypeId);
-
+    List<Map<String, Object>> selectExistingQuestions(@Param("questionTexts") List<String> questionTexts,
+                                                      @Param("categoryId") Long categoryId,
+                                                      @Param("projectId") Long projectId,
+                                                      @Param("knowledgeTypeId") Long knowledgeTypeId);
 
 }

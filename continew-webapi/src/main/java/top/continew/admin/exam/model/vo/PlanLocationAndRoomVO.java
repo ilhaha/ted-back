@@ -23,8 +23,6 @@ import lombok.Data;
 import top.continew.admin.common.model.resp.BaseDetailResp;
 
 import java.io.Serial;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 考试地点详情信息
@@ -43,7 +41,6 @@ public class PlanLocationAndRoomVO extends BaseDetailResp {
     @Schema(description = "考试地点id")
     @ExcelProperty(value = "考试地点id")
     private Long locationId;
-
 
     @Schema(description = "考试地点名称")
     @ExcelProperty(value = "考试地点名称")

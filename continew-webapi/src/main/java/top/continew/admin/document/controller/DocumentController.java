@@ -20,13 +20,11 @@ import cn.dev33.satoken.annotation.SaIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.document.model.req.QrcodeUploadReq;
 import top.continew.admin.document.model.resp.DocumentTypeAddResp;
 import top.continew.admin.document.model.vo.DocumentTypeNameVO;
 import top.continew.admin.document.service.DocumentTypeService;
-import top.continew.admin.util.Result;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -53,7 +51,7 @@ import java.util.List;
 @Tag(name = "资料核心存储管理 API")
 @RestController
 @CrudRequestMapping(value = "/document/document", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
-        Api.EXPORT})
+    Api.EXPORT})
 public class DocumentController extends BaseController<DocumentService, DocumentResp, DocumentDetailResp, DocumentQuery, DocumentReq> {
     @Resource
     private DocumentTypeService documentTypeService;
@@ -88,8 +86,10 @@ public class DocumentController extends BaseController<DocumentService, Document
     public void uploadDocument(DocumentReq req) {
         documentService.upload(req);
     }
+
     /**
      * 审核资料接口
+     * 
      * @param request 审核请求参数
      * @return 操作结果
      */

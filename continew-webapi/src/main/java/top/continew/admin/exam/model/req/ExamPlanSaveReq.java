@@ -22,7 +22,6 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -37,9 +36,9 @@ public class ExamPlanSaveReq {
     /**
      * 开始时间和结束时间
      */
-//    @Schema(description = "开始时间和结束时间")
-//    @Size(min = 2, max = 2, message = "时间范围必须包含且仅包含开始时间和结束时间")
-//    private List<String> dateRange;
+    //    @Schema(description = "开始时间和结束时间")
+    //    @Size(min = 2, max = 2, message = "时间范围必须包含且仅包含开始时间和结束时间")
+    //    private List<String> dateRange;
 
     /**
      * 考试开始时间

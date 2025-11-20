@@ -17,7 +17,6 @@
 package top.continew.admin.exam.model.resp;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -122,7 +121,6 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     @Schema(description = "实际考生人数")
     @ExcelProperty(value = "实际考生人数")
     private Integer actualCandidates;
-
 
     /**
      * 考试类型：0-理论考试，1-实操考试

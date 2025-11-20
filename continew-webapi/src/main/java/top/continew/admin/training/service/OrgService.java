@@ -66,6 +66,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 获取当前用户在指定机构的状态（包含状态码和备注）
+     * 
      * @param orgId 机构ID
      * @return 包含status和remark的VO对象
      */
@@ -85,16 +86,14 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      */
     Integer studentQuitAgency(Long orgId);
 
-
     /**
      * 机构移除学生
      *
-     * @param orgId 机构ID
+     * @param orgId       机构ID
      * @param candidateId 学生ID
      * @return Integer
      */
     Integer agencyRemoveStudent(Long orgId, Long candidateId);
-
 
     /**
      * 学生取消报名机构
@@ -139,6 +138,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 解绑机构用户
+     * 
      * @param orgId
      * @return
      */
@@ -146,6 +146,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 获取机构对应的分类-项目级联选择
+     * 
      * @return
      */
     List<ProjectCategoryVO> getSelectCategoryProject(Long orgId);
@@ -167,6 +168,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 获取机构对应的分类-项目-班级级联选择
+     * 
      * @param orgId
      * @return
      */
@@ -174,43 +176,50 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 获取机构对应的项目-班级级联选择
+     * 
      * @return
      */
-    List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId,Integer classType);
+    List<ProjectCategoryVO> getSelectProjectClass(Long orgId, Long projectId, Integer classType);
 
     /**
      * 根据报考状态获取机构对应的项目-班级-考生级联选择 （预报名）
+     * 
      * @param projectId 项目id
      * @return
      */
-    List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId,Integer planType,Long planId);
+    List<ProjectCategoryVO> getSelectProjectClassCandidate(Long projectId, Integer planType, Long planId);
 
     /**
      * 机构给作业人员报名
+     * 
      * @return
      */
     Boolean apply(OrgApplyReq orgApplyPreReq);
 
     /**
      * 获取所有的机构作为选择器返回
+     * 
      * @return
      */
     List<SelectOrgVO> getOrgSelect();
 
     /**
      * 根据班级类型获取机构对应的项目-班级级联选择
+     * 
      * @return
      */
     List<Map<String, Object>> getSelectProjectClassByType(Integer type);
 
     /**
      * 获取班级类型机构对应的项目-班级级联选择
+     * 
      * @return
      */
     List<ProjectCategoryVO> getSelectOrgProjectClassByType(Integer type);
 
     /**
      * 根据班级id下载导入作业人员模板
+     * 
      * @param classId
      * @return
      */
@@ -218,6 +227,7 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
 
     /**
      * 批量导入作业人员
+     * 
      * @param file
      * @return
      */

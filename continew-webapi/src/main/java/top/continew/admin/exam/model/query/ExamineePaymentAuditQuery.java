@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.exam.model.query;
 
 import lombok.Data;
@@ -11,7 +27,6 @@ import top.continew.starter.data.core.enums.QueryType;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.*;
-import java.math.BigDecimal;
 
 /**
  * 考生缴费审核查询条件
@@ -55,11 +70,11 @@ public class ExamineePaymentAuditQuery implements Serializable {
     private Integer auditStatus;
 
     @Schema(description = "考生姓名查询")
-    @Query(type = QueryType.LIKE,columns = "su.nickname")
+    @Query(type = QueryType.LIKE, columns = "su.nickname")
     private String examineeName; // 考生姓名查询
 
     @Schema(description = "考试计划名称查询")
-    @Query(type = QueryType.LIKE,columns = "tep.exam_plan_name")
+    @Query(type = QueryType.LIKE, columns = "tep.exam_plan_name")
     private String planName; // 考试计划名称查询
 
     @Schema(description = "是否是审核作业人员缴费")

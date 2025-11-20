@@ -32,7 +32,7 @@ public class EnrollInfoResp {
     @Schema(description = "资料列表")
     private List<String> documentList;
 
-//    @FieldEncrypt
+    //    @FieldEncrypt
     @Schema(description = "手机号码")
     private String phoneNumber;
 

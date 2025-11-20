@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.training.mapper;
 
 import org.apache.ibatis.annotations.Delete;
@@ -23,30 +39,20 @@ public interface OrgCategoryRelationMapper extends BaseMapper<OrgCategoryRelatio
     /**
      * 批量查询机构对应的类目名称
      */
-    @Select({
-            "<script>",
-            "SELECT r.org_id, c.name",
-            "FROM ted_org_category_relation r",
-            "JOIN ted_category c ON r.category_id = c.id",
-            "WHERE r.org_id IN",
-            "<foreach collection='orgIds' item='id' open='(' separator=',' close=')'>",
-            "   #{id}",
-            "</foreach>",
-            "AND r.is_deleted = 0",
-            "AND c.is_deleted = 0",
-            "</script>"
-    })
+    @Select({"<script>", "SELECT r.org_id, c.name", "FROM ted_org_category_relation r",
+        "JOIN ted_category c ON r.category_id = c.id", "WHERE r.org_id IN",
+        "<foreach collection='orgIds' item='id' open='(' separator=',' close=')'>", "   #{id}", "</foreach>",
+        "AND r.is_deleted = 0", "AND c.is_deleted = 0", "</script>"})
     List<Map<String, Object>> listCategoryInfoByOrgIds(@Param("orgIds") List<Long> orgIds);
 
     @Select("""
-    SELECT c.name
-    FROM ted_org_category_relation r
-    JOIN ted_category c ON r.category_id = c.id
-    WHERE r.org_id = #{orgId}
-      AND r.is_deleted = 0
-      AND c.is_deleted = 0
-    """)
+        SELECT c.name
+        FROM ted_org_category_relation r
+        JOIN ted_category c ON r.category_id = c.id
+        WHERE r.org_id = #{orgId}
+          AND r.is_deleted = 0
+          AND c.is_deleted = 0
+        """)
     List<String> listCategoryNamesByOrgId(@Param("orgId") Long orgId);
 
 }
-

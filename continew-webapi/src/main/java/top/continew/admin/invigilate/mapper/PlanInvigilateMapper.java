@@ -73,28 +73,26 @@ public interface PlanInvigilateMapper extends BaseMapper<PlanInvigilateDO> {
      * @return
      */
     @Select("""
-                SELECT 
-                    tep.exam_plan_name, 
-                    tep.start_time, 
-                    tep.end_time, 
-                    tep.redeme, 
-                    tel.location_name, 
-                    tpi.invigilate_status
-                FROM ted_plan_invigilate tpi
-                INNER JOIN ted_exam_plan tep 
-                    ON tep.id = tpi.exam_plan_id AND tep.is_deleted = 0
-                INNER JOIN ted_classroom tc
-                    ON tpi.classroom_id = tc.id AND tc.is_deleted = 0
-                INNER JOIN ted_location_classroom tlc
-                    ON tc.id = tlc.classroom_id AND tlc.is_deleted = 0
-                INNER JOIN ted_exam_location tel 
-                    ON tlc.location_id = tel.id AND tel.is_deleted = 0
-                WHERE tpi.invigilator_id = #{invigilatorId}
-                  AND tpi.exam_plan_id = #{examId}
-            """)
-    InvigilateExamDetailResp queryExamDetail(@Param("invigilatorId") Long invigilatorId,
-                                             @Param("examId") Long examId);
-
+            SELECT
+                tep.exam_plan_name,
+                tep.start_time,
+                tep.end_time,
+                tep.redeme,
+                tel.location_name,
+                tpi.invigilate_status
+            FROM ted_plan_invigilate tpi
+            INNER JOIN ted_exam_plan tep
+                ON tep.id = tpi.exam_plan_id AND tep.is_deleted = 0
+            INNER JOIN ted_classroom tc
+                ON tpi.classroom_id = tc.id AND tc.is_deleted = 0
+            INNER JOIN ted_location_classroom tlc
+                ON tc.id = tlc.classroom_id AND tlc.is_deleted = 0
+            INNER JOIN ted_exam_location tel
+                ON tlc.location_id = tel.id AND tel.is_deleted = 0
+            WHERE tpi.invigilator_id = #{invigilatorId}
+              AND tpi.exam_plan_id = #{examId}
+        """)
+    InvigilateExamDetailResp queryExamDetail(@Param("invigilatorId") Long invigilatorId, @Param("examId") Long examId);
 
     /**
      * 更新监考状态 根据examPlanId

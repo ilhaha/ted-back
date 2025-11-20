@@ -29,7 +29,6 @@ import top.continew.admin.exam.model.resp.ProjectResp;
 import top.continew.admin.exam.model.resp.StudentProjectDetailResp;
 import top.continew.admin.exam.model.vo.ProjectClassroomFlatVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
-import top.continew.admin.exam.model.vo.ProjectWithClassroomVO;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ProjectDO;

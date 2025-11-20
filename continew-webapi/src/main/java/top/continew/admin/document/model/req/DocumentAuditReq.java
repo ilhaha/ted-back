@@ -22,8 +22,6 @@ import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import org.hibernate.validator.constraints.Length;
-
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.*;

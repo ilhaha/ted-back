@@ -125,12 +125,14 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
 
     /**
      * 查询所有有考场的考试项目
+     * 
      * @return
      */
     List<ProjectWithClassroomVO> getProjectsWithClassrooms();
 
     /**
      * 机构获取所属全部项目
+     * 
      * @param query
      * @param pageQuery
      * @return

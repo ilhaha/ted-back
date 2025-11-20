@@ -64,11 +64,11 @@ public class ExamLocationResp extends BaseResp {
     @Schema(description = "城市名称")
     private String cityName;
 
-        /**
-         * 街道名称
-         */
-        @Schema(description = "街道名称")
-        private String streetName;
+    /**
+     * 街道名称
+     */
+    @Schema(description = "街道名称")
+    private String streetName;
 
     /**
      * 详细地址

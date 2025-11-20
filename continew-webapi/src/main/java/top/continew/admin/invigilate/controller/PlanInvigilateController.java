@@ -49,6 +49,7 @@ public class PlanInvigilateController extends BaseController<PlanInvigilateServi
 
     /**
      * 更换监考员
+     * 
      * @param req
      * @return
      */
@@ -59,6 +60,7 @@ public class PlanInvigilateController extends BaseController<PlanInvigilateServi
 
     /**
      * 监考员无法参加监考
+     * 
      * @param planId
      * @return
      */
@@ -69,6 +71,7 @@ public class PlanInvigilateController extends BaseController<PlanInvigilateServi
 
     /**
      * 根据计划id获取计划分配的监考员信息
+     * 
      * @param planId
      * @return
      */

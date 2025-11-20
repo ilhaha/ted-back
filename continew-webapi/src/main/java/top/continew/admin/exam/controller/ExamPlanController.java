@@ -22,9 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
-import top.continew.admin.exam.model.query.EnrollQuery;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
-import top.continew.admin.exam.model.resp.EnrollStatusResp;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.service.ProjectService;
@@ -66,47 +64,52 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     /**
      * 中心主任确认考试
+     * 
      * @param planId
      * @param isFinalConfirmed
      * @return
      */
     @PostMapping("/conform/{planId}/{isFinalConfirmed}")
-    public Boolean centerDirectorConform(@PathVariable("planId") Long planId, @PathVariable("isFinalConfirmed") Integer isFinalConfirmed) {
-        return baseService.centerDirectorConform(planId,isFinalConfirmed);
+    public Boolean centerDirectorConform(@PathVariable("planId") Long planId,
+                                         @PathVariable("isFinalConfirmed") Integer isFinalConfirmed) {
+        return baseService.centerDirectorConform(planId, isFinalConfirmed);
     }
 
     /**
      * 获取可用监考员
+     * 
      * @param planId
      * @return
      */
     @GetMapping("/available/invigilator/{planId}/{rejectedInvigilatorId}")
-    public List<AvailableInvigilatorResp> getAvailableInvigilator(@PathVariable("planId") Long planId,@PathVariable("rejectedInvigilatorId") Long rejectedInvigilatorId) {
-        return baseService.getAvailableInvigilator(planId,rejectedInvigilatorId);
+    public List<AvailableInvigilatorResp> getAvailableInvigilator(@PathVariable("planId") Long planId,
+                                                                  @PathVariable("rejectedInvigilatorId") Long rejectedInvigilatorId) {
+        return baseService.getAvailableInvigilator(planId, rejectedInvigilatorId);
     }
 
     /**
      * 重新随机分配考试计划的监考员
+     * 
      * @param planId
      * @param invigilatorNum
      * @return
      */
     @PostMapping("/rest/random/invigilator/{planId}/{invigilatorNum}")
-    public Boolean reRandomInvigilators(@PathVariable("planId") Long planId, @PathVariable("invigilatorNum") Integer invigilatorNum) {
-        return examPlanService.reRandomInvigilators(planId,invigilatorNum);
+    public Boolean reRandomInvigilators(@PathVariable("planId") Long planId,
+                                        @PathVariable("invigilatorNum") Integer invigilatorNum) {
+        return examPlanService.reRandomInvigilators(planId, invigilatorNum);
     }
 
     /**
      * 机构获取符合自身八大类的考试计划
      *
      * @param examPlanQuery 考试计划查询参数
-     * @param pageQuery    分页参数
+     * @param pageQuery     分页参数
      * @return 分页结果
      */
     @GetMapping({"/org/page"})
-    public PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery,
-                                                  @Validated PageQuery pageQuery) {
-        return examPlanService.orgGetPlanList(examPlanQuery,pageQuery);
+    public PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery, @Validated PageQuery pageQuery) {
+        return examPlanService.orgGetPlanList(examPlanQuery, pageQuery);
     }
 
     @Operation(summary = "批量导入考试计划")

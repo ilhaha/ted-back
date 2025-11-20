@@ -18,12 +18,10 @@ package top.continew.admin.invigilate.service.impl;
 
 import cn.crane4j.core.util.StringUtils;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
 import com.aliyun.sdk.service.dysmsapi20170525.AsyncClient;
 import com.aliyun.sdk.service.dysmsapi20170525.models.SendSmsRequest;
-import com.aliyun.sdk.service.dysmsapi20170525.models.SendSmsResponse;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -67,7 +65,6 @@ import top.continew.admin.invigilate.service.PlanInvigilateService;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static top.continew.admin.invigilate.model.enums.InvigilateStatus.*;
@@ -304,10 +301,8 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         Long userId = TokenLocalThreadUtil.get().getUserId();
 
         // 1. 查询监考任务
-        List<PlanInvigilateDO> invigilateList = baseMapper.selectList(
-                new LambdaQueryWrapper<PlanInvigilateDO>()
-                        .eq(PlanInvigilateDO::getExamPlanId, examId)
-        );
+        List<PlanInvigilateDO> invigilateList = baseMapper.selectList(new LambdaQueryWrapper<PlanInvigilateDO>()
+            .eq(PlanInvigilateDO::getExamPlanId, examId));
         ValidationUtils.throwIfEmpty(invigilateList, "无监考任务");
 
         // 2. 获取当前监考员任务
@@ -328,10 +323,10 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
 
         // 3. 查找是否已有监考员生成过密码
         String existPassword = invigilateList.stream()
-                .map(PlanInvigilateDO::getExamPassword)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+            .map(PlanInvigilateDO::getExamPassword)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(null);
 
         // 需要生成或复用的密码
         String finalPassword = (existPassword != null) ? existPassword : RandomUtil.randomNumbers(6);
@@ -347,19 +342,14 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         return statueConstant.EXAM_PASSWORD_SEND_CONTENT;
     }
 
-
     /**
      * 更新监考记录中的考试密码
      */
     private void updateExamPassword(Long userId, Long examId, Long classroomId, String pwd) {
-        planInvigilateMapper.deductBalanceByIds(
-                pwd,
-                new QueryWrapper<PlanInvigilateDO>()
-                        .eq("invigilator_id", userId)
-                        .eq("invigilate_status", InvigilateStatusEnum.TO_CONFIRM.getValue())
-                        .eq("exam_plan_id", examId)
-                        .eq("classroom_id", classroomId)
-        );
+        planInvigilateMapper.deductBalanceByIds(pwd, new QueryWrapper<PlanInvigilateDO>().eq("invigilator_id", userId)
+            .eq("invigilate_status", InvigilateStatusEnum.TO_CONFIRM.getValue())
+            .eq("exam_plan_id", examId)
+            .eq("classroom_id", classroomId));
     }
 
     /**
@@ -371,18 +361,18 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         paramsMap.put("code", password);
 
         SendSmsRequest request = SendSmsRequest.builder()
-                .phoneNumbers(phone)
-                .signName(smsConfig.getSignName())
-                .templateCode(smsConfig.getTemplateCodes().get(SmsConstants.EXAM_NOTIFICATION_TEMPLATE))
-                .templateParam(JSON.toJSONString(paramsMap))
-                .build();
+            .phoneNumbers(phone)
+            .signName(smsConfig.getSignName())
+            .templateCode(smsConfig.getTemplateCodes().get(SmsConstants.EXAM_NOTIFICATION_TEMPLATE))
+            .templateParam(JSON.toJSONString(paramsMap))
+            .build();
 
         smsAsyncClient.sendSms(request);
     }
 
-
     /**
      * 根据计划id获取计划分配的监考员信息
+     * 
      * @param planId
      * @return
      */
@@ -393,6 +383,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
 
     /**
      * 监考员无法参加监考
+     * 
      * @param planId
      * @return
      */
@@ -400,13 +391,14 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
     @Transactional(rollbackFor = Exception.class)
     public Boolean rejected(Long planId) {
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
-        return baseMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>().eq(PlanInvigilateDO::getExamPlanId,planId)
-                .eq(PlanInvigilateDO::getInvigilatorId,userTokenDo.getUserId())
-                .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.REJECTED.getValue())) > 0;
+        return baseMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>().eq(PlanInvigilateDO::getExamPlanId, planId)
+            .eq(PlanInvigilateDO::getInvigilatorId, userTokenDo.getUserId())
+            .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.REJECTED.getValue())) > 0;
     }
 
     /**
      * 更换监考员
+     * 
      * @param req
      * @return
      */
@@ -415,10 +407,11 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
     public Boolean replace(PlanInvigilateReq req) {
         Long planInvigilateId = req.getId();
         PlanInvigilateDO planInvigilateDO = baseMapper.selectById(planInvigilateId);
-        ValidationUtils.throwIfNull(planInvigilateDO,"未查询到记录");
-        return baseMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>().eq(PlanInvigilateDO::getId,planInvigilateId)
-                        .set(PlanInvigilateDO::getInvigilatorId,req.getInvigilateId())
-                .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.TO_CONFIRM.getValue())) > 0;
+        ValidationUtils.throwIfNull(planInvigilateDO, "未查询到记录");
+        return baseMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>()
+            .eq(PlanInvigilateDO::getId, planInvigilateId)
+            .set(PlanInvigilateDO::getInvigilatorId, req.getInvigilateId())
+            .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.TO_CONFIRM.getValue())) > 0;
     }
 
 }

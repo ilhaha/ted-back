@@ -16,7 +16,6 @@
 
 package top.continew.admin.examconnect.model.query;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -68,8 +67,6 @@ public class QuestionBankQuery implements Serializable {
     @Schema(description = "题目标题")
     @Query(type = QueryType.LIKE, columns = "t1.question")
     private String question;
-
-
 
     /**
      * 考试类型（0-未指定，1-作业人员考试，2-无损/有损检验人员考试，可后续扩展）

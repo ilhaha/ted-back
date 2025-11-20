@@ -25,7 +25,6 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import top.continew.admin.certificate.model.dto.CertificateInfoDTO;
 import top.continew.admin.exam.model.resp.*;
-import top.continew.admin.exam.model.vo.ApplyListVO;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
 import top.continew.starter.data.mp.base.BaseMapper;
@@ -100,11 +99,11 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
 
     /**
      * 根据考生id查询申报记录
+     * 
      * @param userId 考生id
      */
     @Select("SELECT * FROM ted.ted_enroll WHERE user_id = #{userId} AND enroll_status NOT IN (0, 3) AND is_deleted = 0 LIMIT 1")
     EnrollDO getByCandidateId(@Param("userId") Long userId);
-
 
     IPage<EnrollResp> getWorkerApplyList(@Param("page") Page<EnrollDO> page,
                                          @Param(Constants.WRAPPER) QueryWrapper<EnrollDO> queryWrapper);

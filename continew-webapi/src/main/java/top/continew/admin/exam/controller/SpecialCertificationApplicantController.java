@@ -16,7 +16,6 @@
 
 package top.continew.admin.exam.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
 import net.dreamlu.mica.core.result.R;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.dto.BatchAuditSpecialCertificationApplicantDTO;
@@ -53,9 +52,8 @@ public class SpecialCertificationApplicantController extends BaseController<Spec
      * @return
      */
     @GetMapping("/candidates/{planId}")
-    public SpecialCertificationApplicantResp getByCandidates(
-            @PathVariable("planId") Long planId,
-            @RequestParam(value = "applySource", required = false) Integer applySource) {
+    public SpecialCertificationApplicantResp getByCandidates(@PathVariable("planId") Long planId,
+                                                             @RequestParam(value = "applySource", required = false) Integer applySource) {
         return baseService.getByCandidates(planId, applySource);
     }
 
@@ -90,7 +88,8 @@ public class SpecialCertificationApplicantController extends BaseController<Spec
      *
      */
     @PutMapping("/update/{id}")
-    public R updateResult(@RequestBody SpecialCertificationApplicantReq req, @PathVariable("id") Long id) throws Exception {
+    public R updateResult(@RequestBody SpecialCertificationApplicantReq req,
+                          @PathVariable("id") Long id) throws Exception {
         return baseService.updateResult(req, id);
     }
 

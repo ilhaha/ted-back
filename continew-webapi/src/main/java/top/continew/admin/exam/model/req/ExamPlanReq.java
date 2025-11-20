@@ -71,7 +71,6 @@ public class ExamPlanReq implements Serializable {
     @Schema(description = "考试地点")
     private Long locationId;
 
-
     /**
      * 考场id列表
      */
@@ -97,6 +96,5 @@ public class ExamPlanReq implements Serializable {
      * 监考员分配类型（1：第一次随机分配 2：第二次随机分配 3：管理员指派）
      */
     private Integer assignType;
-
 
 }

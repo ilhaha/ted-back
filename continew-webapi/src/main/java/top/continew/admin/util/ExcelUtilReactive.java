@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.util;
 
 import com.alibaba.excel.EasyExcel;
@@ -9,13 +25,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import reactor.netty.http.client.HttpClient;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -93,12 +104,9 @@ public class ExcelUtilReactive {
         try {
             byte[] templateBytes = loadTemplateSync(templateUrl);
             try (InputStream templateIs = new ByteArrayInputStream(templateBytes);
-                 ByteArrayOutputStream excelOut = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream excelOut = new ByteArrayOutputStream()) {
                 List<Map<String, Object>> dataList = Collections.singletonList(dataMap);
-                EasyExcel.write(excelOut)
-                        .withTemplate(templateIs)
-                        .sheet()
-                        .doFill(dataList);
+                EasyExcel.write(excelOut).withTemplate(templateIs).sheet().doFill(dataList);
                 byte[] excelBytes = excelOut.toByteArray();
                 log.info("填充Excel模板完成，大小={}KB", excelBytes.length / 1024);
                 return excelBytes;
@@ -111,15 +119,21 @@ public class ExcelUtilReactive {
 
     /**
      * 插入照片（同步）
+     * 
      * @param excelBytes 模板Excel字节流
      * @param photoBytes 需要插入的图片字节流
-     * @param startCol 开始单元格列数
-     * @param endCol 结束单元格列数
-     * @param startRow 开始行
-     * @param endRow 结束行
+     * @param startCol   开始单元格列数
+     * @param endCol     结束单元格列数
+     * @param startRow   开始行
+     * @param endRow     结束行
      * @return
      */
-    public byte[] insertPhotoToExcelBytesSync(byte[] excelBytes, byte[] photoBytes, int startCol, int endCol, int startRow, int endRow) {
+    public byte[] insertPhotoToExcelBytesSync(byte[] excelBytes,
+                                              byte[] photoBytes,
+                                              int startCol,
+                                              int endCol,
+                                              int startRow,
+                                              int endRow) {
         try {
             if (photoBytes == null || photoBytes.length == 0) {
                 log.info("没有有效照片，直接返回Excel原始字节");
@@ -127,8 +141,8 @@ public class ExcelUtilReactive {
             }
 
             try (ByteArrayInputStream excelIn = new ByteArrayInputStream(excelBytes);
-                 XSSFWorkbook workbook = new XSSFWorkbook(excelIn);
-                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                XSSFWorkbook workbook = new XSSFWorkbook(excelIn);
+                ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
                 Sheet sheet = workbook.getSheetAt(0);
                 Drawing<?> drawing = sheet.createDrawingPatriarch();
@@ -140,8 +154,7 @@ public class ExcelUtilReactive {
                     if (range.isInRange(startRow, startCol)) {
                         endCol = range.getLastColumn();
                         endRow = range.getLastRow();
-                        log.info("检测到合并单元格，调整插入范围：col[{}->{}], row[{}->{}]",
-                                startCol, endCol, startRow, endRow);
+                        log.info("检测到合并单元格，调整插入范围：col[{}->{}], row[{}->{}]", startCol, endCol, startRow, endRow);
                         break;
                     }
                 }
@@ -176,7 +189,7 @@ public class ExcelUtilReactive {
         try {
             log.info("开始Excel转PDF，输入大小={}KB", excelBytes.length / 1024);
             try (ByteArrayInputStream in = new ByteArrayInputStream(excelBytes);
-                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
                 com.aspose.cells.Workbook workbook = new com.aspose.cells.Workbook(in);
                 PdfSaveOptions options = new PdfSaveOptions();
@@ -195,7 +208,13 @@ public class ExcelUtilReactive {
     }
 
     // 生成PDF字节流（同步）
-    public byte[] generatePdfBytesSync(Map<String, Object> dataMap, String templateUrl, byte[] photoBytes, int startCol, int endCol, int startRow, int endRow) {
+    public byte[] generatePdfBytesSync(Map<String, Object> dataMap,
+                                       String templateUrl,
+                                       byte[] photoBytes,
+                                       int startCol,
+                                       int endCol,
+                                       int startRow,
+                                       int endRow) {
         byte[] excelBytes = fillTemplateToBytesSync(dataMap, templateUrl);
         byte[] excelWithPhoto = insertPhotoToExcelBytesSync(excelBytes, photoBytes, startCol, endCol, startRow, endRow);
         return convertExcelBytesToPdfBytesSync(excelWithPhoto);
@@ -206,33 +225,32 @@ public class ExcelUtilReactive {
                                                                 String templateUrl,
                                                                 byte[] photoBytes,
                                                                 String fileName) {
-        log.info("开始生成PDF响应：模板URL={}, 数据项数={}, 照片大小={}KB",
-                templateUrl, dataMap.size(), photoBytes.length / 1024);
+        log.info("开始生成PDF响应：模板URL={}, 数据项数={}, 照片大小={}KB", templateUrl, dataMap.size(), photoBytes.length / 1024);
 
         try {
-            byte[] pdfBytes = generatePdfBytesSync(dataMap, templateUrl, photoBytes,3,3,1,5);
+            byte[] pdfBytes = generatePdfBytesSync(dataMap, templateUrl, photoBytes, 3, 3, 1, 5);
             String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
             log.info("生成PDF响应完成，文件名={}，大小={}KB", encodedName, pdfBytes.length / 1024);
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"")
-                    .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache")
-                    .header(HttpHeaders.PRAGMA, "no-cache")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .contentLength(pdfBytes.length)
-                    .body(pdfBytes);
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(pdfBytes.length)
+                .body(pdfBytes);
         } catch (Exception e) {
             log.error("生成PDF响应失败", e);
             String errorMsg = "生成准考证失败：" + e.getMessage();
             return ResponseEntity.internalServerError()
-                    .contentType(MediaType.TEXT_PLAIN)
-                    .body(errorMsg.getBytes(StandardCharsets.UTF_8));
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(errorMsg.getBytes(StandardCharsets.UTF_8));
         }
     }
 
     public String generateUniqueNoticeNo(String prefix) {
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
-        String randomNum = String.valueOf((int) (Math.random() * 1000000));
+        String randomNum = String.valueOf((int)(Math.random() * 1000000));
         return prefix + timestamp + "_" + randomNum;
     }
 
@@ -246,8 +264,8 @@ public class ExcelUtilReactive {
 
         //元转分（避免浮点数误差，1元=100分），四舍五入保留整数分
         int totalAmountFen = totalAmount.multiply(new BigDecimal("100"))
-                .setScale(0, BigDecimal.ROUND_HALF_UP)
-                .intValue();
+            .setScale(0, BigDecimal.ROUND_HALF_UP)
+            .intValue();
 
         // 计算元及以上（万、千、百、十、元）：总元数 = 总分 / 100
         int yuanTotal = totalAmountFen / 100;
@@ -276,8 +294,6 @@ public class ExcelUtilReactive {
         String[] upperNums = {"零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"};
         return (digit >= 0 && digit <= 9) ? upperNums[digit] : upperNums[0];
     }
-
-
 
     public String getSafeValue(String value) {
         return value == null ? "" : value.trim();

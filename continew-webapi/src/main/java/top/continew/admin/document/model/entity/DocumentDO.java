@@ -58,7 +58,6 @@ public class DocumentDO extends BaseDO {
      */
     private Integer status;
 
-
     /**
      * 审核备注
      */

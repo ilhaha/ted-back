@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.document.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
@@ -6,7 +22,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.conditions.update.LambdaUpdateChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
@@ -97,10 +112,7 @@ public class EnrollPreUploadServiceImpl extends BaseServiceImpl<EnrollPreUploadM
         String aesCandidateId = aesWithHMAC.verifyAndDecrypt(qrcodeUploadReq.getCandidateId());
 
         // 校验二维码有效性
-        ValidationUtils.throwIf(
-                ObjectUtil.isEmpty(aesPlanId) || ObjectUtil.isEmpty(aesCandidateId),
-                "二维码信息已失效，请重新获取"
-        );
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(aesPlanId) || ObjectUtil.isEmpty(aesCandidateId), "二维码信息已失效，请重新获取");
 
         Long planId = Long.valueOf(aesPlanId);
         Long candidateId = Long.valueOf(aesCandidateId);
@@ -109,15 +121,13 @@ public class EnrollPreUploadServiceImpl extends BaseServiceImpl<EnrollPreUploadM
         String idLastSix = aesUsername.substring(aesUsername.length() - 6);
 
         // 身份验证
-        ValidationUtils.throwIf(
-                !qrcodeUploadReq.getIdLastSix().equals(idLastSix),
-                "身份信息有误，请确认信息后重新输入"
-        );
+        ValidationUtils.throwIf(!qrcodeUploadReq.getIdLastSix().equals(idLastSix), "身份信息有误，请确认信息后重新输入");
         // 查询考生正在所在班级
         LambdaQueryWrapper<OrgClassCandidateDO> orgClassCandidateDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
         orgClassCandidateDOLambdaQueryWrapper.eq(OrgClassCandidateDO::getCandidateId, candidateId)
-                .eq(OrgClassCandidateDO::getStatus, 0);
-        OrgClassCandidateDO orgClassCandidateDO = orgClassCandidateMapper.selectOne(orgClassCandidateDOLambdaQueryWrapper);
+            .eq(OrgClassCandidateDO::getStatus, 0);
+        OrgClassCandidateDO orgClassCandidateDO = orgClassCandidateMapper
+            .selectOne(orgClassCandidateDOLambdaQueryWrapper);
 
         EnrollPreUploadDO enrollPreUploadDO = new EnrollPreUploadDO();
         enrollPreUploadDO.setPlanId(planId);
@@ -155,17 +165,14 @@ public class EnrollPreUploadServiceImpl extends BaseServiceImpl<EnrollPreUploadM
     @Transactional
     public Boolean review(EnrollPreReviewReq reviewReq) {
         // 审核原因校验：退回补正或虚假材料时必须填写 remark
-        ValidationUtils.throwIf(
-                (reviewReq.getStatus().equals(2) || reviewReq.getStatus().equals(3))
-                        && ObjectUtil.isEmpty(reviewReq.getRemark()),
-                "请填写审核原因"
-        );
+        ValidationUtils.throwIf((reviewReq.getStatus().equals(2) || reviewReq.getStatus().equals(3)) && ObjectUtil
+            .isEmpty(reviewReq.getRemark()), "请填写审核原因");
 
         // 更新审核状态和备注
         LambdaUpdateWrapper<EnrollPreUploadDO> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.set(EnrollPreUploadDO::getStatus, reviewReq.getStatus())
-                .set(EnrollPreUploadDO::getRemark, reviewReq.getRemark())
-                .in(EnrollPreUploadDO::getId, reviewReq.getReviewIds());
+            .set(EnrollPreUploadDO::getRemark, reviewReq.getRemark())
+            .in(EnrollPreUploadDO::getId, reviewReq.getReviewIds());
 
         //  审核通过才执行生成报名信息逻辑
         if (Integer.valueOf(1).equals(reviewReq.getStatus())) {
@@ -235,12 +242,10 @@ public class EnrollPreUploadServiceImpl extends BaseServiceImpl<EnrollPreUploadM
                     }
 
                     // 一次性批量删除
-                    documentMapper.delete(
-                            new LambdaQueryWrapper<DocumentDO>()
-                                    .in(DocumentDO::getCreateUser, candidateIds)
-                                    .in(DocumentDO::getTypeId, typeIds)
-                                    .ne(DocumentDO::getStatus, 1)
-                    );
+                    documentMapper.delete(new LambdaQueryWrapper<DocumentDO>()
+                        .in(DocumentDO::getCreateUser, candidateIds)
+                        .in(DocumentDO::getTypeId, typeIds)
+                        .ne(DocumentDO::getStatus, 1));
 
                     // 再批量插入
                     documentMapper.insertBatch(documentList);
@@ -267,8 +272,8 @@ public class EnrollPreUploadServiceImpl extends BaseServiceImpl<EnrollPreUploadM
 
                     // 取出所有 candidateId-planId 组合
                     Set<String> candidatePlanPairs = applicantList.stream()
-                            .map(a -> a.getCandidatesId() + "_" + a.getPlanId())
-                            .collect(Collectors.toSet());
+                        .map(a -> a.getCandidatesId() + "_" + a.getPlanId())
+                        .collect(Collectors.toSet());
 
                     // 批量更新预报名表
                     for (String pair : candidatePlanPairs) {
@@ -277,10 +282,9 @@ public class EnrollPreUploadServiceImpl extends BaseServiceImpl<EnrollPreUploadM
                         Long planId = Long.valueOf(parts[1]);
 
                         LambdaUpdateWrapper<EnrollPreDO> enrollPreDOLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-                        enrollPreDOLambdaUpdateWrapper
-                                .eq(EnrollPreDO::getCandidateId, candidateId)
-                                .eq(EnrollPreDO::getPlanId, planId)
-                                .set(EnrollPreDO::getStatus, 1);
+                        enrollPreDOLambdaUpdateWrapper.eq(EnrollPreDO::getCandidateId, candidateId)
+                            .eq(EnrollPreDO::getPlanId, planId)
+                            .set(EnrollPreDO::getStatus, 1);
 
                         enrollPreMapper.update(null, enrollPreDOLambdaUpdateWrapper);
                     }
@@ -290,7 +294,6 @@ public class EnrollPreUploadServiceImpl extends BaseServiceImpl<EnrollPreUploadM
         }
         return this.update(updateWrapper);
     }
-
 
     /**
      * 重写分页查询
@@ -306,7 +309,7 @@ public class EnrollPreUploadServiceImpl extends BaseServiceImpl<EnrollPreUploadM
         super.sort(queryWrapper, pageQuery);
 
         IPage<EnrollPreUploadDetailResp> page = baseMapper.page(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+            .getSize()), queryWrapper);
 
         PageResp<EnrollPreUploadResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);

@@ -24,7 +24,6 @@ import com.alibaba.excel.annotation.ExcelIgnoreUnannotated;
 import com.alibaba.excel.annotation.ExcelProperty;
 
 import top.continew.admin.common.model.resp.BaseDetailResp;
-import top.continew.starter.security.crypto.annotation.FieldEncrypt;
 
 import java.io.Serial;
 import java.time.*;
@@ -129,7 +128,7 @@ public class OrgDetailResp extends BaseDetailResp {
     /**
      * 机构用户电话
      */
-//    @FieldEncrypt
+    //    @FieldEncrypt
     @Schema(description = "机构用户电话")
     private String phone;
 }

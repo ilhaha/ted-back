@@ -47,14 +47,13 @@ public class UploadController {
         ValidationUtils.throwIf(file::isEmpty, "文件不能为空");
         FileInfoResp fileInfo = uploadService.applyUpload(file);
         return FileUploadResp.builder()
-                .id(fileInfo.getId())
-                .url(fileInfo.getUrl())
-                .thUrl(fileInfo.getThUrl())
-                .duration(fileInfo.getDuration())
-                .metadata(fileInfo.getMetadata())
-                .build();
+            .id(fileInfo.getId())
+            .url(fileInfo.getUrl())
+            .thUrl(fileInfo.getThUrl())
+            .duration(fileInfo.getDuration())
+            .metadata(fileInfo.getMetadata())
+            .build();
     }
-
 
     @Operation(summary = "上传文件", description = "上传文件")
     @PostMapping("/file")
@@ -62,12 +61,12 @@ public class UploadController {
         ValidationUtils.throwIf(file::isEmpty, "文件不能为空");
         FileInfoResp fileInfo = uploadService.upload(file, fileReq);
         return FileUploadResp.builder()
-                .id(fileInfo.getId())
-                .url(fileInfo.getUrl())
-                .thUrl(fileInfo.getThUrl())
-                .duration(fileInfo.getDuration())
-                .metadata(fileInfo.getMetadata())
-                .build();
+            .id(fileInfo.getId())
+            .url(fileInfo.getUrl())
+            .thUrl(fileInfo.getThUrl())
+            .duration(fileInfo.getDuration())
+            .metadata(fileInfo.getMetadata())
+            .build();
     }
 
     @SaIgnore

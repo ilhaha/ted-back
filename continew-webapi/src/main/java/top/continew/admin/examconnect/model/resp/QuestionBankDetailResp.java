@@ -72,7 +72,6 @@ public class QuestionBankDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "考试类型")
     private Long examType;
 
-
     /**
      * 知识类型ID
      */

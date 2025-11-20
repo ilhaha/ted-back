@@ -18,13 +18,12 @@ package top.continew.admin.training.model.resp;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import top.continew.starter.security.crypto.annotation.FieldEncrypt;
 
 @Data
 public class OrgCandidatesResp {
     @Schema(description = "考生id")
     private Long candidateId;
-//    @FieldEncrypt
+    //    @FieldEncrypt
     @Schema(description = "考生手机号")
     private String phoneNumber;
     @Schema(description = "考生昵称")

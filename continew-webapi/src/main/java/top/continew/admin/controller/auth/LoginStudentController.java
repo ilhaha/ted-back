@@ -34,7 +34,6 @@ import top.continew.admin.system.model.resp.user.UserResp;
 import top.continew.admin.system.service.UserService;
 import top.continew.admin.training.mapper.CandidateTypeMapper;
 import top.continew.admin.training.model.entity.CandidateTypeDO;
-import top.continew.admin.training.service.CandidateTypeService;
 import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.annotation.CrudRequestMapping;

@@ -32,7 +32,6 @@ import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.training.model.entity.OrgDO;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 机构信息 Mapper
@@ -68,18 +67,21 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
 
     //  AgencyStatusVO，接收多字段
     AgencyStatusVO getAgencyStatus(@Param("orgId") Long orgId, @Param("userId") Long userId);
+
     @Insert("insert into ted_org_candidate values (null, #{orgId}, #{userId}, #{projectId}, 1, null,1,1, now(), now() 0)")
-    Integer studentAddAgency(@Param("orgId") Long orgId, @Param("userId") Long userId, @Param("projectId") Long projectId);
+    Integer studentAddAgency(@Param("orgId") Long orgId,
+                             @Param("userId") Long userId,
+                             @Param("projectId") Long projectId);
 
     @Select("select count(1) " + "from ted_org_candidate " + "where is_deleted = 0 " + "and status = 1 " + "and org_id = #{orgId} " + "and candidate_id = #{userId}")
     Integer findAgency(@Param("orgId") Long orgId, @Param("userId") Long userId);
 
     @Delete("update ted_org_candidate set is_deleted = 1,status = 3 where org_id = #{orgId} and candidate_id = #{userId}")
-    Integer studentDelAgency(@Param("orgId") Long orgId, @Param("userId") Long userId );
+    Integer studentDelAgency(@Param("orgId") Long orgId, @Param("userId") Long userId);
 
-    Integer studentQuitAgency(@Param("orgId") Long orgId, @Param("userId") Long userId,@Param("Id") Long Id);
+    Integer studentQuitAgency(@Param("orgId") Long orgId, @Param("userId") Long userId, @Param("Id") Long Id);
 
-    Integer studentQuitAgencyClass(@Param("orgId") Long orgId, @Param("userId") Long userId  );
+    Integer studentQuitAgencyClass(@Param("orgId") Long orgId, @Param("userId") Long userId);
 
     Integer approveStudent(@Param("orgId") Long orgId, @Param("userId") Long userId);
 
@@ -99,7 +101,9 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
 
     List<ProjectCategoryVO> getAllCategoryByOrgId(@Param("orgId") Long orgId);
 
-    List<OrgProjectClassVO> getSelectProjectClass(@Param("orgId") Long orgId, @Param("projectId") Long projectId, @Param("classType") Integer classType);
+    List<OrgProjectClassVO> getSelectProjectClass(@Param("orgId") Long orgId,
+                                                  @Param("projectId") Long projectId,
+                                                  @Param("classType") Integer classType);
 
     List<OrgProjectClassCandidateVO> getSelectProjectClassCandidate(@Param("orgId") Long orgId,
                                                                     @Param("projectId") Long projectId,

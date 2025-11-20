@@ -72,7 +72,6 @@ public class SpecialCertificationApplicantResp extends BaseResp {
     @Schema(description = "申请来源（0：培训机构批量上传，1：考生个人单独报名）")
     private Integer applySource;
 
-
     /**
      * 班级批次id
      */
@@ -85,13 +84,11 @@ public class SpecialCertificationApplicantResp extends BaseResp {
     @Schema(description = "审核意见或退回原因")
     private String remark;
 
-
     /**
      * 缴费审核状态
      */
     @Schema(description = "缴费审核状态")
     private Integer auditStatus;
-
 
     /**
      * 驳回原因

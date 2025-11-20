@@ -17,13 +17,9 @@
 package top.continew.admin.exam.controller;
 
 import jakarta.annotation.Resource;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.resp.*;
-import top.continew.admin.exam.model.vo.ApplyListVO;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
 import top.continew.starter.extension.crud.enums.Api;
@@ -40,8 +36,6 @@ import top.continew.admin.exam.service.EnrollService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -59,17 +53,20 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 下载某个班级的准考证
+     * 
      * @param classId
      * @param planId
      * @return
      */
     @GetMapping("/download/batch/ticket/{classId}/{planId}")
-    public ResponseEntity<byte[]> downloadClassTicket(@PathVariable("classId") Long classId, @PathVariable("planId") Long planId) {
-        return enrollService.downloadClassTicket(classId,planId);
+    public ResponseEntity<byte[]> downloadClassTicket(@PathVariable("classId") Long classId,
+                                                      @PathVariable("planId") Long planId) {
+        return enrollService.downloadClassTicket(classId, planId);
     }
 
     /**
      * 下载某个考生的准考证
+     * 
      * @param enrollId
      * @return
      */
@@ -78,20 +75,22 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
         return enrollService.downloadTicket(enrollId);
     }
 
-
     /**
      * 下载某个班级的考试缴费通知单
+     * 
      * @param classId
      * @param planId
      * @return
      */
     @GetMapping("/download/batch/auditNotice/{classId}/{planId}")
-    public ResponseEntity<byte[]> downloadPdf(@PathVariable("classId") Long classId, @PathVariable("planId") Long planId) {
-        return enrollService.downloadBatchAuditNotice(classId,planId);
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable("classId") Long classId,
+                                              @PathVariable("planId") Long planId) {
+        return enrollService.downloadBatchAuditNotice(classId, planId);
     }
 
     /**
      * 下载某个考生的缴费通知单
+     * 
      * @param enrollId
      * @return
      */
@@ -160,14 +159,11 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
      * @return 分页结果
      */
     @GetMapping("/getEnrollStatusList")
-    public PageResp<EnrollStatusResp> getEnrollStatusList(
-            @Validated EnrollQuery query,
-            @Validated PageQuery pageQuery,
-            @RequestParam(required = false) Long enrollStatus
-    ) {
+    public PageResp<EnrollStatusResp> getEnrollStatusList(@Validated EnrollQuery query,
+                                                          @Validated PageQuery pageQuery,
+                                                          @RequestParam(required = false) Long enrollStatus) {
         return enrollService.getEnrollStatusList(query, pageQuery, enrollStatus);
     }
-
 
     @GetMapping("/getEnrollInfo")
     public EnrollInfoResp getEnrollInfo() {

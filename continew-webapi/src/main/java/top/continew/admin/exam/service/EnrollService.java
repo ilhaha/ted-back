@@ -18,7 +18,6 @@ package top.continew.admin.exam.service;
 
 import org.springframework.http.ResponseEntity;
 import top.continew.admin.exam.model.resp.*;
-import top.continew.admin.exam.model.vo.ApplyListVO;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -27,7 +26,6 @@ import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.EnrollQuery;
 import top.continew.admin.exam.model.req.EnrollReq;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -70,7 +68,6 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      */
     Boolean signUp(EnrollReq enrollReq, Long userId, Integer status);
 
-
     /**
      * 生成考生报名准考证
      *
@@ -80,7 +77,6 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      * @return 是否报名成功（0-人数超限，1-报名成功，2-数据库插入失败）
      */
     Boolean signUpdate(EnrollReq enrollReq, Long userId, Integer status);
-
 
     /**
      * 获取考试成绩
@@ -124,6 +120,7 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
 
     /**
      * 下载某个考试的缴费通知单
+     * 
      * @param enrollId
      * @return
      */
@@ -131,15 +128,16 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
 
     /**
      * 下载某个班级的考试缴费通知单
+     * 
      * @param classId
      * @param planId
      * @return
      */
     ResponseEntity<byte[]> downloadBatchAuditNotice(Long classId, Long planId);
 
-
     /**
      * 下载某个考生的准考证
+     * 
      * @param enrollId
      * @return
      */
@@ -147,6 +145,7 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
 
     /**
      * 下载某个班级的准考证
+     * 
      * @param classId
      * @param planId
      * @return

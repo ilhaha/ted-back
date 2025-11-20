@@ -16,14 +16,10 @@
 
 package top.continew.admin.exam.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import top.continew.admin.exam.mapper.ExamPlanMapper;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
-import top.continew.admin.exam.model.resp.EnrollStatusResp;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
@@ -98,21 +94,24 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 批量导入考试计划
+     * 
      * @param file
      */
     void importExcel(MultipartFile file);
 
     /**
      * 机构获取符合自身八大类的考试计划
+     * 
      * @param pageQuery
      * @return
      */
-    PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery,PageQuery pageQuery);
+    PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery, PageQuery pageQuery);
 
     void batchUpdatePlanMaxCandidates(List<ExamPlanDTO> planList);
 
     /**
      * 重新随机分配考试计划的监考员
+     * 
      * @param planId
      * @param invigilatorNum
      * @return
@@ -121,13 +120,15 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 获取可用监考员
+     * 
      * @param planId
      * @return
      */
-    List<AvailableInvigilatorResp> getAvailableInvigilator(Long planId,Long rejectedInvigilatorId);
+    List<AvailableInvigilatorResp> getAvailableInvigilator(Long planId, Long rejectedInvigilatorId);
 
     /**
      * 中心主任确认考试
+     * 
      * @param planId
      * @param isFinalConfirmed
      * @return

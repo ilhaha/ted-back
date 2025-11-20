@@ -1,11 +1,23 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.training.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import org.apache.poi.ss.formula.functions.T;
-import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
-import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
 import top.continew.admin.training.model.entity.OrgTrainingPaymentAuditDO;
 import top.continew.starter.extension.crud.enums.Api;
 
@@ -30,19 +42,18 @@ import top.continew.starter.web.model.R;
  */
 @Tag(name = "机构培训缴费审核（记录考生参与机构培训的缴费及审核流程）管理 API")
 @RestController
-@CrudRequestMapping(value = "/training/orgTrainingPaymentAudit", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE, Api.EXPORT})
+@CrudRequestMapping(value = "/training/orgTrainingPaymentAudit", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE,
+    Api.DELETE, Api.EXPORT})
 public class OrgTrainingPaymentAuditController extends BaseController<OrgTrainingPaymentAuditService, OrgTrainingPaymentAuditResp, OrgTrainingPaymentAuditDetailResp, OrgTrainingPaymentAuditQuery, OrgTrainingPaymentAuditReq> {
 
     /**
      * 根据机构id和是申请加入机构审核id查询培训缴费审核信息
      */
     @GetMapping("/info")
-    public OrgTrainingPaymentAuditDO getTrainingPaymentAuditInfo(
-            @RequestParam Long orgId,
-            @RequestParam Long enrollId) {
+    public OrgTrainingPaymentAuditDO getTrainingPaymentAuditInfo(@RequestParam Long orgId,
+                                                                 @RequestParam Long enrollId) {
         return baseService.getByTrainingOrgIdAndEnrollId(orgId, enrollId);
     }
-
 
     /**
      * 上传培训缴费凭证
@@ -51,8 +62,6 @@ public class OrgTrainingPaymentAuditController extends BaseController<OrgTrainin
     public Boolean uploadTrainingPaymentProof(@Validated @RequestBody OrgTrainingPaymentAuditResp orgTrainingPaymentAuditResp) {
         return baseService.uploadTrainingPaymentProof(orgTrainingPaymentAuditResp);
     }
-
-
 
     /**
      * 审核培训缴费记录

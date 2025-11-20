@@ -21,8 +21,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import top.continew.admin.exam.model.resp.SpecialCertificationApplicantResp;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;

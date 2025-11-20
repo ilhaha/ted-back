@@ -105,7 +105,6 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     @Resource
     private ClassroomMapper classroomMapper;
 
-
     @Resource
     private SpecialCertificationApplicantMapper scMapper;
 
@@ -131,12 +130,12 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
 
         LambdaQueryWrapper<SpecialCertificationApplicantDO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SpecialCertificationApplicantDO::getCandidatesId, candidateId)
-                .eq(SpecialCertificationApplicantDO::getPlanId, planId)
-                .eq(SpecialCertificationApplicantDO::getIsDeleted, false)
-                .eq(SpecialCertificationApplicantDO::getUpdateUser, candidateId)
-                .eq(applySource != null, SpecialCertificationApplicantDO::getApplySource, applySource)
-                .orderByDesc(SpecialCertificationApplicantDO::getCreateTime)
-                .last("LIMIT 1");
+            .eq(SpecialCertificationApplicantDO::getPlanId, planId)
+            .eq(SpecialCertificationApplicantDO::getIsDeleted, false)
+            .eq(SpecialCertificationApplicantDO::getUpdateUser, candidateId)
+            .eq(applySource != null, SpecialCertificationApplicantDO::getApplySource, applySource)
+            .orderByDesc(SpecialCertificationApplicantDO::getCreateTime)
+            .last("LIMIT 1");
 
         SpecialCertificationApplicantDO applicantDO = baseMapper.selectOne(queryWrapper);
         if (applicantDO == null) {
@@ -146,19 +145,17 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
         SpecialCertificationApplicantResp resp = new SpecialCertificationApplicantResp();
         BeanUtils.copyProperties(applicantDO, resp);
         // 查找缴费记录
-        ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper.selectOne(
-                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                        .eq(ExamineePaymentAuditDO::getExamPlanId, planId)
-                        .eq(ExamineePaymentAuditDO::getExamineeId, candidateId)
-                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                        .last("LIMIT 1")
-        );
+        ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper
+            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                .eq(ExamineePaymentAuditDO::getExamPlanId, planId)
+                .eq(ExamineePaymentAuditDO::getExamineeId, candidateId)
+                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                .last("LIMIT 1"));
         // 空值判断：为null时赋值null，不为null则取数据库值
         resp.setAuditStatus(examineePaymentAuditDO != null ? examineePaymentAuditDO.getAuditStatus() : null);
         resp.setRejectReason(examineePaymentAuditDO != null ? examineePaymentAuditDO.getRejectReason() : null);
         return resp;
     }
-
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -167,34 +164,32 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
 
         //判定该计划是否确定考试时间和考试地点
         ExamPlanDO examPlanDO = examPlanMapper.selectById(req.getPlanId());
-        ValidationUtils.throwIf(examPlanDO == null || examPlanDO.getIsFinalConfirmed() == 1,
-                "该考试计划已确定考试时间以及地点，无法报名。");
+        ValidationUtils.throwIf(examPlanDO == null || examPlanDO.getIsFinalConfirmed() == 1, "该考试计划已确定考试时间以及地点，无法报名。");
 
         // 查询该考生在该计划下是否已存在申报记录
         LambdaQueryWrapper<SpecialCertificationApplicantDO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SpecialCertificationApplicantDO::getCandidatesId, user.getUserId())
-                .eq(SpecialCertificationApplicantDO::getPlanId, req.getPlanId())
-                .eq(SpecialCertificationApplicantDO::getApplySource, 1)
-                .eq(SpecialCertificationApplicantDO::getIsDeleted, false)
-                .last("LIMIT 1");
+            .eq(SpecialCertificationApplicantDO::getPlanId, req.getPlanId())
+            .eq(SpecialCertificationApplicantDO::getApplySource, 1)
+            .eq(SpecialCertificationApplicantDO::getIsDeleted, false)
+            .last("LIMIT 1");
 
         SpecialCertificationApplicantDO existing = baseMapper.selectOne(queryWrapper);
 
-
-//        // 校验该考生是否已有机构预报名记录
-//        LambdaQueryWrapper<EnrollPreDO> preQuery = new LambdaQueryWrapper<>();
-//        preQuery.eq(EnrollPreDO::getCandidateId, user.getUserId())
-//                .eq(EnrollPreDO::getPlanId, req.getPlanId())
-//                .eq(EnrollPreDO::getIsDeleted, false)
-//                .last("LIMIT 1");
-//        EnrollPreDO preRecord = enrollPreMapper.selectOne(preQuery);
-//
-//        ValidationUtils.throwIf(preRecord != null,
-//                "您已通过机构完成预报名，无法再次自行上传资料。");
+        //        // 校验该考生是否已有机构预报名记录
+        //        LambdaQueryWrapper<EnrollPreDO> preQuery = new LambdaQueryWrapper<>();
+        //        preQuery.eq(EnrollPreDO::getCandidateId, user.getUserId())
+        //                .eq(EnrollPreDO::getPlanId, req.getPlanId())
+        //                .eq(EnrollPreDO::getIsDeleted, false)
+        //                .last("LIMIT 1");
+        //        EnrollPreDO preRecord = enrollPreMapper.selectOne(preQuery);
+        //
+        //        ValidationUtils.throwIf(preRecord != null,
+        //                "您已通过机构完成预报名，无法再次自行上传资料。");
 
         // 若存在虚假资料记录（status=3），禁止再次申报
-        ValidationUtils.throwIf(!ObjectUtils.isEmpty(existing) && existing.getStatus() == 3,
-                "您的申报被标记为虚假资料，禁止再次申报该考试。如有疑问，请联系管理员。");
+        ValidationUtils.throwIf(!ObjectUtils.isEmpty(existing) && existing
+            .getStatus() == 3, "您的申报被标记为虚假资料，禁止再次申报该考试。如有疑问，请联系管理员。");
 
         // 校验是否距离考试不足 5 天
         EnrollDetailResp detail = enrollMapper.getAllDetailEnrollList(req.getPlanId(), user.getUserId());
@@ -232,10 +227,10 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
 
         // 同步插入报名表（状态 = 4 审核中）
         EnrollDO existingEnroll = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
-                .eq(EnrollDO::getExamPlanId, req.getPlanId())
-                .eq(EnrollDO::getUserId, user.getUserId())
-                .eq(EnrollDO::getIsDeleted, false)
-                .last("LIMIT 1"));
+            .eq(EnrollDO::getExamPlanId, req.getPlanId())
+            .eq(EnrollDO::getUserId, user.getUserId())
+            .eq(EnrollDO::getIsDeleted, false)
+            .last("LIMIT 1"));
 
         if (existingEnroll == null) {
             EnrollDO enroll = new EnrollDO();
@@ -271,7 +266,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             log.error("错误", e);
         }
         List<UserDO> userDO = scMapper.selectLog(scaList, scar.getPlanId(), SpecialCertificationApplicantEnum.UNAUDITED
-                .getValue());
+            .getValue());
         for (UserDO u : userDO) {
             ValidationUtils.throwIfNotNull(userDO, "申请提交失败，" + u.getNickname() + " 已提交申请表，请等待审批");
         }
@@ -310,13 +305,13 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             //2.1修改状态
             LambdaUpdateWrapper<SpecialCertificationApplicantDO> specialCertificationApplicantDOLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
             specialCertificationApplicantDOLambdaUpdateWrapper.in(SpecialCertificationApplicantDO::getId, dto.getIds())
-                    .set(SpecialCertificationApplicantDO::getStatus, dto.getStatus());
+                .set(SpecialCertificationApplicantDO::getStatus, dto.getStatus());
             super.update(specialCertificationApplicantDOLambdaUpdateWrapper);
 
             //2.2先发送短信，循环发送
             List<String> ids = dto.getIds();
             QueryWrapper<SpecialCertificationApplicantDO> idWrapper = new QueryWrapper<SpecialCertificationApplicantDO>()
-                    .in("id", ids);
+                .in("id", ids);
             List<SpecialCertificationApplicantDO> scaList = baseMapper.selectList(idWrapper);
             for (SpecialCertificationApplicantDO sca : scaList) {
                 // 2.1.1构建计划名称
@@ -330,7 +325,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
 
             List<String> ids = dto.getIds();
             QueryWrapper<SpecialCertificationApplicantDO> idWrapper = new QueryWrapper<SpecialCertificationApplicantDO>()
-                    .in("id", ids);
+                .in("id", ids);
             List<SpecialCertificationApplicantDO> scaList = baseMapper.selectList(idWrapper);
             //1.检查有没有达到最大人数循环检查
             for (SpecialCertificationApplicantDO sca : scaList) {
@@ -350,7 +345,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
                     //检验是否还需要跟新状态
                     LambdaQueryWrapper<SpecialCertificationApplicantDO> wrapper = new LambdaQueryWrapper<>();
                     wrapper.eq(SpecialCertificationApplicantDO::getStatus, 0)
-                            .eq(SpecialCertificationApplicantDO::getPlanId, sca.getPlanId());
+                        .eq(SpecialCertificationApplicantDO::getPlanId, sca.getPlanId());
                     if (baseMapper.selectCount(wrapper) > 0) {
                         success = true;
                         smsList(examPlanName, String.valueOf(sca.getPlanId()), reason);
@@ -395,7 +390,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
         super.sort(queryWrapper, pageQuery);
         // 执行分页查询
         IPage<SpecialCertificationApplicantDO> page = baseMapper.getSpecialCertification(new Page<>(pageQuery
-                .getPage(), pageQuery.getSize()), queryWrapper);
+            .getPage(), pageQuery.getSize()), queryWrapper);
         // 将查询结果转换成 PageResp 对象
         PageResp<SpecialCertificationApplicantResp> pageResp = PageResp.build(page, super.getListClass());
         // 遍历查询结果列表，调用 fill 方法填充额外字段或处理数据
@@ -439,12 +434,12 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             sms(examPlanName, phone, "审核通过，报名成功！");
             //创建缴费审核表记录
             EnrollDO enrollDO = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
-                    .eq(EnrollDO::getExamPlanId, applicantDO.getPlanId())
-                    .eq(EnrollDO::getUserId, applicantDO.getCandidatesId())
-                    .select(EnrollDO::getId)
-                    .last("LIMIT 1"));
-            examineePaymentAuditService.generatePaymentAudit(applicantDO.getPlanId(), applicantDO.getCandidatesId(),
-                    enrollDO.getId());
+                .eq(EnrollDO::getExamPlanId, applicantDO.getPlanId())
+                .eq(EnrollDO::getUserId, applicantDO.getCandidatesId())
+                .select(EnrollDO::getId)
+                .last("LIMIT 1"));
+            examineePaymentAuditService.generatePaymentAudit(applicantDO.getPlanId(), applicantDO
+                .getCandidatesId(), enrollDO.getId());
             return R.status(true, "报名成功");
         }
 
@@ -483,8 +478,8 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     public void batchRejectApplications(Long planId) {
         LambdaUpdateWrapper<SpecialCertificationApplicantDO> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(SpecialCertificationApplicantDO::getStatus, 0)
-                .eq(SpecialCertificationApplicantDO::getPlanId, planId)
-                .set(SpecialCertificationApplicantDO::getStatus, 2);
+            .eq(SpecialCertificationApplicantDO::getPlanId, planId)
+            .set(SpecialCertificationApplicantDO::getStatus, 2);
         baseMapper.update(null, wrapper);
     }
 
@@ -521,11 +516,11 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
         log.info("手机号：{}", phoneList);
 
         SendSmsRequest request = SendSmsRequest.builder()
-                .phoneNumbers(phoneList)//手机号
-                .signName(aliYunConfig.getSignName())
-                .templateCode(aliYunConfig.getTemplateCodes().get(SmsConstants.ENROLLMENT_CONFIRMATION_TEMPLATE))
-                .templateParam(params)//验证码
-                .build();
+            .phoneNumbers(phoneList)//手机号
+            .signName(aliYunConfig.getSignName())
+            .templateCode(aliYunConfig.getTemplateCodes().get(SmsConstants.ENROLLMENT_CONFIRMATION_TEMPLATE))
+            .templateParam(params)//验证码
+            .build();
         CompletableFuture<SendSmsResponse> future = smsAsyncClient.sendSms(request);
         future.thenAccept(response -> {
             if ("OK".equals(response.getBody().getCode())) {
@@ -557,11 +552,11 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
         String params = JSON.toJSONString(templateParams);
         //2.2  构建短信
         SendSmsRequest request = SendSmsRequest.builder()
-                .phoneNumbers(phone)//手机号
-                .signName(aliYunConfig.getSignName())
-                .templateCode(aliYunConfig.getTemplateCodes().get(SmsConstants.ENROLLMENT_CONFIRMATION_TEMPLATE))
-                .templateParam(params)//验证码
-                .build();
+            .phoneNumbers(phone)//手机号
+            .signName(aliYunConfig.getSignName())
+            .templateCode(aliYunConfig.getTemplateCodes().get(SmsConstants.ENROLLMENT_CONFIRMATION_TEMPLATE))
+            .templateParam(params)//验证码
+            .build();
         //2.3异步发送
         CompletableFuture<SendSmsResponse> future = smsAsyncClient.sendSms(request);
         future.thenAccept(response -> {

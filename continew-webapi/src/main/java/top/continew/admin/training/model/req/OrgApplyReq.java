@@ -47,12 +47,10 @@ public class OrgApplyReq implements Serializable {
     @NotNull(message = "报考计划为空")
     private Long examPlanId;
 
-
     /**
      * 预报名考生名单
      */
     @NotEmpty(message = "预报名考生名单")
     private List<List<Long>> candidateIds;
-
 
 }

@@ -21,7 +21,6 @@ import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.URLUtil;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -228,9 +227,11 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         }
         return fileInfoResp;
     }
+
     /**
      * 上传身份证或人脸证件照（用于登录实名验证）
-     * @param file 文件
+     * 
+     * @param file        文件
      * @param frontOrBack 1=身份证正面，0=身份证反面，2=人脸证件照
      */
     @Override
@@ -246,14 +247,14 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         }
 
         LocalDate today = LocalDate.now();
-        String path = today.getYear() + StringConstants.SLASH + today.getMonthValue()
-                + StringConstants.SLASH + today.getDayOfMonth() + StringConstants.SLASH;
+        String path = today.getYear() + StringConstants.SLASH + today.getMonthValue() + StringConstants.SLASH + today
+            .getDayOfMonth() + StringConstants.SLASH;
 
         UploadPretreatment uploadPretreatment = fileStorageService.of(file)
-                .setPlatform(storage.getCode())
-                .setHashCalculatorMd5(true)
-                .putAttr(ClassUtil.getClassName(StorageDO.class, false), storage)
-                .setPath(path);
+            .setPlatform(storage.getCode())
+            .setHashCalculatorMd5(true)
+            .putAttr(ClassUtil.getClassName(StorageDO.class, false), storage)
+            .setPath(path);
 
         // 图片文件生成缩略图
         if (FileTypeEnum.IMAGE.getExtensions().contains(FileNameUtil.extName(file.getOriginalFilename()))) {
@@ -264,10 +265,12 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
             public void start() {
                 log.info("开始上传");
             }
+
             @Override
             public void progress(long progressSize, Long allSize) {
                 log.info("已上传 [{}]，总大小 [{}]", progressSize, allSize);
             }
+
             @Override
             public void finish() {
                 log.info("上传结束");
@@ -332,6 +335,7 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
 
     /**
      * 上传文件（用于机构报名考试补充报考资料）
+     * 
      * @param file
      * @return
      */
@@ -348,13 +352,13 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         }
         LocalDate today = LocalDate.now();
         String path = today.getYear() + StringConstants.SLASH + today.getMonthValue() + StringConstants.SLASH + today
-                .getDayOfMonth() + StringConstants.SLASH;
+            .getDayOfMonth() + StringConstants.SLASH;
 
         UploadPretreatment uploadPretreatment = fileStorageService.of(file)
-                .setPlatform(storage.getCode())
-                .setHashCalculatorMd5(true)
-                .putAttr(ClassUtil.getClassName(StorageDO.class, false), storage)
-                .setPath(path);
+            .setPlatform(storage.getCode())
+            .setHashCalculatorMd5(true)
+            .putAttr(ClassUtil.getClassName(StorageDO.class, false), storage)
+            .setPath(path);
 
         // 图片文件生成缩略图
         if (FileTypeEnum.IMAGE.getExtensions().contains(FileNameUtil.extName(file.getOriginalFilename()))) {

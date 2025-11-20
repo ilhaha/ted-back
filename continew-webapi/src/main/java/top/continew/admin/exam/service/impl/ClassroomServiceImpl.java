@@ -19,21 +19,17 @@ package top.continew.admin.exam.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
-import net.dreamlu.mica.core.utils.ObjectUtil;
 import org.springframework.beans.BeanUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
 import top.continew.admin.exam.mapper.*;
@@ -50,8 +46,6 @@ import top.continew.admin.exam.model.query.ClassroomQuery;
 import top.continew.admin.exam.model.req.ClassroomReq;
 import top.continew.admin.exam.service.ClassroomService;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -72,7 +66,6 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
 
     private final ClassroomMapper classroomMapper;
 
-
     @Resource
     private ExamPlanClassroomMapper examPlanClassroomMapper;
 
@@ -85,14 +78,13 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
 
     private final PlanClassroomMapper planClassroomMapper;
 
-
     @Override
     public PageResp<ClassroomResp> page(ClassroomQuery query, PageQuery pageQuery) {
         QueryWrapper<ClassroomDO> wrapper = this.buildQueryWrapper(query);
         wrapper.eq("tc.is_deleted", 0);
         super.sort(wrapper, pageQuery);
         IPage<ClassroomResp> page = baseMapper.selectExamLocation(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), wrapper);
+            .getSize()), wrapper);
         PageResp<ClassroomResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
         return build;
@@ -148,28 +140,18 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
         if (newMax < oldMax) {
 
             // 查该考场绑定了哪些考试计划
-            List<Long> planIds = planClassroomMapper.selectList(
-                            new LambdaQueryWrapper<PlancalssroomDO>()
-                                    .select(PlancalssroomDO::getPlanId)
-                                    .eq(PlancalssroomDO::getClassroomId, id)
-                    )
-                    .stream()
-                    .map(PlancalssroomDO::getPlanId)
-                    .toList();
+            List<Long> planIds = planClassroomMapper.selectList(new LambdaQueryWrapper<PlancalssroomDO>()
+                .select(PlancalssroomDO::getPlanId)
+                .eq(PlancalssroomDO::getClassroomId, id)).stream().map(PlancalssroomDO::getPlanId).toList();
 
             if (CollUtil.isNotEmpty(planIds)) {
 
                 // 查是否有已确认考试的计划
-                boolean hasConfirmed = examPlanMapper.exists(
-                        new LambdaQueryWrapper<ExamPlanDO>()
-                                .in(ExamPlanDO::getId, planIds)
-                                .eq(ExamPlanDO::getStatus, ExamPlanStatusEnum.IN_FORCE.getValue())
-                );
+                boolean hasConfirmed = examPlanMapper.exists(new LambdaQueryWrapper<ExamPlanDO>()
+                    .in(ExamPlanDO::getId, planIds)
+                    .eq(ExamPlanDO::getStatus, ExamPlanStatusEnum.IN_FORCE.getValue()));
 
-                ValidationUtils.throwIf(
-                        hasConfirmed,
-                        "该考场已有已确认的考试计划，容量不能设置得小于原容量：" + oldMax
-                );
+                ValidationUtils.throwIf(hasConfirmed, "该考场已有已确认的考试计划，容量不能设置得小于原容量：" + oldMax);
             }
         }
 
@@ -178,11 +160,11 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
         //  若容量变化则批量更新 plan
         if (capacityChanged) {
             List<Long> planIdList = examPlanClassroomMapper.selectByClassroomId(id)
-                    .stream()
-                    .map(ExamPlanClassroomDO::getPlanId)
-                    .filter(Objects::nonNull)
-                    .distinct()
-                    .toList();
+                .stream()
+                .map(ExamPlanClassroomDO::getPlanId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
 
             if (!planIdList.isEmpty()) {
                 String lockKey = "lock:exam_plan_update:classroom_" + id;
@@ -190,16 +172,14 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
                 try {
                     if (lock.tryLock(5, 30, TimeUnit.SECONDS)) {
                         //  构造批量更新数据
-                        List<ExamPlanDTO> updates = planIdList.stream()
-                                .map(planId -> {
-                                    ExamPlanDO plan = examPlanMapper.selectById(planId);
-                                    if (plan == null) return null;
-                                    int currentMax = plan.getMaxCandidates() != null ? plan.getMaxCandidates() : 0;
-                                    int updatedMax = (int) Math.max(currentMax - oldMax + newMax, 0L);
-                                    return new ExamPlanDTO(planId, (long) updatedMax);
-                                })
-                                .filter(Objects::nonNull)
-                                .collect(Collectors.toList());
+                        List<ExamPlanDTO> updates = planIdList.stream().map(planId -> {
+                            ExamPlanDO plan = examPlanMapper.selectById(planId);
+                            if (plan == null)
+                                return null;
+                            int currentMax = plan.getMaxCandidates() != null ? plan.getMaxCandidates() : 0;
+                            int updatedMax = (int)Math.max(currentMax - oldMax + newMax, 0L);
+                            return new ExamPlanDTO(planId, (long)updatedMax);
+                        }).filter(Objects::nonNull).collect(Collectors.toList());
 
                         //  一次性批量更新
                         if (!updates.isEmpty()) {
@@ -229,8 +209,7 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
         //  更新考点关联
         if (req.getExamLocationId() != null) {
             UpdateWrapper<LocationClassroomDO> wrapper = new UpdateWrapper<>();
-            wrapper.set("location_id", req.getExamLocationId())
-                    .eq("classroom_id", id);
+            wrapper.set("location_id", req.getExamLocationId()).eq("classroom_id", id);
             locationClassroomMapper.update(null, wrapper);
         }
     }

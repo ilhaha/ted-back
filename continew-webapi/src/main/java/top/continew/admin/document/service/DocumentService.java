@@ -54,6 +54,7 @@ public interface DocumentService extends BaseService<DocumentResp, DocumentDetai
      * @return
      */
     Boolean qrcodeUpload(QrcodeUploadReq qrcodeUploadReq);
+
     /**
      * 审核资料
      *

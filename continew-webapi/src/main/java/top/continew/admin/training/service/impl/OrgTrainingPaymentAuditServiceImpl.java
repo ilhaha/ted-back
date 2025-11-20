@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.training.service.impl;
 
 import cn.crane4j.core.util.StringUtils;
@@ -9,8 +25,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
-import org.aspectj.weaver.ast.Or;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,10 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ProjectMapper;
-import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.model.entity.ProjectDO;
-import top.continew.admin.exam.model.query.ExamineePaymentAuditQuery;
-import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.FileService;
@@ -62,10 +73,8 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
     @Resource
     private OrgTrainingPaymentAuditMapper orgTrainingPaymentAuditMapper;
 
-
     @Resource
     private ExcelUtilReactive excelUtilReactive;
-
 
     @Resource
     private OrgMapper orgMapper;
@@ -76,24 +85,21 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
     @Resource
     private FileService fileService;
 
-
     @Resource
     private OrgCandidateMapper orgCandidateMapper;
 
     @Value("${excel.template.training-payment-notice.inspector.url}")
     private String excelTemplateUrl;
 
-
     @Override
     public OrgTrainingPaymentAuditDO getByTrainingOrgIdAndEnrollId(Long orgId, Long enrollId) {
         // 先查找当前记录
-        OrgTrainingPaymentAuditDO record = orgTrainingPaymentAuditMapper.selectOne(
-                new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
-                        .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
-                        .eq(OrgTrainingPaymentAuditDO::getEnrollId, enrollId)
-                        .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false)
-                        .last("LIMIT 1")
-        );
+        OrgTrainingPaymentAuditDO record = orgTrainingPaymentAuditMapper
+            .selectOne(new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
+                .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
+                .eq(OrgTrainingPaymentAuditDO::getEnrollId, enrollId)
+                .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false)
+                .last("LIMIT 1"));
         if (record == null) {
             throw new IllegalStateException("未找到对应的缴费审核记录，请检查考试计划和考生信息。");
         }
@@ -105,7 +111,8 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
         OrgDO orgDO = orgMapper.selectById(orgId);
         ProjectDO projectDO = projectMapper.selectById(record.getProjectId());
         // 否则生成通知单 PDF
-        String auditNoticeUrl = generateAuditNotice(orgDO.getName(),projectDO.getProjectName(),record.getNoticeNo(),record.getPaymentAmount());
+        String auditNoticeUrl = generateAuditNotice(orgDO.getName(), projectDO.getProjectName(), record
+            .getNoticeNo(), record.getPaymentAmount());
 
         // 更新当前记录
         record.setAuditNoticeUrl(auditNoticeUrl);
@@ -116,23 +123,13 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
 
     }
 
-
     private String generateAuditNotice(String orgName, String projectName, String noticeNo, BigDecimal paymentAmount) {
         // 生成 PDF
-        byte[] pdfBytes = generateTrainingPaymentNotice(
-                orgName,
-                projectName,
-                noticeNo,
-                paymentAmount
-        );
+        byte[] pdfBytes = generateTrainingPaymentNotice(orgName, projectName, noticeNo, paymentAmount);
 
         // 封装为 MultipartFile
-        MultipartFile pdfFile = new InMemoryMultipartFile(
-                "file",
-                TokenLocalThreadUtil.get().getNickname() + "_缴费通知单.pdf",
-                "application/pdf",
-                pdfBytes
-        );
+        MultipartFile pdfFile = new InMemoryMultipartFile("file", TokenLocalThreadUtil.get()
+            .getNickname() + "_缴费通知单.pdf", "application/pdf", pdfBytes);
 
         // 上传 OSS
         FileInfoResp fileInfoResp = fileService.upload(pdfFile, new GeneralFileReq());
@@ -143,9 +140,11 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
         return pdfUrl;
     }
 
-
     @Override
-    public byte[] generateTrainingPaymentNotice(String orgName, String projectName, String noticeNo, BigDecimal paymentAmount) {
+    public byte[] generateTrainingPaymentNotice(String orgName,
+                                                String projectName,
+                                                String noticeNo,
+                                                BigDecimal paymentAmount) {
         ValidationUtils.throwIfNull(orgName, "机构名称不能为空");
         ValidationUtils.throwIfNull(noticeNo, "培训缴费通知单不能为空");
         ValidationUtils.throwIfNull(projectName, "考试项目不能为空");
@@ -160,7 +159,7 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
         dataMap.put("paymentDateTime", LocalDateTime.now());
         dataMap.putAll(excelUtilReactive.splitAmountToUpper(BigDecimal.valueOf(paymentAmount.intValue())));
         // 阻塞生成 PDF
-        return excelUtilReactive.generatePdfBytesSync(dataMap, excelTemplateUrl , new byte[0],0,0,0,0);
+        return excelUtilReactive.generatePdfBytesSync(dataMap, excelTemplateUrl, new byte[0], 0, 0, 0, 0);
     }
 
     @Override
@@ -174,13 +173,12 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
             throw new BusinessException("缴费凭证地址不能为空！");
         }
         // 查找当前记录
-        OrgTrainingPaymentAuditDO record = orgTrainingPaymentAuditMapper.selectOne(
-                new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
-                        .eq(OrgTrainingPaymentAuditDO::getOrgId, req.getOrgId())
-                        .eq(OrgTrainingPaymentAuditDO::getEnrollId, req.getEnrollId())
-                        .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false)
-                        .last("LIMIT 1")
-        );
+        OrgTrainingPaymentAuditDO record = orgTrainingPaymentAuditMapper
+            .selectOne(new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>().eq(OrgTrainingPaymentAuditDO::getOrgId, req
+                .getOrgId())
+                .eq(OrgTrainingPaymentAuditDO::getEnrollId, req.getEnrollId())
+                .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false)
+                .last("LIMIT 1"));
         if (record == null || record.getAuditNoticeUrl() == null) {
             throw new BusinessException("未找到缴费通知记录，不能上传凭证！");
         }
@@ -243,14 +241,13 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
             throw new BusinessException("审核请求参数缺失！");
         }
         // 查找对应记录
-        OrgTrainingPaymentAuditDO record = orgTrainingPaymentAuditMapper.selectOne(
-                new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
-                        .eq(OrgTrainingPaymentAuditDO::getId, req.getId())
-                        .eq(OrgTrainingPaymentAuditDO::getEnrollId, req.getEnrollId())
-                        .eq(OrgTrainingPaymentAuditDO::getCandidateId, req.getCandidateId())
-                        .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false)
-                        .last("LIMIT 1")
-        );
+        OrgTrainingPaymentAuditDO record = orgTrainingPaymentAuditMapper
+            .selectOne(new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>().eq(OrgTrainingPaymentAuditDO::getId, req
+                .getId())
+                .eq(OrgTrainingPaymentAuditDO::getEnrollId, req.getEnrollId())
+                .eq(OrgTrainingPaymentAuditDO::getCandidateId, req.getCandidateId())
+                .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false)
+                .last("LIMIT 1"));
 
         if (record == null) {
             throw new BusinessException("未找到对应的缴费审核记录！");
@@ -350,20 +347,16 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
             orgCandidate.setPaymentStatus(6); // 已退款
             orgCandidate.setUpdateTime(LocalDateTime.now());
 
-            orgCandidateMapper.update(orgCandidate,
-                    new LambdaUpdateWrapper<OrgCandidateDO>()
-                            .eq(OrgCandidateDO::getId,payment.getEnrollId())
-                            .eq(OrgCandidateDO::getCandidateId, candidateId)
-                            .eq(OrgCandidateDO::getProjectId, projectId)
-                            .eq(OrgCandidateDO::getOrgId, orgId)
-                            .eq(OrgCandidateDO::getIsDeleted,false)
-            );
+            orgCandidateMapper.update(orgCandidate, new LambdaUpdateWrapper<OrgCandidateDO>()
+                .eq(OrgCandidateDO::getId, payment.getEnrollId())
+                .eq(OrgCandidateDO::getCandidateId, candidateId)
+                .eq(OrgCandidateDO::getProjectId, projectId)
+                .eq(OrgCandidateDO::getOrgId, orgId)
+                .eq(OrgCandidateDO::getIsDeleted, false));
         }
 
         return rows > 0;
     }
-
-
 
     /**
      * 处理退款审核逻辑（状态5 -> 状态6）
@@ -375,7 +368,6 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
         if (newStatus == 2) {
             record.setAuditStatus(6); // 已退款
             // ... 业务待定
-
 
         } else if (newStatus == 3) {
             record.setAuditStatus(7); // 退款驳回
@@ -389,17 +381,15 @@ public class OrgTrainingPaymentAuditServiceImpl extends BaseServiceImpl<OrgTrain
         String candidateName = query.getCandidateName();
         query.setCandidateName(null);
         QueryWrapper<OrgTrainingPaymentAuditDO> queryWrapper = this.buildQueryWrapper(query);
-        queryWrapper.eq("ttpa.is_deleted", 0)
-                .eq("tp.is_deleted", 0);
+        queryWrapper.eq("ttpa.is_deleted", 0).eq("tp.is_deleted", 0);
 
         if (StringUtils.isNotBlank(candidateName)) {
             queryWrapper.like("su.nickname", candidateName);
         }
         super.sort(queryWrapper, pageQuery);
 
-        IPage<OrgTrainingPaymentAuditResp> page = baseMapper.getTrainingPaymentAudits(
-                new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper
-        );
+        IPage<OrgTrainingPaymentAuditResp> page = baseMapper.getTrainingPaymentAudits(new Page<>(pageQuery
+            .getPage(), pageQuery.getSize()), queryWrapper);
         PageResp<OrgTrainingPaymentAuditResp> pageResp = PageResp.build(page, super.getListClass());
         pageResp.getList().forEach(this::fill);
         return pageResp;

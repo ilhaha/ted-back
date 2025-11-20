@@ -53,9 +53,8 @@ public class QuestionBankController extends BaseController<QuestionBankService, 
 
     @Operation(summary = "考生获取试卷")
     @GetMapping("/candidate/paper/{planId}/{userId}")
-    public ExamPaperVO getCandidateParer( @PathVariable("planId") Long planId,
-                                          @PathVariable("userId") Long userId) {
-        return baseService.getCandidatePaper(planId,userId);
+    public ExamPaperVO getCandidateParer(@PathVariable("planId") Long planId, @PathVariable("userId") Long userId) {
+        return baseService.getCandidatePaper(planId, userId);
     }
 
     @Operation(summary = "生成考试计划试卷")
@@ -74,6 +73,7 @@ public class QuestionBankController extends BaseController<QuestionBankService, 
     public List<CascadeOptionsVo> getOptions() {
         return baseService.getOptions();
     }
+
     @Operation(summary = "导出题目Excel")
     @GetMapping("/exportExcel")
     public void exportQuestions(@RequestParam Long categoryId,

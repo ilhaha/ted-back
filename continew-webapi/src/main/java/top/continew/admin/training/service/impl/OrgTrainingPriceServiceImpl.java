@@ -1,22 +1,31 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.training.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
-import org.apache.catalina.User;
-import org.aspectj.weaver.ast.Or;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
-import top.continew.admin.exam.mapper.CategoryMapper;
 import top.continew.admin.exam.mapper.ProjectMapper;
-import top.continew.admin.exam.model.entity.CategoryDO;
 import top.continew.admin.exam.model.entity.ProjectDO;
-import top.continew.admin.training.mapper.OrgMapper;
 import top.continew.admin.training.mapper.OrgTrainingPriceMapper;
 import top.continew.admin.training.mapper.OrgUserMapper;
-import top.continew.admin.training.model.entity.OrgDO;
 import top.continew.admin.training.model.entity.OrgTrainingPriceDO;
 import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.admin.training.model.query.OrgTrainingPriceQuery;
@@ -27,12 +36,10 @@ import top.continew.admin.training.service.OrgTrainingPriceService;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
-import top.continew.starter.extension.crud.model.query.SortQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -43,14 +50,7 @@ import java.util.Objects;
  */
 @Service
 @RequiredArgsConstructor
-public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<
-        OrgTrainingPriceMapper,
-        OrgTrainingPriceDO,
-        OrgTrainingPriceResp,
-        OrgTrainingPriceDetailResp,
-        OrgTrainingPriceQuery,
-        OrgTrainingPriceReq
-        > implements OrgTrainingPriceService {
+public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<OrgTrainingPriceMapper, OrgTrainingPriceDO, OrgTrainingPriceResp, OrgTrainingPriceDetailResp, OrgTrainingPriceQuery, OrgTrainingPriceReq> implements OrgTrainingPriceService {
 
     @Resource
     private OrgTrainingPriceMapper orgTrainingPriceMapper;
@@ -73,17 +73,13 @@ public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<
         }
 
         //  根据用户ID查机构ID
-        Long orgId = orgUserMapper.selectOne(
-                new LambdaQueryWrapper<TedOrgUser>()
-                        .eq(TedOrgUser::getUserId, userId)
-                        .eq(TedOrgUser::getIsDeleted, false)
-                        .select(TedOrgUser::getOrgId)
-        ) != null ? orgUserMapper.selectOne(
-                new LambdaQueryWrapper<TedOrgUser>()
-                        .eq(TedOrgUser::getUserId, userId)
-                        .eq(TedOrgUser::getIsDeleted, false)
-                        .select(TedOrgUser::getOrgId)
-        ).getOrgId() : null;
+        Long orgId = orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>().eq(TedOrgUser::getUserId, userId)
+            .eq(TedOrgUser::getIsDeleted, false)
+            .select(TedOrgUser::getOrgId)) != null
+                ? orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>().eq(TedOrgUser::getUserId, userId)
+                    .eq(TedOrgUser::getIsDeleted, false)
+                    .select(TedOrgUser::getOrgId)).getOrgId()
+                : null;
 
         if (orgId == null) {
             throw new BusinessException("未找到所属机构，请联系管理员");
@@ -103,12 +99,10 @@ public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<
                 record.setOrgName(orgName);
 
                 if (record.getProjectId() != null) {
-                    ProjectDO projectDO = projectMapper.selectOne(
-                            new LambdaQueryWrapper<ProjectDO>()
-                                    .eq(ProjectDO::getId, record.getProjectId())
-                                    .eq(ProjectDO::getIsDeleted, 0)
-                                    .select(ProjectDO::getProjectName)
-                    );
+                    ProjectDO projectDO = projectMapper.selectOne(new LambdaQueryWrapper<ProjectDO>()
+                        .eq(ProjectDO::getId, record.getProjectId())
+                        .eq(ProjectDO::getIsDeleted, 0)
+                        .select(ProjectDO::getProjectName));
                     record.setProjectName(projectDO != null ? projectDO.getProjectName() : null);
                 }
             }
@@ -116,7 +110,6 @@ public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<
 
         return pageResp;
     }
-
 
     /**
      * 新增机构培训价格
@@ -129,24 +122,17 @@ public class OrgTrainingPriceServiceImpl extends BaseServiceImpl<
     public Long add(OrgTrainingPriceReq req) {
         validateParam(req);
 
-        TedOrgUser user = orgUserMapper.selectOne(
-                new LambdaQueryWrapper<TedOrgUser>()
-                        .eq(TedOrgUser::getUserId, TokenLocalThreadUtil.get().getUserId())
-                        .eq(TedOrgUser::getIsDeleted, 0)
-                        .select(TedOrgUser::getOrgId)
-        );
+        TedOrgUser user = orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>()
+            .eq(TedOrgUser::getUserId, TokenLocalThreadUtil.get().getUserId())
+            .eq(TedOrgUser::getIsDeleted, 0)
+            .select(TedOrgUser::getOrgId));
         // 校验唯一约束（org_id + project_id 不能重复）
-        OrgTrainingPriceDO exist = this.getOne(
-                new LambdaQueryWrapper<OrgTrainingPriceDO>()
-                        .eq(OrgTrainingPriceDO::getOrgId, user.getOrgId())
-                        .eq(OrgTrainingPriceDO::getProjectId, req.getProjectId())
-                        .eq(OrgTrainingPriceDO::getIsDeleted, 0)
-        );
+        OrgTrainingPriceDO exist = this.getOne(new LambdaQueryWrapper<OrgTrainingPriceDO>()
+            .eq(OrgTrainingPriceDO::getOrgId, user.getOrgId())
+            .eq(OrgTrainingPriceDO::getProjectId, req.getProjectId())
+            .eq(OrgTrainingPriceDO::getIsDeleted, 0));
 
-        ValidationUtils.throwIf(
-                Objects.nonNull(exist),
-                String.format("已存在价格记录，无需重复添加")
-        );
+        ValidationUtils.throwIf(Objects.nonNull(exist), String.format("已存在价格记录，无需重复添加"));
 
         // 构建持久化实体
         OrgTrainingPriceDO entity = new OrgTrainingPriceDO();

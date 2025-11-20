@@ -49,7 +49,6 @@ import top.continew.admin.examconnect.model.entity.KnowledgeTypeDO;
 import top.continew.admin.examconnect.model.entity.StepDO;
 import top.continew.admin.examconnect.model.resp.*;
 import top.continew.admin.system.mapper.UserMapper;
-import top.continew.admin.system.model.entity.UserDO;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -117,7 +116,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         super.sort(queryWrapper, pageQuery);
 
         IPage<QuestionBankResp> page = baseMapper.selectQuestionBankPage(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+            .getSize()), queryWrapper);
 
         PageResp<QuestionBankResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
@@ -141,7 +140,8 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         }
 
         //  查询题目及其选项
-        List<QuestionBankResp> questions = questionBankMapper.selectByCategory(categoryId, subCategoryId, knowledgeTypeId);
+        List<QuestionBankResp> questions = questionBankMapper
+            .selectByCategory(categoryId, subCategoryId, knowledgeTypeId);
 
         for (QuestionBankResp question : questions) {
             List<OptionDTO> options = questionOptionMapper.selectByQuestionId(question.getId());
@@ -169,15 +169,8 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             XSSFSheet sheet = workbook.createSheet("题库_" + category.getName());
 
             // ---- 3.1 表头 ----
-            String[] headers = {
-                    "题目标题",
-                    "题目类型（0单选，1判断，2多选）",
-                    "考试类型（0-未指定，1-作业人员考试，2-无损/有损检验人员考试）",
-                    "选项A", "是否正确答案",
-                    "选项B", "是否正确答案",
-                    "选项C", "是否正确答案",
-                    "选项D", "是否正确答案"
-            };
+            String[] headers = {"题目标题", "题目类型（0单选，1判断，2多选）", "考试类型（0-未指定，1-作业人员考试，2-无损/有损检验人员考试）", "选项A", "是否正确答案",
+                "选项B", "是否正确答案", "选项C", "是否正确答案", "选项D", "是否正确答案"};
 
             XSSFRow headerRow = sheet.createRow(0);
             XSSFCellStyle headerStyle = workbook.createCellStyle();
@@ -205,12 +198,8 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             sheet.addMergedRegion(new CellRangeAddress(1, 1, 2, 10)); // 合并“考试类型”+“所有选项列”
 
             XSSFCell statsCell = statsRow.createCell(0);
-            statsCell.setCellValue(
-                    String.format(
-                            "统计信息：总题数 %d 道，其中单选题 %d 道，多选题 %d 道，判断题 %d 道",
-                            totalCount, singleChoiceCount, multipleChoiceCount, judgmentCount
-                    )
-            );
+            statsCell.setCellValue(String
+                .format("统计信息：总题数 %d 道，其中单选题 %d 道，多选题 %d 道，判断题 %d 道", totalCount, singleChoiceCount, multipleChoiceCount, judgmentCount));
             statsCell.setCellStyle(statsStyle);
 
             // 填充题目数据
@@ -244,6 +233,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
     /**
      * 考生获取试卷
+     * 
      * @param planId
      * @param userId
      * @return
@@ -253,14 +243,14 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
         // 1. 查询报名表
         EnrollDO enrollDO = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
-                .eq(EnrollDO::getExamPlanId, planId)
-                .eq(EnrollDO::getUserId, userId));
+            .eq(EnrollDO::getExamPlanId, planId)
+            .eq(EnrollDO::getUserId, userId));
         ValidationUtils.throwIfNull(enrollDO, "未报名该考试");
 
         // 3. 查询试卷表
-        CandidateExamPaperDO candidateExamPaperDO = candidateExamPaperMapper.selectOne(
-                new LambdaQueryWrapper<CandidateExamPaperDO>()
-                        .eq(CandidateExamPaperDO::getEnrollId, enrollDO.getId()));
+        CandidateExamPaperDO candidateExamPaperDO = candidateExamPaperMapper
+            .selectOne(new LambdaQueryWrapper<CandidateExamPaperDO>().eq(CandidateExamPaperDO::getEnrollId, enrollDO
+                .getId()));
         ValidationUtils.throwIfNull(candidateExamPaperDO, "未生成试卷，联系监考员生成试卷");
 
         // 4. 反序列化 JSON
@@ -274,7 +264,6 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
         return examPaperVO;
     }
-
 
     @Override
     public QuestionBankDetailResp get(Long id) {
@@ -307,7 +296,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         List<CategoryDO> categoryDOList = categoryMapper.selectList(new QueryWrapper<CategoryDO>().eq("is_deleted", 0));
         List<ProjectDO> projectDOList = projectMapper.selectList(new QueryWrapper<ProjectDO>().eq("is_deleted", 0));
         List<KnowledgeTypeDO> knowledgeTypeDOList = knowledgeTypeMapper.selectList(new QueryWrapper<KnowledgeTypeDO>()
-                .eq("is_deleted", 0));
+            .eq("is_deleted", 0));
 
         List<CascadeOptionsVo> vos = new ArrayList<>();
 
@@ -405,15 +394,13 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         Long topicNumber = categoryDB.getTopicNumber();
 
         // 2. 查所有题目
-        List<QuestionBankDO> questionBankDBList = questionBankMapper
-                .selectList(new LambdaQueryWrapper<QuestionBankDO>()
-                        .eq(QuestionBankDO::getCategoryId, projectDB.getCategoryId())
-                        .eq(QuestionBankDO::getSubCategoryId, projectDB.getId())
-                        .eq(QuestionBankDO::getExamType, examPlanDB.getPlanType() + 1));
+        List<QuestionBankDO> questionBankDBList = questionBankMapper.selectList(new LambdaQueryWrapper<QuestionBankDO>()
+            .eq(QuestionBankDO::getCategoryId, projectDB.getCategoryId())
+            .eq(QuestionBankDO::getSubCategoryId, projectDB.getId())
+            .eq(QuestionBankDO::getExamType, examPlanDB.getPlanType() + 1));
         // 3. 查知识库
         List<KnowledgeTypeDO> knowledgeTypeDBList = knowledgeTypeMapper
-                .selectList(new LambdaQueryWrapper<KnowledgeTypeDO>().eq(KnowledgeTypeDO::getProjectId, projectDB
-                        .getId()));
+            .selectList(new LambdaQueryWrapper<KnowledgeTypeDO>().eq(KnowledgeTypeDO::getProjectId, projectDB.getId()));
         // 4. 抽题逻辑，分类收集
         List<QuestionBankWithOptionVO> singleList = new ArrayList<>();
         List<QuestionBankWithOptionVO> multipleList = new ArrayList<>();
@@ -424,8 +411,8 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
             // 当前知识点下的题目
             List<QuestionBankDO> source = questionBankDBList.stream()
-                    .filter(q -> Objects.equals(q.getKnowledgeTypeId(), knowledgeType.getId()))
-                    .collect(Collectors.toList());
+                .filter(q -> Objects.equals(q.getKnowledgeTypeId(), knowledgeType.getId()))
+                .collect(Collectors.toList());
 
             Collections.shuffle(source);
             List<QuestionBankDO> selected = source.stream().limit(count).toList();
@@ -441,7 +428,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
                 // 加载选项
                 List<StepDO> stepDOS = stepMapper.selectList(new LambdaQueryWrapper<StepDO>()
-                        .eq(StepDO::getQuestionBankId, question.getId()));
+                    .eq(StepDO::getQuestionBankId, question.getId()));
 
                 List<OptionVO> options = stepDOS.stream().map(step -> {
                     OptionVO option = new OptionVO();
@@ -499,7 +486,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
     private ExamPaperVO getPaperFromRedis(String key) {
         Object obj = redisTemplate.opsForValue().get(key);
         if (obj instanceof ExamPaperVO) {
-            return (ExamPaperVO) obj;
+            return (ExamPaperVO)obj;
         }
         return null;
     }

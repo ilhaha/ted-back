@@ -40,12 +40,11 @@ public class DateUtil {
         DateTimeFormatter formatter;
         if (time.length() == 16) { // yyyy-MM-dd HH:mm
             formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-        }  else  { // yyyy-MM-dd HH:mm:ss
+        } else { // yyyy-MM-dd HH:mm:ss
             formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         }
         return LocalDateTime.parse(time, formatter);
     }
-
 
     public static LocalDate getLocalDate(String date, String resource) {
         DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern(resource, Locale.CHINA);

@@ -1,6 +1,21 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.exam.service;
 
-import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.model.req.PaymentAuditConfirmReq;
@@ -24,25 +39,29 @@ public interface ExamineePaymentAuditService extends BaseService<ExamineePayment
 
     /**
      * 考生查看缴费审核表信息
+     * 
      * @param examineeId
      * @return
      */
     Boolean verifyPaymentAudit(Long examineeId);
 
-
     /**
      * 报名审核通过生成缴费审核表
      *
      */
-    void generatePaymentAudit(Long examPlanId, Long examineeId , Long enrollId) throws Exception;
+    void generatePaymentAudit(Long examPlanId, Long examineeId, Long enrollId) throws Exception;
 
     /**
      * 生成缴费通知单
      */
-    byte[] generatePaymentNotice(Long examPlanId, Long examineeId, String examPlanName,
-                                 String projectName, Long paymentAmount, String noticeNo,
-                                 String className,byte[] photoBytes) throws Exception;
-
+    byte[] generatePaymentNotice(Long examPlanId,
+                                 Long examineeId,
+                                 String examPlanName,
+                                 String projectName,
+                                 Long paymentAmount,
+                                 String noticeNo,
+                                 String className,
+                                 byte[] photoBytes) throws Exception;
 
     /**
      * 根据考试计划ID和考生ID查询缴费审核信息
@@ -69,6 +88,7 @@ public interface ExamineePaymentAuditService extends BaseService<ExamineePayment
 
     /**
      * 生成作业人员缴费通知单
+     * 
      * @param enrollDOList
      */
     void generatePaymentAudit(List<EnrollDO> enrollDOList);

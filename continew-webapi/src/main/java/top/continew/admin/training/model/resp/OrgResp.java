@@ -24,7 +24,6 @@ import top.continew.admin.common.model.resp.BaseResp;
 
 import java.io.Serial;
 import java.time.*;
-import java.util.List;
 
 /**
  * 机构信息信息
@@ -122,7 +121,5 @@ public class OrgResp extends BaseResp {
      */
     @Schema(description = "是否删除（0-未删除，1-已删除）")
     private Boolean isDeleted;
-
-
 
 }

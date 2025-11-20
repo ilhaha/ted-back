@@ -35,8 +35,6 @@ import java.util.List;
  */
 public interface QuestionBankService extends BaseService<QuestionBankResp, QuestionBankDetailResp, QuestionBankQuery, QuestionBankReq> {
 
-
-
     List<CascadeOptionsVo> getOptions();
 
     ExamPaperVO getExamQuestionBank(Long planId);
@@ -48,11 +46,12 @@ public interface QuestionBankService extends BaseService<QuestionBankResp, Quest
      * @return
      */
     ExamPaperVO generateExamQuestionBank(Long planId);
+
     /**
      * 导出题库为 Excel 文件
      *
-     * @param categoryId 八大类ID
-     * @param subCategoryId 子类ID
+     * @param categoryId      八大类ID
+     * @param subCategoryId   子类ID
      * @param knowledgeTypeId 知识类型ID
      * @return Excel 文件字节数组
      */
@@ -60,6 +59,7 @@ public interface QuestionBankService extends BaseService<QuestionBankResp, Quest
 
     /**
      * 考生获取试卷
+     * 
      * @param planId
      * @param userId
      * @return

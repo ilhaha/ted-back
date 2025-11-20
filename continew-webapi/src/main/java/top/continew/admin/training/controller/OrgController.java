@@ -67,20 +67,22 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     @Resource
     private OrgService orgService;
 
-
     /**
      * 批量导入作业人员
+     * 
      * @param file
      * @return
      */
     @Operation(summary = "批量导入考试计划")
     @PostMapping("/import/worker/{classId}")
-    public ParsedExcelResultVO importWorker(@RequestPart("file") MultipartFile file, @PathVariable("classId") Long classId) {
-        return baseService.importWorker(file,classId);
+    public ParsedExcelResultVO importWorker(@RequestPart("file") MultipartFile file,
+                                            @PathVariable("classId") Long classId) {
+        return baseService.importWorker(file, classId);
     }
 
     /**
      * 根据班级id下载导入作业人员模板
+     * 
      * @param classId
      * @return
      */
@@ -91,79 +93,88 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
 
     /**
      * 获取所有的机构作为选择器返回
+     * 
      * @return
      */
     @GetMapping("/select")
     public List<SelectOrgVO> getOrgSelect() {
         return orgService.getOrgSelect();
     }
+
     /**
      * 机构给作业人员报名
+     * 
      * @return
      */
     @PostMapping("/apply")
     public Boolean apply(@Validated @RequestBody OrgApplyReq orgApplyPreReq) {
         return orgService.apply(orgApplyPreReq);
     }
+
     /**
      * 根据报考状态获取机构对应的项目-班级-考生级联选择 （预报名）
+     * 
      * @param projectId 项目id
-     * @param planType 计划考试人员类型
-     * @param planId 计划id
+     * @param planType  计划考试人员类型
+     * @param planId    计划id
      * @return
      */
     @GetMapping("/select/project/class/candidate/{planType}")
     public List<ProjectCategoryVO> getSelectProjectClassCandidate(@PathVariable("planType") Integer planType,
                                                                   @RequestParam Long projectId,
                                                                   @RequestParam("planId") Long planId) {
-        return orgService.getSelectProjectClassCandidate(projectId,planType,planId);
+        return orgService.getSelectProjectClassCandidate(projectId, planType, planId);
     }
 
     /**
      * 获取班级类型机构对应的项目-班级级联选择
+     * 
      * @return
      */
     @GetMapping("/select/project/class/type/{type}")
-    public List<ProjectCategoryVO> getSelectProjectClassByType(@PathVariable("type") Integer type){
+    public List<ProjectCategoryVO> getSelectProjectClassByType(@PathVariable("type") Integer type) {
         return orgService.getSelectOrgProjectClassByType(type);
     }
 
-
     /**
      * 获取机构对应的项目-班级级联选择
+     * 
      * @return
      */
     @GetMapping("/select/project/class/{classType}")
     public List<ProjectCategoryVO> getSelectProjectClass(@RequestParam Long orgId,
                                                          @RequestParam Long projectId,
-                                                         @PathVariable("classType") Integer classType){
-        return orgService.getSelectProjectClass(orgId,projectId,classType);
+                                                         @PathVariable("classType") Integer classType) {
+        return orgService.getSelectProjectClass(orgId, projectId, classType);
     }
 
     /**
      * 根据班级类型获取机构对应的项目-班级级联选择
+     * 
      * @return
      */
     @GetMapping("/select/org/project/class/{type}")
-    public List<Map<String, Object>> getSelectProjectClass(@PathVariable("type") Integer type){
+    public List<Map<String, Object>> getSelectProjectClass(@PathVariable("type") Integer type) {
         return orgService.getSelectProjectClassByType(type);
     }
 
     /**
      * 获取机构对应的分类-项目-班级级联选择
+     * 
      * @return
      */
     @GetMapping("/select/category/project/class")
-    public List<ProjectCategoryVO> getSelectCategoryProjectClass(@RequestParam(required = false) Long orgId){
+    public List<ProjectCategoryVO> getSelectCategoryProjectClass(@RequestParam(required = false) Long orgId) {
         return orgService.getSelectCategoryProjectClass(orgId);
     }
 
     /**
      * 获取机构对应的分类-项目级联选择
+     * 
      * @return
      */
     @GetMapping("/select/category/project")
-    public List<ProjectCategoryVO> getSelectCategoryProject(@RequestParam(required = false) Long orgId){
+    public List<ProjectCategoryVO> getSelectCategoryProject(@RequestParam(required = false) Long orgId) {
         return orgService.getSelectCategoryProject(orgId);
     }
 
@@ -244,8 +255,8 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     }
 
     @GetMapping("/studentAddAgency/{orgId}/{projectId}")
-    public Integer studentAddAgency(@PathVariable Long orgId,@PathVariable Long projectId) {
-        return orgService.studentAddAgency(orgId,projectId);
+    public Integer studentAddAgency(@PathVariable Long orgId, @PathVariable Long projectId) {
+        return orgService.studentAddAgency(orgId, projectId);
     }
 
     //学生退出机构
@@ -256,10 +267,10 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
 
     // 机构移除学生
     @GetMapping("/agencyRemoveStudent/{orgId}/{candidateId}")
-    public Integer agencyRemoveStudent(@PathVariable Long orgId,
-                                       @PathVariable Long candidateId) {
+    public Integer agencyRemoveStudent(@PathVariable Long orgId, @PathVariable Long candidateId) {
         return orgService.agencyRemoveStudent(orgId, candidateId);
     }
+
     @GetMapping("/studentDelAgency/{orgId}")
     public Integer studentDelAgency(@PathVariable Long orgId) {
         return orgService.studentDelAgency(orgId);
@@ -292,12 +303,12 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
         return orgService.getBindableUsers();
     }
 
-
     // 解绑机构用户
     @PostMapping("/unbind-user/{orgId}")
     public Boolean unbindUserToOrg(@PathVariable("orgId") Long orgId) {
         return orgService.unbindUserToOrg(orgId);
     }
+
     // 绑定用户到机构
     @PostMapping("/bind-user")
     public void bindUserToOrg(@RequestBody BindUserReq req) {
@@ -310,6 +321,5 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
         orgService.removeOrgWithRelations(orgId);
         return R.ok("删除机构及关联信息成功");
     }
-
 
 }

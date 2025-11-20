@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.training.service.impl;
 
 import cn.hutool.extra.qrcode.QrCodeUtil;
@@ -9,7 +25,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
-import org.aspectj.weaver.ast.Or;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -72,6 +87,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
     /**
      * 重写分页查询
+     * 
      * @param query
      * @param pageQuery
      * @return
@@ -86,7 +102,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         super.sort(queryWrapper, pageQuery);
 
         IPage<OrgClassDetailResp> page = baseMapper.page(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+            .getSize()), queryWrapper);
 
         PageResp<OrgClassResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
@@ -95,6 +111,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
     /**
      * 重写添加
+     * 
      * @param req
      * @return
      */
@@ -107,10 +124,8 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
         // 校验重名
         LambdaQueryWrapper<OrgClassDO> query = new LambdaQueryWrapper<>();
-        query.eq(OrgClassDO::getClassName, req.getClassName())
-                .eq(OrgClassDO::getOrgId, orgDO.getId());
-        ValidationUtils.throwIf(baseMapper.selectCount(query) > 0,
-                " [ " + req.getClassName() + " ] 已存在");
+        query.eq(OrgClassDO::getClassName, req.getClassName()).eq(OrgClassDO::getOrgId, orgDO.getId());
+        ValidationUtils.throwIf(baseMapper.selectCount(query) > 0, " [ " + req.getClassName() + " ] 已存在");
 
         // 设置机构ID
         req.setOrgId(orgDO.getId());
@@ -124,19 +139,14 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
                 String qrUrl = generateAndUploadQr(classId, qrContent);
 
                 //  更新二维码地址
-                baseMapper.update(
-                        new LambdaUpdateWrapper<OrgClassDO>()
-                                .eq(OrgClassDO::getId, classId)
-                                .set(OrgClassDO::getQrcodeApplyUrl, qrUrl)
-                );
+                baseMapper.update(new LambdaUpdateWrapper<OrgClassDO>().eq(OrgClassDO::getId, classId)
+                    .set(OrgClassDO::getQrcodeApplyUrl, qrUrl));
             } catch (Exception e) {
                 throw new BusinessException("二维码生成失败，请稍后重试");
             }
         }
         return classId;
     }
-
-
 
     @Override
     public void update(OrgClassReq req, Long id) {
@@ -147,24 +157,21 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         // 检查是否重名（排除当前记录）
         LambdaQueryWrapper<OrgClassDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(OrgClassDO::getClassName, req.getClassName())
-                .eq(OrgClassDO::getOrgId, orgDO.getId())
-                .ne(OrgClassDO::getId, id);
-        ValidationUtils.throwIf(
-                baseMapper.selectCount(wrapper) > 0,
-                "班级名称 [ " + req.getClassName() + " ] 已存在"
-        );
+            .eq(OrgClassDO::getOrgId, orgDO.getId())
+            .ne(OrgClassDO::getId, id);
+        ValidationUtils.throwIf(baseMapper.selectCount(wrapper) > 0, "班级名称 [ " + req.getClassName() + " ] 已存在");
 
         // 设置机构 ID 并更新
         req.setOrgId(orgDO.getId());
         super.update(req, id);
     }
 
-
     /**
      * 生成二维码内容
      */
     private String buildQrContent(Long classId) throws UnsupportedEncodingException {
-        String encryptedClassId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String.valueOf(classId)), StandardCharsets.UTF_8);
+        String encryptedClassId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String
+            .valueOf(classId)), StandardCharsets.UTF_8);
         return qrcodeUrl + "?classId=" + encryptedClassId;
     }
 
@@ -177,12 +184,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
             ImageIO.write(image, "png", baos);
             byte[] bytes = baos.toByteArray();
 
-            MultipartFile file = new InMemoryMultipartFile(
-                    "file",
-                    candidateId + ".png",
-                    "image/png",
-                    bytes
-            );
+            MultipartFile file = new InMemoryMultipartFile("file", candidateId + ".png", "image/png", bytes);
 
             GeneralFileReq fileReq = new GeneralFileReq();
             fileReq.setType("pic");
@@ -194,12 +196,13 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
     /**
      * 根据项目类型和班级类型获取班级选择器
+     * 
      * @param projectId
      * @param classType
      * @return
      */
     @Override
     public List<SelectClassVO> getSelectClassByProject(Long projectId, Integer classType) {
-        return baseMapper.getSelectClassByProject(projectId,classType);
+        return baseMapper.getSelectClassByProject(projectId, classType);
     }
 }

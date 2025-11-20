@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.exam.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
@@ -36,7 +52,6 @@ import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
 import top.continew.admin.exam.model.resp.PaymentInfoVO;
 import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.mapper.UserMapper;
-import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.FileService;
@@ -57,7 +72,6 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -70,10 +84,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
-        ExamineePaymentAuditMapper, ExamineePaymentAuditDO, ExamineePaymentAuditResp,
-        ExamineePaymentAuditDetailResp, ExamineePaymentAuditQuery, ExamineePaymentAuditReq>
-        implements ExamineePaymentAuditService {
+public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePaymentAuditMapper, ExamineePaymentAuditDO, ExamineePaymentAuditResp, ExamineePaymentAuditDetailResp, ExamineePaymentAuditQuery, ExamineePaymentAuditReq> implements ExamineePaymentAuditService {
 
     @Resource
     private ExamineePaymentAuditMapper examineePaymentAuditMapper;
@@ -146,27 +157,22 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         ValidationUtils.throwIf(insertCount <= 0, "生成缴费审核记录失败");
     }
 
-
     @Override
     public PageResp<ExamineePaymentAuditResp> page(ExamineePaymentAuditQuery query, PageQuery pageQuery) {
         QueryWrapper<ExamineePaymentAuditDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tepa.is_deleted", 0);
         if (query.getIsWorker()) {
-            queryWrapper.isNotNull("tepa.class_id")
-                    .isNotNull("tepa.qrcode_upload_url");
-        }else {
-            queryWrapper.isNull("tepa.class_id")
-                    .isNull("tepa.qrcode_upload_url");
+            queryWrapper.isNotNull("tepa.class_id").isNotNull("tepa.qrcode_upload_url");
+        } else {
+            queryWrapper.isNull("tepa.class_id").isNull("tepa.qrcode_upload_url");
         }
         super.sort(queryWrapper, pageQuery);
-        IPage<ExamineePaymentAuditResp> page = baseMapper.getExamineePaymentAudits(
-                new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper
-        );
+        IPage<ExamineePaymentAuditResp> page = baseMapper.getExamineePaymentAudits(new Page<>(pageQuery
+            .getPage(), pageQuery.getSize()), queryWrapper);
         PageResp<ExamineePaymentAuditResp> pageResp = PageResp.build(page, super.getListClass());
         pageResp.getList().forEach(this::fill);
         return pageResp;
     }
-
 
     @Override
     public Boolean uploadPaymentProof(ExamineePaymentAuditResp req) {
@@ -178,13 +184,12 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
             throw new BusinessException("缴费凭证地址不能为空！");
         }
         // 查找当前记录
-        ExamineePaymentAuditDO record = examineePaymentAuditMapper.selectOne(
-                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                        .eq(ExamineePaymentAuditDO::getExamPlanId, req.getExamPlanId())
-                        .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
-                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                        .last("LIMIT 1")
-        );
+        ExamineePaymentAuditDO record = examineePaymentAuditMapper
+            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>().eq(ExamineePaymentAuditDO::getExamPlanId, req
+                .getExamPlanId())
+                .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
+                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                .last("LIMIT 1"));
         if (record == null || record.getAuditNoticeUrl() == null) {
             throw new BusinessException("未找到缴费通知记录，不能上传凭证！");
         }
@@ -225,7 +230,6 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         return true;
     }
 
-
     @Override
     public boolean reviewPayment(ExamineePaymentAuditResp req) {
         // 校验传入参数
@@ -233,14 +237,12 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
             throw new BusinessException("审核请求参数缺失！");
         }
         // 查找对应记录
-        ExamineePaymentAuditDO record = examineePaymentAuditMapper.selectOne(
-                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                        .eq(ExamineePaymentAuditDO::getId, req.getId())
-                        .eq(ExamineePaymentAuditDO::getExamPlanId, req.getExamPlanId())
-                        .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
-                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                        .last("LIMIT 1")
-        );
+        ExamineePaymentAuditDO record = examineePaymentAuditMapper
+            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>().eq(ExamineePaymentAuditDO::getId, req.getId())
+                .eq(ExamineePaymentAuditDO::getExamPlanId, req.getExamPlanId())
+                .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
+                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                .last("LIMIT 1"));
 
         if (record == null) {
             throw new BusinessException("未找到对应的缴费审核记录！");
@@ -292,7 +294,6 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         return true;
     }
 
-
     /**
      * 生成作业人员缴费通知单
      *
@@ -310,7 +311,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
 
         List<Long> classIds = enrollDOList.stream().map(EnrollDO::getClassId).distinct().toList();
         Map<Long, OrgClassDO> classMap = orgClassMapper.selectBatchIds(classIds)
-                .stream().collect(Collectors.toMap(OrgClassDO::getId, Function.identity()));
+            .stream()
+            .collect(Collectors.toMap(OrgClassDO::getId, Function.identity()));
 
         // 构建缴费审核记录并入库
         List<ExamineePaymentAuditDO> insertList = enrollDOList.stream().map(item -> {
@@ -331,12 +333,14 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
             paymentAuditDO.setIsDeleted(false);
             try {
                 // 生成二维码内容
-                String qrContent = buildQrContent(classId, candidateId,enrollId,planId);
+                String qrContent = buildQrContent(classId, candidateId, enrollId, planId);
                 // 生成二维码并上传
                 String qrUrl = generateAndUploadQr(candidateId, qrContent);
                 paymentAuditDO.setQrcodeUploadUrl(qrUrl);
                 byte[] photoBytes = loadPhotoSync(qrUrl);
-                paymentAuditDO.setAuditNoticeUrl(generateAuditNotice(planId, candidateId, paymentInfoDTO, noticeNo, orgClass.getClassName(), photoBytes));
+                paymentAuditDO
+                    .setAuditNoticeUrl(generateAuditNotice(planId, candidateId, paymentInfoDTO, noticeNo, orgClass
+                        .getClassName(), photoBytes));
             } catch (Exception e) {
                 throw new RuntimeException("生成或上传二维码失败");
             }
@@ -360,28 +364,25 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         String enrollIdAes = aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getEnrollId());
         String classIdAes = aesWithHMAC.verifyAndDecrypt(paymentInfoReq.getClassId());
 
-
         // 参数完整性校验
-        ValidationUtils.throwIf(ObjectUtil.isNull(planIdAes) || ObjectUtil.isNull(candidateIdAes)
-                || ObjectUtil.isNull(enrollIdAes) || ObjectUtil.isNull(classIdAes),"二维码已被篡改或参数缺失，请重新获取");
+        ValidationUtils.throwIf(ObjectUtil.isNull(planIdAes) || ObjectUtil.isNull(candidateIdAes) || ObjectUtil
+            .isNull(enrollIdAes) || ObjectUtil.isNull(classIdAes), "二维码已被篡改或参数缺失，请重新获取");
 
         Long planId = NumberUtil.toLong(planIdAes);
         Long candidateId = NumberUtil.toLong(candidateIdAes);
         Long enrollId = NumberUtil.toLong(enrollIdAes);
         Long classId = NumberUtil.toLong(classIdAes);
 
-
         // 查询报名信息
         EnrollDO enrollDO = enrollMapper.selectById(enrollId);
-        ValidationUtils.throwIfNull(enrollDO,"未找到报名信息");
+        ValidationUtils.throwIfNull(enrollDO, "未找到报名信息");
 
         // 查询缴费记录
         ExamineePaymentAuditDO auditDO = baseMapper.selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                .eq(ExamineePaymentAuditDO::getExamPlanId, planId)
-                .eq(ExamineePaymentAuditDO::getExamineeId, candidateId)
-                .eq(ExamineePaymentAuditDO::getEnrollId, enrollId)
-                .eq(ExamineePaymentAuditDO::getClassId, classId)
-        );
+            .eq(ExamineePaymentAuditDO::getExamPlanId, planId)
+            .eq(ExamineePaymentAuditDO::getExamineeId, candidateId)
+            .eq(ExamineePaymentAuditDO::getEnrollId, enrollId)
+            .eq(ExamineePaymentAuditDO::getClassId, classId));
         ValidationUtils.throwIfNull(auditDO, "未找到报名信息");
 
         // 查询个人信息
@@ -403,17 +404,18 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     @Override
     public Boolean paymentAuditConfirm(PaymentAuditConfirmReq paymentAuditConfirmReq) {
         ExamineePaymentAuditDO examineePaymentAuditDO = baseMapper.selectById(paymentAuditConfirmReq.getId());
-        ValidationUtils.throwIfEmpty(examineePaymentAuditDO,"未找到报名信息");
+        ValidationUtils.throwIfEmpty(examineePaymentAuditDO, "未找到报名信息");
         // 不能重复提交待审核状态
         Integer PAID_PENDING_REVIEW = PaymentAuditStatusEnum.PAID_PENDING_REVIEW.getValue();
-        ValidationUtils.throwIf(PAID_PENDING_REVIEW.equals(paymentAuditConfirmReq.getAuditStatus()) &&
-                PAID_PENDING_REVIEW.equals(examineePaymentAuditDO.getAuditStatus()),"您已提交过缴费凭证，请勿重复提交！");
+        ValidationUtils.throwIf(PAID_PENDING_REVIEW.equals(paymentAuditConfirmReq
+            .getAuditStatus()) && PAID_PENDING_REVIEW.equals(examineePaymentAuditDO
+                .getAuditStatus()), "您已提交过缴费凭证，请勿重复提交！");
         return baseMapper.update(new LambdaUpdateWrapper<ExamineePaymentAuditDO>()
-                .set(ExamineePaymentAuditDO::getAuditStatus,paymentAuditConfirmReq.getAuditStatus())
-                .set(ExamineePaymentAuditDO::getPaymentTime,LocalDateTime.now())
-                .set(ExamineePaymentAuditDO::getPaymentProofUrl,paymentAuditConfirmReq.getPaymentProofUrl())
-                .set(ExamineePaymentAuditDO::getRejectReason,null)
-                .eq(ExamineePaymentAuditDO::getId,examineePaymentAuditDO.getId())) > 0;
+            .set(ExamineePaymentAuditDO::getAuditStatus, paymentAuditConfirmReq.getAuditStatus())
+            .set(ExamineePaymentAuditDO::getPaymentTime, LocalDateTime.now())
+            .set(ExamineePaymentAuditDO::getPaymentProofUrl, paymentAuditConfirmReq.getPaymentProofUrl())
+            .set(ExamineePaymentAuditDO::getRejectReason, null)
+            .eq(ExamineePaymentAuditDO::getId, examineePaymentAuditDO.getId())) > 0;
     }
 
     /**
@@ -431,21 +433,17 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         return photoBytes != null ? photoBytes : new byte[0];
     }
 
-
     /**
      * 构建二维码内容（带加密）
      */
     private String buildQrContent(Long classId, Long candidateId, Long enrollId, Long planId) {
-        Map<String, Long> params = Map.of(
-                "classId", classId,
-                "candidateId", candidateId,
-                "enrollId", enrollId,
-                "planId", planId
-        );
+        Map<String, Long> params = Map
+            .of("classId", classId, "candidateId", candidateId, "enrollId", enrollId, "planId", planId);
 
-        String query = params.entrySet().stream()
-                .map(e -> e.getKey() + "=" + encode(aesWithHMAC.encryptAndSign(String.valueOf(e.getValue()))))
-                .collect(Collectors.joining("&"));
+        String query = params.entrySet()
+            .stream()
+            .map(e -> e.getKey() + "=" + encode(aesWithHMAC.encryptAndSign(String.valueOf(e.getValue()))))
+            .collect(Collectors.joining("&"));
 
         return qrcodeUrl + "?" + query;
     }
@@ -468,12 +466,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         byte[] bytes = baos.toByteArray();
 
         // 3. 封装成 MultipartFile
-        MultipartFile file = new InMemoryMultipartFile(
-                "file",
-                candidateId + ".png",
-                "image/png",
-                bytes
-        );
+        MultipartFile file = new InMemoryMultipartFile("file", candidateId + ".png", "image/png", bytes);
 
         // 4. 上传文件
         GeneralFileReq req = new GeneralFileReq();
@@ -483,9 +476,6 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
 
         return resp.getUrl();
     }
-
-
-
 
     /**
      * 处理退款审核逻辑（状态5 -> 状态6）
@@ -498,7 +488,6 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
             record.setAuditStatus(6); // 已退款
             // ... 业务待定
 
-
         } else if (newStatus == 3) {
             record.setAuditStatus(7); // 退款驳回
         } else {
@@ -510,13 +499,12 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     @Transactional(rollbackFor = Exception.class)
     public ExamineePaymentAuditDO getByExamPlanIdAndExamineeId(Long examPlanId, Long examineeId) {
         // 先查找当前记录
-        ExamineePaymentAuditDO record = examineePaymentAuditMapper.selectOne(
-                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                        .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
-                        .eq(ExamineePaymentAuditDO::getExamineeId, examineeId)
-                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                        .last("LIMIT 1")
-        );
+        ExamineePaymentAuditDO record = examineePaymentAuditMapper
+            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
+                .eq(ExamineePaymentAuditDO::getExamineeId, examineeId)
+                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                .last("LIMIT 1"));
 
         if (record == null) {
             throw new IllegalStateException("未找到对应的缴费审核记录，请检查考试计划和考生信息。");
@@ -532,7 +520,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         if (paymentInfoDTO == null) {
             throw new IllegalStateException("未找到考试计划缴费信息: " + examPlanId);
         }
-        String auditNoticeUrl = generateAuditNotice(examPlanId, examineeId, paymentInfoDTO, record.getNoticeNo(), null, new byte[0]);
+        String auditNoticeUrl = generateAuditNotice(examPlanId, examineeId, paymentInfoDTO, record
+            .getNoticeNo(), null, new byte[0]);
 
         // 更新当前记录
         record.setAuditNoticeUrl(auditNoticeUrl);
@@ -541,7 +530,6 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         // 返回更新后的记录（此处 record 已包括新 URL）
         return record;
     }
-
 
     /**
      * 生成通知单pdf
@@ -552,27 +540,19 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
      * @param noticeNo
      * @return
      */
-    private String generateAuditNotice(Long examPlanId, Long examineeId, ExamPlanProjectPaymentDTO paymentInfoDTO, String noticeNo, String className, byte[] photoBytes) {
+    private String generateAuditNotice(Long examPlanId,
+                                       Long examineeId,
+                                       ExamPlanProjectPaymentDTO paymentInfoDTO,
+                                       String noticeNo,
+                                       String className,
+                                       byte[] photoBytes) {
         // 生成 PDF
-        byte[] pdfBytes = generatePaymentNotice(
-                examPlanId,
-                examineeId,
-                paymentInfoDTO.getExamPlanName(),
-                paymentInfoDTO.getProjectName(),
-                paymentInfoDTO.getPaymentAmount().longValue(),
-                noticeNo,
-                className,
-                photoBytes
-        );
+        byte[] pdfBytes = generatePaymentNotice(examPlanId, examineeId, paymentInfoDTO.getExamPlanName(), paymentInfoDTO
+            .getProjectName(), paymentInfoDTO.getPaymentAmount().longValue(), noticeNo, className, photoBytes);
 
         // 封装为 MultipartFile
         String nickname = userMapper.selectById(examineeId).getNickname();
-        MultipartFile pdfFile = new InMemoryMultipartFile(
-                "file",
-                nickname + "_缴费通知单.pdf",
-                "application/pdf",
-                pdfBytes
-        );
+        MultipartFile pdfFile = new InMemoryMultipartFile("file", nickname + "_缴费通知单.pdf", "application/pdf", pdfBytes);
 
         // 上传 OSS
         FileInfoResp fileInfoResp = fileService.upload(pdfFile, new GeneralFileReq());
@@ -583,11 +563,15 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         return pdfUrl;
     }
 
-
     @Override
-    public byte[] generatePaymentNotice(Long examPlanId, Long examineeId,
-                                        String examPlanName, String projectName,
-                                        Long paymentAmount, String noticeNo, String className, byte[] photoBytes) {
+    public byte[] generatePaymentNotice(Long examPlanId,
+                                        Long examineeId,
+                                        String examPlanName,
+                                        String projectName,
+                                        Long paymentAmount,
+                                        String noticeNo,
+                                        String className,
+                                        byte[] photoBytes) {
         ValidationUtils.throwIfNull(examPlanId, "考试计划ID不能为空");
         ValidationUtils.throwIfNull(examineeId, "考生ID不能为空");
         ValidationUtils.throwIfNull(examPlanName, "考试名称不能为空");
@@ -610,7 +594,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         dataMap.putAll(excelUtilReactive.splitAmountToUpper(BigDecimal.valueOf(paymentAmount.intValue())));
         // 阻塞生成 PDF
         if (isWorker) {
-            return excelUtilReactive.generatePdfBytesSync(dataMap, workerExamNoticeTemplateUrl, photoBytes, 7, 8, 21, 22);
+            return excelUtilReactive
+                .generatePdfBytesSync(dataMap, workerExamNoticeTemplateUrl, photoBytes, 7, 8, 21, 22);
         } else {
             return excelUtilReactive.generatePdfBytesSync(dataMap, excelTemplateUrl, photoBytes, 3, 3, 1, 5);
         }
@@ -619,11 +604,9 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
     // 根据考试计划ID查询项目缴费金额
     private ExamPlanProjectPaymentDTO getExamPlanProjectPaymentInfo(Long examPlanId) {
         // 查询考试计划
-        ExamPlanDO examPlanDO = examPlanMapper.selectOne(
-                new LambdaQueryWrapper<ExamPlanDO>()
-                        .eq(ExamPlanDO::getId, examPlanId)
-                        .eq(ExamPlanDO::getIsDeleted, false)
-        );
+        ExamPlanDO examPlanDO = examPlanMapper.selectOne(new LambdaQueryWrapper<ExamPlanDO>()
+            .eq(ExamPlanDO::getId, examPlanId)
+            .eq(ExamPlanDO::getIsDeleted, false));
         ValidationUtils.throwIfNull(examPlanDO, "考试计划不存在");
 
         // 获取关联项目ID和考试计划名称
@@ -633,11 +616,9 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<
         ValidationUtils.throwIfBlank(examPlanName, "考试计划名称不能为空"); // 额外校验名称非空
 
         //  查询项目信息
-        ProjectDO projectDO = examProjectMapper.selectOne(
-                new LambdaQueryWrapper<ProjectDO>()
-                        .eq(ProjectDO::getId, examProjectId)
-                        .eq(ProjectDO::getIsDeleted, false)
-        );
+        ProjectDO projectDO = examProjectMapper.selectOne(new LambdaQueryWrapper<ProjectDO>()
+            .eq(ProjectDO::getId, examProjectId)
+            .eq(ProjectDO::getIsDeleted, false));
         ValidationUtils.throwIfNull(projectDO, "考试项目不存在");
 
         // 提取项目名称和缴费金额

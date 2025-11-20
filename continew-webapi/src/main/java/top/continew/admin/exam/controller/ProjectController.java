@@ -18,7 +18,6 @@ package top.continew.admin.exam.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.document.model.resp.DocumentTypeResp;
 import top.continew.admin.exam.model.req.ExamLocationReqStr;
@@ -53,7 +52,7 @@ import java.util.Map;
 @Tag(name = "项目管理 API")
 @RestController
 @CrudRequestMapping(value = "/exam/project", api = {Api.PAGE, Api.LIST, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
-        Api.EXPORT})
+    Api.EXPORT})
 public class ProjectController extends BaseController<ProjectService, ProjectResp, ProjectDetailResp, ProjectQuery, ProjectReq> {
 
     /**
@@ -122,11 +121,11 @@ public class ProjectController extends BaseController<ProjectService, ProjectRes
         return baseService.getLocationSelect(projectId);
     }
 
-//    @Operation(summary = "根据项目ID查询地点-考场_下拉框")
-//    @GetMapping("/classroom/select/{projectId}")
-//    public List<ProjectVo> getClassRoomSelect(@PathVariable Long projectId) {
-//        return baseService.getClassRoomSelect(projectId);
-//    }
+    //    @Operation(summary = "根据项目ID查询地点-考场_下拉框")
+    //    @GetMapping("/classroom/select/{projectId}")
+    //    public List<ProjectVo> getClassRoomSelect(@PathVariable Long projectId) {
+    //        return baseService.getClassRoomSelect(projectId);
+    //    }
 
     @Operation(summary = "根据项目ID查询地点-考场_下拉框")
     @GetMapping("/classroom/select/{projectId}")

@@ -17,7 +17,6 @@
 package top.continew.admin.exam.service;
 
 import net.dreamlu.mica.core.result.R;
-import org.apache.ibatis.annotations.Select;
 import top.continew.admin.exam.model.dto.BatchAuditSpecialCertificationApplicantDTO;
 import top.continew.admin.exam.model.req.SpecialCertificationApplicantListReq;
 import top.continew.starter.extension.crud.service.BaseService;
@@ -37,7 +36,7 @@ public interface SpecialCertificationApplicantService extends BaseService<Specia
     /**
      * 根据考生和计划ID查询申报记录
      *
-     * @param planId 计划ID
+     * @param planId      计划ID
      * @param applySource 申报来源（0机构 / 1个人 / null不区分）
      */
     SpecialCertificationApplicantResp getByCandidates(Long planId, Integer applySource);

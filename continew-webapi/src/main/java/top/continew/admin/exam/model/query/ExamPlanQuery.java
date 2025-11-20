@@ -75,7 +75,6 @@ public class ExamPlanQuery implements Serializable {
     @Query(type = QueryType.EQ, columns = "tep.plan_type")
     private Integer planType;
 
-
     /**
      * 计划状态
      */

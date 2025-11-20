@@ -25,7 +25,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -45,11 +44,7 @@ import top.continew.admin.document.model.req.QrcodeUploadReq;
 import top.continew.admin.document.model.resp.*;
 import top.continew.admin.document.service.cache.DocumentTypeCache;
 import top.continew.admin.exam.mapper.EnrollMapper;
-import top.continew.admin.exam.mapper.SpecialCertificationApplicantMapper;
 import top.continew.admin.exam.model.entity.EnrollDO;
-import top.continew.admin.exam.model.resp.EnrollStatusResp;
-import top.continew.admin.exam.model.resp.SpecialCertificationApplicantResp;
-import top.continew.admin.file.model.dto.Document;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -92,14 +87,14 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         queryWrapper.eq("is_deleted", 0);
         super.sort(queryWrapper, pageQuery);
         IPage<DocumentDO> page = baseMapper.selectPage(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+            .getSize()), queryWrapper);
         PageResp<DocumentResp> result = PageResp.build(page, super.getListClass());
 
         //2. 缓存获取所有的资料类型
         List<DocumentTypeDTO> documentTypeDOS = documentTypeCache.getDocumentTypeCache();
         //2.1 将documentTypeDOS转换为Map<ID, TypeName>，提升查找效率
         Map<Long, String> typeIdToNameMap = documentTypeDOS.stream()
-                .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
+            .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
         //2.2 获取用户信息
         List<UserDTO> userDTOList = documentMapper.getUserInfoList();
 
@@ -140,7 +135,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         if (dtos != null) {
             //2.1 将documentTypeDOS转换为Map<ID, TypeName>，提升查找效率
             Map<Long, String> typeIdToNameMap = dtos.stream()
-                    .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
+                .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
 
             //缓存命中
             detail.setTypeName(typeIdToNameMap.get(detail.getTypeId()));
@@ -214,16 +209,16 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         QueryWrapper<DocumentDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("ed.is_deleted", 0)
-                .eq("ed.examinee_id", userTokenDo.getUserId())
-                .eq("td.create_user",userTokenDo.getUserId())
-                .eq("td.is_deleted", 0);
+            .eq("ed.examinee_id", userTokenDo.getUserId())
+            .eq("td.create_user", userTokenDo.getUserId())
+            .eq("td.is_deleted", 0);
         // 根据 pageQuery 里的排序参数，对查询结果进行排序
         super.sort(queryWrapper, pageQuery);
 
         // 执行分页查询
         IPage<DocumentCandidatesResp> page = baseMapper.getDocumentList(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
-        System.out.println("page========"+page);
+            .getSize()), queryWrapper);
+        System.out.println("page========" + page);
 
         // 将查询结果转换成 PageResp 对象
         PageResp<DocumentCandidatesResp> pageResp = PageResp.build(page, DocumentCandidatesResp.class);
@@ -244,10 +239,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         String aesCandidateId = aesWithHMAC.verifyAndDecrypt(qrcodeUploadReq.getCandidateId());
 
         // 校验二维码有效性
-        ValidationUtils.throwIf(
-                ObjectUtil.isEmpty(aesPlanId) || ObjectUtil.isEmpty(aesCandidateId),
-                "二维码信息已失效，请重新获取"
-        );
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(aesPlanId) || ObjectUtil.isEmpty(aesCandidateId), "二维码信息已失效，请重新获取");
 
         Long planId = Long.valueOf(aesPlanId);
         Long candidateId = Long.valueOf(aesCandidateId);
@@ -258,10 +250,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         String idLastSix = aesUsername.substring(aesUsername.length() - 6);
 
         // 身份验证
-        ValidationUtils.throwIf(
-                !qrcodeUploadReq.getIdLastSix().equals(idLastSix),
-                "身份证后六位验证不通过，请确认信息后重新输入"
-        );
+        ValidationUtils.throwIf(!qrcodeUploadReq.getIdLastSix().equals(idLastSix), "身份证后六位验证不通过，请确认信息后重新输入");
         return null;
     }
 
@@ -312,7 +301,9 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         }
 
         // ========== 更新状态与备注 ==========
-        int rows = documentMapper.updateAuditStatus(documentId, status, request.getAuditRemark(),TokenLocalThreadUtil.get().getUserId());
+        int rows = documentMapper.updateAuditStatus(documentId, status, request.getAuditRemark(), TokenLocalThreadUtil
+            .get()
+            .getUserId());
         if (rows == 0) {
             throw new RuntimeException("审核失败，未更新任何记录");
         }

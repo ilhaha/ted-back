@@ -26,7 +26,6 @@ import lombok.NoArgsConstructor;
 import top.continew.admin.common.model.entity.BaseDO;
 
 import java.io.Serial;
-import java.math.BigDecimal;
 
 /**
  * 培训主表实体
@@ -69,10 +68,10 @@ public class TrainingDO extends BaseDO {
     //     */
     //    private String expertName;
 
-//    /**
-//     * 费用
-//     */
-//    private BigDecimal fee;
+    //    /**
+    //     * 费用
+    //     */
+    //    private BigDecimal fee;
 
     /**
      * 培训描述
