@@ -154,6 +154,11 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         super.sort(queryWrapper, pageQuery);
         IPage<UserDetailResp> page = baseMapper.selectUserPage(new Page<>(pageQuery.getPage(), pageQuery
             .getSize()), queryWrapper);
+        page.setRecords(page.getRecords().stream().map(item -> {
+            item.setPhone(aesWithHMAC.verifyAndDecrypt(item.getPhone()));
+            item.setUsername(aesWithHMAC.verifyAndDecrypt(item.getUsername()));
+            return item;
+        }).toList());
         PageResp<UserResp> pageResp = PageResp.build(page, super.getListClass());
         pageResp.getList().forEach(this::fill);
         return pageResp;
@@ -173,10 +178,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         CheckUtils.throwIf(StrUtil.isNotBlank(email) && this.isEmailExists(email, null), errorMsgTemplate, email);
         // 获取手机号
         String phone = req.getPhone();
-        boolean match = ReUtil.isMatch("^1[3-9]\\d{9}$", phone);
-        CheckUtils.throwIf(!match, "手机号格式不正确: [{}]", phone);
         // 如果手机号已存在，则抛出异常
-        CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(phone, null), errorMsgTemplate, phone);
+        CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(phone, null), errorMsgTemplate, aesWithHMAC.verifyAndDecrypt(phone));
     }
 
     @Override
@@ -199,7 +202,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         String phone = req.getPhone();
         boolean match = ReUtil.isMatch("^1[3-9]\\d{9}$", phone);
         CheckUtils.throwIf(!match, "手机号格式不正确: [{}]", phone);
-        CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(phone, id), errorMsgTemplate, phone);
+        String encryptPhone = aesWithHMAC.encryptAndSign(phone);
+        CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(encryptPhone, id), errorMsgTemplate, phone);
         DisEnableStatusEnum newStatus = req.getStatus();
         CheckUtils.throwIf(DisEnableStatusEnum.DISABLE.equals(newStatus) && ObjectUtil.equal(id, UserContextHolder
             .getUserId()), "不允许禁用当前用户");
@@ -214,6 +218,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         // 更新信息
         UserDO newUser = BeanUtil.toBean(req, UserDO.class);
         newUser.setId(id);
+        newUser.setPhone(encryptPhone);
         baseMapper.updateById(newUser);
         // 保存用户和角色关联
         boolean isSaveUserRoleSuccess = userRoleService.assignRolesToUser(req.getRoleIds(), id);
@@ -917,7 +922,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
      * @return 是否存在
      */
     public boolean isPhoneExists(String phone, Long id) {
-        Long count = baseMapper.selectCountByPhone(aesWithHMAC.encryptAndSign(phone), id);
+        Long count = baseMapper.selectCountByPhone(phone, id);
         return null != count && count > 0;
     }
 

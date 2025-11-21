@@ -55,6 +55,7 @@ import top.continew.admin.system.model.vo.UploadWhenUserInfoVO;
 import top.continew.admin.system.service.UserService;
 import top.continew.admin.training.service.OrgService;
 import top.continew.starter.core.util.ExceptionUtils;
+import top.continew.starter.core.validation.CheckUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.annotation.CrudRequestMapping;
 import top.continew.starter.extension.crud.enums.Api;
@@ -90,6 +91,16 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @Resource
     private AESWithHMAC aesWithHMAC;
 
+    /**
+     * 获取用户解密之后的手机号
+     * @param phone
+     * @return
+     */
+    @GetMapping("/verify/phone")
+    public String getVerifyPhone(@RequestParam("phone") String phone) {
+        return aesWithHMAC.verifyAndDecrypt(phone);
+    }
+
     //    @SaIgnore
     @GetMapping("/upload/when/info")
     @Operation(summary = "考生扫码上传资料时获取个人信息", description = "考生扫码上传资料时获取个人信息")
@@ -103,7 +114,7 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @GetMapping("/isPhoneExists")
     @Operation(summary = "判断手机是否已被绑定", description = "判断手机是否已被绑定")
     public Boolean isPhoneExists(String phone) {
-        return userService.isPhoneExists(phone, null);
+        return userService.isPhoneExists(aesWithHMAC.encryptAndSign(phone), null);
     }
 
     @GetMapping("/getUserByUserName")
@@ -124,6 +135,10 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
             .isMatch(RegexConstants.PASSWORD, rawPassword), "密码长度为 8-32 个字符，支持大小写字母、数字、特殊字符，至少包含字母和数字");
         req.setPassword(rawPassword);
         req.setUsername(aesWithHMAC.encryptAndSign(username));
+        String phone = req.getPhone();
+        boolean match = ReUtil.isMatch("^1[3-9]\\d{9}$", phone);
+        CheckUtils.throwIf(!match, "手机号格式不正确: [{}]", phone);
+        req.setPhone(aesWithHMAC.encryptAndSign(phone));
         return super.add(req);
     }
 
