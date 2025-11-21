@@ -376,9 +376,11 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
      */
     @Override
     public void checkEnrollTime(Long examPlanId) {
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
+        ValidationUtils.throwIfNull(examPlanDO,"未查询到考试计划");
+        ValidationUtils.throwIf(!ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType()),"无法报名作业人员考试计划");
         //1.检查是否存在报名时间冲突
         List<EnrollResp> enrollRespList = enrollMapper.getEnrolledPlan(TokenLocalThreadUtil.get().getUserId());
-        ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
         enrollRespList.forEach(enrollResp -> {
             boolean isConflict = !enrollResp.getExamEndTime().isBefore(examPlanDO.getStartTime()) && !enrollResp
                 .getExamStartTime()
