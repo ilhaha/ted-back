@@ -36,6 +36,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import top.continew.admin.common.constant.EnrollStatusConstant;
+import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
+import top.continew.admin.common.constant.enums.ExamPlanTypeEnum;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -140,10 +142,11 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         // 1️ 获取登录用户
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
 
-        // 2⃣ 构建基础查询
+        // 2 构建基础查询
         QueryWrapper<EnrollDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tep.is_deleted", 0);
-        queryWrapper.eq("tep.status", 3); // 默认查有效考试计划
+        queryWrapper.eq("tep.status", ExamPlanStatusEnum.IN_FORCE.getValue());
+        queryWrapper.eq("plan_type", ExamPlanTypeEnum.INSPECTION.getValue());
 
         // 3️ 按状态过滤
         if (enrollStatus != null) {

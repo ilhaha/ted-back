@@ -66,24 +66,51 @@ public class KnowledgeTypeServiceImpl extends BaseServiceImpl<KnowledgeTypeMappe
     }
 
     @Override
-    public void update(KnowledgeTypeReq req, Long id) {
-        // 查看该项目的所有分数占比
-        List<KnowledgeTypeDO> knowledgeTypes = baseMapper.selectList(new QueryWrapper<KnowledgeTypeDO>()
-            .eq("project_id", req.getProjectId())
-            .eq("is_deleted", 0));
-        Integer total = req.getProportion();
-        for (KnowledgeTypeDO knowledgeType : knowledgeTypes)
-            total += knowledgeType.getProportion();
-        total -= baseMapper.selectById(req.getId()).getProportion();
-        ValidationUtils.throwIf(total > FULL_PROPORTION, "操作失败, 占分比总数不能超过100%!");
-        super.update(req, id);
+    @Transactional(rollbackFor = Exception.class)
+    public Long add(KnowledgeTypeReq req) {
+        validateProportionSum(req, null);
+        return super.add(req);
     }
 
     @Override
-    @Transactional
-    public Long add(KnowledgeTypeReq req) {
-        ValidationUtils.throwIf(req.getProportion() > FULL_PROPORTION, "操作失败, 占分比总数不能超过100%!");
-        return super.add(req);
+    @Transactional(rollbackFor = Exception.class)
+    public void update(KnowledgeTypeReq req, Long id) {
+        validateProportionSum(req, id);
+        super.update(req, id);
     }
+
+    /**
+     * 校验某项目所有知识类型的占比总和是否超过 100%（新增、修改通用）
+     */
+    private void validateProportionSum(KnowledgeTypeReq req, Long currentId) {
+        // 查出该项目的所有占比
+        List<KnowledgeTypeDO> knowledgeTypes = baseMapper.selectList(
+                new QueryWrapper<KnowledgeTypeDO>()
+                        .eq("project_id", req.getProjectId())
+                        .eq("is_deleted", 0)
+        );
+
+        int total = req.getProportion();
+
+        // 累计已有的占比
+        for (KnowledgeTypeDO item : knowledgeTypes) {
+            total += item.getProportion();
+        }
+
+        // 如果是更新，需要减去旧值的占比
+        if (currentId != null) {
+            Integer old = baseMapper.selectById(currentId).getProportion();
+            total -= old;
+        }
+
+        ValidationUtils.throwIf(
+                total > FULL_PROPORTION,
+                "项目所有知识类型的分数占比之和不能超过 100%！"
+        );
+    }
+
+
+
+
 
 }

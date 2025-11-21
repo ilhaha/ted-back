@@ -179,7 +179,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         // 获取手机号
         String phone = req.getPhone();
         // 如果手机号已存在，则抛出异常
-        CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(phone, null), errorMsgTemplate, aesWithHMAC.verifyAndDecrypt(phone));
+        CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(phone, null), errorMsgTemplate, aesWithHMAC
+            .verifyAndDecrypt(phone));
     }
 
     @Override
