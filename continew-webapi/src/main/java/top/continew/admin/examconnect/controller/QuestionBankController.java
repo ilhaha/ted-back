@@ -18,7 +18,9 @@ package top.continew.admin.examconnect.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.vo.CascadeOptionsVo;
+import top.continew.admin.examconnect.model.req.RestPaperReq;
 import top.continew.admin.examconnect.model.resp.ExamPaperVO;
 import top.continew.starter.extension.crud.enums.Api;
 
@@ -50,6 +52,12 @@ import java.util.List;
 @CrudRequestMapping(value = "/examconnect/questionBank", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
     Api.EXPORT})
 public class QuestionBankController extends BaseController<QuestionBankService, QuestionBankResp, QuestionBankDetailResp, QuestionBankQuery, QuestionBankReq> {
+
+    @Operation(summary = "监考员重新生成考试试卷")
+    @PostMapping("/rest/paper")
+    public Boolean restPaper(@Validated @RequestBody RestPaperReq restPaperReq) {
+        return baseService.restPaper(restPaperReq);
+    }
 
     @Operation(summary = "考生获取试卷")
     @GetMapping("/candidate/paper/{planId}/{userId}")

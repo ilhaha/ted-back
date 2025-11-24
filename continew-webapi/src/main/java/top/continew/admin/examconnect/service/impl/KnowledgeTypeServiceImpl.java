@@ -84,11 +84,9 @@ public class KnowledgeTypeServiceImpl extends BaseServiceImpl<KnowledgeTypeMappe
      */
     private void validateProportionSum(KnowledgeTypeReq req, Long currentId) {
         // 查出该项目的所有占比
-        List<KnowledgeTypeDO> knowledgeTypes = baseMapper.selectList(
-                new QueryWrapper<KnowledgeTypeDO>()
-                        .eq("project_id", req.getProjectId())
-                        .eq("is_deleted", 0)
-        );
+        List<KnowledgeTypeDO> knowledgeTypes = baseMapper.selectList(new QueryWrapper<KnowledgeTypeDO>()
+            .eq("project_id", req.getProjectId())
+            .eq("is_deleted", 0));
 
         int total = req.getProportion();
 
@@ -103,14 +101,7 @@ public class KnowledgeTypeServiceImpl extends BaseServiceImpl<KnowledgeTypeMappe
             total -= old;
         }
 
-        ValidationUtils.throwIf(
-                total > FULL_PROPORTION,
-                "项目所有知识类型的分数占比之和不能超过 100%！"
-        );
+        ValidationUtils.throwIf(total > FULL_PROPORTION, "项目所有知识类型的分数占比之和不能超过 100%！");
     }
-
-
-
-
 
 }

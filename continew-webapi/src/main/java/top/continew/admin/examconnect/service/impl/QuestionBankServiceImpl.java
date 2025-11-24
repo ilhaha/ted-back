@@ -21,6 +21,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.constant.QuestionConstant;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.model.entity.UserTokenDo;
+import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.*;
@@ -47,8 +49,10 @@ import top.continew.admin.examconnect.mapper.QuestionOptionMapper;
 import top.continew.admin.examconnect.mapper.StepMapper;
 import top.continew.admin.examconnect.model.entity.KnowledgeTypeDO;
 import top.continew.admin.examconnect.model.entity.StepDO;
+import top.continew.admin.examconnect.model.req.RestPaperReq;
 import top.continew.admin.examconnect.model.resp.*;
 import top.continew.admin.system.mapper.UserMapper;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -108,6 +112,8 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
     @Resource
     private CandidateExamPaperMapper candidateExamPaperMapper;
+
+    private final AESWithHMAC aesWithHMAC;
 
     @Override
     public PageResp<QuestionBankResp> page(QuestionBankQuery query, PageQuery pageQuery) {
@@ -265,6 +271,38 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         return examPaperVO;
     }
 
+    /**
+     * 监考员重新生成考试试卷
+     * @param restPaperReq
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean restPaper(RestPaperReq restPaperReq) {
+        // 通过考生id和准考证获取考试计划id
+        LambdaQueryWrapper<EnrollDO> enrollDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        enrollDOLambdaQueryWrapper.eq(EnrollDO::getExamNumber,aesWithHMAC.encryptAndSign(restPaperReq.getExamNumber()))
+                .eq(EnrollDO::getUserId,restPaperReq.getCandidateId())
+                .eq(EnrollDO::getExamPlanId,restPaperReq.getPlanId());
+        EnrollDO enrollDO = enrollMapper.selectOne(enrollDOLambdaQueryWrapper);
+        ValidationUtils.throwIfNull(enrollDO,"未查询到该考生报名信息");
+        // 删除之前的试卷
+        Long enrollId = enrollDO.getId();
+        candidateExamPaperMapper.delete(new LambdaQueryWrapper<CandidateExamPaperDO>().eq(CandidateExamPaperDO::getEnrollId,enrollId));
+        // 生成新的试卷
+        ExamPaperVO examPaperVO = generateExamQuestionBank(enrollDO.getExamPlanId());
+        // 保存新的试卷
+        ObjectMapper objectMapper = new ObjectMapper();
+        CandidateExamPaperDO candidateExamPaperDO = new CandidateExamPaperDO();
+        try {
+            candidateExamPaperDO.setPaperJson(objectMapper.writeValueAsString(examPaperVO));
+        } catch (JsonProcessingException e) {
+            throw new BusinessException("系统错误");
+        }
+        candidateExamPaperDO.setEnrollId(enrollId);
+        return candidateExamPaperMapper.insert(candidateExamPaperDO) > 0;
+    }
+
     @Override
     public QuestionBankDetailResp get(Long id) {
         QuestionBankDetailResp questionBankDetailResp = super.get(id);
@@ -398,6 +436,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             .eq(QuestionBankDO::getCategoryId, projectDB.getCategoryId())
             .eq(QuestionBankDO::getSubCategoryId, projectDB.getId())
             .eq(QuestionBankDO::getExamType, examPlanDB.getPlanType() + 1));
+        ValidationUtils.throwIf(topicNumber > questionBankDBList.size(),"当前分类下的题目数量不足，无法满足出题要求");
         // 3. 查知识库
         List<KnowledgeTypeDO> knowledgeTypeDBList = knowledgeTypeMapper
             .selectList(new LambdaQueryWrapper<KnowledgeTypeDO>().eq(KnowledgeTypeDO::getProjectId, projectDB.getId()));
@@ -413,6 +452,10 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             List<QuestionBankDO> source = questionBankDBList.stream()
                 .filter(q -> Objects.equals(q.getKnowledgeTypeId(), knowledgeType.getId()))
                 .collect(Collectors.toList());
+            ValidationUtils.throwIf(
+                    count > source.size(),
+                    "知识点【" + knowledgeType.getName() + "】下可用题目数量不足，请补充题库"
+            );
 
             Collections.shuffle(source);
             List<QuestionBankDO> selected = source.stream().limit(count).toList();

@@ -22,6 +22,7 @@ import top.continew.admin.auth.model.dto.ClassroomDTO;
 import top.continew.admin.auth.model.dto.InvigilatorPlanDTO;
 import top.continew.admin.auth.model.req.CandidatesExamPlanReq;
 import top.continew.admin.auth.model.resp.CandidatesExamPlanVo;
+import top.continew.admin.common.constant.enums.EnrollExamStatusEnum;
 import top.continew.admin.common.model.entity.UserRoleDeptDo;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.query.UserQuery;
@@ -328,5 +329,14 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      * @return
      */
     Boolean isWorker(Long id);
+
+    /**
+     * 修改考生的考试状态为已签到
+     * @param candidateId
+     * @param examNumberEncrypt
+     * @param planId
+     * @param examStatus
+     */
+    void updateExamStatus(Long candidateId, String examNumberEncrypt, Long planId, Integer examStatus);
 
 }

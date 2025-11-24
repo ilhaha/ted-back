@@ -377,8 +377,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     @Override
     public void checkEnrollTime(Long examPlanId) {
         ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
-        ValidationUtils.throwIfNull(examPlanDO,"未查询到考试计划");
-        ValidationUtils.throwIf(!ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType()),"无法报名作业人员考试计划");
+        ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划");
+        ValidationUtils.throwIf(!ExamPlanTypeEnum.INSPECTION.getValue()
+            .equals(examPlanDO.getPlanType()), "无法报名作业人员考试计划");
         //1.检查是否存在报名时间冲突
         List<EnrollResp> enrollRespList = enrollMapper.getEnrolledPlan(TokenLocalThreadUtil.get().getUserId());
         enrollRespList.forEach(enrollResp -> {
@@ -485,10 +486,12 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                                                        Long classroomId) {
         // 根据考试计划ID和考场ID查出考生的信息
         QueryWrapper<EnrollDO> queryWrapper = this.buildQueryWrapper(enrollQuery);
-
         queryWrapper.eq("te.is_deleted", 0);
         queryWrapper.eq("te.classroom_id", classroomId);
         queryWrapper.eq("te.exam_plan_id", planId);
+        if (enrollQuery.getNickName() != null) {
+            queryWrapper.like("sys_user.nickName", enrollQuery.getNickName());
+        }
         super.sort(queryWrapper, pageQuery);
 
         IPage<ExamCandidateVO> page = baseMapper.getExamCandidates(new Page<>(pageQuery.getPage(), pageQuery

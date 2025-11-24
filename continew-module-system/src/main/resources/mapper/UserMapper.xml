@@ -29,6 +29,13 @@
         set status = #{status}
         WHERE id = #{planId}
     </update>
+    <update id="updateExamStatus">
+        UPDATE ted_enroll
+        SET exam_status = #{examStatus}
+        WHERE user_id = #{candidateId}
+        AND exam_plan_id = #{planId}
+        AND exam_number = #{examNumberEncrypt}
+    </update>
     <delete id="deleteOrgUser">
         DELETE FROM ted_org_user
         WHERE user_id IN
