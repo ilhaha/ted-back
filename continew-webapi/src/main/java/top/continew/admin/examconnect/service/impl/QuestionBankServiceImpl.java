@@ -273,6 +273,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
     /**
      * 监考员重新生成考试试卷
+     * 
      * @param restPaperReq
      * @return
      */
@@ -281,14 +282,15 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
     public Boolean restPaper(RestPaperReq restPaperReq) {
         // 通过考生id和准考证获取考试计划id
         LambdaQueryWrapper<EnrollDO> enrollDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        enrollDOLambdaQueryWrapper.eq(EnrollDO::getExamNumber,aesWithHMAC.encryptAndSign(restPaperReq.getExamNumber()))
-                .eq(EnrollDO::getUserId,restPaperReq.getCandidateId())
-                .eq(EnrollDO::getExamPlanId,restPaperReq.getPlanId());
+        enrollDOLambdaQueryWrapper.eq(EnrollDO::getExamNumber, aesWithHMAC.encryptAndSign(restPaperReq.getExamNumber()))
+            .eq(EnrollDO::getUserId, restPaperReq.getCandidateId())
+            .eq(EnrollDO::getExamPlanId, restPaperReq.getPlanId());
         EnrollDO enrollDO = enrollMapper.selectOne(enrollDOLambdaQueryWrapper);
-        ValidationUtils.throwIfNull(enrollDO,"未查询到该考生报名信息");
+        ValidationUtils.throwIfNull(enrollDO, "未查询到该考生报名信息");
         // 删除之前的试卷
         Long enrollId = enrollDO.getId();
-        candidateExamPaperMapper.delete(new LambdaQueryWrapper<CandidateExamPaperDO>().eq(CandidateExamPaperDO::getEnrollId,enrollId));
+        candidateExamPaperMapper.delete(new LambdaQueryWrapper<CandidateExamPaperDO>()
+            .eq(CandidateExamPaperDO::getEnrollId, enrollId));
         // 生成新的试卷
         ExamPaperVO examPaperVO = generateExamQuestionBank(enrollDO.getExamPlanId());
         // 保存新的试卷
@@ -436,7 +438,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             .eq(QuestionBankDO::getCategoryId, projectDB.getCategoryId())
             .eq(QuestionBankDO::getSubCategoryId, projectDB.getId())
             .eq(QuestionBankDO::getExamType, examPlanDB.getPlanType() + 1));
-        ValidationUtils.throwIf(topicNumber > questionBankDBList.size(),"当前分类下的题目数量不足，无法满足出题要求");
+        ValidationUtils.throwIf(topicNumber > questionBankDBList.size(), "当前分类下的题目数量不足，无法满足出题要求");
         // 3. 查知识库
         List<KnowledgeTypeDO> knowledgeTypeDBList = knowledgeTypeMapper
             .selectList(new LambdaQueryWrapper<KnowledgeTypeDO>().eq(KnowledgeTypeDO::getProjectId, projectDB.getId()));
@@ -452,10 +454,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             List<QuestionBankDO> source = questionBankDBList.stream()
                 .filter(q -> Objects.equals(q.getKnowledgeTypeId(), knowledgeType.getId()))
                 .collect(Collectors.toList());
-            ValidationUtils.throwIf(
-                    count > source.size(),
-                    "知识点【" + knowledgeType.getName() + "】下可用题目数量不足，请补充题库"
-            );
+            ValidationUtils.throwIf(count > source.size(), "知识点【" + knowledgeType.getName() + "】下可用题目数量不足，请补充题库");
 
             Collections.shuffle(source);
             List<QuestionBankDO> selected = source.stream().limit(count).toList();

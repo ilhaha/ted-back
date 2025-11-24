@@ -57,7 +57,6 @@ import top.continew.admin.auth.model.req.CandidatesExamPlanReq;
 import top.continew.admin.auth.model.resp.CandidatesExamPlanVo;
 import top.continew.admin.auth.service.OnlineUserService;
 import top.continew.admin.common.constant.RedisConstant;
-import top.continew.admin.common.constant.enums.EnrollExamStatusEnum;
 import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
 import top.continew.admin.common.model.entity.UserRoleDeptDo;
 import top.continew.admin.common.service.CommonUserService;
@@ -975,6 +974,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
     /**
      * 修改考生的考试状态为已签到
+     * 
      * @param candidateId
      * @param examNumberEncrypt
      * @param planId
@@ -982,7 +982,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
      */
     @Override
     public void updateExamStatus(Long candidateId, String examNumberEncrypt, Long planId, Integer examStatus) {
-        baseMapper.updateExamStatus(candidateId,examNumberEncrypt,planId,examStatus);
+        baseMapper.updateExamStatus(candidateId, examNumberEncrypt, planId, examStatus);
     }
 
     /**

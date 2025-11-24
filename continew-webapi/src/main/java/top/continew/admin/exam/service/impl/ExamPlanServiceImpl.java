@@ -52,8 +52,6 @@ import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.service.CandidateTicketService;
-import top.continew.admin.exam.service.CategoryService;
-import top.continew.admin.examconnect.model.entity.QuestionBankDO;
 import top.continew.admin.examconnect.model.resp.ExamPaperVO;
 import top.continew.admin.examconnect.service.QuestionBankService;
 import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
@@ -694,7 +692,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             .format("已报名 %d 人，但所选考场最多只能容纳 %d 人，请重新选择考场", candidateCount, totalCapacity));
         // 判断题库是否够考试
         ExamPaperVO examPaperVO = questionBankService.generateExamQuestionBank(id);
-        ValidationUtils.throwIfNull(examPaperVO,"当前分类下的题目数量不足，无法满足出题要求");
+        ValidationUtils.throwIfNull(examPaperVO, "当前分类下的题目数量不足，无法满足出题要求");
 
         // 5. 如果是巡检类型，校验报名人员是否全部审核通过
         if (ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType())) {
@@ -822,9 +820,9 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划");
         // 判断是否已有监考员确认，如果有无法再次随机
         Long notStartCount = planInvigilateMapper.selectCount(new LambdaQueryWrapper<PlanInvigilateDO>()
-                .eq(PlanInvigilateDO::getExamPlanId, examPlanDO.getId())
-                .eq(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.NOT_START.getValue()));
-        ValidationUtils.throwIf(notStartCount > 0,"已有监考员完成确认，当前无法重新随机分配！");
+            .eq(PlanInvigilateDO::getExamPlanId, examPlanDO.getId())
+            .eq(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.NOT_START.getValue()));
+        ValidationUtils.throwIf(notStartCount > 0, "已有监考员完成确认，当前无法重新随机分配！");
         // 1. 先删除原监考员
         planInvigilateMapper.delete(new LambdaQueryWrapper<PlanInvigilateDO>()
             .eq(PlanInvigilateDO::getExamPlanId, planId));
@@ -893,12 +891,12 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 1. 查询该计划所有考场
         List<Long> classroomIds = examPlanMapper.getPlanExamClassroom(planId);
-        ValidationUtils.throwIfEmpty(classroomIds,"考试计划未分配任何考场");
+        ValidationUtils.throwIfEmpty(classroomIds, "考试计划未分配任何考场");
 
         // 2. 查询报名记录
         List<EnrollDO> enrollList = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
-                .eq(EnrollDO::getExamPlanId, planId));
-        ValidationUtils.throwIfEmpty(enrollList,"未查询到考生报名信息");
+            .eq(EnrollDO::getExamPlanId, planId));
+        ValidationUtils.throwIfEmpty(enrollList, "未查询到考生报名信息");
 
         // 查询监考员列表
         List<InvigilatorAssignResp> invigilatorList = planInvigilateMapper.getListByPlanId(planId);
@@ -969,8 +967,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 }
 
                 // 调用确实耗时的方法：生成 PDF
-                String ticketUrl = safeGenerateWorkerTicket(enroll.getUserId(), user.getUsername(),user.getNickname(), upd
-                        .getExamNumber(), enroll.getClassId());
+                String ticketUrl = safeGenerateWorkerTicket(enroll.getUserId(), user.getUsername(), user
+                    .getNickname(), upd.getExamNumber(), enroll.getClassId());
 
                 // 保存准考证表
                 WorkerExamTicketDO ticket = new WorkerExamTicketDO();
@@ -1021,7 +1019,11 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     /**
      * 为单个考生生成准考证 PDF（附带错误兜底）
      */
-    private String safeGenerateWorkerTicket(Long userId, String idCard, String nickname,String encryptedExamNo, Long classId) {
+    private String safeGenerateWorkerTicket(Long userId,
+                                            String idCard,
+                                            String nickname,
+                                            String encryptedExamNo,
+                                            Long classId) {
         try {
             return candidateTicketReactiveService.generateWorkerTicket(userId, idCard, encryptedExamNo, classId);
         } catch (Exception e) {

@@ -48,7 +48,6 @@ import top.continew.admin.util.ExcelUtilReactive;
 import top.continew.admin.util.InMemoryMultipartFile;
 import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
-import top.continew.starter.core.exception.BusinessException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -89,8 +88,8 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
 
         // 2. 查询照片URL（同步）
         WorkerApplyDO workerApplyDO = workerApplyMapper.selectOne(new LambdaQueryWrapper<WorkerApplyDO>()
-                .eq(WorkerApplyDO::getIdCardNumber, idCard)
-                .eq(WorkerApplyDO::getClassId, classId));
+            .eq(WorkerApplyDO::getIdCardNumber, idCard)
+            .eq(WorkerApplyDO::getClassId, classId));
 
         String photoUrl = workerApplyDO != null ? workerApplyDO.getFacePhoto() : null;
 
@@ -106,11 +105,10 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
         String fileName = "准考证_" + examNumber + ".pdf";
 
         ResponseEntity<byte[]> responseEntity = excelUtilReactive
-                .generatePdfResponseEntitySync(dataMap, excelTemplateUrl, photoBytes, fileName);
+            .generatePdfResponseEntitySync(dataMap, excelTemplateUrl, photoBytes, fileName);
 
-        MultipartFile pdfFile =
-                new InMemoryMultipartFile("file", idCard + "_WORKER_准考证.pdf", "application/pdf", responseEntity
-                .getBody());
+        MultipartFile pdfFile = new InMemoryMultipartFile("file", idCard + "_WORKER_准考证.pdf", "application/pdf", responseEntity
+            .getBody());
         // 上传 OSS
         FileInfoResp fileInfoResp = fileService.upload(pdfFile, new GeneralFileReq());
         return fileInfoResp.getUrl();

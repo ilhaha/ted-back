@@ -240,6 +240,8 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
 
     int getCandidateIdentity(@Param("id") Long id);
 
-    void updateExamStatus(@Param("candidateId") Long candidateId, @Param("examNumberEncrypt") String examNumberEncrypt,
-                          @Param("planId") Long planId, @Param("examStatus") Integer examStatus);
+    void updateExamStatus(@Param("candidateId") Long candidateId,
+                          @Param("examNumberEncrypt") String examNumberEncrypt,
+                          @Param("planId") Long planId,
+                          @Param("examStatus") Integer examStatus);
 }

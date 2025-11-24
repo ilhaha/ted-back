@@ -210,7 +210,8 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         examCandidateInfoVO.setClassroomName(classroomDTO.getClassroomName());
         examCandidateInfoVO.setWarningShortFilm(candidatesExamPlanVo.getWarningShortFilm());
         // 修改考生的考试状态为已签到
-        userService.updateExamStatus(user.getId(),examNumberEncrypt, candidatesExamPlanVo.getPlanId(),EnrollExamStatusEnum.SIGNED.getValue());
+        userService.updateExamStatus(user.getId(), examNumberEncrypt, candidatesExamPlanVo
+            .getPlanId(), EnrollExamStatusEnum.SIGNED.getValue());
         return LoginResp.builder()
             .token(token)
             .role(UserConstant.CANDIDATES_ROLE_FLAG)

@@ -101,7 +101,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         int offset = (currentPage - 1) * pageSize;
         //2.分页查询数据
         List<InvigilatorPlanResp> enrollResps = planInvigilateMapper
-                .queryEnrollRespByInvigilatorIdAndInvigilateStatus(invigilatorId, invigilateStatus, pageSize, offset);
+            .queryEnrollRespByInvigilatorIdAndInvigilateStatus(invigilatorId, invigilateStatus, pageSize, offset);
         //3.查询总条数
         Long total = planInvigilateMapper.queryTotal(invigilatorId, invigilateStatus);
         //4.返回数据
@@ -115,7 +115,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
     public InvigilateExamDetailResp getInvigilateExamDetail(Long invigilatorId, Long examId) {
         InvigilateExamDetailResp invigilateExamDetailResp = planInvigilateMapper.queryExamDetail(invigilatorId, examId);
         long examDuration = Duration.between(invigilateExamDetailResp.getStartTime(), invigilateExamDetailResp
-                .getEndTime()).toMinutes();
+            .getEndTime()).toMinutes();
         invigilateExamDetailResp.setExamDuration(examDuration);
         return invigilateExamDetailResp;
     }
@@ -159,10 +159,10 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         //3.判断是否应该进入其他状态
         ExamPlanState pendingEntryStatemachine = stateRegistry.getState(PENDING_ENTRY);
         BatchEntryContext batchEntryContext = BatchEntryContext.builder()
-                .planId(planId)
-                .mapper(planInvigilateMapper)
-                .currentState(pendingEntryStatemachine)
-                .build();
+            .planId(planId)
+            .mapper(planInvigilateMapper)
+            .currentState(pendingEntryStatemachine)
+            .build();
         pendingEntryStatemachine.handleEvent(batchEntryContext);
     }
 
@@ -189,7 +189,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
 
         //2. 按状态分组：通过 vs 不通过
         Map<Boolean, List<UpdateReviewReq>> statusGroups = updateReviewReqs.stream()
-                .collect(Collectors.groupingBy(req -> req.getNewStatus() == ReviewStatus.APPROVED.getCode()));
+            .collect(Collectors.groupingBy(req -> req.getNewStatus() == ReviewStatus.APPROVED.getCode()));
 
         //3. 处理审核通过的记录
         List<UpdateReviewReq> approvedList = statusGroups.getOrDefault(true, Collections.emptyList());
@@ -209,10 +209,10 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         //5.判断是否审核完成
         ExamPlanState pendingEntryStatemachine = stateRegistry.getState(PENDING_REVIEW);
         BatchReviewContext batchReviewContext = BatchReviewContext.builder()
-                .planId(examId)
-                .mapper(planInvigilateMapper)
-                .currentState(pendingEntryStatemachine)
-                .build();
+            .planId(examId)
+            .mapper(planInvigilateMapper)
+            .currentState(pendingEntryStatemachine)
+            .build();
         pendingEntryStatemachine.handleEvent(batchReviewContext);
     }
 
@@ -223,10 +223,10 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         // 构建批量更新条件
         UpdateWrapper<TedExamRecords> wrapper = new UpdateWrapper<>();
         wrapper.set("review_status", status.getCode())
-                .set("registration_progress", 3)
-                .eq("plan_id", examId)
-                .in("candidate_id", candidateIds)
-                .eq("is_deleted", 0);
+            .set("registration_progress", 3)
+            .eq("plan_id", examId)
+            .in("candidate_id", candidateIds)
+            .eq("is_deleted", 0);
         log.info("wrapper:examId:{},candidate_id:{},sc:{}", examId, candidateIds, status.getCode());
         int update = examRecords1Mapper.update(null, wrapper);
         log.info("update:{}", update);
@@ -264,10 +264,10 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         //3. 判断是否全部录入
         ExamPlanState pendingEntryStatemachine = stateRegistry.getState(PENDING_ENTRY);
         BatchEntryContext batchEntryContext = BatchEntryContext.builder()
-                .planId(tedExamRecordsTemp.getPlanId())
-                .mapper(planInvigilateMapper)
-                .currentState(pendingEntryStatemachine)
-                .build();
+            .planId(tedExamRecordsTemp.getPlanId())
+            .mapper(planInvigilateMapper)
+            .currentState(pendingEntryStatemachine)
+            .build();
         pendingEntryStatemachine.handleEvent(batchEntryContext);
     }
 
@@ -287,10 +287,10 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         //3.判断是否全部录入
         ExamPlanState pendingEntryStatemachine = stateRegistry.getState(PENDING_ENTRY);
         BatchEntryContext batchEntryContext = BatchEntryContext.builder()
-                .planId(examId)
-                .mapper(planInvigilateMapper)
-                .currentState(pendingEntryStatemachine)
-                .build();
+            .planId(examId)
+            .mapper(planInvigilateMapper)
+            .currentState(pendingEntryStatemachine)
+            .build();
         pendingEntryStatemachine.handleEvent(batchEntryContext);
     }
 
@@ -302,7 +302,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
 
         // 1. 查询监考任务
         List<PlanInvigilateDO> invigilateList = baseMapper.selectList(new LambdaQueryWrapper<PlanInvigilateDO>()
-                .eq(PlanInvigilateDO::getExamPlanId, examId));
+            .eq(PlanInvigilateDO::getExamPlanId, examId));
         ValidationUtils.throwIfEmpty(invigilateList, "无监考任务");
 
         // 2. 获取当前监考员任务
@@ -323,11 +323,11 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
 
         // 3. 查找当前考场是否已有监考员生成过密码（不同考场密码不同）
         String existPassword = invigilateList.stream()
-                .filter(t -> t.getClassroomId().equals(classroomId))
-                .map(PlanInvigilateDO::getExamPassword)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+            .filter(t -> t.getClassroomId().equals(classroomId))
+            .map(PlanInvigilateDO::getExamPassword)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(null);
 
         // 需要生成或复用的密码
         String finalPassword = (existPassword != null) ? existPassword : RandomUtil.randomNumbers(6);
@@ -348,9 +348,9 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
      */
     private void updateExamPassword(Long userId, Long examId, Long classroomId, String pwd) {
         planInvigilateMapper.deductBalanceByIds(pwd, new QueryWrapper<PlanInvigilateDO>().eq("invigilator_id", userId)
-                .eq("invigilate_status", InvigilateStatusEnum.TO_CONFIRM.getValue())
-                .eq("exam_plan_id", examId)
-                .eq("classroom_id", classroomId));
+            .eq("invigilate_status", InvigilateStatusEnum.TO_CONFIRM.getValue())
+            .eq("exam_plan_id", examId)
+            .eq("classroom_id", classroomId));
     }
 
     /**
@@ -362,11 +362,11 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         paramsMap.put("code", password);
 
         SendSmsRequest request = SendSmsRequest.builder()
-                .phoneNumbers(phone)
-                .signName(smsConfig.getSignName())
-                .templateCode(smsConfig.getTemplateCodes().get(SmsConstants.EXAM_NOTIFICATION_TEMPLATE))
-                .templateParam(JSON.toJSONString(paramsMap))
-                .build();
+            .phoneNumbers(phone)
+            .signName(smsConfig.getSignName())
+            .templateCode(smsConfig.getTemplateCodes().get(SmsConstants.EXAM_NOTIFICATION_TEMPLATE))
+            .templateParam(JSON.toJSONString(paramsMap))
+            .build();
 
         smsAsyncClient.sendSms(request);
     }
@@ -393,8 +393,8 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
     public Boolean rejected(Long planId) {
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         return baseMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>().eq(PlanInvigilateDO::getExamPlanId, planId)
-                .eq(PlanInvigilateDO::getInvigilatorId, userTokenDo.getUserId())
-                .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.REJECTED.getValue())) > 0;
+            .eq(PlanInvigilateDO::getInvigilatorId, userTokenDo.getUserId())
+            .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.REJECTED.getValue())) > 0;
     }
 
     /**
@@ -410,9 +410,9 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         PlanInvigilateDO planInvigilateDO = baseMapper.selectById(planInvigilateId);
         ValidationUtils.throwIfNull(planInvigilateDO, "未查询到记录");
         return baseMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>()
-                .eq(PlanInvigilateDO::getId, planInvigilateId)
-                .set(PlanInvigilateDO::getInvigilatorId, req.getInvigilateId())
-                .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.TO_CONFIRM.getValue())) > 0;
+            .eq(PlanInvigilateDO::getId, planInvigilateId)
+            .set(PlanInvigilateDO::getInvigilatorId, req.getInvigilateId())
+            .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.TO_CONFIRM.getValue())) > 0;
     }
 
 }
