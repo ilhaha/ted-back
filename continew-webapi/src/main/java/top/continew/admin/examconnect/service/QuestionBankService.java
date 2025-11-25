@@ -17,6 +17,7 @@
 package top.continew.admin.examconnect.service;
 
 import top.continew.admin.exam.model.vo.CascadeOptionsVo;
+import top.continew.admin.examconnect.model.req.RestPaperReq;
 import top.continew.admin.examconnect.model.resp.ExamPaperVO;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.examconnect.model.query.QuestionBankQuery;
@@ -65,4 +66,13 @@ public interface QuestionBankService extends BaseService<QuestionBankResp, Quest
      * @return
      */
     ExamPaperVO getCandidatePaper(Long planId, Long userId);
+
+    /**
+     * 监考员重新生成考试试卷
+     * 
+     * @param restPaperReq
+     * @return
+     */
+    Boolean restPaper(RestPaperReq restPaperReq);
+
 }

@@ -329,4 +329,14 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      */
     Boolean isWorker(Long id);
 
+    /**
+     * 修改考生的考试状态为已签到
+     * 
+     * @param candidateId
+     * @param examNumberEncrypt
+     * @param planId
+     * @param examStatus
+     */
+    void updateExamStatus(Long candidateId, String examNumberEncrypt, Long planId, Integer examStatus);
+
 }

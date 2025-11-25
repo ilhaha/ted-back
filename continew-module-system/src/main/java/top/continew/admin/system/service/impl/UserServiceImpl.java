@@ -973,6 +973,19 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     }
 
     /**
+     * 修改考生的考试状态为已签到
+     * 
+     * @param candidateId
+     * @param examNumberEncrypt
+     * @param planId
+     * @param examStatus
+     */
+    @Override
+    public void updateExamStatus(Long candidateId, String examNumberEncrypt, Long planId, Integer examStatus) {
+        baseMapper.updateExamStatus(candidateId, examNumberEncrypt, planId, examStatus);
+    }
+
+    /**
      * 根据用户名获取用户列表
      *
      * @param usernames 用户名列表

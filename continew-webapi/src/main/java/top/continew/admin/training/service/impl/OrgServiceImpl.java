@@ -1141,7 +1141,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         Long examPlanId = orgApplyPreReq.getExamPlanId();
         ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
         ValidationUtils.throwIf(Objects.isNull(examPlanDO), "考试计划不存在");
-        ValidationUtils.throwIf(!ExamPlanTypeEnum.WORKER.getValue().equals(examPlanDO.getPlanType()),"无法报考检验人员考试计划");
+        ValidationUtils.throwIf(!ExamPlanTypeEnum.WORKER.getValue().equals(examPlanDO.getPlanType()), "无法报考检验人员考试计划");
         // 报名时间校验
         LocalDateTime enrollEndTime = examPlanDO.getEnrollEndTime();
         ValidationUtils.throwIf(!ExamPlanStatusEnum.IN_FORCE.getValue().equals(examPlanDO.getStatus()) || LocalDateTime

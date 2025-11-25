@@ -22,6 +22,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
@@ -38,6 +40,7 @@ import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.PlanConstant;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
+import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.DateUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
@@ -48,11 +51,18 @@ import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
+import top.continew.admin.exam.service.CandidateTicketService;
+import top.continew.admin.examconnect.model.resp.ExamPaperVO;
+import top.continew.admin.examconnect.service.QuestionBankService;
 import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
 import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
 import top.continew.admin.invigilate.model.enums.InvigilateStatus;
 import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
 import top.continew.admin.invigilate.model.resp.InvigilatorAssignResp;
+import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
+import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -66,6 +76,7 @@ import top.continew.admin.exam.service.ExamPlanService;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -111,7 +122,21 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Value("${examine.userRole.invigilatorId}")
     private Long invigilatorId;
 
-    private final ExamAsyncService examAsyncService;
+    private final QuestionBankService questionBankService;
+
+    private final EnrollMapper enrollMapper;
+
+    private final CandidateTicketService candidateTicketReactiveService;
+
+    private final AESWithHMAC aesWithHMAC;
+
+    private final UserMapper userMapper;
+
+    private final WorkerExamTicketMapper workerExamTicketMapper;
+
+    private final CandidateExamPaperMapper candidateExamPaperMapper;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     @Override
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
@@ -665,6 +690,10 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             .sum();
         ValidationUtils.throwIf(candidateCount > totalCapacity, String
             .format("已报名 %d 人，但所选考场最多只能容纳 %d 人，请重新选择考场", candidateCount, totalCapacity));
+        // 判断题库是否够考试
+        ExamPaperVO examPaperVO = questionBankService.generateExamQuestionBank(id);
+        ValidationUtils.throwIfNull(examPaperVO, "当前分类下的题目数量不足，无法满足出题要求");
+
         // 5. 如果是巡检类型，校验报名人员是否全部审核通过
         if (ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType())) {
             long pendingCount = specialCertificationApplicantMapper
@@ -789,6 +818,11 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     public Boolean reRandomInvigilators(Long planId, Integer invigilatorNum) {
         ExamPlanDO examPlanDO = baseMapper.selectById(planId);
         ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划");
+        // 判断是否已有监考员确认，如果有无法再次随机
+        Long notStartCount = planInvigilateMapper.selectCount(new LambdaQueryWrapper<PlanInvigilateDO>()
+            .eq(PlanInvigilateDO::getExamPlanId, examPlanDO.getId())
+            .eq(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.NOT_START.getValue()));
+        ValidationUtils.throwIf(notStartCount > 0, "已有监考员完成确认，当前无法重新随机分配！");
         // 1. 先删除原监考员
         planInvigilateMapper.delete(new LambdaQueryWrapper<PlanInvigilateDO>()
             .eq(PlanInvigilateDO::getExamPlanId, planId));
@@ -855,6 +889,15 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ExamPlanDO examPlanDO = baseMapper.selectById(planId);
         ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划信息");
 
+        // 1. 查询该计划所有考场
+        List<Long> classroomIds = examPlanMapper.getPlanExamClassroom(planId);
+        ValidationUtils.throwIfEmpty(classroomIds, "考试计划未分配任何考场");
+
+        // 2. 查询报名记录
+        List<EnrollDO> enrollList = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
+            .eq(EnrollDO::getExamPlanId, planId));
+        ValidationUtils.throwIfEmpty(enrollList, "未查询到考生报名信息");
+
         // 查询监考员列表
         List<InvigilatorAssignResp> invigilatorList = planInvigilateMapper.getListByPlanId(planId);
         ValidationUtils.throwIfEmpty(invigilatorList, "未选择监考员");
@@ -884,14 +927,107 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         // 执行更新
         boolean success = baseMapper.update(updateWrapper) > 0;
 
-        // 情况 2：主任确认，且是工种考试
+        // 情况 2：主任确认，且是作业人员考试
         if (success && PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue()
             .equals(isFinalConfirmed) && ExamPlanTypeEnum.WORKER.getValue().equals(examPlanDO.getPlanType())) {
-            // 异步生成准考证号，不阻塞前端
-            examAsyncService.generateAdmissionTicket(examPlanDO);
+            Collections.shuffle(classroomIds, RANDOM);
+            List<WorkerExamTicketDO> ticketSaveList = new ArrayList<>();
+            List<CandidateExamPaperDO> candidateExamPaperDOList = new ArrayList<>();
+            // 按报名记录逐个生成准考证
+            for (EnrollDO enroll : enrollList) {
+
+                Long classroomId = findAvailableClassroom(classroomIds, planId);
+                if (classroomId == null) {
+                    break;
+                }
+
+                Integer seatNo = classroomMapper.getSeatNumber(classroomId, planId);
+                if (seatNo == null) {
+                    continue;
+                }
+
+                String seatStr = String.format("%03d", seatNo);
+                String classroomStr = String.format("%03d", classroomId);
+                String randomStr = String.format("%04d", RANDOM.nextInt(10000));
+
+                // 最终准考证号
+                String examNumber = examPlanDO.getPlanYear() + randomStr + classroomStr + seatStr;
+                // 更新报名表
+                EnrollDO upd = new EnrollDO();
+                upd.setId(enroll.getId());
+                upd.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
+                upd.setSeatId(Long.valueOf(seatStr));
+                upd.setClassroomId(classroomId);
+                enrollMapper.updateById(upd);
+
+                // 查询用户
+                UserDO user = userMapper.selectById(enroll.getUserId());
+                if (user == null) {
+                    continue;
+                }
+
+                // 调用确实耗时的方法：生成 PDF
+                String ticketUrl = safeGenerateWorkerTicket(enroll.getUserId(), user.getUsername(), user
+                    .getNickname(), upd.getExamNumber(), enroll.getClassId());
+
+                // 保存准考证表
+                WorkerExamTicketDO ticket = new WorkerExamTicketDO();
+                ticket.setCandidateName(user.getNickname());
+                ticket.setEnrollId(enroll.getId());
+                ticket.setTicketUrl(ticketUrl);
+
+                ticketSaveList.add(ticket);
+
+                ObjectMapper objectMapper = new ObjectMapper();
+                ExamPaperVO examPaperVO = questionBankService.generateExamQuestionBank(planId);
+                CandidateExamPaperDO candidateExamPaperDO = new CandidateExamPaperDO();
+                try {
+                    candidateExamPaperDO.setPaperJson(objectMapper.writeValueAsString(examPaperVO));
+                } catch (JsonProcessingException e) {
+                    throw new BusinessException("系统错误");
+                }
+                candidateExamPaperDO.setEnrollId(enroll.getId());
+                candidateExamPaperDOList.add(candidateExamPaperDO);
+            }
+
+            if (!ticketSaveList.isEmpty()) {
+                workerExamTicketMapper.insertBatch(ticketSaveList);
+            }
+
+            if (!candidateExamPaperDOList.isEmpty()) {
+                candidateExamPaperMapper.insertBatch(candidateExamPaperDOList);
+            }
+
         }
 
         return success;
     }
 
+    /**
+     * 选择一个座位未满的考场
+     * 每次尝试 +1，占位成功说明可用
+     */
+    private Long findAvailableClassroom(List<Long> classroomIds, Long planId) {
+        for (Long classroomId : classroomIds) {
+            if (classroomMapper.incrementEnrolledCount(classroomId, planId) > 0) {
+                return classroomId;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 为单个考生生成准考证 PDF（附带错误兜底）
+     */
+    private String safeGenerateWorkerTicket(Long userId,
+                                            String idCard,
+                                            String nickname,
+                                            String encryptedExamNo,
+                                            Long classId) {
+        try {
+            return candidateTicketReactiveService.generateWorkerTicket(userId, idCard, encryptedExamNo, classId);
+        } catch (Exception e) {
+            throw new BusinessException("生成考生【" + nickname + "】的准考证失败，请稍后重试");
+        }
+    }
 }

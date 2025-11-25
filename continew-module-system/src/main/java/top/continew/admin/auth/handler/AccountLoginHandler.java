@@ -31,6 +31,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.auth.AbstractLoginHandler;
 import top.continew.admin.auth.enums.AuthTypeEnum;
 import top.continew.admin.auth.mapper.AuthMapper;
@@ -42,6 +43,7 @@ import top.continew.admin.auth.model.resp.CandidatesExamPlanVo;
 import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
 import top.continew.admin.auth.model.resp.LoginResp;
 import top.continew.admin.common.constant.*;
+import top.continew.admin.common.constant.enums.EnrollExamStatusEnum;
 import top.continew.admin.common.model.entity.UserRoleDeptDo;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
@@ -139,6 +141,7 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public LoginResp examLogin(AccountLoginReq req, ClientResp client, HttpServletRequest request) {
         // 验证用户名密码
         String username = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(req.getUsername()));
@@ -151,7 +154,8 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         CandidatesExamPlanReq candidatesExamPlanReq = new CandidatesExamPlanReq();
         candidatesExamPlanReq.setCandidateId(user.getId());
         String examNumber = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(req.getExamNumber()));
-        candidatesExamPlanReq.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
+        String examNumberEncrypt = aesWithHMAC.encryptAndSign(examNumber);
+        candidatesExamPlanReq.setExamNumber(examNumberEncrypt);
         candidatesExamPlanReq.setEnrollStatus(ExamEnrollStatusEnum.SIGNED_UP.getValue());
         CandidatesExamPlanVo candidatesExamPlanVo = userService.getPlanInfo(candidatesExamPlanReq);
         // 找不到对应的考试
@@ -205,6 +209,9 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         examCandidateInfoVO.setClassroomId(classroomDTO.getClassroomId());
         examCandidateInfoVO.setClassroomName(classroomDTO.getClassroomName());
         examCandidateInfoVO.setWarningShortFilm(candidatesExamPlanVo.getWarningShortFilm());
+        // 修改考生的考试状态为已签到
+        userService.updateExamStatus(user.getId(), examNumberEncrypt, candidatesExamPlanVo
+            .getPlanId(), EnrollExamStatusEnum.SIGNED.getValue());
         return LoginResp.builder()
             .token(token)
             .role(UserConstant.CANDIDATES_ROLE_FLAG)

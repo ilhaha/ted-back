@@ -321,8 +321,9 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         // 当前考场 ID
         Long classroomId = currentTask.getClassroomId();
 
-        // 3. 查找是否已有监考员生成过密码
+        // 3. 查找当前考场是否已有监考员生成过密码（不同考场密码不同）
         String existPassword = invigilateList.stream()
+            .filter(t -> t.getClassroomId().equals(classroomId))
             .map(PlanInvigilateDO::getExamPassword)
             .filter(Objects::nonNull)
             .findFirst()
@@ -372,7 +373,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
 
     /**
      * 根据计划id获取计划分配的监考员信息
-     * 
+     *
      * @param planId
      * @return
      */
@@ -383,7 +384,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
 
     /**
      * 监考员无法参加监考
-     * 
+     *
      * @param planId
      * @return
      */
@@ -398,7 +399,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
 
     /**
      * 更换监考员
-     * 
+     *
      * @param req
      * @return
      */

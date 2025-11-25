@@ -80,46 +80,38 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
 
     @Override
     public String generateWorkerTicket(Long userId, String idCard, String examNumber, Long classId) {
-        try {
-            // 1. 查询准考证数据（同步）
-            CandidateTicketDTO dto = examTicketMapper.findTicketByUserAndExamNumber(userId, examNumber);
-            if (dto == null) {
-                throw new RuntimeException("未找到该用户的准考证数据！");
-            }
-
-            // 2. 查询照片URL（同步）
-            WorkerApplyDO workerApplyDO = workerApplyMapper.selectOne(new LambdaQueryWrapper<WorkerApplyDO>()
-                .eq(WorkerApplyDO::getIdCardNumber, idCard)
-                .eq(WorkerApplyDO::getClassId, classId));
-
-            String photoUrl = workerApplyDO != null ? workerApplyDO.getFacePhoto() : null;
-
-            // 3. 解密并组装数据
-            dto.setTicketId(aesWithHMAC.verifyAndDecrypt(examNumber));
-            dto.setIdCard(aesWithHMAC.verifyAndDecrypt(dto.getIdCard()));
-            Map<String, Object> dataMap = assembleData(dto);
-
-            // 4. 同步下载照片
-            byte[] photoBytes = loadPhotoSync(photoUrl);
-
-            // 5. 同步生成PDF响应
-            String fileName = "准考证_" + examNumber + ".pdf";
-
-            ResponseEntity<byte[]> responseEntity = excelUtilReactive
-                .generatePdfResponseEntitySync(dataMap, excelTemplateUrl, photoBytes, fileName);
-
-            MultipartFile pdfFile = new InMemoryMultipartFile("file", idCard + "_WORKER_准考证.pdf", "application/pdf", responseEntity
-                .getBody());
-
-            // 上传 OSS
-            FileInfoResp fileInfoResp = fileService.upload(pdfFile, new GeneralFileReq());
-
-            return fileInfoResp.getUrl();
-
-        } catch (Exception e) {
-            log.error("生成准考证失败：userId={}, examNumber={}", userId, examNumber, e);
-            return null;
+        // 1. 查询准考证数据（同步）
+        CandidateTicketDTO dto = examTicketMapper.findTicketByUserAndExamNumber(userId, examNumber);
+        if (dto == null) {
+            throw new RuntimeException("未找到该用户的准考证数据！");
         }
+
+        // 2. 查询照片URL（同步）
+        WorkerApplyDO workerApplyDO = workerApplyMapper.selectOne(new LambdaQueryWrapper<WorkerApplyDO>()
+            .eq(WorkerApplyDO::getIdCardNumber, idCard)
+            .eq(WorkerApplyDO::getClassId, classId));
+
+        String photoUrl = workerApplyDO != null ? workerApplyDO.getFacePhoto() : null;
+
+        // 3. 解密并组装数据
+        dto.setTicketId(aesWithHMAC.verifyAndDecrypt(examNumber));
+        dto.setIdCard(aesWithHMAC.verifyAndDecrypt(dto.getIdCard()));
+        Map<String, Object> dataMap = assembleData(dto);
+
+        // 4. 同步下载照片
+        byte[] photoBytes = loadPhotoSync(photoUrl);
+
+        // 5. 同步生成PDF响应
+        String fileName = "准考证_" + examNumber + ".pdf";
+
+        ResponseEntity<byte[]> responseEntity = excelUtilReactive
+            .generatePdfResponseEntitySync(dataMap, excelTemplateUrl, photoBytes, fileName);
+
+        MultipartFile pdfFile = new InMemoryMultipartFile("file", idCard + "_WORKER_准考证.pdf", "application/pdf", responseEntity
+            .getBody());
+        // 上传 OSS
+        FileInfoResp fileInfoResp = fileService.upload(pdfFile, new GeneralFileReq());
+        return fileInfoResp.getUrl();
     }
 
     // 完全同步执行，适配MVC
