@@ -36,6 +36,7 @@ import top.continew.admin.common.constant.UploadStorageTypeEnum;
 import top.continew.admin.common.constant.UploadTypeConstants;
 import top.continew.admin.common.model.entity.IdCardDo;
 import top.continew.admin.common.service.ali.ocr.IdCardRecognition;
+import top.continew.admin.common.util.IDPhotoConverter;
 import top.continew.admin.common.util.VideoUtil;
 import top.continew.admin.system.enums.FileTypeEnum;
 import top.continew.admin.system.mapper.FileMapper;
@@ -250,6 +251,18 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         String path = today.getYear() + StringConstants.SLASH + today.getMonthValue() + StringConstants.SLASH + today
             .getDayOfMonth() + StringConstants.SLASH;
 
+        // 处理人脸证件照
+        if (frontOrBack != null && frontOrBack == 2) {
+            try {
+                if (file.getSize() > 2 * 1024 * 1024) {
+                    throw new BusinessException("一寸免冠照大小不能超过 2MB");
+                }
+                file = IDPhotoConverter.convertToOneInchPhoto(file);
+
+            } catch (Exception e) {
+                throw new BusinessException("一寸免冠照裁剪失败");
+            }
+        }
         UploadPretreatment uploadPretreatment = fileStorageService.of(file)
             .setPlatform(storage.getCode())
             .setHashCalculatorMd5(true)
@@ -284,32 +297,13 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         IdCardFileInfoResp fileInfoResp = new IdCardFileInfoResp();
         BeanUtils.copyProperties(fileInfo, fileInfoResp);
 
+
         // 处理人脸证件照
         if (frontOrBack != null && frontOrBack == 2) {
-            try {
-                BufferedImage img = ImageIO.read(file.getInputStream());
-                int width = img.getWidth();
-                int height = img.getHeight();
-
-                // 校验尺寸约为 295x413
-                if (Math.abs(width - 295) > 10 || Math.abs(height - 413) > 10) {
-                    throw new BusinessException("一寸免冠照尺寸不符合要求，应为约 295×413 像素");
-                }
-
-                // 校验文件大小
-                if (file.getSize() > 2 * 1024 * 1024) {
-                    throw new BusinessException("人脸证件照大小不能超过 2MB");
-                }
-
-                fileInfoResp.setFacePhoto(fileInfo.getUrl());
-                log.info("人脸证件照上传成功：{}", fileInfo.getUrl());
-                return fileInfoResp;
-
-            } catch (Exception e) {
-                log.error("人脸证件照上传失败：{}", e.getMessage(), e);
-                throw new BusinessException(e.getMessage());
-            }
+            fileInfoResp.setFacePhoto(fileInfo.getUrl());
+            return fileInfoResp;
         }
+
         // 身份证识别逻辑
         try {
             boolean flag = frontOrBack == 1;

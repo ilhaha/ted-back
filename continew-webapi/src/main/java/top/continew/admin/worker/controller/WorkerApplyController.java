@@ -48,6 +48,16 @@ import java.util.List;
 public class WorkerApplyController extends BaseController<WorkerApplyService, WorkerApplyResp, WorkerApplyDetailResp, WorkerApplyQuery, WorkerApplyReq> {
 
     /**
+     * 机构上传某个考生的资料
+     * @param workerOrgUploadReq
+     * @return
+     */
+    @PostMapping("/org/single/upload")
+    public Boolean orgSingleUploadDoc(@Validated @RequestBody WorkerOrgUploadReq workerOrgUploadReq) {
+        return baseService.orgSingleUploadDoc(workerOrgUploadReq);
+    }
+
+    /**
      * 机构批量导入
      * 
      * @param workerOrgImportReqs
@@ -102,5 +112,15 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
     @PostMapping("/verify")
     public WorkerApplyVO verify(@Validated @RequestBody VerifyReq verifyReq) {
         return baseService.verify(verifyReq);
+    }
+
+    /**
+     * 机构根据作业人员报考id获取需要上传的资料信息
+     *
+     * @return
+     */
+    @PostMapping("/doc/{workerId}")
+    public WorkerApplyVO getDocWorkerId(@PathVariable("workerId") Long workerId) {
+        return baseService.getDocWorkerId(workerId);
     }
 }

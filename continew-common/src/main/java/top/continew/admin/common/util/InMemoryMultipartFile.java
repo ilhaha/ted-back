@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package top.continew.admin.util;
+package top.continew.admin.common.util;
 
 import org.springframework.web.multipart.MultipartFile;
 import java.io.*;

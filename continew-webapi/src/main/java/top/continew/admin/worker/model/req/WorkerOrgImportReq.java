@@ -103,4 +103,25 @@ public class WorkerOrgImportReq implements Serializable {
      */
     private Map<String, String> docMap;
 
+    /**
+     * 学历
+     */
+    private String education;
+
+
+    /**
+     * 工作单位
+     */
+    private String workUnit;
+
+    /**
+     * 通讯地址
+     */
+    private String address;
+
+    /**
+     * 政治面貌
+     */
+    private String politicalStatus;
+
 }

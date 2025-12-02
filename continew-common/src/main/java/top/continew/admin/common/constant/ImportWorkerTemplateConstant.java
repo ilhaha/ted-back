@@ -18,6 +18,7 @@ package top.continew.admin.common.constant;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author ilhaha
@@ -26,7 +27,7 @@ import java.util.List;
 public class ImportWorkerTemplateConstant {
 
     /**
-     * 考试端 考生标识表示
+     * 导入作业人员模板表头（自定义）
      */
     public static final List<String> DEFAULT_HEAD = new ArrayList<>() {
         {
@@ -38,4 +39,33 @@ public class ImportWorkerTemplateConstant {
             add("报名资格申请表");
         }
     };
+
+    /**
+     * 导入作业人员模板表头（按照就系统）
+     */
+    public static final List<String> DEFAULT_HEAD_OLD = new ArrayList<>() {
+        {
+            add("姓名");
+            add("身份证号");
+            add("学历");
+            add("联系电话");
+            add("工作单位");
+            add("通讯地址");
+            add("政治面貌");
+        }
+    };
+
+    /**
+     * 学历
+     */
+    public static final Set<String> EDUCATION_SET = Set.of(
+            "小学", "初中", "高中", "专科", "本科", "研究生"
+    );
+
+    /**
+     * 政治面貌
+     */
+    public static final Set<String> POLITICAL_STATUS_SET = Set.of(
+            "中共党员", "共青团员", "群众"
+    );
 }

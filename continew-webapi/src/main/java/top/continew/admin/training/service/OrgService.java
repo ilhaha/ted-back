@@ -232,4 +232,12 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      * @return
      */
     ParsedExcelResultVO importWorker(MultipartFile file, Long classId);
+
+    /**
+     * 解析导入作业人员Excel
+     * @param file
+     * @param classId
+     * @return
+     */
+    ExcelParseResultVO parsedWorkerExcel(MultipartFile file, Long classId);
 }

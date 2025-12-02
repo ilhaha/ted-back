@@ -40,7 +40,7 @@ import top.continew.admin.system.service.UploadService;
 import top.continew.admin.training.mapper.OrgUserMapper;
 import top.continew.admin.training.model.entity.OrgDO;
 import top.continew.admin.training.model.vo.SelectClassVO;
-import top.continew.admin.util.InMemoryMultipartFile;
+import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;

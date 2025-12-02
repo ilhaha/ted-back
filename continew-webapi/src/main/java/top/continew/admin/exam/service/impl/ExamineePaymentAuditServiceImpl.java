@@ -59,7 +59,7 @@ import top.continew.admin.system.service.UploadService;
 import top.continew.admin.training.mapper.OrgClassMapper;
 import top.continew.admin.training.model.entity.OrgClassDO;
 import top.continew.admin.util.ExcelUtilReactive;
-import top.continew.admin.util.InMemoryMultipartFile;
+import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -68,7 +68,6 @@ import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

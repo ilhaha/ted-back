@@ -64,7 +64,7 @@ public class WorkerApplyResp extends BaseResp {
      * 作业人员手机号
      */
     @Schema(description = "作业人员手机号")
-    @JsonMask(MaskType.MOBILE_PHONE)
+//    @JsonMask(MaskType.MOBILE_PHONE)
     private String phone;
 
     /**
@@ -152,4 +152,25 @@ public class WorkerApplyResp extends BaseResp {
     @Schema(description = "资料名称与资料路径映射")
     @ExcelProperty(value = "资料名称与资料路径映射")
     private Map<String, String> docMap;
+
+    /**
+     * 学历
+     */
+    private String education;
+
+
+    /**
+     * 工作单位
+     */
+    private String workUnit;
+
+    /**
+     * 通讯地址
+     */
+    private String address;
+
+    /**
+     * 政治面貌
+     */
+    private String politicalStatus;
 }

@@ -71,4 +71,19 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      * @return
      */
     Boolean orgImport(List<WorkerOrgImportReq> workerOrgImportReqs);
+
+    /**
+     * 机构根据作业人员报考id获取需要上传的资料信息
+     *
+     * @return
+     */
+    WorkerApplyVO getDocWorkerId(Long workerId);
+
+    /**
+     * 机构上传某个考生的资料
+     * @param workerOrgUploadReq
+     * @return
+     */
+    Boolean orgSingleUploadDoc(WorkerOrgUploadReq workerOrgUploadReq);
+
 }

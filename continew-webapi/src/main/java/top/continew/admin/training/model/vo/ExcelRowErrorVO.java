@@ -14,31 +14,30 @@
  * limitations under the License.
  */
 
-package top.continew.admin.common.constant.enums;
+package top.continew.admin.training.model.vo;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import top.continew.starter.security.mask.annotation.JsonMask;
+import top.continew.starter.security.mask.enums.MaskType;
+
+import java.io.Serializable;
 
 /**
  * @author ilhaha
- * @Create 2025/11/3 16:32
+ * @Create 2025/11/5 16:51
  */
-@Getter
-@RequiredArgsConstructor
-public enum WorkerApplyReviewStatusEnum {
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ExcelRowErrorVO implements Serializable {
 
-    PENDING_REVIEW(0, "待审核"),
+    private Integer rowNum;
 
-    APPROVED(1, "审核通过"),
+    private String excelName;
 
-    REJECTED(2, "未通过"),
+    private String phone;
 
-    FAKE_MATERIAL(3, "虚假材料"),
-
-    WAIT_UPLOAD(4, "待上传资料"),
-
-    DOC_UPLOADED(5,"资料已上传");
-
-    private final Integer value;
-    private final String description;
+    private String errorMessage;
 }

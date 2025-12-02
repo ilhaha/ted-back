@@ -25,6 +25,7 @@ import org.apache.poi.poifs.filesystem.Ole10Native;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.enums.WorkerPictureTypeEnum;
 import top.continew.admin.common.model.dto.ExcelUploadFileResultDTO;
+import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.model.resp.IdCardFileInfoResp;

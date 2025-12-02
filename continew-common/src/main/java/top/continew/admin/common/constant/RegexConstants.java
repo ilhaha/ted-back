@@ -55,9 +55,19 @@ public class RegexConstants {
     public static final String GENERAL_NAME = "^[\\u4e00-\\u9fa5a-zA-Z0-9_-]{2,30}$";
 
     /**
+     * 姓名正则（长度为 2-5 个中文简体）
+     */
+    public static final String CHINESE_NAME = "^[\\u4e00-\\u9fa5]{2,5}$";
+
+    /**
      * 包名正则（可以包含大小写字母、数字、下划线，每一级包名不能以数字开头）
      */
     public static final String PACKAGE_NAME = "^(?:[a-zA-Z_][a-zA-Z0-9_]*\\.)*[a-zA-Z_][a-zA-Z0-9_]*$";
+
+    /**
+     * 身份证正则
+     */
+    public static final String ID_CARD_REGEX = "^[1-9]\\d{5}(18|19|20)\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}[0-9Xx]$";
 
     private RegexConstants() {
     }

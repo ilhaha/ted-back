@@ -54,6 +54,7 @@ import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.ImportWorkerTemplateConstant;
 import top.continew.admin.common.constant.RedisConstant;
+import top.continew.admin.common.constant.RegexConstants;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.dto.ExcelUploadFileResultDTO;
 import top.continew.admin.common.model.entity.UserTokenDo;
@@ -82,7 +83,7 @@ import top.continew.admin.training.model.resp.OrgCandidatesResp;
 import top.continew.admin.training.model.vo.*;
 import top.continew.admin.util.ExcelMediaUtils;
 import top.continew.admin.util.ExcelUtilReactive;
-import top.continew.admin.util.InMemoryMultipartFile;
+import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.starter.core.exception.BusinessException;
@@ -204,19 +205,19 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             // 2查询机构分类信息
             List<Map<String, Object>> categoryRows = orgCategoryRelMapper.listCategoryInfoByOrgIds(orgIds);
             Map<Long, String> categoryMap = categoryRows.stream()
-                .collect(Collectors.groupingBy(r -> ((Number)r.get("org_id")).longValue(), Collectors
-                    .mapping(r -> (String)r.get("name"), Collectors.joining("、"))));
+                    .collect(Collectors.groupingBy(r -> ((Number) r.get("org_id")).longValue(), Collectors
+                            .mapping(r -> (String) r.get("name"), Collectors.joining("、"))));
 
             // 3 查询机构账号信息（每个机构一个账号）
             List<Map<String, Object>> accountRows = orgUserMapper.listAccountNamesByOrgIds(orgIds);
 
             Map<Long, String> accountMap = accountRows.stream()
-                .collect(Collectors.toMap(r -> ((Number)r.get("org_id")).longValue(), r -> {
-                    String nickname = (String)r.get("nickname");
-                    String username = (String)r.get("username");
-                    String decryptedUsername = aesWithHMAC.verifyAndDecrypt(username);
-                    return nickname + " [ " + decryptedUsername + " ] ";
-                }, (v1, v2) -> v1));
+                    .collect(Collectors.toMap(r -> ((Number) r.get("org_id")).longValue(), r -> {
+                        String nickname = (String) r.get("nickname");
+                        String username = (String) r.get("username");
+                        String decryptedUsername = aesWithHMAC.verifyAndDecrypt(username);
+                        return nickname + " [ " + decryptedUsername + " ] ";
+                    }, (v1, v2) -> v1));
 
             // 4 设置分类名和账号名
             list.forEach(org -> {
@@ -239,10 +240,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         // 获取八大类id
         List<OrgCategoryRelationDO> orgCategoryRelationDOS = orgCategoryRelMapper
-            .selectList(new LambdaQueryWrapper<OrgCategoryRelationDO>().eq(OrgCategoryRelationDO::getOrgId, id));
+                .selectList(new LambdaQueryWrapper<OrgCategoryRelationDO>().eq(OrgCategoryRelationDO::getOrgId, id));
         orgDetailResp.setCategoryIds(orgCategoryRelationDOS.stream()
-            .map(OrgCategoryRelationDO::getCategoryId)
-            .collect(Collectors.toList()));
+                .map(OrgCategoryRelationDO::getCategoryId)
+                .collect(Collectors.toList()));
         //
         //        List<String> categoryNames = orgCategoryRelMapper.listCategoryNamesByOrgId(id);
         //        orgDetailResp.setCategoryNames(categoryNames == null ? "" : String.join(",", categoryNames));
@@ -255,10 +256,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     public Long add(OrgReq req) {
         // 社会代号、机构名称、机构信用代码不可重复
         List<OrgDO> orgDOList = baseMapper.selectList(new LambdaQueryWrapper<OrgDO>().eq(OrgDO::getName, req.getName())
-            .or()
-            .eq(OrgDO::getCode, req.getCode())
-            .or()
-            .eq(OrgDO::getSocialCode, req.getSocialCode()));
+                .or()
+                .eq(OrgDO::getCode, req.getCode())
+                .or()
+                .eq(OrgDO::getSocialCode, req.getSocialCode()));
         ValidationUtils.throwIfNotEmpty(orgDOList, "机构代号、机构名称、机构信用代码已存在");
         Long orgId = super.add(req);
         List<Long> categoryIds = req.getCategoryIds();
@@ -285,16 +286,16 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Transactional // 确保事务性
     public void update(OrgReq req, Long id) {
         List<OrgDO> orgDOList = baseMapper.selectList(new LambdaQueryWrapper<OrgDO>().ne(OrgDO::getId, id)
-            .and(new Consumer<LambdaQueryWrapper<OrgDO>>() {
-                @Override
-                public void accept(LambdaQueryWrapper<OrgDO> orgDOLambdaQueryWrapper) {
-                    orgDOLambdaQueryWrapper.eq(OrgDO::getName, req.getName())
-                        .or()
-                        .eq(OrgDO::getCode, req.getCode())
-                        .or()
-                        .eq(OrgDO::getSocialCode, req.getSocialCode());
-                }
-            }));
+                .and(new Consumer<LambdaQueryWrapper<OrgDO>>() {
+                    @Override
+                    public void accept(LambdaQueryWrapper<OrgDO> orgDOLambdaQueryWrapper) {
+                        orgDOLambdaQueryWrapper.eq(OrgDO::getName, req.getName())
+                                .or()
+                                .eq(OrgDO::getCode, req.getCode())
+                                .or()
+                                .eq(OrgDO::getSocialCode, req.getSocialCode());
+                    }
+                }));
         ValidationUtils.throwIfNotEmpty(orgDOList, "机构代号、机构名称、机构信用代码已存在");
 
         super.update(req, id);
@@ -324,7 +325,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         this.removeByIds(ids);
 
         orgCategoryRelMapper.delete(new LambdaQueryWrapper<OrgCategoryRelationDO>()
-            .in(OrgCategoryRelationDO::getOrgId, ids));
+                .in(OrgCategoryRelationDO::getOrgId, ids));
 
         orgUserMapper.delete(new LambdaQueryWrapper<TedOrgUser>().in(TedOrgUser::getOrgId, ids));
 
@@ -350,8 +351,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     public List<UserOrgDTO> processUserCredentials(List<UserOrgDTO> userDTOList) {
         // 1. 前置校验强化
         final Long userId = Optional.ofNullable(TokenLocalThreadUtil.get())
-            .orElseThrow(() -> new AuthException("用户未登录"))
-            .getUserId();
+                .orElseThrow(() -> new AuthException("用户未登录"))
+                .getUserId();
 
         OrgDTO orgInfo = orgMapper.getOrgId(userId);
         if (orgInfo == null) {
@@ -365,24 +366,24 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         // 2. 并行流处理提升效率
         return userDTOList.parallelStream()
-            .filter(Objects::nonNull) // 过滤空对象
-            .peek(userDTO -> {
-                try {
-                    // 3. 密码生成逻辑修正
-                    String username = validateUsername(userDTO.getUsername());
-                    String rawPassword = generatePassword(orgInfo.getCode(), username);
-                    validatePhone(userDTO.getPhone());
-                    // 4. 加密存储
-                    userDTO.setPassword(rawPassword);
-                    userDTO.setOrgId(orgInfo.getId());
-                    userDTO.setDeptId(examCenterId);
-                    userDTO.setRoleId(candidatesId);
-                } catch (Exception e) {
-                    log.warn("用户数据校验失败 ");
-                    throw e; // 触发异常处理
-                }
-            })
-            .collect(Collectors.toList());
+                .filter(Objects::nonNull) // 过滤空对象
+                .peek(userDTO -> {
+                    try {
+                        // 3. 密码生成逻辑修正
+                        String username = validateUsername(userDTO.getUsername());
+                        String rawPassword = generatePassword(orgInfo.getCode(), username);
+                        validatePhone(userDTO.getPhone());
+                        // 4. 加密存储
+                        userDTO.setPassword(rawPassword);
+                        userDTO.setOrgId(orgInfo.getId());
+                        userDTO.setDeptId(examCenterId);
+                        userDTO.setRoleId(candidatesId);
+                    } catch (Exception e) {
+                        log.warn("用户数据校验失败 ");
+                        throw e; // 触发异常处理
+                    }
+                })
+                .collect(Collectors.toList());
     }
 
     // 密码生成工具方法
@@ -395,7 +396,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     private String validateUsername(String username) {
         ValidationUtils.throwIfBlank(username, "用户名不能为空");
         ValidationUtils.throwIf(!username
-            .matches("^[1-9]\\d{5}(18|19|20)\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}[0-9Xx]$"), "身份证格式错误");
+                .matches(RegexConstants.ID_CARD_REGEX), "身份证格式错误");
         return username.trim();
     }
 
@@ -458,7 +459,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         }
         super.sort(queryWrapper, pageQuery);
         IPage<OrgCandidatesResp> page = baseMapper.getCandidatesList(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
         PageResp<OrgCandidatesResp> pageResp = PageResp.build(page, OrgCandidatesResp.class);
         pageResp.getList().forEach(this::fill);
         return pageResp;
@@ -556,7 +557,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 updateDO.setRemark(null);
 
                 int updateCount = orgCandidateMapper.update(updateDO, new LambdaUpdateWrapper<OrgCandidateDO>()
-                    .eq(OrgCandidateDO::getId, agencyStatusVO.getId()));
+                        .eq(OrgCandidateDO::getId, agencyStatusVO.getId()));
 
                 // 更新成功后插入培训缴费通知单（如不存在）
                 if (updateCount > 0) {
@@ -596,12 +597,12 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     private void insertTrainingPaymentNotice(Long orgId, Long projectId, Long userId, OrgCandidateDO insertDO) {
         // 检查是否已有通知单
         OrgTrainingPaymentAuditDO existNotice = orgTrainingPaymentAuditMapper
-            .selectOne(new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
-                .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
-                .eq(OrgTrainingPaymentAuditDO::getCandidateId, userId)
-                .eq(OrgTrainingPaymentAuditDO::getProjectId, projectId)
-                .eq(OrgTrainingPaymentAuditDO::getEnrollId, insertDO.getId())
-                .eq(OrgTrainingPaymentAuditDO::getIsDeleted, 0));
+                .selectOne(new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
+                        .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
+                        .eq(OrgTrainingPaymentAuditDO::getCandidateId, userId)
+                        .eq(OrgTrainingPaymentAuditDO::getProjectId, projectId)
+                        .eq(OrgTrainingPaymentAuditDO::getEnrollId, insertDO.getId())
+                        .eq(OrgTrainingPaymentAuditDO::getIsDeleted, 0));
 
         // 已存在则跳过
         if (existNotice != null) {
@@ -610,9 +611,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         // 未存在则创建新通知单
         OrgTrainingPriceDO existPrice = orgTrainingPriceMapper.selectOne(new LambdaQueryWrapper<OrgTrainingPriceDO>()
-            .eq(OrgTrainingPriceDO::getOrgId, orgId)
-            .eq(OrgTrainingPriceDO::getProjectId, projectId)
-            .eq(OrgTrainingPriceDO::getIsDeleted, 0));
+                .eq(OrgTrainingPriceDO::getOrgId, orgId)
+                .eq(OrgTrainingPriceDO::getProjectId, projectId)
+                .eq(OrgTrainingPriceDO::getIsDeleted, 0));
         if (existPrice == null) {
             throw new BusinessException("未找到培训价格信息");
         }
@@ -643,9 +644,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         // 查找考生提交加入机构的申请记录
         LambdaQueryWrapper<OrgCandidateDO> candidateQuery = new LambdaQueryWrapper<>();
         candidateQuery.eq(OrgCandidateDO::getCandidateId, userId)
-            .eq(OrgCandidateDO::getOrgId, orgId)
-            .eq(OrgCandidateDO::getStatus, 2) // 2 = 已加入
-            .eq(OrgCandidateDO::getIsDeleted, false);
+                .eq(OrgCandidateDO::getOrgId, orgId)
+                .eq(OrgCandidateDO::getStatus, 2) // 2 = 已加入
+                .eq(OrgCandidateDO::getIsDeleted, false);
 
         OrgCandidateDO application = orgCandidateMapper.selectOne(candidateQuery);
 
@@ -656,10 +657,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         //  查询考生是否已缴费且已退费
         LambdaQueryWrapper<OrgTrainingPaymentAuditDO> paymentQuery = new LambdaQueryWrapper<>();
         paymentQuery.eq(OrgTrainingPaymentAuditDO::getCandidateId, userId)
-            .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
-            .eq(OrgTrainingPaymentAuditDO::getAuditStatus, 6) // 6 = 已退费
-            .eq(OrgTrainingPaymentAuditDO::getEnrollId, application.getId())
-            .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false);
+                .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
+                .eq(OrgTrainingPaymentAuditDO::getAuditStatus, 6) // 6 = 已退费
+                .eq(OrgTrainingPaymentAuditDO::getEnrollId, application.getId())
+                .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false);
 
         Long refundedCount = orgTrainingPaymentAuditMapper.selectCount(paymentQuery);
 
@@ -670,8 +671,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         // 查询该考生在当前机构下的所有未完成预报名记录（多个考试计划）
         LambdaQueryWrapper<EnrollPreDO> enrollPreQueryWrapper = new LambdaQueryWrapper<>();
         enrollPreQueryWrapper.eq(EnrollPreDO::getCandidateId, userId)
-            .eq(EnrollPreDO::getOrgId, orgId)
-            .eq(EnrollPreDO::getIsDeleted, false);
+                .eq(EnrollPreDO::getOrgId, orgId)
+                .eq(EnrollPreDO::getIsDeleted, false);
         List<EnrollPreDO> enrollPreList = enrollPreMapper.selectList(enrollPreQueryWrapper);
 
         // 检查所有预报名记录关联的考试计划
@@ -717,9 +718,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         // 查找学生提交的加入机构申请记录
         LambdaQueryWrapper<OrgCandidateDO> candidateQuery = new LambdaQueryWrapper<>();
         candidateQuery.eq(OrgCandidateDO::getCandidateId, candidateId)
-            .eq(OrgCandidateDO::getOrgId, orgId)
-            .eq(OrgCandidateDO::getStatus, 2) // 2 = 已加入
-            .eq(OrgCandidateDO::getIsDeleted, false);
+                .eq(OrgCandidateDO::getOrgId, orgId)
+                .eq(OrgCandidateDO::getStatus, 2) // 2 = 已加入
+                .eq(OrgCandidateDO::getIsDeleted, false);
 
         OrgCandidateDO candidateRecord = orgCandidateMapper.selectOne(candidateQuery);
         if (candidateRecord == null) {
@@ -729,10 +730,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         // 判断该学生是否已退费
         LambdaQueryWrapper<OrgTrainingPaymentAuditDO> paymentQuery = new LambdaQueryWrapper<>();
         paymentQuery.eq(OrgTrainingPaymentAuditDO::getCandidateId, candidateId)
-            .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
-            .eq(OrgTrainingPaymentAuditDO::getEnrollId, candidateRecord.getId())
-            .eq(OrgTrainingPaymentAuditDO::getAuditStatus, 6) // 6 = 已退费
-            .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false);
+                .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
+                .eq(OrgTrainingPaymentAuditDO::getEnrollId, candidateRecord.getId())
+                .eq(OrgTrainingPaymentAuditDO::getAuditStatus, 6) // 6 = 已退费
+                .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false);
 
         Long refundedCount = orgTrainingPaymentAuditMapper.selectCount(paymentQuery);
         if (refundedCount == 0) {
@@ -742,8 +743,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         // 检查学生在该机构下是否存在未结束的考试计划
         LambdaQueryWrapper<EnrollPreDO> enrollPreQueryWrapper = new LambdaQueryWrapper<>();
         enrollPreQueryWrapper.eq(EnrollPreDO::getCandidateId, candidateId)
-            .eq(EnrollPreDO::getOrgId, orgId)
-            .eq(EnrollPreDO::getIsDeleted, false);
+                .eq(EnrollPreDO::getOrgId, orgId)
+                .eq(EnrollPreDO::getIsDeleted, false);
         List<EnrollPreDO> enrollPreList = enrollPreMapper.selectList(enrollPreQueryWrapper);
 
         if (!enrollPreList.isEmpty()) {
@@ -788,9 +789,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         // 查找考生提交加入机构的申请记录
         OrgCandidateDO candidateRecord = orgCandidateMapper.selectOne(new LambdaQueryWrapper<OrgCandidateDO>()
-            .eq(OrgCandidateDO::getOrgId, orgId)
-            .eq(OrgCandidateDO::getCandidateId, userId)
-            .eq(OrgCandidateDO::getIsDeleted, false));
+                .eq(OrgCandidateDO::getOrgId, orgId)
+                .eq(OrgCandidateDO::getCandidateId, userId)
+                .eq(OrgCandidateDO::getIsDeleted, false));
 
         if (candidateRecord == null) {
             throw new BusinessException("未找到有效的机构申请记录，无法撤回");
@@ -800,16 +801,16 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         // 查询缴费记录（同一考生 + 机构 + 申请记录）
         List<OrgTrainingPaymentAuditDO> payments = orgTrainingPaymentAuditMapper
-            .selectList(new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
-                .eq(OrgTrainingPaymentAuditDO::getCandidateId, userId)
-                .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
-                .eq(OrgTrainingPaymentAuditDO::getEnrollId, enrollId)
-                .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false));
+                .selectList(new LambdaQueryWrapper<OrgTrainingPaymentAuditDO>()
+                        .eq(OrgTrainingPaymentAuditDO::getCandidateId, userId)
+                        .eq(OrgTrainingPaymentAuditDO::getOrgId, orgId)
+                        .eq(OrgTrainingPaymentAuditDO::getEnrollId, enrollId)
+                        .eq(OrgTrainingPaymentAuditDO::getIsDeleted, false));
 
         if (!payments.isEmpty()) {
             // 检查是否有已审核通过（2）的记录（即：已缴费但未退费）
             boolean hasApproved = payments.stream()
-                .anyMatch(p -> p.getAuditStatus() != null && p.getAuditStatus() == 2);
+                    .anyMatch(p -> p.getAuditStatus() != null && p.getAuditStatus() == 2);
             if (hasApproved) {
                 throw new BusinessException("请先联系管理员退款后，再撤回申请");
             }
@@ -952,8 +953,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         // 构建父子关系
         for (ProjectCategoryVO parent : parentList) {
             List<ProjectCategoryVO> children = childrenList.stream()
-                .filter(child -> Objects.equals(child.getParentId(), parent.getValue()))
-                .collect(Collectors.toList());
+                    .filter(child -> Objects.equals(child.getParentId(), parent.getValue()))
+                    .collect(Collectors.toList());
             parent.setChildren(children);
         }
         return parentList;
@@ -985,7 +986,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         orgUserMapper.delete(new LambdaQueryWrapper<TedOrgUser>().eq(TedOrgUser::getOrgId, ids));
         // 删除机构与分类关联信息
         orgCategoryRelMapper.delete(new LambdaQueryWrapper<OrgCategoryRelationDO>()
-            .eq(OrgCategoryRelationDO::getOrgId, ids));
+                .eq(OrgCategoryRelationDO::getOrgId, ids));
 
     }
 
@@ -1027,8 +1028,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             // 5️ 绑定第三层到第二层
             for (ProjectCategoryVO project : projectList) {
                 List<ProjectCategoryVO> classes = classList.stream()
-                    .filter(c -> Objects.equals(c.getParentId(), project.getValue()))
-                    .collect(Collectors.toList());
+                        .filter(c -> Objects.equals(c.getParentId(), project.getValue()))
+                        .collect(Collectors.toList());
                 project.setChildren(classes);
             }
         }
@@ -1036,8 +1037,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         // 6️ 绑定第二层到第一层
         for (ProjectCategoryVO parent : parentList) {
             List<ProjectCategoryVO> children = projectList.stream()
-                .filter(child -> Objects.equals(child.getParentId(), parent.getValue()))
-                .collect(Collectors.toList());
+                    .filter(child -> Objects.equals(child.getParentId(), parent.getValue()))
+                    .collect(Collectors.toList());
             parent.setChildren(children);
         }
 
@@ -1089,7 +1090,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         OrgDTO orgDTO = orgMapper.getOrgId(userTokenDo.getUserId());
         List<OrgProjectClassCandidateVO> flatList = baseMapper.getSelectProjectClassCandidate(orgDTO
-            .getId(), projectId, planType, planId);
+                .getId(), projectId, planType, planId);
 
         // 组装层级结构
         Map<Long, ProjectCategoryVO> projectMap = new LinkedHashMap<>();
@@ -1106,17 +1107,17 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
             // 二级：班级
             ProjectCategoryVO clazz = project.getChildren()
-                .stream()
-                .filter(c -> c.getValue().equals(item.getClassId()))
-                .findFirst()
-                .orElseGet(() -> {
-                    ProjectCategoryVO vo = new ProjectCategoryVO();
-                    vo.setValue(item.getClassId());
-                    vo.setLabel(item.getClassLabel());
-                    vo.setChildren(new ArrayList<>());
-                    project.getChildren().add(vo);
-                    return vo;
-                });
+                    .stream()
+                    .filter(c -> c.getValue().equals(item.getClassId()))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        ProjectCategoryVO vo = new ProjectCategoryVO();
+                        vo.setValue(item.getClassId());
+                        vo.setLabel(item.getClassLabel());
+                        vo.setChildren(new ArrayList<>());
+                        project.getChildren().add(vo);
+                        return vo;
+                    });
 
             // 三级：学员
             if (item.getCandidateId() != null) {
@@ -1145,8 +1146,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         // 报名时间校验
         LocalDateTime enrollEndTime = examPlanDO.getEnrollEndTime();
         ValidationUtils.throwIf(!ExamPlanStatusEnum.IN_FORCE.getValue().equals(examPlanDO.getStatus()) || LocalDateTime
-            .now()
-            .isAfter(enrollEndTime), "报名时间已截至，无法继续报名");
+                .now()
+                .isAfter(enrollEndTime), "报名时间已截至，无法继续报名");
 
         // 空检查
         List<List<Long>> projectClassCandidateList = orgApplyPreReq.getCandidateIds();
@@ -1168,7 +1169,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         int maxNumber = 0;
         List<ClassroomDO> classroomDOS = classroomMapper.selectList(new LambdaQueryWrapper<ClassroomDO>()
-            .in(ClassroomDO::getId, examPlanVO.getClassroomList()));
+                .in(ClassroomDO::getId, examPlanVO.getClassroomList()));
         for (ClassroomDO classroomDO : classroomDOS) {
             maxNumber += classroomDO.getMaxCandidates();
         }
@@ -1182,14 +1183,14 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         }).toList();
 
         List<Long> existedCandidateIds = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
-            .eq(EnrollDO::getExamPlanId, examPlanId)
-            .in(EnrollDO::getUserId, candidateIds)).stream().map(EnrollDO::getUserId).toList();
+                .eq(EnrollDO::getExamPlanId, examPlanId)
+                .in(EnrollDO::getUserId, candidateIds)).stream().map(EnrollDO::getUserId).toList();
 
         if (CollUtil.isNotEmpty(existedCandidateIds)) {
             String existedNames = String.join("、", userMapper.selectByIds(existedCandidateIds)
-                .stream()
-                .map(UserDO::getNickname)
-                .toList());
+                    .stream()
+                    .map(UserDO::getNickname)
+                    .toList());
             throw new BusinessException("以下考生已报名该考试计划：" + existedNames);
         }
 
@@ -1238,7 +1239,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 return node;
             });
 
-            Map<Long, Map<String, Object>> projectMap = (Map<Long, Map<String, Object>>)orgNode.get("children");
+            Map<Long, Map<String, Object>> projectMap = (Map<Long, Map<String, Object>>) orgNode.get("children");
 
             Map<String, Object> projectNode = projectMap.computeIfAbsent(row.getProjectId(), k -> {
                 Map<String, Object> node = new LinkedHashMap<>();
@@ -1248,7 +1249,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 return node;
             });
 
-            List<Map<String, Object>> classList = (List<Map<String, Object>>)projectNode.get("children");
+            List<Map<String, Object>> classList = (List<Map<String, Object>>) projectNode.get("children");
 
             if (row.getClassId() != null) {
                 Map<String, Object> classNode = new LinkedHashMap<>();
@@ -1260,7 +1261,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map<String, Object> orgNode : orgMap.values()) {
-            Map<Long, Map<String, Object>> projectMap = (Map<Long, Map<String, Object>>)orgNode.remove("children");
+            Map<Long, Map<String, Object>> projectMap = (Map<Long, Map<String, Object>>) orgNode.remove("children");
             orgNode.put("children", new ArrayList<>(projectMap.values()));
             result.add(orgNode);
         }
@@ -1325,7 +1326,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
-            headerFont.setFontHeightInPoints((short)12);
+            headerFont.setFontHeightInPoints((short) 12);
             headerFont.setColor(IndexedColors.WHITE.getIndex());
             headerStyle.setFont(headerFont);
             headerStyle.setAlignment(HorizontalAlignment.CENTER);
@@ -1361,13 +1362,13 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             tipRow.setHeightInPoints(100);
 
             String tipText = """
-                温馨提示：
-                1. 请完整填写所有必填项，表头对应的内容不得为空；
-                2. 上传的图片（身份证正反面、一寸照等）请确保大小适配单元格，不可超出边界；
-                3. 报名资格申请表请以 PDF 格式插入，并选择“文件附件”方式；
-                4. 请从第 3 行开始填写数据，确保中间无空行或空白记录；
-                5. 建议每次导入数据不超过 50 条，以提升导入效率。
-                """;
+                    温馨提示：
+                    1. 请完整填写所有必填项，表头对应的内容不得为空；
+                    2. 上传的图片（身份证正反面、一寸照等）请确保大小适配单元格，不可超出边界；
+                    3. 报名资格申请表请以 PDF 格式插入，并选择“文件附件”方式；
+                    4. 请从第 3 行开始填写数据，确保中间无空行或空白记录；
+                    5. 建议每次导入数据不超过 50 条，以提升导入效率。
+                    """;
 
             // 合并提示单元格（例如 A2 ~ 最后一列）
             sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, headers.size() - 1));
@@ -1408,7 +1409,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
             HttpHeaders headersHttp = new HttpHeaders();
             headersHttp.setContentType(MediaType
-                .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+                    .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
             headersHttp.setContentDispositionFormData("attachment", fileName);
 
             return new ResponseEntity<>(out.toByteArray(), headersHttp, HttpStatus.OK);
@@ -1485,7 +1486,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                     String idCardNumber = item.getIdCardNumber();
                     item.setEncFieldB(aesWithHMAC.encryptAndSign(idCardNumber));
                     item.setIdCardNumber(CharSequenceUtil.replaceByCodePoint(idCardNumber, 2, idCardNumber
-                        .length() - 5, '*'));
+                            .length() - 5, '*'));
 
                     item.setIsUpload(true);
                 });
@@ -1499,6 +1500,143 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             e.printStackTrace();
             throw new BusinessException("导入过程发生错误，请检查模板是否被修改");
         }
+    }
+
+    /**
+     * 解析导入作业人员Excel
+     *
+     * @param file
+     * @param classId
+     * @return
+     */
+    @Override
+    public ExcelParseResultVO parsedWorkerExcel(MultipartFile file, Long classId) {
+        if (file.isEmpty()) {
+            throw new BusinessException("文件不能为空");
+        }
+
+        String filename = file.getOriginalFilename();
+        if (filename == null || !filename.endsWith(".xlsx")) {
+            throw new BusinessException("仅支持.xlsx文件");
+        }
+
+        try (InputStream is = file.getInputStream(); XSSFWorkbook workbook = new XSSFWorkbook(is)) {
+            XSSFSheet sheet = workbook.getSheetAt(0);
+            if (sheet == null) {
+                throw new BusinessException("Excel中未找到有效工作表");
+            }
+
+            // ============ 阶段1：模板与表头校验 ============
+            validateTemplate(sheet, ImportWorkerTemplateConstant.DEFAULT_HEAD_OLD);
+
+            // ============ 阶段2：行级校验（仅检查存在性） ============
+            validateRows(sheet, ImportWorkerTemplateConstant.DEFAULT_HEAD_OLD);
+
+            // ============ 阶段3：上传校验============
+            ExcelParseResultVO excelParseResultVO = parsedExcel(sheet, classId);
+
+            List<ExcelRowSuccessVO> successList = excelParseResultVO.getSuccessList();
+            List<ExcelRowErrorVO> failedList = excelParseResultVO.getFailedList();
+
+            // 检查成功列表中的重复身份证号，将重复条目移到失败列表，并记录重复行号
+            removeDuplicateIdCard(successList, failedList);
+
+            // 删除数据库已存在身份证，将已存在的移到失败列表
+            removeExistingIdCard(successList, failedList, classId);
+
+            // 删除数据库中电话号码与当前身份证导入的手机号不匹配的记录，将已存在的移到失败列表
+            removeMismatchPhoneRecord(successList, failedList);
+
+            return excelParseResultVO;
+
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new BusinessException("导入过程发生错误，请检查模板是否被修改");
+        }
+    }
+
+    /**
+     * 返回要插入的数据
+     *
+     * @param sheet
+     * @param classId
+     * @return
+     */
+    private ExcelParseResultVO parsedExcel(XSSFSheet sheet, Long classId) {
+        ExcelParseResultVO result = new ExcelParseResultVO();
+        List<ExcelRowSuccessVO> successList = new ArrayList<>();
+        List<ExcelRowErrorVO> failedList = new ArrayList<>();
+
+        int rowCount = sheet.getPhysicalNumberOfRows();
+
+        for (int rowIndex = 1; rowIndex < rowCount; rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (ExcelMediaUtils.isRowEmpty(row))
+                break;
+
+            String candidateName = getCellString(row, 0);
+            String idCardNumber = getCellString(row, 1);
+            String education = getCellString(row, 2);
+            String phone = getCellString(row, 3);
+            String workUnit = getCellString(row, 4);
+            String address = getCellString(row, 5);
+            String politicalStatus = getCellString(row, 6);
+            try {
+                ExcelRowSuccessVO worker = new ExcelRowSuccessVO();
+                worker.setExcelName(candidateName);
+                worker.setPhone(phone);
+                worker.setRowNum(rowIndex + 1);
+                worker.setCandidateName(candidateName);
+                worker.setIdCardNumber(idCardNumber);
+                worker.setGender(getGenderByIdCard(idCardNumber));
+                worker.setWorkUnit(workUnit);
+                worker.setEducation(education);
+                worker.setAddress(address);
+                worker.setPoliticalStatus(politicalStatus);
+                worker.setStatus(WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue());
+                worker.setClassId(classId);
+                worker.setApplyType(WorkerApplyTypeEnum.ORG_IMPORT.getValue());
+                successList.add(worker);
+
+            } catch (Exception e) {
+                String message = e.getMessage();
+                if (message != null && message.contains("BadRequestException")) {
+                    int idx = message.lastIndexOf(": ");
+                    if (idx != -1 && idx + 2 < message.length()) {
+                        message = message.substring(idx + 2);
+                    }
+                }
+                failedList.add(new ExcelRowErrorVO(rowIndex + 1, candidateName, phone, message));
+            }
+        }
+        result.setSuccessList(successList);
+        result.setFailedList(failedList);
+        return result;
+    }
+
+
+    /**
+     * 根据身份证辨别性别
+     *
+     * @param idCard
+     * @return
+     */
+    private static String getGenderByIdCard(String idCard) {
+        if (idCard == null || idCard.length() != 18) {
+            return null;
+        }
+
+        // 第 17 位（索引 16）判断性别：奇数男，偶数女
+        char genderCode = idCard.charAt(16);
+
+        if (!Character.isDigit(genderCode)) {
+            return null;
+        }
+
+        int genderNum = genderCode - '0';
+        return (genderNum % 2 == 1) ? "男" : "女";
     }
 
     /**
@@ -1532,8 +1670,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 worker.setPhone(phone);
                 // 上传身份证正面
                 ExcelUploadFileResultDTO idFront = ExcelMediaUtils
-                    .excelUploadFile(workbook, sheet, rowIndex, 2, uploadService, WorkerPictureTypeEnum.ID_CARD_FRONT
-                        .getValue());
+                        .excelUploadFile(workbook, sheet, rowIndex, 2, uploadService, WorkerPictureTypeEnum.ID_CARD_FRONT
+                                .getValue());
                 String realName = idFront.getRealName();
                 if (!realName.equals(excelName)) {
                     throw new BusinessException("上传的身份证与Excel填写的姓名不一致");
@@ -1546,21 +1684,21 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
                 // 上传身份证反面
                 ExcelUploadFileResultDTO idBack = ExcelMediaUtils
-                    .excelUploadFile(workbook, sheet, rowIndex, 3, uploadService, WorkerPictureTypeEnum.ID_CARD_BACK
-                        .getValue());
+                        .excelUploadFile(workbook, sheet, rowIndex, 3, uploadService, WorkerPictureTypeEnum.ID_CARD_BACK
+                                .getValue());
                 if (LocalDateTime.now().isAfter(idBack.getValidEndDate().atTime(LocalTime.MAX))) {
                     throw new BusinessException("身份证已过期");
                 }
                 worker.setIdCardPhotoBack(idBack.getIdCardPhotoBack());
                 // 上传一寸免冠照
                 ExcelUploadFileResultDTO face = ExcelMediaUtils
-                    .excelUploadFile(workbook, sheet, rowIndex, 4, uploadService, WorkerPictureTypeEnum.PASSPORT_PHOTO
-                        .getValue());
+                        .excelUploadFile(workbook, sheet, rowIndex, 4, uploadService, WorkerPictureTypeEnum.PASSPORT_PHOTO
+                                .getValue());
                 worker.setFacePhoto(face.getFacePhoto());
 
                 // 报名申请资格表附件
                 Map<String, List<String>> oleMap = ExcelMediaUtils
-                    .getOleAttachmentMapAndUpload(workbook, rowIndex, uploadService, true);
+                        .getOleAttachmentMapAndUpload(workbook, rowIndex, uploadService, true);
                 List<String> oleMapVal = oleMap.get(rowIndex + "_5");
                 worker.setQualificationName(oleMapVal.get(0));
                 worker.setQualificationPath(oleMapVal.get(1));
@@ -1572,8 +1710,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 for (int col = 6; col < expectedHeaders.size(); col++) {
                     String header = expectedHeaders.get(col);
                     ExcelUploadFileResultDTO pic = ExcelMediaUtils
-                        .excelUploadFile(workbook, sheet, rowIndex, col, uploadService, WorkerPictureTypeEnum.GENERAL_PHOTO
-                            .getValue());
+                            .excelUploadFile(workbook, sheet, rowIndex, col, uploadService, WorkerPictureTypeEnum.GENERAL_PHOTO
+                                    .getValue());
                     docMap.put(header, pic.getDocUrl());
                 }
                 worker.setDocMap(docMap);
@@ -1603,17 +1741,52 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @param failedList  失败导入列表
      * @param classId     班级id
      */
+    private void removeExistingIdCard(List<ExcelRowSuccessVO> successList,
+                                      List<ExcelRowErrorVO> failedList,
+                                      Long classId) {
+        List<WorkerApplyDO> workerApplyDOS = workerApplyMapper.selectList(new LambdaQueryWrapper<WorkerApplyDO>()
+                .eq(WorkerApplyDO::getClassId, classId)
+                .select(WorkerApplyDO::getIdCardNumber));
+        if (ObjectUtil.isNotEmpty(workerApplyDOS)) {
+            Set<String> existingIdCardsFromDb = workerApplyDOS.stream()
+                    .map(item -> aesWithHMAC.verifyAndDecrypt(item.getIdCardNumber()))
+                    .filter(StrUtil::isNotBlank)
+                    .collect(Collectors.toSet());
+            Iterator<ExcelRowSuccessVO> iterator = successList.iterator();
+            while (iterator.hasNext()) {
+                ExcelRowSuccessVO worker = iterator.next();
+                String idCard = worker.getIdCardNumber();
+                if (StrUtil.isNotBlank(idCard) && existingIdCardsFromDb.contains(idCard)) {
+                    // 移到失败列表
+                    ExcelRowErrorVO errorDTO = new ExcelRowErrorVO();
+                    BeanUtils.copyProperties(worker, errorDTO);
+                    errorDTO.setErrorMessage("班级中已存在身份证为【" + idCard + "】" + "的信息");
+                    failedList.add(errorDTO);
+                    // 从成功列表移除
+                    iterator.remove();
+                }
+            }
+        }
+    }
+
+    /**
+     * 删除数据库班级已有的报名信息
+     *
+     * @param successList 成功导入列表
+     * @param failedList  失败导入列表
+     * @param classId     班级id
+     */
     private void removeExistingIdCards(List<ParsedSuccessVO> successList,
                                        List<ParsedErrorVO> failedList,
                                        Long classId) {
         List<WorkerApplyDO> workerApplyDOS = workerApplyMapper.selectList(new LambdaQueryWrapper<WorkerApplyDO>()
-            .eq(WorkerApplyDO::getClassId, classId)
-            .select(WorkerApplyDO::getIdCardNumber));
+                .eq(WorkerApplyDO::getClassId, classId)
+                .select(WorkerApplyDO::getIdCardNumber));
         if (ObjectUtil.isNotEmpty(workerApplyDOS)) {
             Set<String> existingIdCardsFromDb = workerApplyDOS.stream()
-                .map(item -> aesWithHMAC.verifyAndDecrypt(item.getIdCardNumber()))
-                .filter(StrUtil::isNotBlank)
-                .collect(Collectors.toSet());
+                    .map(item -> aesWithHMAC.verifyAndDecrypt(item.getIdCardNumber()))
+                    .filter(StrUtil::isNotBlank)
+                    .collect(Collectors.toSet());
             Iterator<ParsedSuccessVO> iterator = successList.iterator();
             while (iterator.hasNext()) {
                 ParsedSuccessVO worker = iterator.next();
@@ -1623,11 +1796,82 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                     ParsedErrorVO errorDTO = new ParsedErrorVO();
                     BeanUtils.copyProperties(worker, errorDTO);
                     errorDTO.setErrorMessage("班级中已存在身份证为【" + CharSequenceUtil.replaceByCodePoint(idCard, 2, idCard
-                        .length() - 5, '*') + "】" + "的报名记录");
+                            .length() - 5, '*') + "】" + "的报名记录");
                     failedList.add(errorDTO);
                     // 从成功列表移除
                     iterator.remove();
                 }
+            }
+        }
+    }
+
+    /**
+     * 移除身份证与手机号绑定不一致的记录（基于 worker_apply 表）
+     * <p>
+     * 逻辑：
+     * - worker_apply 表中若已存在某身份证
+     * - 则该身份证已绑定一个手机号
+     * - 若当前 Excel 上传的手机号与数据库手机号不同
+     * → 判定为手机号冲突
+     */
+
+    private void removeMismatchPhoneRecord(List<ExcelRowSuccessVO> successList, List<ExcelRowErrorVO> failedList) {
+
+        if (CollUtil.isEmpty(successList)) {
+            return;
+        }
+
+        // 1. 收集所有加密身份证 + 加密手机号
+        List<String> encryptedIdCards = successList.stream()
+                .map(item -> aesWithHMAC.encryptAndSign(item.getIdCardNumber()))
+                .toList();
+
+        List<String> encryptedPhones = successList.stream()
+                .map(item -> aesWithHMAC.encryptAndSign(item.getPhone()))
+                .toList();
+
+        // 2. 查询数据库 —— 身份证
+        List<WorkerApplyDO> existByIdCard = workerApplyMapper.selectList(new LambdaQueryWrapper<WorkerApplyDO>()
+                .in(WorkerApplyDO::getIdCardNumber, encryptedIdCards));
+
+        // 3. 查询数据库 —— 手机号
+        List<WorkerApplyDO> existByPhone = workerApplyMapper.selectList(new LambdaQueryWrapper<WorkerApplyDO>()
+                .in(WorkerApplyDO::getPhone, encryptedPhones));
+
+        // 4. 构建映射（允许重复 key，保留第一条）
+        Map<String, String> dbIdCardToPhoneMap = existByIdCard.stream()
+                .collect(Collectors.toMap(WorkerApplyDO::getIdCardNumber, WorkerApplyDO::getPhone, (v1, v2) -> v1  // 遇到重复身份证时保留第一条
+                ));
+
+        Map<String, String> dbPhoneToIdCardMap = existByPhone.stream()
+                .collect(Collectors.toMap(WorkerApplyDO::getPhone, WorkerApplyDO::getIdCardNumber, (v1, v2) -> v1  // 遇到重复手机号时保留第一条
+                ));
+
+        // 5. 遍历导入数据
+        Iterator<ExcelRowSuccessVO> iterator = successList.iterator();
+        while (iterator.hasNext()) {
+            ExcelRowSuccessVO item = iterator.next();
+            String encryptedIdCard = aesWithHMAC.encryptAndSign(item.getIdCardNumber());
+            String encryptedPhone = aesWithHMAC.encryptAndSign(item.getPhone());
+
+            // 校验 1：身份证已绑定但手机号不一致
+            String dbPhone = dbIdCardToPhoneMap.get(encryptedIdCard);
+            if (dbPhone != null && !dbPhone.equals(encryptedPhone)) {
+
+                moveToFailed(failedList, item, "该人员已绑定手机号 " + aesWithHMAC
+                        .verifyAndDecrypt(dbPhone) + "，与导入手机号不一致");
+
+                iterator.remove();
+                continue;
+            }
+
+            // 校验 2：手机号已被别人绑定
+            String dbIdCard = dbPhoneToIdCardMap.get(encryptedPhone);
+            if (dbIdCard != null && !dbIdCard.equals(encryptedIdCard)) {
+
+                moveToFailed(failedList, item, "导入手机号已被其他人员绑定，不能重复使用");
+
+                iterator.remove();
             }
         }
     }
@@ -1650,29 +1894,29 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         // 1. 收集所有加密身份证 + 加密手机号
         List<String> encryptedIdCards = successList.stream()
-            .map(item -> aesWithHMAC.encryptAndSign(item.getIdCardNumber()))
-            .toList();
+                .map(item -> aesWithHMAC.encryptAndSign(item.getIdCardNumber()))
+                .toList();
 
         List<String> encryptedPhones = successList.stream()
-            .map(item -> aesWithHMAC.encryptAndSign(item.getPhone()))
-            .toList();
+                .map(item -> aesWithHMAC.encryptAndSign(item.getPhone()))
+                .toList();
 
         // 2. 查询数据库 —— 身份证
         List<WorkerApplyDO> existByIdCard = workerApplyMapper.selectList(new LambdaQueryWrapper<WorkerApplyDO>()
-            .in(WorkerApplyDO::getIdCardNumber, encryptedIdCards));
+                .in(WorkerApplyDO::getIdCardNumber, encryptedIdCards));
 
         // 3. 查询数据库 —— 手机号
         List<WorkerApplyDO> existByPhone = workerApplyMapper.selectList(new LambdaQueryWrapper<WorkerApplyDO>()
-            .in(WorkerApplyDO::getPhone, encryptedPhones));
+                .in(WorkerApplyDO::getPhone, encryptedPhones));
 
         // 4. 构建映射（允许重复 key，保留第一条）
         Map<String, String> dbIdCardToPhoneMap = existByIdCard.stream()
-            .collect(Collectors.toMap(WorkerApplyDO::getIdCardNumber, WorkerApplyDO::getPhone, (v1, v2) -> v1  // 遇到重复身份证时保留第一条
-            ));
+                .collect(Collectors.toMap(WorkerApplyDO::getIdCardNumber, WorkerApplyDO::getPhone, (v1, v2) -> v1  // 遇到重复身份证时保留第一条
+                ));
 
         Map<String, String> dbPhoneToIdCardMap = existByPhone.stream()
-            .collect(Collectors.toMap(WorkerApplyDO::getPhone, WorkerApplyDO::getIdCardNumber, (v1, v2) -> v1  // 遇到重复手机号时保留第一条
-            ));
+                .collect(Collectors.toMap(WorkerApplyDO::getPhone, WorkerApplyDO::getIdCardNumber, (v1, v2) -> v1  // 遇到重复手机号时保留第一条
+                ));
 
         // 5. 遍历导入数据
         Iterator<ParsedSuccessVO> iterator = successList.iterator();
@@ -1687,7 +1931,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             if (dbPhone != null && !dbPhone.equals(encryptedPhone)) {
 
                 moveToFailedList(failedList, item, "该人员已有报名已绑定手机号 " + maskPhone(aesWithHMAC
-                    .verifyAndDecrypt(dbPhone)) + "，与导入手机号不一致");
+                        .verifyAndDecrypt(dbPhone)) + "，与导入手机号不一致");
 
                 iterator.remove();
                 continue;
@@ -1709,6 +1953,18 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      */
     private void moveToFailedList(List<ParsedErrorVO> failedList, ParsedSuccessVO item, String message) {
         ParsedErrorVO error = new ParsedErrorVO();
+        error.setRowNum(item.getRowNum());
+        error.setExcelName(item.getExcelName());
+        error.setPhone(item.getPhone());
+        error.setErrorMessage(message);
+        failedList.add(error);
+    }
+
+    /**
+     * 移动到失败列表的工具方法
+     */
+    private void moveToFailed(List<ExcelRowErrorVO> failedList, ExcelRowSuccessVO item, String message) {
+        ExcelRowErrorVO error = new ExcelRowErrorVO();
         error.setRowNum(item.getRowNum());
         error.setExcelName(item.getExcelName());
         error.setPhone(item.getPhone());
@@ -1762,6 +2018,47 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @param successList 成功导入列表
      * @param failedList  失败导入列表
      */
+    private void removeDuplicateIdCard(List<ExcelRowSuccessVO> successList, List<ExcelRowErrorVO> failedList) {
+
+        Map<String, List<ExcelRowSuccessVO>> idCardMap = new HashMap<>();
+        for (ExcelRowSuccessVO worker : successList) {
+            String idCard = worker.getIdCardNumber();
+            if (StrUtil.isBlank(idCard))
+                continue;
+            idCardMap.computeIfAbsent(idCard, k -> new ArrayList<>()).add(worker);
+        }
+
+        for (Map.Entry<String, List<ExcelRowSuccessVO>> entry : idCardMap.entrySet()) {
+            List<ExcelRowSuccessVO> list = entry.getValue();
+            if (list.size() > 1) {
+                List<Integer> rowNums = list.stream().map(ExcelRowSuccessVO::getRowNum).collect(Collectors.toList());
+
+                for (ExcelRowSuccessVO duplicateWorker : list) {
+                    ExcelRowErrorVO errorDTO = new ExcelRowErrorVO();
+                    BeanUtils.copyProperties(duplicateWorker, errorDTO);
+
+                    List<Integer> otherRows = rowNums.stream()
+                            .filter(r -> !r.equals(duplicateWorker.getRowNum()))
+                            .collect(Collectors.toList());
+                    errorDTO.setErrorMessage("所上传身份证与第 " + otherRows.stream()
+                            .map(String::valueOf)
+                            .collect(Collectors.joining("、")) + " 行一致");
+
+                    failedList.add(errorDTO);
+                }
+
+                successList.removeAll(list);
+            }
+        }
+    }
+
+
+    /**
+     * 检查成功列表中的重复身份证号，将重复条目移到失败列表，并记录重复行号
+     *
+     * @param successList 成功导入列表
+     * @param failedList  失败导入列表
+     */
     private void removeDuplicateIdCards(List<ParsedSuccessVO> successList, List<ParsedErrorVO> failedList) {
 
         Map<String, List<ParsedSuccessVO>> idCardMap = new HashMap<>();
@@ -1782,16 +2079,43 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                     BeanUtils.copyProperties(duplicateWorker, errorDTO);
 
                     List<Integer> otherRows = rowNums.stream()
-                        .filter(r -> !r.equals(duplicateWorker.getRowNum()))
-                        .collect(Collectors.toList());
+                            .filter(r -> !r.equals(duplicateWorker.getRowNum()))
+                            .collect(Collectors.toList());
                     errorDTO.setErrorMessage("所上传身份证与第 " + otherRows.stream()
-                        .map(String::valueOf)
-                        .collect(Collectors.joining("、")) + " 行一致");
+                            .map(String::valueOf)
+                            .collect(Collectors.joining("、")) + " 行一致");
 
                     failedList.add(errorDTO);
                 }
 
                 successList.removeAll(list);
+            }
+        }
+    }
+
+    /**
+     * 校验表头（无资料类型）
+     *
+     * @param sheet
+     */
+    private void validateTemplate(XSSFSheet sheet, List<String> expectedHeaders) {
+        Row headerRow = sheet.getRow(0);
+        if (headerRow == null) {
+            throw new BusinessException("Excel表头行为空，请确认模板未被修改");
+        }
+
+        List<String> actualHeaders = new ArrayList<>();
+        for (Cell cell : headerRow) {
+            cell.setCellType(CellType.STRING);
+            actualHeaders.add(cell.getStringCellValue().trim());
+        }
+        if (expectedHeaders.size() != actualHeaders.size()) {
+            throw new BusinessException("模板表头数量不匹配，请重新下载最新模板");
+        }
+        for (int i = 0; i < expectedHeaders.size(); i++) {
+            if (!expectedHeaders.get(i).equals(actualHeaders.get(i))) {
+                throw new BusinessException(String.format("模板表头与系统要求不符（第 %d 列应为「%s」，实际为「%s」）", i + 1, expectedHeaders
+                        .get(i), actualHeaders.get(i)));
             }
         }
     }
@@ -1825,10 +2149,117 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         for (int i = 0; i < expectedHeaders.size(); i++) {
             if (!expectedHeaders.get(i).equals(actualHeaders.get(i))) {
                 throw new BusinessException(String.format("模板表头与系统要求不符（第 %d 列应为「%s」，实际为「%s」）", i + 1, expectedHeaders
-                    .get(i), actualHeaders.get(i)));
+                        .get(i), actualHeaders.get(i)));
             }
         }
     }
+
+
+    /**
+     * 校验数据有没有空的（无资料上传）
+     *
+     * @param sheet
+     */
+    private void validateRows(XSSFSheet sheet, List<String> expectedHeaders) {
+
+        int rowCount = sheet.getPhysicalNumberOfRows();
+
+        // 身份证 & 手机号重复校验
+        Set<String> idCardSet = new HashSet<>();
+        Set<String> phoneSet = new HashSet<>();
+
+        for (int rowIndex = 1; rowIndex < rowCount; rowIndex++) {
+
+            Row row = sheet.getRow(rowIndex);
+            if (ExcelMediaUtils.isRowEmpty(row))
+                break;
+
+            // ===== 1. 姓名 =====
+            String workerName = getCellString(row, 0);
+            if (StrUtil.isBlank(workerName)) {
+                throw new BusinessException(String.format("第 %d 行【%s】不能为空",
+                        rowIndex + 1, expectedHeaders.get(0)));
+            }
+
+            // ===== 2. 身份证号 =====
+            String idCard = getCellString(row, 1);
+            if (StrUtil.isBlank(idCard)) {
+                throw new BusinessException(String.format("第 %d 行【%s】不能为空",
+                        rowIndex + 1, expectedHeaders.get(1)));
+            }
+
+            if (!idCard.matches(RegexConstants.ID_CARD_REGEX)) {
+                throw new BusinessException(String.format("第 %d 行【%s】格式不正确",
+                        rowIndex + 1, expectedHeaders.get(1)));
+            }
+
+            if (!idCardSet.add(idCard)) {
+                throw new BusinessException(String.format("第 %d 行【%s】与前面行重复",
+                        rowIndex + 1, expectedHeaders.get(1)));
+            }
+
+            // ===== 3. 学历 =====
+            String education = getCellString(row, 2);
+            if (StrUtil.isBlank(education)) {
+                throw new BusinessException(String.format("第 %d 行【%s】不能为空",
+                        rowIndex + 1, expectedHeaders.get(2)));
+            }
+
+            // 限定学历范围
+            Set<String> EDUCATION_SET = ImportWorkerTemplateConstant.EDUCATION_SET;
+            if (!EDUCATION_SET.contains(education.trim())) {
+                throw new BusinessException(String.format("第 %d 行【%s】只能为：%s",
+                        rowIndex + 1, expectedHeaders.get(2),
+                        String.join(" / ", EDUCATION_SET)));
+            }
+
+            // ===== 4. 联系电话 =====
+            String phone = getCellString(row, 3);
+            if (StrUtil.isBlank(phone)) {
+                throw new BusinessException(String.format("第 %d 行【%s】不能为空",
+                        rowIndex + 1, expectedHeaders.get(3)));
+            }
+
+            if (!phone.matches("^1[3-9]\\d{9}$")) {
+                throw new BusinessException(String.format("第 %d 行【%s】格式不正确",
+                        rowIndex + 1, expectedHeaders.get(3)));
+            }
+
+            if (!phoneSet.add(phone)) {
+                throw new BusinessException(String.format("第 %d 行【%s】与前面行重复",
+                        rowIndex + 1, expectedHeaders.get(3)));
+            }
+
+            // ===== 5. 工作单位 =====
+            String workUnit = getCellString(row, 4);
+            if (StrUtil.isBlank(workUnit)) {
+                throw new BusinessException(String.format("第 %d 行【%s】不能为空",
+                        rowIndex + 1, expectedHeaders.get(4)));
+            }
+
+            // ===== 6. 通讯地址 =====
+            String address = getCellString(row, 5);
+            if (StrUtil.isBlank(address)) {
+                throw new BusinessException(String.format("第 %d 行【%s】不能为空",
+                        rowIndex + 1, expectedHeaders.get(5)));
+            }
+
+            // ===== 7. 政治面貌 =====
+            String politicalStatus = getCellString(row, 6);
+            if (StrUtil.isBlank(politicalStatus)) {
+                throw new BusinessException(String.format("第 %d 行【%s】不能为空",
+                        rowIndex + 1, expectedHeaders.get(6)));
+            }
+            Set<String> POLITICAL_STATUS_SET = ImportWorkerTemplateConstant.POLITICAL_STATUS_SET;
+            // 限定政治面貌
+            if (!POLITICAL_STATUS_SET.contains(politicalStatus.trim())) {
+                throw new BusinessException(String.format("第 %d 行【%s】只能为：%s",
+                        rowIndex + 1, expectedHeaders.get(6),
+                        String.join(" / ", POLITICAL_STATUS_SET)));
+            }
+        }
+    }
+
 
     /**
      * 校验数据有没有空的
@@ -1878,10 +2309,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 String header = expectedHeaders.get(col);
                 if (col == 5) {
                     Map<String, List<String>> oleMap = ExcelMediaUtils
-                        .getOleAttachmentMapAndUpload(workbook, rowIndex, uploadService, false);
+                            .getOleAttachmentMapAndUpload(workbook, rowIndex, uploadService, false);
                     if (!oleMap.containsKey(rowIndex + "_" + col)) {
                         throw new BusinessException(String
-                            .format("第 %d 行【%s】请上传 PDF 格式文件", rowIndex + 1, expectedHeaders.get(col)));
+                                .format("第 %d 行【%s】请上传 PDF 格式文件", rowIndex + 1, expectedHeaders.get(col)));
                     }
                 } else {
                     boolean hasPicture = ExcelMediaUtils.hasPicture(workbook, sheet, rowIndex, col);
@@ -1931,9 +2362,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      */
     private String buildQrContent(Long candidateId, Long examPlanId) throws UnsupportedEncodingException {
         String encryptedCandidateId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String
-            .valueOf(candidateId)), StandardCharsets.UTF_8);
+                .valueOf(candidateId)), StandardCharsets.UTF_8);
         String encryptedPlanId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String
-            .valueOf(examPlanId)), StandardCharsets.UTF_8);
+                .valueOf(examPlanId)), StandardCharsets.UTF_8);
         return qrcodeUrl + "?candidateId=" + encryptedCandidateId + "&planId=" + encryptedPlanId;
     }
 

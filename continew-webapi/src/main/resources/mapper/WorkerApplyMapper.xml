@@ -33,6 +33,10 @@
                twa.id_card_photo_back,
                twa.face_photo,
                twa.`status`,
+               twa.political_status,
+               twa.education,
+               twa.work_unit,
+               twa.address,
                toc.class_name,
                tp.project_name,
                tc.`name` AS category_name

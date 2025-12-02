@@ -16,6 +16,7 @@
 
 package top.continew.admin.worker.model.entity;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -93,7 +94,7 @@ public class WorkerApplyDO extends BaseDO {
     private Integer applyType;
 
     /**
-     * 审核状态:0待审核,1已生效,2未通过
+     * 审核状态:0待审核,1已生效,2未通过,3虚假材料，4待上传资料,5资料已上传
      */
     private Integer status;
 
@@ -101,6 +102,27 @@ public class WorkerApplyDO extends BaseDO {
      * 审核意见或退回原因
      */
     private String remark;
+
+    /**
+     * 学历
+     */
+    private String education;
+
+
+    /**
+     * 工作单位
+     */
+    private String workUnit;
+
+    /**
+     * 通讯地址
+     */
+    private String address;
+
+    /**
+     * 政治面貌
+     */
+    private String politicalStatus;
 
     /**
      * 删除标记(0未删,1已删)

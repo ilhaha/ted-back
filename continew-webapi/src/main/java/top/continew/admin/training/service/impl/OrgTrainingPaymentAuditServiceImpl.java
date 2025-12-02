@@ -41,7 +41,7 @@ import top.continew.admin.training.mapper.OrgMapper;
 import top.continew.admin.training.model.entity.OrgCandidateDO;
 import top.continew.admin.training.model.entity.OrgDO;
 import top.continew.admin.util.ExcelUtilReactive;
-import top.continew.admin.util.InMemoryMultipartFile;
+import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;

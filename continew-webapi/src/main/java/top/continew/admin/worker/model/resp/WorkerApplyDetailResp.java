@@ -168,4 +168,33 @@ public class WorkerApplyDetailResp extends BaseDetailResp {
     @Schema(description = "资料名称与资料路径映射")
     @ExcelProperty(value = "资料名称与资料路径映射")
     private Map<String, String> docMap;
+
+    /**
+     * 学历
+     */
+    @Schema(description = "学历")
+    @ExcelProperty(value = "学历")
+    private String education;
+
+
+    /**
+     * 工作单位
+     */
+    @Schema(description = "工作单位")
+    @ExcelProperty(value = "工作单位")
+    private String workUnit;
+
+    /**
+     * 通讯地址
+     */
+    @Schema(description = "通讯地址")
+    @ExcelProperty(value = "通讯地址")
+    private String address;
+
+    /**
+     * 政治面貌
+     */
+    @Schema(description = "政治面貌")
+    @ExcelProperty(value = "政治面貌")
+    private String politicalStatus;
 }

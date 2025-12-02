@@ -45,7 +45,7 @@ import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.FileService;
 import top.continew.admin.util.ExcelUtilReactive;
-import top.continew.admin.util.InMemoryMultipartFile;
+import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 
