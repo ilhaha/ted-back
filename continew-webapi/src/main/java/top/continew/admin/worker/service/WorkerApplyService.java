@@ -77,7 +77,7 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      *
      * @return
      */
-    WorkerApplyVO getDocWorkerId(Long workerId);
+    WorkerApplyVO getWorkerNeedUploadDoc(Long workerIdOrClassId,Boolean isBatch);
 
     /**
      * 机构上传某个考生的资料
@@ -86,4 +86,10 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      */
     Boolean orgSingleUploadDoc(WorkerOrgUploadReq workerOrgUploadReq);
 
+    /**
+     * 根据班级id获取未上上传资料的作业人员数
+     * @param classId
+     * @return
+     */
+    Long getNotUploadedCount(Integer classId);
 }

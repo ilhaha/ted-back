@@ -47,6 +47,17 @@ import java.util.List;
     Api.EXPORT})
 public class WorkerApplyController extends BaseController<WorkerApplyService, WorkerApplyResp, WorkerApplyDetailResp, WorkerApplyQuery, WorkerApplyReq> {
 
+
+    /**
+     * 根据班级id获取未上上传资料的作业人员数
+     * @param classId
+     * @return
+     */
+    @GetMapping("/not/uploaded/{classId}")
+    public Long getNotUploadedCount(@PathVariable("classId") Integer classId) {
+        return baseService.getNotUploadedCount(classId);
+    }
+
     /**
      * 机构上传某个考生的资料
      * @param workerOrgUploadReq
@@ -119,8 +130,9 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
      *
      * @return
      */
-    @PostMapping("/doc/{workerId}")
-    public WorkerApplyVO getDocWorkerId(@PathVariable("workerId") Long workerId) {
-        return baseService.getDocWorkerId(workerId);
+    @PostMapping("/doc/{workerIdOrClassId}/{isBatch}")
+    public WorkerApplyVO getWorkerNeedUploadDoc(@PathVariable("workerIdOrClassId") Long workerIdOrClassId,
+                                        @PathVariable("isBatch") Boolean isBatch) {
+        return baseService.getWorkerNeedUploadDoc(workerIdOrClassId,isBatch);
     }
 }

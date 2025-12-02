@@ -516,18 +516,28 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
      * @return
      */
     @Override
-    public WorkerApplyVO getDocWorkerId(Long workerId) {
-        // 初始化返回对象
+    public WorkerApplyVO getWorkerNeedUploadDoc(Long workerIdOrClassId, Boolean isBatch) {
+        // 创建返回对象
         WorkerApplyVO workerApplyVO = new WorkerApplyVO();
-        WorkerApplyDO workerApplyDO = baseMapper.selectById(workerId);
-        ValidationUtils.throwIfNull(workerApplyDO, "未找到作业人员信息");
 
-        Long classId = workerApplyDO.getClassId();
+        Long classId;
 
-        // 3 初始化项目报名所需资料
-        workerApplyVO.setProjectNeedUploadDocs(baseMapper.selectProjectNeedUploadDoc(classId));
+        if (Boolean.TRUE.equals(isBatch)) {
+            classId = workerIdOrClassId;
+        } else {
+            WorkerApplyDO workerApplyDO = baseMapper.selectById(workerIdOrClassId);
+            ValidationUtils.throwIfNull(workerApplyDO, "未找到作业人员信息");
+            classId = workerApplyDO.getClassId();
+        }
+
+        // 查询所需上传资料
+        workerApplyVO.setProjectNeedUploadDocs(
+                baseMapper.selectProjectNeedUploadDoc(classId)
+        );
+
         return workerApplyVO;
     }
+
 
     /**
      * 机构上传某个考生的资料
@@ -574,6 +584,18 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             workerApplyDocumentMapper.insertBatch(docs);
         }
         return true;
+    }
+
+    /**
+     * 根据班级id获取未上上传资料的作业人员数
+     * @param classId
+     * @return
+     */
+    @Override
+    public Long getNotUploadedCount(Integer classId) {
+        return baseMapper.selectCount(new LambdaQueryWrapper<WorkerApplyDO>()
+                .eq(WorkerApplyDO::getClassId,classId)
+                .eq(WorkerApplyDO::getStatus,WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue()));
     }
 
 
