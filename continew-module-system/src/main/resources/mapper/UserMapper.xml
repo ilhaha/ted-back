@@ -56,6 +56,30 @@
         ${ew.customSqlSegment}
     </select>
 
+    <select id="selectExamStaffPage" resultType="top.continew.admin.system.model.resp.user.UserDetailResp">
+        SELECT
+        u.id,
+        u.username,
+        u.nickname,
+        u.phone,
+        u.email,
+        u.status,
+        u.gender,
+        u.dept_id,
+        u.create_time,
+        u.description,
+        u.is_system
+        FROM sys_user u
+        LEFT JOIN sys_user_role ur ON u.id = ur.user_id
+        LEFT JOIN sys_role r ON ur.role_id = r.id
+        <where>
+            r.code = 'jk'
+            ${ew.customSqlSegment}
+        </where>
+        ORDER BY u.id DESC
+    </select>
+
+
     <select id="selectUserList" resultType="top.continew.admin.system.model.resp.user.UserDetailResp">
         <include refid="selectUser"/>
         ${ew.customSqlSegment}

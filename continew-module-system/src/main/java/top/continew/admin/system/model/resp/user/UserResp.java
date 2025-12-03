@@ -74,14 +74,12 @@ public class UserResp extends BaseDetailResp {
      * 邮箱
      */
     @Schema(description = "邮箱", example = "c*******@126.com")
-    @JsonMask(MaskType.EMAIL)
     private String email;
 
     /**
      * 手机号码
      */
     @Schema(description = "手机号码", example = "188****8888")
-    @JsonMask(MaskType.MOBILE_PHONE)
     private String phone;
 
     /**

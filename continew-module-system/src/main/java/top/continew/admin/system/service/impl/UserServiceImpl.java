@@ -165,6 +165,35 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     }
 
     @Override
+    public PageResp<UserResp> pageExamStaff(UserQuery query, PageQuery pageQuery) {
+
+        // 构建条件
+        QueryWrapper<UserDO> wrapper = this.buildQueryWrapper(query);
+
+        // 排序（调用你自己的排序器）
+        super.sort(wrapper, pageQuery);
+
+        // 调用新 Mapper 方法
+        IPage<UserDetailResp> page = baseMapper.selectExamStaffPage(
+                new Page<>(pageQuery.getPage(), pageQuery.getSize()),
+                wrapper
+        );
+
+        // 解密
+        page.setRecords(page.getRecords().stream().map(item -> {
+            item.setPhone(aesWithHMAC.verifyAndDecrypt(item.getPhone()));
+            item.setUsername(aesWithHMAC.verifyAndDecrypt(item.getUsername()));
+            return item;
+        }).toList());
+
+        // 构造返回结果
+        PageResp<UserResp> pageResp = PageResp.build(page, super.getListClass());
+        pageResp.getList().forEach(this::fill);
+        return pageResp;
+    }
+
+
+    @Override
     public void beforeAdd(UserReq req) {
         // 定义新增失败错误信息模板
         final String errorMsgTemplate = "新增失败，[{}] 已存在";
@@ -1097,5 +1126,4 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
         return resultList;
     }
-
 }

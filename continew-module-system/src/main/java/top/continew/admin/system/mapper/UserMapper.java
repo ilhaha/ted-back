@@ -16,10 +16,12 @@
 
 package top.continew.admin.system.mapper;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.google.common.base.Equivalence;
 import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.annotations.Param;
 import top.continew.admin.auth.model.dto.ClassroomDTO;
@@ -56,6 +58,20 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
     @DataPermission(tableAlias = "t1")
     IPage<UserDetailResp> selectUserPage(@Param("page") IPage<UserDO> page,
                                          @Param(Constants.WRAPPER) QueryWrapper<UserDO> queryWrapper);
+
+    /**
+     * 分页查询考务列表
+     *
+     * @param page         分页条件
+     * @param queryWrapper 查询条件
+     * @return 分页列表信息
+     */
+
+    IPage<UserDetailResp> selectExamStaffPage(
+            Page<?> page,
+            @Param(Constants.WRAPPER) Wrapper<UserDO> queryWrapper);
+
+
 
     /**
      * 查询列表

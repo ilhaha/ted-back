@@ -29,6 +29,12 @@ public class UserQualificationResp extends BaseResp {
     private Long userId;
 
     /**
+     * 八大类名称
+     */
+    @Schema(description = "八大类名称")
+    private String categoryName;
+
+    /**
      * 八大类ID
      */
     @Schema(description = "八大类ID")

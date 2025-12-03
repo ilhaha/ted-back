@@ -37,6 +37,7 @@ import top.continew.admin.common.constant.RegexConstants;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.invigilate.model.resp.UserQualificationResp;
 import top.continew.admin.invigilate.service.PlanInvigilateService;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.query.UserQuery;
@@ -238,6 +239,14 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @GetMapping("/getStudentDocumentTypeStatus")
     public List<StudentDocumentTypeVO> getStudentDocumentTypeStatus(@RequestParam("documentTypeList") List<String> documentTypeList) {
         return userService.getStudentDocumentTypeStatus(documentTypeList);
+    }
+
+    /**
+     * 分页查询考务人员
+     */
+    @GetMapping("/examStaff/page")
+    public PageResp<UserResp> pageExamStaff(UserQuery query, PageQuery pageQuery) {
+        return userService.pageExamStaff(query, pageQuery);
     }
 
 }

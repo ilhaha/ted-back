@@ -339,4 +339,7 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      */
     void updateExamStatus(Long candidateId, String examNumberEncrypt, Long planId, Integer examStatus);
 
+
+    PageResp<UserResp> pageExamStaff(UserQuery query, PageQuery pageQuery);
+
 }
