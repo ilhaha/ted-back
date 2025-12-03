@@ -17,8 +17,11 @@
 package top.continew.admin.worker.controller;
 
 import cn.dev33.satoken.annotation.SaIgnore;
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.worker.model.req.*;
+import top.continew.admin.worker.model.resp.UploadResulResp;
 import top.continew.admin.worker.model.resp.WorkerApplyVO;
 import top.continew.starter.extension.crud.enums.Api;
 
@@ -56,6 +59,22 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
     @GetMapping("/not/uploaded/{classId}")
     public Long getNotUploadedCount(@PathVariable("classId") Integer classId) {
         return baseService.getNotUploadedCount(classId);
+    }
+
+    /**
+     * 机构上传某个班级的资料
+     * @param classId
+     * @param idCardFiles
+     * @param applyForms
+     * @param projectDocs
+     * @return
+     */
+    @PostMapping("/org/batch/upload/{classId}")
+    public UploadResulResp orgBatchUploadDoc(@PathVariable("classId") Long classId,
+                                             @RequestPart("idCardFiles") List<MultipartFile> idCardFiles,
+                                             @RequestPart("applyForms") List<MultipartFile> applyForms,
+                                             @RequestPart(value = "projectDocs",required = false) List<MultipartFile> projectDocs) {
+        return baseService.orgBatchUploadDoc(classId,idCardFiles,applyForms,projectDocs);
     }
 
     /**

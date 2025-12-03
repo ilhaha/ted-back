@@ -16,7 +16,9 @@
 
 package top.continew.admin.worker.service;
 
+import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.worker.model.req.*;
+import top.continew.admin.worker.model.resp.UploadResulResp;
 import top.continew.admin.worker.model.resp.WorkerApplyVO;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.worker.model.query.WorkerApplyQuery;
@@ -92,4 +94,14 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      * @return
      */
     Long getNotUploadedCount(Integer classId);
+
+    /**
+     * 机构上传某个班级的资料
+     * @param classId
+     * @param idCardFiles
+     * @param applyForms
+     * @param projectDocs
+     * @return
+     */
+    UploadResulResp orgBatchUploadDoc(Long classId, List<MultipartFile> idCardFiles, List<MultipartFile> applyForms, List<MultipartFile> projectDocs);
 }

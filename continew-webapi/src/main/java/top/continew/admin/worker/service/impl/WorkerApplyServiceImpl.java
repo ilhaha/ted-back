@@ -36,6 +36,7 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
+import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.WorkerApplyCheckConstants;
 import top.continew.admin.common.constant.enums.ClassStatusEnum;
 import top.continew.admin.common.constant.enums.WorkerApplyReviewStatusEnum;
@@ -55,6 +56,9 @@ import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.mapper.UserRoleMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.entity.UserRoleDO;
+import top.continew.admin.system.model.resp.FileInfoResp;
+import top.continew.admin.system.model.resp.IdCardFileInfoResp;
+import top.continew.admin.system.service.UploadService;
 import top.continew.admin.training.mapper.CandidateTypeMapper;
 import top.continew.admin.training.mapper.OrgClassCandidateMapper;
 import top.continew.admin.training.mapper.OrgClassMapper;
@@ -62,6 +66,7 @@ import top.continew.admin.training.model.entity.CandidateTypeDO;
 import top.continew.admin.training.model.entity.OrgClassCandidateDO;
 import top.continew.admin.training.model.entity.OrgClassDO;
 import top.continew.admin.worker.mapper.WorkerApplyDocumentMapper;
+import top.continew.admin.worker.model.dto.UploadGroupDTO;
 import top.continew.admin.worker.model.dto.WorkerApplyCheckDTO;
 import top.continew.admin.worker.model.dto.WorkerApplyDocAndNameDTO;
 import top.continew.admin.worker.model.entity.WorkerApplyDocumentDO;
@@ -77,8 +82,11 @@ import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.admin.worker.model.query.WorkerApplyQuery;
 import top.continew.admin.worker.service.WorkerApplyService;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -129,6 +137,8 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
     @Resource
     private UserRoleMapper userRoleMapper;
+
+    private final UploadService uploadService;
 
     /**
      * 根据身份证后六位、和班级id查询当前身份证报名信息
@@ -541,6 +551,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
     /**
      * 机构上传某个考生的资料
+     *
      * @param req
      * @return
      */
@@ -588,14 +599,226 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
     /**
      * 根据班级id获取未上上传资料的作业人员数
+     *
      * @param classId
      * @return
      */
     @Override
     public Long getNotUploadedCount(Integer classId) {
         return baseMapper.selectCount(new LambdaQueryWrapper<WorkerApplyDO>()
-                .eq(WorkerApplyDO::getClassId,classId)
-                .eq(WorkerApplyDO::getStatus,WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue()));
+                .eq(WorkerApplyDO::getClassId, classId)
+                .eq(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue()));
+    }
+
+
+    /**
+     * 机构上传某个班级的资料
+     *
+     * @param classId
+     * @param idCardFiles
+     * @param applyForms
+     * @param projectDocs
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public UploadResulResp orgBatchUploadDoc(Long classId,
+                                             List<MultipartFile> idCardFiles,
+                                             List<MultipartFile> applyForms,
+                                             List<MultipartFile> projectDocs) {
+
+        UploadResulResp result = new UploadResulResp();
+
+        // 获取班级所需上传资料
+        WorkerApplyVO workerNeedUploadDoc = getWorkerNeedUploadDoc(classId, Boolean.TRUE);
+        Map<Long, String> requiredDocs = workerNeedUploadDoc.getProjectNeedUploadDocs()
+                .stream()
+                .collect(Collectors.toMap(ProjectNeedUploadDocVO::getId, ProjectNeedUploadDocVO::getTypeName));
+
+        // 按身份证分组
+        Map<String, UploadGroupDTO> grouped = groupFilesByIdCard(idCardFiles, applyForms, projectDocs, requiredDocs);
+
+        // 资料完整的身份证
+        Map<String, UploadGroupDTO> completeGroups = new HashMap<>();
+        grouped.forEach((id, g) -> {
+            List<String> missing = checkMissingFiles(g, requiredDocs);
+            if (missing.isEmpty()) {
+                completeGroups.put(id, g);
+            } else {
+                result.getFailedList().add(new FailedUploadResp(id, "未上传: " + String.join("、 ", missing)));
+            }
+        });
+
+        // 批量更新/插入数据
+        List<WorkerApplyDO> updateList = new ArrayList<>();
+        List<WorkerApplyDocumentDO> insertList = new ArrayList<>();
+
+        for (Map.Entry<String, UploadGroupDTO> entry : completeGroups.entrySet()) {
+            String idCard = entry.getKey();
+            UploadGroupDTO group = entry.getValue();
+
+            try {
+                // 识别身份证正面和反面
+                IdCardFileInfoResp frontResp = uploadAndCheckIdCard(group.getIdCardFront(), 1, idCard, result, "正面");
+                if (frontResp == null) continue;
+
+                IdCardFileInfoResp backResp = uploadAndCheckIdCard(group.getIdCardBack(), 0, idCard, result, "反面");
+                if (backResp == null) continue;
+
+                // 检查身份证是否过期
+                if (backResp.getValidEndDate() != null && backResp.getValidEndDate().isBefore(LocalDate.now())) {
+                    result.getFailedList().add(new FailedUploadResp(idCard, "所上传的身份证已过期"));
+                    continue;
+                }
+
+                // 上传正脸照
+                IdCardFileInfoResp faceResp = uploadService.uploadIdCard(group.getPhotoOneInch(), 2);
+
+                // 上传资格申请表
+                FileInfoResp applyResp = uploadService.applyUpload(group.getApplyForm());
+
+                // 查找作业人员信息
+                WorkerApplyDO workerApplyDO = baseMapper.selectOne(
+                        new LambdaQueryWrapper<WorkerApplyDO>()
+                                .eq(WorkerApplyDO::getIdCardNumber, aesWithHMAC.encryptAndSign(idCard))
+                                .eq(WorkerApplyDO::getClassId, classId)
+                );
+                if (workerApplyDO == null) {
+                    result.getFailedList().add(new FailedUploadResp(idCard,"未查询到班级下存在该身份证信息"));
+                    continue;
+                }
+
+                // 准备更新数据
+                WorkerApplyDO update = new WorkerApplyDO();
+                update.setId(workerApplyDO.getId());
+                update.setIdCardPhotoFront(frontResp.getIdCardPhotoFront());
+                update.setIdCardPhotoBack(backResp.getIdCardPhotoBack());
+                update.setFacePhoto(faceResp.getFacePhoto());
+                update.setQualificationPath(applyResp.getUrl());
+                update.setQualificationName(group.getApplyForm().getOriginalFilename());
+                update.setStatus(WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue());
+                updateList.add(update);
+
+                // 上传项目资料
+                if (group.getProjectDocs() != null) {
+                    for (Map.Entry<Long, UploadGroupDTO.ProjectDocItem> docEntry : group.getProjectDocs().entrySet()) {
+                        FileInfoResp fileInfoResp = uploadService.applyUpload(docEntry.getValue().getFile());
+                        WorkerApplyDocumentDO insert = new WorkerApplyDocumentDO();
+                        insert.setWorkerApplyId(workerApplyDO.getId());
+                        insert.setTypeId(docEntry.getKey());
+                        insert.setDocPath(fileInfoResp.getUrl());
+                        insertList.add(insert);
+                    }
+                }
+
+                result.getSuccessIdCards().add(idCard);
+
+            } catch (Exception e) {
+                String msg = Optional.ofNullable(e.getMessage())
+                        .map(m -> m.contains(":") ? m.substring(m.indexOf(":") + 1).trim() : m)
+                        .orElse("上传失败");
+                result.getFailedList().add(new FailedUploadResp(idCard, msg));
+            }
+        }
+
+        // 批量更新和插入数据库
+        if (!updateList.isEmpty()) baseMapper.updateBatchById(updateList);
+        if (!insertList.isEmpty()) workerApplyDocumentMapper.insertBatch(insertList);
+
+        return result;
+    }
+
+    private Map<String, UploadGroupDTO> groupFilesByIdCard(List<MultipartFile> idCardFiles,
+                                                           List<MultipartFile> applyForms,
+                                                           List<MultipartFile> projectDocs,
+                                                           Map<Long, String> requiredDocs) {
+        Map<String, UploadGroupDTO> grouped = new HashMap<>();
+
+        for (MultipartFile file : idCardFiles) {
+            if (file == null || file.getOriginalFilename() == null) continue;
+            String idCard = extractIdCard(file.getOriginalFilename());
+            UploadGroupDTO group = grouped.computeIfAbsent(idCard, k -> new UploadGroupDTO());
+            if (isIdCardFront(file.getOriginalFilename())) group.setIdCardFront(file);
+            else if (isIdCardBack(file.getOriginalFilename())) group.setIdCardBack(file);
+            else if (isPhotoOneInch(file.getOriginalFilename())) group.setPhotoOneInch(file);
+        }
+
+        for (MultipartFile file : applyForms) {
+            if (file == null || file.getOriginalFilename() == null) continue;
+            String idCard = extractIdCard(file.getOriginalFilename());
+            grouped.computeIfAbsent(idCard, k -> new UploadGroupDTO()).setApplyForm(file);
+        }
+        if (projectDocs != null) {
+            for (MultipartFile file : projectDocs) {
+                if (file == null || file.getOriginalFilename() == null) continue;
+                String idCard = extractIdCard(file.getOriginalFilename());
+                UploadGroupDTO group = grouped.computeIfAbsent(idCard, k -> new UploadGroupDTO());
+                for (Map.Entry<Long, String> entry : requiredDocs.entrySet()) {
+                    if (file.getOriginalFilename().contains(entry.getValue())) {
+                        group.getProjectDocs().put(entry.getKey(),
+                                new UploadGroupDTO.ProjectDocItem(file, entry.getValue()));
+                    }
+                }
+            }
+        }
+
+        return grouped;
+    }
+
+    private List<String> checkMissingFiles(UploadGroupDTO g, Map<Long, String> requiredDocs) {
+        List<String> missing = new ArrayList<>();
+        if (g.getIdCardFront() == null) missing.add("身份证正面");
+        if (g.getIdCardBack() == null) missing.add("身份证反面");
+        if (g.getPhotoOneInch() == null) missing.add("一寸免冠照");
+        if (g.getApplyForm() == null) missing.add("资格申请表");
+
+        for (String docName : requiredDocs.values()) {
+            boolean hasDoc = g.getProjectDocs().values().stream().anyMatch(item -> docName.equals(item.getName()));
+            if (!hasDoc) missing.add(docName);
+        }
+        return missing;
+    }
+
+    private IdCardFileInfoResp uploadAndCheckIdCard(MultipartFile file, int type, String idCard, UploadResulResp result, String position) {
+        try {
+            IdCardFileInfoResp resp = uploadService.uploadIdCard(file, type);
+            System.out.println(resp);
+            if (type == 1 && !resp.getIdCardNumber().equals(idCard)) {
+                result.getFailedList().add(new FailedUploadResp(idCard, "上传的身份证" + position + "与身份证号不一致"));
+                return null;
+            }
+            return resp;
+        } catch (Exception e) {
+            result.getFailedList().add(new FailedUploadResp(idCard, "识别身份证" + position + "失败"));
+            return null;
+        }
+    }
+
+
+
+    private String extractIdCard(String filename) {
+        if (filename == null || filename.length() < 18) {
+            return null;
+        }
+        return filename.substring(0, 18);
+    }
+
+
+    private boolean isIdCardFront(String name) {
+        return name != null && name.contains("正");
+    }
+
+    private boolean isIdCardBack(String name) {
+        return name != null && name.contains("反");
+    }
+
+    private boolean isPhotoOneInch(String name) {
+        // 不含“正”或“反”就是一寸照（默认规则）
+        return name != null && !name.contains("正") && !name.contains("反");
+    }
+
+    private boolean isApplyForm(String filename) {
+        return filename.contains("资格申请表");
     }
 
 

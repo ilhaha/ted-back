@@ -308,7 +308,7 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         try {
             boolean flag = frontOrBack == 1;
             IdCardDo idCardDo = idCardRecognition.uploadIdCard(file.getInputStream(), flag);
-            ValidationUtils.throwIf(ObjectUtils.isEmpty(idCardDo), "身份证信息识别失败");
+            ValidationUtils.throwIf(ObjectUtils.isEmpty(idCardDo), flag ? "身份证正面信息识别失败" : (frontOrBack == 2) ? "一寸免冠照上传失败" : "身份证反面信息识别失败");
             if (flag) {
                 fileInfoResp.setRealName(idCardDo.getName());
                 fileInfoResp.setGender(idCardDo.getSex() ? "女" : "男");

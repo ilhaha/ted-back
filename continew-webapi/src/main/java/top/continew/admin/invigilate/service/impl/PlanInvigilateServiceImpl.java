@@ -40,7 +40,7 @@ import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.config.ali.AliYunConfig;
 import top.continew.admin.constant.SmsConstants;
 import top.continew.admin.exam.mapper.ExamPlanMapper;
-import top.continew.admin.invigilate.constant.statueConstant;
+import top.continew.admin.invigilate.constant.StatueConstant;
 import top.continew.admin.invigilate.mapper.ExamRecords1Mapper;
 import top.continew.admin.invigilate.model.entity.Grades;
 import top.continew.admin.invigilate.model.entity.TedExamRecords;
@@ -312,7 +312,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         // 绑定手机号检查
         UserDO user = userMapper.selectById(userId);
         if (StringUtils.isEmpty(user.getPhone())) {
-            return statueConstant.EXAM_PASSWORD_BIND_PHONE;
+            return StatueConstant.EXAM_PASSWORD_BIND_PHONE;
         }
 
         // 查询考试计划名称
@@ -340,7 +340,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         // 5. 发送短信
         sendExamPwdSms(user.getPhone(), examPlanName, finalPassword);
 
-        return statueConstant.EXAM_PASSWORD_SEND_CONTENT;
+        return StatueConstant.EXAM_PASSWORD_SEND_CONTENT;
     }
 
     /**

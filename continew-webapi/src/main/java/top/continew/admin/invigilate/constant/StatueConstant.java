@@ -16,7 +16,7 @@
 
 package top.continew.admin.invigilate.constant;
 
-public class statueConstant {
+public class StatueConstant {
 
     public static final String EXAM_PASSWORD = "开考密码：";
 
