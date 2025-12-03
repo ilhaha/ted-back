@@ -629,27 +629,59 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
         UploadResulResp result = new UploadResulResp();
 
-        // 获取班级所需上传资料
+        /* ================================
+         * ① 获取班级上传模板要求
+         * ================================ */
         WorkerApplyVO workerNeedUploadDoc = getWorkerNeedUploadDoc(classId, Boolean.TRUE);
         Map<Long, String> requiredDocs = workerNeedUploadDoc.getProjectNeedUploadDocs()
                 .stream()
                 .collect(Collectors.toMap(ProjectNeedUploadDocVO::getId, ProjectNeedUploadDocVO::getTypeName));
 
-        // 按身份证分组
+        /* ================================
+         * ② 文件按身份证分组
+         * ================================ */
         Map<String, UploadGroupDTO> grouped = groupFilesByIdCard(idCardFiles, applyForms, projectDocs, requiredDocs);
 
-        // 资料完整的身份证
+        /* ================================
+         * ③ 筛选出资料齐全的身份证
+         * ================================ */
         Map<String, UploadGroupDTO> completeGroups = new HashMap<>();
         grouped.forEach((id, g) -> {
             List<String> missing = checkMissingFiles(g, requiredDocs);
             if (missing.isEmpty()) {
                 completeGroups.put(id, g);
             } else {
-                result.getFailedList().add(new FailedUploadResp(id, "未上传: " + String.join("、 ", missing)));
+                result.getFailedList().add(new FailedUploadResp(id, "未上传" + String.join("、 ", missing)));
             }
         });
 
-        // 批量更新/插入数据
+        if (completeGroups.isEmpty()) {
+            return result;
+        }
+
+        /* ========================================
+         * ④ 一次性查询班级所有人员信息（替代 selectOne）
+         * ======================================== */
+        List<WorkerApplyDO> workerList = baseMapper.selectList(
+                new LambdaQueryWrapper<WorkerApplyDO>()
+                        .eq(WorkerApplyDO::getClassId, classId)
+        );
+
+        // 生成 "身份证明文 → WorkerApplyDO" 映射
+        Map<String, WorkerApplyDO> idCardToWorkerMap = new HashMap<>();
+        for (WorkerApplyDO w : workerList) {
+            String plainId = null;
+            try {
+                plainId = aesWithHMAC.verifyAndDecrypt(w.getIdCardNumber());
+            } catch (Exception e) {
+                continue; // 解密失败跳过
+            }
+            idCardToWorkerMap.put(plainId, w);
+        }
+
+        /* ================================
+         * ⑤ 批量构建更新 & 插入列表
+         * ================================ */
         List<WorkerApplyDO> updateList = new ArrayList<>();
         List<WorkerApplyDocumentDO> insertList = new ArrayList<>();
 
@@ -657,38 +689,36 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             String idCard = entry.getKey();
             UploadGroupDTO group = entry.getValue();
 
+            WorkerApplyDO workerApplyDO = idCardToWorkerMap.get(idCard);
+            if (workerApplyDO == null) {
+                result.getFailedList().add(new FailedUploadResp(idCard, "未查询到班级下存在该身份证信息"));
+                continue;
+            }
+            if (!WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue().equals(workerApplyDO.getStatus())) {
+                result.getFailedList().add(new FailedUploadResp(idCard, "该作业人员已上传过资料信息"));
+                continue;
+            }
             try {
-                // 识别身份证正面和反面
+                /* =========== 身份证识别 =========== */
                 IdCardFileInfoResp frontResp = uploadAndCheckIdCard(group.getIdCardFront(), 1, idCard, result, "正面");
                 if (frontResp == null) continue;
 
                 IdCardFileInfoResp backResp = uploadAndCheckIdCard(group.getIdCardBack(), 0, idCard, result, "反面");
                 if (backResp == null) continue;
 
-                // 检查身份证是否过期
-                if (backResp.getValidEndDate() != null && backResp.getValidEndDate().isBefore(LocalDate.now())) {
+                if (backResp.getValidEndDate() != null &&
+                        backResp.getValidEndDate().isBefore(LocalDate.now())) {
                     result.getFailedList().add(new FailedUploadResp(idCard, "所上传的身份证已过期"));
                     continue;
                 }
 
-                // 上传正脸照
+                /* ========== 头像上传 ========== */
                 IdCardFileInfoResp faceResp = uploadService.uploadIdCard(group.getPhotoOneInch(), 2);
 
-                // 上传资格申请表
+                /* ========== 申请表上传 ========== */
                 FileInfoResp applyResp = uploadService.applyUpload(group.getApplyForm());
 
-                // 查找作业人员信息
-                WorkerApplyDO workerApplyDO = baseMapper.selectOne(
-                        new LambdaQueryWrapper<WorkerApplyDO>()
-                                .eq(WorkerApplyDO::getIdCardNumber, aesWithHMAC.encryptAndSign(idCard))
-                                .eq(WorkerApplyDO::getClassId, classId)
-                );
-                if (workerApplyDO == null) {
-                    result.getFailedList().add(new FailedUploadResp(idCard,"未查询到班级下存在该身份证信息"));
-                    continue;
-                }
-
-                // 准备更新数据
+                /* ========== 更新 WorkerApply ========== */
                 WorkerApplyDO update = new WorkerApplyDO();
                 update.setId(workerApplyDO.getId());
                 update.setIdCardPhotoFront(frontResp.getIdCardPhotoFront());
@@ -699,10 +729,13 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 update.setStatus(WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue());
                 updateList.add(update);
 
-                // 上传项目资料
+                /* ========== 项目资料上传 ========== */
                 if (group.getProjectDocs() != null) {
-                    for (Map.Entry<Long, UploadGroupDTO.ProjectDocItem> docEntry : group.getProjectDocs().entrySet()) {
+                    for (Map.Entry<Long, UploadGroupDTO.ProjectDocItem> docEntry :
+                            group.getProjectDocs().entrySet()) {
+
                         FileInfoResp fileInfoResp = uploadService.applyUpload(docEntry.getValue().getFile());
+
                         WorkerApplyDocumentDO insert = new WorkerApplyDocumentDO();
                         insert.setWorkerApplyId(workerApplyDO.getId());
                         insert.setTypeId(docEntry.getKey());
@@ -721,12 +754,15 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             }
         }
 
-        // 批量更新和插入数据库
+        /* ================================
+         * ⑥ 执行批量数据库操作
+         * ================================ */
         if (!updateList.isEmpty()) baseMapper.updateBatchById(updateList);
         if (!insertList.isEmpty()) workerApplyDocumentMapper.insertBatch(insertList);
 
         return result;
     }
+
 
     private Map<String, UploadGroupDTO> groupFilesByIdCard(List<MultipartFile> idCardFiles,
                                                            List<MultipartFile> applyForms,
@@ -793,8 +829,6 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             return null;
         }
     }
-
-
 
     private String extractIdCard(String filename) {
         if (filename == null || filename.length() < 18) {
