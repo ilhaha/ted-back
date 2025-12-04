@@ -147,7 +147,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
     @Resource
     private RedisTemplate redisTemplate;
-
     @Override
     public PageResp<UserResp> page(UserQuery query, PageQuery pageQuery) {
         QueryWrapper<UserDO> queryWrapper = this.buildQueryWrapper(query);
@@ -191,6 +190,30 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         pageResp.getList().forEach(this::fill);
         return pageResp;
     }
+
+@Override
+@Transactional(rollbackFor = Exception.class)
+public void deleteExamStaff(Long id) {
+    // 参数校验
+    if (id == null) {
+        throw new IllegalArgumentException("用户ID不能为空");
+    }
+    // 检查用户是否存在
+    UserDO user = super.getById(id);
+    if (user == null) {
+        throw new BusinessException("用户不存在，ID: " + id);
+    }
+    // 删除用户和角色关联
+    userRoleService.deleteByUserIds(Collections.singletonList(id));
+    // 删除用户
+    super.delete(Collections.singletonList(id));
+    // 删除用户资质证明
+    userMapper.deleteUserQualificationsByUserId(id);
+    // 删除历史密码
+    userPasswordHistoryService.deleteByUserIds(Collections.singletonList(id));
+    // 踢出在线用户
+    onlineUserService.kickOut(id);
+}
 
 
     @Override

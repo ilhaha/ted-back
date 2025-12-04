@@ -342,4 +342,9 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
 
     PageResp<UserResp> pageExamStaff(UserQuery query, PageQuery pageQuery);
 
+    /**
+     * 删除考务人员
+     * * @param id
+     */
+    void deleteExamStaff(Long id);
 }

@@ -50,5 +50,4 @@ public class UserQualificationController extends BaseController<UserQualificatio
     public R<Boolean> addQualification(@Valid @RequestBody UserQualificationReq req) {
         return R.ok(baseService.addQualification(req));
     }
-
 }

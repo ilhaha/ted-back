@@ -260,4 +260,11 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
                           @Param("examNumberEncrypt") String examNumberEncrypt,
                           @Param("planId") Long planId,
                           @Param("examStatus") Integer examStatus);
+
+
+    /**
+     * 删除考务人员资质证明
+     */
+    @Delete("DELETE FROM ted_user_qualification WHERE user_id = #{userId}")
+    void deleteUserQualificationsByUserId(@Param("userId") Long userId);
 }

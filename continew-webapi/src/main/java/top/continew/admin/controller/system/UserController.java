@@ -248,5 +248,12 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     public PageResp<UserResp> pageExamStaff(UserQuery query, PageQuery pageQuery) {
         return userService.pageExamStaff(query, pageQuery);
     }
-
+    /**
+     * 删除考务人员
+     * @param id 考务人员ID
+     */
+    @DeleteMapping("/examStaff/{id}")
+    public void deleteExamStaff(@PathVariable Long id) {
+        userService.deleteExamStaff(id);
+    }
 }

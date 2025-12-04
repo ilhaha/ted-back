@@ -4,6 +4,7 @@
 
     <select id="listByUserId" resultType="top.continew.admin.invigilate.model.dto.UserQualificationDTO">
         SELECT
+            uq.id AS id,
             c.name AS categoryName,
             uq.qualification_url AS qualificationUrl,
             uq.create_time AS createTime,
@@ -11,7 +12,7 @@
         FROM ted_user_qualification uq
                  LEFT JOIN ted_category c ON uq.category_id = c.id
         WHERE uq.user_id = #{userId}
+          AND uq.is_deleted = 0
         ORDER BY uq.create_time DESC
     </select>
-
 </mapper>

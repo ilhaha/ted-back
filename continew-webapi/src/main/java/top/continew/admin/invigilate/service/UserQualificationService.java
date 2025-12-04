@@ -23,7 +23,6 @@ public interface UserQualificationService extends BaseService<UserQualificationR
      */
     List<UserQualificationDTO> listByUserId(Long userId);
 
-
     /**
      * 添加资质证明
      */

@@ -15,6 +15,9 @@ import java.time.LocalDateTime;
 @Data
 @Schema(description = "监考员资质证明响应 DTO")
 public class UserQualificationDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
+    @Schema(description = "资质ID")
+    private Long id;
 
     @Schema(description = "类别名称（来自 ted_category.name）")
     private String categoryName;
