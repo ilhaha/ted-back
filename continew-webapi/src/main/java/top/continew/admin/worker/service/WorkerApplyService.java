@@ -104,4 +104,12 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      * @return
      */
     UploadResulResp orgBatchUploadDoc(Long classId, List<MultipartFile> idCardFiles, List<MultipartFile> applyForms, List<MultipartFile> projectDocs);
+
+    /**
+     * 机构提交作业人员资料进行审核
+     * @param classId
+     * @return
+     */
+    Boolean submitDoc(Long classId);
+
 }

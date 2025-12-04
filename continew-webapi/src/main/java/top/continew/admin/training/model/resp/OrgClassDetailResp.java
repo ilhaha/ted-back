@@ -97,4 +97,47 @@ public class OrgClassDetailResp extends BaseDetailResp {
     @Schema(description = "是否删除 0-未删除 1-已删除")
     @ExcelProperty(value = "是否删除 0-未删除 1-已删除")
     private Integer isDeleted;
+
+    /**
+     * 作业人员总人数
+     */
+    @Schema(description = "作业人员总人数")
+    @ExcelProperty(value = "作业人员总人数")
+    private Long workerCount;
+
+
+    /**
+     * 作业人员资料待审核人数
+     */
+    @Schema(description = "作业人员资料待审核人数")
+    @ExcelProperty(value = "作业人员资料待审核人数")
+    private Long pendingReviewCount;
+
+    /**
+     * 作业人员资料审核通过人数
+     */
+    @Schema(description = "作业人员资料审核通过人数")
+    @ExcelProperty(value = "作业人员资料审核通过人数")
+    private Long approvedCount;
+
+    /**
+     * 作业人员资料审核未通过人数
+     */
+    @Schema(description = "作业人员资料审核未通过人数")
+    @ExcelProperty(value = "作业人员资料审核未通过人数")
+    private Long rejectedCount;
+
+    /**
+     * 作业人员待上传资料人数
+     */
+    @Schema(description = "作业人员待上传资料人数")
+    @ExcelProperty(value = "作业人员待上传资料人数")
+    private Long waitUploadCount;
+
+    /**
+     * 作业人员已上传资料人数
+     */
+    @Schema(description = "作业人员已上传资料人数")
+    @ExcelProperty(value = "作业人员已上传资料人数")
+    private Long uploadedCount;
 }

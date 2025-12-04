@@ -50,6 +50,16 @@ import java.util.List;
     Api.EXPORT})
 public class WorkerApplyController extends BaseController<WorkerApplyService, WorkerApplyResp, WorkerApplyDetailResp, WorkerApplyQuery, WorkerApplyReq> {
 
+    /**
+     * 机构提交作业人员资料进行审核
+     * @param classId
+     * @return
+     */
+    @PostMapping("/submit/doc/{classId}")
+    public Boolean submitDoc(@PathVariable("classId") Long classId) {
+        return baseService.submitDoc(classId);
+    }
+
 
     /**
      * 根据班级id获取未上上传资料的作业人员数
