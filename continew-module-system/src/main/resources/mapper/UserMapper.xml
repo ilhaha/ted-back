@@ -344,4 +344,28 @@
         </foreach>
     </insert>
 
+    <select id="selectUserDetailById" resultType="top.continew.admin.system.model.dto.UserDetailDTO">
+        SELECT
+            u.id,
+            u.username,
+            u.nickname,
+            u.gender,
+            u.email,
+            u.phone,
+            u.company_name       AS companyName,
+            u.contact_address    AS contactAddress,
+            u.landline,
+            u.region,
+            u.postal_code        AS postalCode,
+            u.graduation_school  AS graduationSchool,
+            u.related_major      AS relatedMajor,
+            u.major_type         AS majorType,
+            u.related_education  AS relatedEducation,
+            u.job_qualification  AS jobQualification,
+            u.related_work_years AS relatedWorkYears,
+            u.description
+        FROM sys_user u
+        WHERE u.id = #{id}
+    </select>
+
 </mapper>

@@ -18,6 +18,7 @@ package top.continew.admin.system.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.file.FileNameUtil;
@@ -45,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.ahoo.cosid.IdGenerator;
 import me.ahoo.cosid.provider.DefaultIdGeneratorProvider;
 import net.dreamlu.mica.core.result.R;
+import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -71,6 +73,7 @@ import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.system.enums.OptionCategoryEnum;
 import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.dto.UserDetailDTO;
 import top.continew.admin.system.model.entity.DeptDO;
 import top.continew.admin.system.model.entity.RoleDO;
 import top.continew.admin.system.model.entity.UserDO;
@@ -92,6 +95,7 @@ import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.query.SortQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
+import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.starter.web.util.FileUploadUtils;
 import top.continew.starter.core.util.SpringUtils;
@@ -1148,5 +1152,41 @@ public void deleteExamStaff(Long id) {
         });
 
         return resultList;
+    }
+
+    @Override
+    public UserDetailDTO getUserDetail(Long id) {
+        UserDetailDTO userDetailDTO = userMapper.selectUserDetailById(id);
+        // 解码身份证
+        if (userDetailDTO.getUsername() != null) {
+            userDetailDTO.setUsername(aesWithHMAC.verifyAndDecrypt(userDetailDTO.getUsername()));
+        }
+        // 解密邮箱，如果不为空
+//        if (userDetailDTO.getEmail() != null && !userDetailDTO.getEmail().isEmpty()) {
+//            userDetailDTO.setEmail(SecureUtils.decryptByRsaPrivateKey(userDetailDTO.getEmail()));
+//        }
+        // 填充其他信息
+        this.fill(userDetailDTO);
+        return userDetailDTO;
+    }
+
+
+    @Override
+    public void updateUserDetail(UserDetailDTO req) {
+        UserDO user = new UserDO();
+        user.setId(req.getId());
+        user.setCompanyName(req.getCompanyName());//单位名称
+        user.setRegion(req.getRegion());//地区
+        user.setContactAddress(req.getContactAddress());//地址
+        user.setGraduationSchool(req.getGraduationSchool());//毕业学校
+        user.setPostalCode(req.getPostalCode());//邮编
+        user.setLandline(req.getLandline());//固定电话
+//        user.setEmail(req.getEmail());//邮箱
+        user.setMajorType(req.getMajorType());//专业类型
+        user.setRelatedMajor(req.getRelatedMajor());//相关专业
+        user.setRelatedEducation(req.getRelatedEducation());//相关学历
+        user.setJobQualification(req.getJobQualification());//任职资格
+        user.setRelatedWorkYears(req.getRelatedWorkYears());//工作年限
+        userMapper.updateById(user);
     }
 }

@@ -31,6 +31,7 @@ import top.continew.admin.auth.model.resp.CandidatesExamPlanVo;
 import top.continew.admin.common.config.mybatis.DataPermissionMapper;
 import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
 import top.continew.admin.common.model.entity.UserRoleDeptDo;
+import top.continew.admin.system.model.dto.UserDetailDTO;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.resp.user.UserDetailResp;
 import top.continew.admin.system.model.resp.user.UserResp;
@@ -267,4 +268,11 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
      */
     @Delete("DELETE FROM ted_user_qualification WHERE user_id = #{userId}")
     void deleteUserQualificationsByUserId(@Param("userId") Long userId);
+
+
+
+    /**
+     * 根据ID查询用户详细信息
+     */
+    UserDetailDTO selectUserDetailById(@Param("id") Long id);
 }

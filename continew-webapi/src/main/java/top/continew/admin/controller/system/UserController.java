@@ -39,6 +39,7 @@ import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.invigilate.model.resp.UserQualificationResp;
 import top.continew.admin.invigilate.service.PlanInvigilateService;
+import top.continew.admin.system.model.dto.UserDetailDTO;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.query.UserQuery;
 import top.continew.admin.system.model.req.user.UserImportReq;
@@ -255,5 +256,25 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @DeleteMapping("/examStaff/{id}")
     public void deleteExamStaff(@PathVariable Long id) {
         userService.deleteExamStaff(id);
+    }
+
+    /**
+     * 查询用户详细信息
+     * @param id 用户ID
+     */
+    @GetMapping("/detail/{id}")
+    public UserDetailDTO getUserDetail(@PathVariable Long id) {
+        return userService.getUserDetail(id);
+    }
+    /**
+     * 修改用户详细信息
+     * @param id 用户ID
+     */
+    /**
+     * 修改用户详细信息
+     */
+    @PutMapping("/detail")
+    public void updateUserDetail(@Validated @RequestBody UserDetailDTO userDetailDTO) {
+        userService.updateUserDetail(userDetailDTO);
     }
 }

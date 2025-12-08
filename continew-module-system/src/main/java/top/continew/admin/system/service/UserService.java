@@ -23,6 +23,7 @@ import top.continew.admin.auth.model.dto.InvigilatorPlanDTO;
 import top.continew.admin.auth.model.req.CandidatesExamPlanReq;
 import top.continew.admin.auth.model.resp.CandidatesExamPlanVo;
 import top.continew.admin.common.model.entity.UserRoleDeptDo;
+import top.continew.admin.system.model.dto.UserDetailDTO;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.query.UserQuery;
 import top.continew.admin.system.model.req.user.*;
@@ -347,4 +348,16 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      * * @param id
      */
     void deleteExamStaff(Long id);
+
+
+    /**
+     * 获取用户详情
+     */
+    UserDetailDTO getUserDetail(Long id);
+
+
+    /**
+     * 修改用户详情
+     */
+    void updateUserDetail(UserDetailDTO req);
 }

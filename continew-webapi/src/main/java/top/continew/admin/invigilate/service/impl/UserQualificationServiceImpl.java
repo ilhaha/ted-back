@@ -53,4 +53,14 @@ public class UserQualificationServiceImpl extends BaseServiceImpl<UserQualificat
         return this.save(entity);
     }
 
+    @Override
+    public boolean hasQualification(Long userId, Long categoryId) {
+        Long count = lambdaQuery()
+                .eq(UserQualificationDO::getUserId, userId)
+                .eq(UserQualificationDO::getCategoryId, categoryId)
+                .count();
+
+        return count != null && count > 0;
+    }
+
 }

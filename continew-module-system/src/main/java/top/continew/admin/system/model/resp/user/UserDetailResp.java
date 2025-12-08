@@ -159,8 +159,76 @@ public class UserDetailResp extends BaseDetailResp {
     @Schema(description = "最后一次修改密码时间", example = "2023-08-08 08:08:08", type = "string")
     private LocalDateTime pwdResetTime;
 
-    @Override
-    public Boolean getDisabled() {
-        return this.getIsSystem() || Objects.equals(this.getId(), UserContextHolder.getUserId());
-    }
+
+    /**
+     * 公司名称
+     */
+    @Schema(description = "公司名称")
+    private String companyName;
+
+    /**
+     * 联系地址
+     */
+    @Schema(description = "联系地址")
+    private String contactAddress;
+
+    /**
+     * 固定电话
+     */
+    @Schema(description = "固定电话")
+    private String landline;
+
+    /**
+     * 所在地区
+     */
+    @Schema(description = "所在地区")
+    private String region;
+
+    /**
+     * 邮政编码
+     */
+    @Schema(description = "邮政编码")
+    private String postalCode;
+
+    /**
+     * 毕业学校
+     */
+    @Schema(description = "毕业学校")
+    private String graduationSchool;
+
+    /**
+     * 所学专业
+     */
+    @Schema(description = "所学专业")
+    private String relatedMajor;
+
+    /**
+     * 专业类别
+     */
+    @Schema(description = "专业类别")
+    private String majorType;
+
+    /**
+     * 学历
+     */
+    @Schema(description = "学历")
+    private String relatedEducation;
+
+    /**
+     * 职业资格
+     */
+    @Schema(description = "职业资格")
+    private String jobQualification;
+
+    /**
+     * 相关工作年限
+     */
+    @Schema(description = "相关工作年限")
+    private String relatedWorkYears;
+
+
+//    @Override
+//    public Boolean getDisabled() {
+//        return this.getIsSystem() || Objects.equals(this.getId(), UserContextHolder.getUserId());
+//    }
 }

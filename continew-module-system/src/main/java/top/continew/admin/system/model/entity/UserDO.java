@@ -115,4 +115,60 @@ public class UserDO extends BaseDO {
      * 部门 ID
      */
     private Long deptId;
+
+    /**
+     * 单位名称
+     */
+    private String companyName;
+
+    /**
+     * 联系地址
+     */
+    private String contactAddress;
+
+    /**
+     * 固定电话
+     */
+    @TableField(insertStrategy = FieldStrategy.NOT_EMPTY)
+    private String landline;
+
+    /**
+     * 所属地区
+     */
+    private String region;
+
+    /**
+     * 邮政编码
+     */
+    private String postalCode;
+
+    /**
+     * 毕业院校
+     */
+    private String graduationSchool;
+
+    /**
+     * 相关专业
+     */
+    private String relatedMajor;
+
+    /**
+     * 专业类型
+     */
+    private String majorType;
+
+    /**
+     * 相关学历
+     */
+    private String relatedEducation;
+
+    /**
+     * 任职资格
+     */
+    private String jobQualification;
+
+    /**
+     * 相关工作年限（年）
+     */
+    private Integer relatedWorkYears;
 }

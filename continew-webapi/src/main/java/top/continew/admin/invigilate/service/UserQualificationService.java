@@ -28,4 +28,9 @@ public interface UserQualificationService extends BaseService<UserQualificationR
      */
     boolean addQualification(UserQualificationReq req);
 
+    /**
+     * 判断用户是否拥有某类别资质
+     */
+    boolean hasQualification(Long userId, Long categoryId);
+
 }
