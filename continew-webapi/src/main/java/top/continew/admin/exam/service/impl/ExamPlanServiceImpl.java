@@ -524,7 +524,9 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
                 // 解析考试时间
                 LocalDateTime examStartTime = parseDate(examStart, "考试日期", rowIndex, formatter);
-
+                if (examStartTime.isBefore(LocalDateTime.now())) {
+                    throw new BusinessException("第" + rowIndex + "行：考试开始时间不能早于当前时间");
+                }
                 // 根据考试时间自动生成报名时间（提前 7 天）
                 LocalDateTime signupStartTime = examStartTime.minusDays(7).withHour(0).withMinute(0).withSecond(0);
                 LocalDateTime signupEndTime = examStartTime.minusDays(1).withHour(23).withMinute(59).withSecond(59);
@@ -930,7 +932,6 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         List<PlanInvigilateDO> updateList = new ArrayList<>();
 
         for (Map.Entry<Long, List<InvigilatorAssignResp>> entry : groupByClassroom.entrySet()) {
-            Long classroomId = entry.getKey();
             List<InvigilatorAssignResp> list = entry.getValue();
 
             // 为该教室生成统一密码
