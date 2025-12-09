@@ -22,6 +22,7 @@ import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 import top.continew.admin.common.enums.GenderEnum;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
+import top.continew.starter.security.crypto.annotation.FieldEncrypt;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -76,6 +77,7 @@ public class UserDetailDTO implements Serializable {
      */
     @Schema(description = "邮箱", example = "admin@example.com")
     @Length(max = 255, message = "邮箱长度不能超过255个字符")
+    @FieldEncrypt
     private String email;
 
     /**

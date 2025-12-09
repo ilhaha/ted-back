@@ -35,6 +35,8 @@ import java.util.List;
  */
 public interface DocumentService extends BaseService<DocumentResp, DocumentDetailResp, DocumentQuery, DocumentReq> {
 
+    PageResp<CandidateDocumentResp> pageByCandidate(DocumentQuery query, PageQuery pageQuery);
+
     public void upload(DocumentReq req);//上传资料
 
     public List<DocumentTypeAddResp> getDocumentType();//获取资料类型

@@ -22,6 +22,7 @@ import jakarta.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.document.model.req.QrcodeUploadReq;
+import top.continew.admin.document.model.resp.CandidateDocumentResp;
 import top.continew.admin.document.model.resp.DocumentTypeAddResp;
 import top.continew.admin.document.model.vo.DocumentTypeNameVO;
 import top.continew.admin.document.service.DocumentTypeService;
@@ -38,6 +39,8 @@ import top.continew.admin.document.model.req.DocumentReq;
 import top.continew.admin.document.model.resp.DocumentDetailResp;
 import top.continew.admin.document.model.resp.DocumentResp;
 import top.continew.admin.document.service.DocumentService;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.web.model.R;
 
 import java.util.List;
@@ -99,4 +102,17 @@ public class DocumentController extends BaseController<DocumentService, Document
         boolean result = documentService.auditDocument(request);
         return R.ok(result);
     }
+
+    /**
+     * 按考生分页查询资料
+     *
+     * @param query     查询参数
+     * @param pageQuery 分页查询参数
+     * @return 考生资料分页结果
+     */
+    @GetMapping("/pageByCandidate")
+    public PageResp<CandidateDocumentResp> pageByCandidate(DocumentQuery query, PageQuery pageQuery) {
+        return documentService.pageByCandidate(query, pageQuery);
+    }
+
 }

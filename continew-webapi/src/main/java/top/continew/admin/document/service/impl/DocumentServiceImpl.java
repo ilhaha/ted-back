@@ -125,6 +125,75 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         return result;
     }
 
+
+    @Override
+    public PageResp<CandidateDocumentResp> pageByCandidate(DocumentQuery query, PageQuery pageQuery) {
+        // 1. 先查出 document 表的分页数据（你已有）
+        QueryWrapper<DocumentDO> queryWrapper = buildQueryWrapper(query);
+        queryWrapper.eq("is_deleted", 0);
+        super.sort(queryWrapper, pageQuery);
+
+        IPage<DocumentDO> page = baseMapper.selectPage(
+                new Page<>(pageQuery.getPage(), pageQuery.getSize()),
+                queryWrapper
+        );
+
+        // 转成 DocumentResp
+        PageResp<DocumentResp> temp = PageResp.build(page, super.getListClass());
+
+        // 2. 查询资料分类缓存
+        Map<Long, String> typeIdToNameMap = documentTypeCache.getDocumentTypeCache()
+                .stream()
+                .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
+
+        // 3. 查询所有用户信息
+        List<UserDTO> userDTOList = documentMapper.getUserInfoList();
+
+        // 4. 填充字段（你已有）
+        temp.getList().forEach(doc -> {
+            userDTOList.forEach(userDTO -> {
+                if (userDTO.getDocumentId().equals(doc.getId())) {
+                    doc.setUserName(userDTO.getUsername());
+                    doc.setNickName(userDTO.getNickname());
+                    doc.setCreateUser(userDTO.getId());
+                    doc.setCandidateId(userDTO.getId());
+                }
+            });
+
+            doc.setTypeName(typeIdToNameMap.getOrDefault(doc.getTypeId(), "未知分类"));
+            this.fill(doc);
+        });
+
+        // ------------------------------
+        // ⭐⭐⭐ 关键：按 candidateId 聚合成一条记录 ⭐⭐⭐
+        // ------------------------------
+        Map<Long, CandidateDocumentResp> map = new LinkedHashMap<>();
+
+        for (DocumentResp doc : temp.getList()) {
+            Long candidateId = doc.getCandidateId();
+
+            map.computeIfAbsent(candidateId, k -> {
+                CandidateDocumentResp resp = new CandidateDocumentResp();
+                resp.setCandidateId(candidateId);
+                resp.setUserName(doc.getUserName());
+                resp.setNickName(doc.getNickName());
+                resp.setDocuments(new ArrayList<>());
+                return resp;
+            });
+
+            map.get(candidateId).getDocuments().add(doc);
+        }
+
+        // 5. 分页组装结果
+        List<CandidateDocumentResp> finalList = new ArrayList<>(map.values());
+
+        PageResp<CandidateDocumentResp> result = new PageResp<>();
+        result.setList(finalList);
+        result.setTotal(finalList.size());
+        return result;
+    }
+
+
     @Override
     public DocumentDetailResp get(Long id) {
         DocumentDO entity = super.getById(id, false);

@@ -1161,10 +1161,6 @@ public void deleteExamStaff(Long id) {
         if (userDetailDTO.getUsername() != null) {
             userDetailDTO.setUsername(aesWithHMAC.verifyAndDecrypt(userDetailDTO.getUsername()));
         }
-        // 解密邮箱，如果不为空
-//        if (userDetailDTO.getEmail() != null && !userDetailDTO.getEmail().isEmpty()) {
-//            userDetailDTO.setEmail(SecureUtils.decryptByRsaPrivateKey(userDetailDTO.getEmail()));
-//        }
         // 填充其他信息
         this.fill(userDetailDTO);
         return userDetailDTO;
@@ -1181,7 +1177,7 @@ public void deleteExamStaff(Long id) {
         user.setGraduationSchool(req.getGraduationSchool());//毕业学校
         user.setPostalCode(req.getPostalCode());//邮编
         user.setLandline(req.getLandline());//固定电话
-//        user.setEmail(req.getEmail());//邮箱
+        user.setEmail(req.getEmail());//邮箱
         user.setMajorType(req.getMajorType());//专业类型
         user.setRelatedMajor(req.getRelatedMajor());//相关专业
         user.setRelatedEducation(req.getRelatedEducation());//相关学历
