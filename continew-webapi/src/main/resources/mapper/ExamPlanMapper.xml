@@ -23,18 +23,23 @@
                CASE
                    WHEN tep.update_user IS NOT NULL THEN su.nickname
                    ELSE NULL
-                   END AS approvedUser,
+                   END      AS approvedUser,
                tep.create_time,
                tep.update_time,
                tep.exam_fee,
                tel.location_name,
                tp.project_name,
                tep.exam_project_id,
-               tep.location_id
+               tep.location_id,
+               COUNT(te.id) AS enrolled_count
         FROM ted_exam_plan tep
                  LEFT JOIN ted_exam_location tel ON tel.id = tep.location_id
                  LEFT JOIN ted_project tp ON tp.id = tep.exam_project_id
                  LEFT JOIN sys_user su ON tep.update_user IS NOT NULL AND su.id = tep.update_user
+                 LEFT JOIN ted_enroll te
+                           ON tep.id = te.exam_plan_id
+                               AND te.enroll_status IN (1, 4)
+                               AND te.is_deleted = 0
     </sql>
     <insert id="savePlanClassroom">
         INSERT INTO ted_plan_classroom (plan_id, classroom_id)
@@ -52,6 +57,8 @@
     <select id="selectExamPlanPage" resultType="top.continew.admin.exam.model.resp.ExamPlanDetailResp">
         <include refid="selectPlanPage"/>
         ${ew.customSqlSegment}
+        GROUP BY tep.id
+        ORDER BY tep.id DESC
     </select>
 
     <select id="selectDetailById" resultType="top.continew.admin.exam.model.resp.ExamPlanDetailResp">
@@ -128,7 +135,7 @@
     <select id="orgGetPlanList" resultType="top.continew.admin.exam.model.vo.OrgExamPlanVO">
         SELECT tep.id                                       AS exam_plan_id,
                tep.*,
-               tp.id AS project_id,
+               tp.id                                        AS project_id,
                tp.project_name,
                tp.project_code,
                tp.exam_duration,
@@ -144,11 +151,25 @@
                  LEFT JOIN ted_org_user tou
                            ON tocr.org_id = tou.org_id AND tou.is_deleted = 0
                  LEFT JOIN ted_enroll te
-                           ON tep.id = te.exam_plan_id AND te.enroll_status = 1 AND te.is_deleted = 0 ${ew.customSqlSegment}
+                           ON tep.id = te.exam_plan_id AND te.enroll_status IN (1, 4) AND te.is_deleted = 0 ${ew.customSqlSegment}
           AND tep.is_deleted = 0
           AND tou.user_id = #{userId}
         GROUP BY tep.id;
     </select>
+    <select id="listConflictClassrooms" resultType="java.lang.String">
+        SELECT DISTINCT tc.classroom_name
+        FROM ted_exam_plan tep
+        LEFT JOIN ted_plan_classroom tpc ON tep.id = tpc.plan_id
+        LEFT JOIN ted_classroom tc ON tc.id = tpc.classroom_id
+        WHERE tep.`status` NOT IN (4, 6)
+        AND tep.is_deleted = 0
+        AND tpc.classroom_id IN
+        <foreach collection="classroomIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND DATE(tep.start_time) = DATE(#{startTime})
+    </select>
+
 
     <update id="batchUpdatePlanMaxCandidates">
         UPDATE ted_exam_plan

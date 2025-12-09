@@ -80,4 +80,16 @@ public class ClassroomResp extends BaseResp {
     @Schema(description = "考试地点")
     private String examLocation;
 
+    /**
+     * 考场类型，0作业人员考场，1检验人员考场
+     */
+    @Schema(description = "考场类型，0作业人员考场，1检验人员考场")
+    private Integer classroomType;
+
+    /**
+     * 考场考试类型，0理论考试，1实操考试
+     */
+    @Schema(description = "考场考试类型，0理论考试，1实操考试")
+    private Integer examType;
+
 }

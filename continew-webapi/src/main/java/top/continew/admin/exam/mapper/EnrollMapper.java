@@ -109,4 +109,6 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
                                          @Param(Constants.WRAPPER) QueryWrapper<EnrollDO> queryWrapper);
 
     List<WorkerAuditNoticeResp> selectAuditNoticeToClass(@Param("classId") Long classId, @Param("planId") Long planId);
+
+    Long getPlanEnrollCount(@Param("examPlanId") Long examPlanId);
 }

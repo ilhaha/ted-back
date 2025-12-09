@@ -34,5 +34,6 @@ public class ProjectVo {
     private String label;
     private Long value;
     private Boolean disabled = false;
+    private Integer isOperation;
 
 }

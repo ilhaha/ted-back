@@ -16,49 +16,39 @@
 
 package top.continew.admin.exam.model.req;
 
-import lombok.Data;
-
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.*;
+import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.time.*;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
- * 创建或修改考场参数
+ * 创建或修改考试计划参数
  *
  * @author Anton
- * @since 2025/05/14 16:34
+ * @since 2025/03/11 15:14
  */
 @Data
-@Schema(description = "创建或修改考场参数")
-public class ClassroomReq implements Serializable {
+@Schema(description = "创建或修改考试计划参数")
+public class AdjustPlanTimeReq implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private Long id;
     /**
-     * 地点id
+     * 考试开始时间
      */
-    private Long examLocationId;
+    @NotNull(message = "考试开始时间不能为空")
+    @Future(message = "考试开始时间必须是未来时间")
+    private LocalDateTime startTime;
 
-    private String examLocation;
 
-    private String classroomName;
+    @Schema(description = "报名开始时间范围")
+    @Size(min = 2, max = 2, message = "报名开始时间范围必须包含 2 个时间点")
+    private List<@Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$", message = "报名开始时间格式不正确") String> enrollList;
 
-    private Long maxCandidates;
-
-    /**
-     * 考场类型，0作业人员考场，1检验人员考场
-     */
-    @Schema(description = "考场类型，0作业人员考场，1检验人员考场")
-    private Integer classroomType;
-
-    /**
-     * 考场考试类型，0理论考试，1实操考试
-     */
-    @Schema(description = "考场考试类型，0理论考试，1实操考试")
-    private Integer examType;
 
 }

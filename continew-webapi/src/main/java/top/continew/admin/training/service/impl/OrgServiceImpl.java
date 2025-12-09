@@ -1163,19 +1163,21 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         }
 
         // 计算最大人数
-        ExamPlanVO examPlanVO = new ExamPlanVO();
-        BeanUtils.copyProperties(examPlanDO, examPlanVO);
-        examPlanVO.setClassroomList(examPlanMapper.getPlanExamClassroom(examPlanId));
+//        ExamPlanVO examPlanVO = new ExamPlanVO();
+//        BeanUtils.copyProperties(examPlanDO, examPlanVO);
+//        examPlanVO.setClassroomList(examPlanMapper.getPlanExamClassroom(examPlanId));
+//
+//        int maxNumber = 0;
+//        List<ClassroomDO> classroomDOS = classroomMapper.selectList(new LambdaQueryWrapper<ClassroomDO>()
+//                .in(ClassroomDO::getId, examPlanVO.getClassroomList()));
+//        for (ClassroomDO classroomDO : classroomDOS) {
+//            maxNumber += classroomDO.getMaxCandidates();
+//        }
+//
+        Long actualCount = enrollMapper.getPlanEnrollCount(examPlanId);
+        Integer maxCandidates = examPlanDO.getMaxCandidates();
 
-        int maxNumber = 0;
-        List<ClassroomDO> classroomDOS = classroomMapper.selectList(new LambdaQueryWrapper<ClassroomDO>()
-                .in(ClassroomDO::getId, examPlanVO.getClassroomList()));
-        for (ClassroomDO classroomDO : classroomDOS) {
-            maxNumber += classroomDO.getMaxCandidates();
-        }
-
-        Long actualCount = enrollMapper.getEnrollCount(examPlanId);
-        ValidationUtils.throwIf(maxNumber - actualCount - projectClassCandidateList.size() < 0, "报名人数大于考试计划剩余报名名额");
+        ValidationUtils.throwIf(maxCandidates - actualCount - projectClassCandidateList.size() < 0, "报名人数大于考试计划剩余报名名额");
 
         // 检查是否重复报名
         List<Long> candidateIds = projectClassCandidateList.stream().map(item -> {

@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -61,6 +62,18 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     @Resource
     private ExamPlanService examPlanService;
+
+
+    /**
+     * 调整考试/报名时间
+     * @param req
+     * @param planId
+     * @return
+     */
+    @PostMapping("/adjustPlanTime/{planId}")
+    public Boolean adjustPlanTime(@Validated @RequestBody AdjustPlanTimeReq req, @PathVariable("planId") Long planId ) {
+        return baseService.adjustPlanTime(req,planId);
+    }
 
     /**
      * 中心主任确认考试
@@ -143,9 +156,9 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
      * @return
      */
     @Operation(summary = "根据部门ID获取项目列表")
-    @PostMapping("/dept/projectList")
-    public List<ProjectVo> getDeptProject() {
-        return projectService.getDeptProject();
+    @PostMapping("/dept/projectList/{planType}")
+    public List<ProjectVo> getDeptProject(@PathVariable("planType") Integer planType) {
+        return projectService.getDeptProject(planType);
     }
 
     /**

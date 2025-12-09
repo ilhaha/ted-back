@@ -72,11 +72,16 @@ public class ExamPlanReq implements Serializable {
     private Long locationId;
 
     /**
-     * 考场id列表
+     * 理论考场
      */
-    @Schema(description = "考场ID列表")
-    @NotNull(message = "考场ID列表不能为空")
-    private List<Long> classroomId;
+    @Schema(description = "理论考场")
+    @NotNull(message = "理论考场未选择")
+    private List<Long> theoryClassroomId;
+    /**
+     * 实操考场
+     */
+    @Schema(description = "实操考场")
+    private List<Long> operationClassroomId;
 
     @Schema(description = "计划考试人数")
     @NotNull(message = "计划人数不能为空")
@@ -88,6 +93,11 @@ public class ExamPlanReq implements Serializable {
 
     private LocalDateTime enrollEndTime;
     private LocalDateTime enrollStartTime;
+    /**
+     * 考试开始时间
+     */
+    @NotNull(message = "考试开始时间不能为空")
+    @Future(message = "考试开始时间必须是未来时间")
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Integer isFinalConfirmed;

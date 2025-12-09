@@ -106,6 +106,7 @@ ExamPlanResp extends BaseResp {
     @ExcelProperty(value = "项目名称")
     private String projectName;
 
+
     /**
      * 机构类型，0作业人员，1检验人员
      */
@@ -190,4 +191,10 @@ ExamPlanResp extends BaseResp {
      */
     @Schema(description = "考试费用")
     private Long examFee;
+
+    /**
+     * 已报名人数
+     */
+    @Schema(description = "已报名人数")
+    private Integer enrolledCount;
 }

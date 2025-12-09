@@ -56,4 +56,8 @@ public class ProjectQuery implements Serializable {
     @Schema(description = "八大类ID")
     private Long categoryId;
 
+    @Query(type = QueryType.EQ)
+    @Schema(description = "项目考试人员类型")
+    private Long projectType;
+
 }

@@ -27,7 +27,7 @@
         registration_progress = IF(review_status != 1, VALUES(registration_progress), registration_progress);
     </insert>
     <select id="getListByPlanId" resultType="top.continew.admin.invigilate.model.resp.InvigilatorAssignResp">
-        SELECT su.nickname, tpi.invigilator_id, tc.id AS classroom_id, tc.classroom_name, tpi.invigilate_status,tpi.id
+        SELECT su.nickname, tpi.invigilator_id, tc.id AS classroom_id, tc.classroom_name, tpi.invigilate_status,tpi.id,tpi.exam_password
         from ted_plan_invigilate tpi
                  LEFT JOIN ted_classroom tc
                            ON tpi.classroom_id = tc.id AND tc.is_deleted = 0

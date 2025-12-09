@@ -92,11 +92,19 @@ public class ProjectDetailResp extends BaseDetailResp {
     private Long projectStatus;
 
     /**
-     * 项目类型（0-理论考试 1-实操考试）
+     * 项目类型（0-作业人员 1-检验人员）
      */
-    @Schema(description = "项目类型（0-理论考试 1-实操考试）")
-    @ExcelProperty(value = "项目类型（0-理论考试 1-实操考试）")
+    @Schema(description = "项目类型（0-作业人员 1-检验人员）")
+    @ExcelProperty(value = "项目类型（0-作业人员 1-检验人员）")
     private Integer projectType;
+
+    /**
+     * 是否有实操考试（0无，1有）
+     */
+    @Schema(description = "是否有实操考试（0无，1有）")
+    @ExcelProperty(value = "是否有实操考试（0无，1有）")
+    private Integer isOperation;
+
     /**
      * 描述
      */

@@ -207,4 +207,10 @@
           AND tepa.class_id = #{classId}
           AND te.exam_plan_id = #{planId}
     </select>
+    <select id="getPlanEnrollCount" resultType="java.lang.Long">
+        SELECT COUNT(id)
+        FROM ted_enroll
+        WHERE exam_plan_id = #{examPlanId}
+            AND enroll_status IN (1,4)
+    </select>
 </mapper>

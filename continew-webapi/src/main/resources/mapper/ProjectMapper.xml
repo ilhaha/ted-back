@@ -19,13 +19,15 @@
     <select id="getDeptProject" resultType="top.continew.admin.exam.model.vo.ProjectVo">
         SELECT
         tp.project_name as `label`,
-        tp.id as `value`
+        tp.id as `value`,
+        tp.is_operation
         FROM ted_project AS tp
         WHERE tp.is_deleted = 0
         <if test="deptId != null">
             AND tp.dept_id = #{deptId}
         </if>
         and tp.project_status = 2
+        AND tp.project_type = #{planType}
     </select>
 
     <select id="selectBindingLocationByIds" resultType="java.lang.Long">
@@ -189,6 +191,18 @@
             #{id}
         </foreach>
         AND is_deleted = 0
+    </select>
+
+    <select id="getLocationClassroomList" resultType="top.continew.admin.exam.model.resp.LocationClassroomVO">
+        SELECT *
+        FROM  ted_classroom tc
+                  LEFT JOIN ted_location_classroom tlc
+                            ON tc.id = tlc.classroom_id AND tlc.is_deleted = 0
+                  LEFT JOIN ted_exam_location tel
+                            ON tlc.location_id = tel.id AND tel.is_deleted = 0
+        WHERE tc.is_deleted = 0
+          AND tc.classroom_type = #{examType}
+          AND tc.exam_type = #{isOperation}
     </select>
 
 </mapper>

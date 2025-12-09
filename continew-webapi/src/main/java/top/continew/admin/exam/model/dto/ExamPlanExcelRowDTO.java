@@ -29,7 +29,8 @@ import java.util.List;
 public class ExamPlanExcelRowDTO {
     private String planName;
     private Long projectId;
-    private List<Long> classroomIds;
-    private LocalDateTime signupStartTime, signupEndTime, examStartTime, examEndTime;
+    private LocalDateTime signupStartTime, signupEndTime, examStartTime;
+    private String maxCandidates;
+    private Integer projectType;
     private int rowIndex;
 }

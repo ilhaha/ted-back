@@ -96,6 +96,7 @@ public class ExamPlanDO extends BaseDO {
      */
     private Integer assignType;
 
+
     /**
      * 审批人ID列表
      */

@@ -56,6 +56,17 @@ import java.util.Map;
 public class ProjectController extends BaseController<ProjectService, ProjectResp, ProjectDetailResp, ProjectQuery, ProjectReq> {
 
     /**
+     * 根据项目的考试人员类型和是否有实操考试获取地点-考场级联选择器
+     *
+     * @return
+     */
+    @Operation(summary = "根据考场考试类型获取地点-考场级联选择器")
+    @GetMapping("/local/classroom/{projectId}/{isOperation}")
+    public List<Map<String, Object>> getLocalClassroomChoose(@PathVariable("projectId") Long projectId,@PathVariable("isOperation") Integer isOperation) {
+        return baseService.getLocalClassroomChoose(projectId,isOperation);
+    }
+
+    /**
      * 机构获取所属全部项目
      *
      * @return

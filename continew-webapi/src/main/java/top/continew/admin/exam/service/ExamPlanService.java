@@ -19,6 +19,7 @@ package top.continew.admin.exam.service;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -135,4 +136,11 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      */
     Boolean centerDirectorConform(Long planId, Integer isFinalConfirmed);
 
+    /**
+     * 调整考试/报名时间
+     * @param req
+     * @param planId
+     * @return
+     */
+    Boolean adjustPlanTime(AdjustPlanTimeReq req, Long planId);
 }

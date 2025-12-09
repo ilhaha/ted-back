@@ -133,72 +133,72 @@ public class ClassroomServiceImpl extends BaseServiceImpl<ClassroomMapper, Class
         ClassroomDO oldClassroom = classroomMapper.selectById(id);
         ValidationUtils.throwIfNull(oldClassroom, "未找到对应的考场记录");
 
-        Long oldMax = Optional.ofNullable(oldClassroom.getMaxCandidates()).orElse(0L);
-        Long newMax = Optional.ofNullable(req.getMaxCandidates()).orElse(0L);
-
-        // 2. 如果新容量 < 旧容量，需要校验是否已被确认考试计划占用
-        if (newMax < oldMax) {
-
-            // 查该考场绑定了哪些考试计划
-            List<Long> planIds = planClassroomMapper.selectList(new LambdaQueryWrapper<PlancalssroomDO>()
-                .select(PlancalssroomDO::getPlanId)
-                .eq(PlancalssroomDO::getClassroomId, id)).stream().map(PlancalssroomDO::getPlanId).toList();
-
-            if (CollUtil.isNotEmpty(planIds)) {
-
-                // 查是否有已确认考试的计划
-                boolean hasConfirmed = examPlanMapper.exists(new LambdaQueryWrapper<ExamPlanDO>()
-                    .in(ExamPlanDO::getId, planIds)
-                    .eq(ExamPlanDO::getStatus, ExamPlanStatusEnum.IN_FORCE.getValue()));
-
-                ValidationUtils.throwIf(hasConfirmed, "该考场已有已确认的考试计划，容量不能设置得小于原容量：" + oldMax);
-            }
-        }
-
-        boolean capacityChanged = !newMax.equals(oldMax);
-
-        //  若容量变化则批量更新 plan
-        if (capacityChanged) {
-            List<Long> planIdList = examPlanClassroomMapper.selectByClassroomId(id)
-                .stream()
-                .map(ExamPlanClassroomDO::getPlanId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-
-            if (!planIdList.isEmpty()) {
-                String lockKey = "lock:exam_plan_update:classroom_" + id;
-                RLock lock = redissonClient.getLock(lockKey);
-                try {
-                    if (lock.tryLock(5, 30, TimeUnit.SECONDS)) {
-                        //  构造批量更新数据
-                        List<ExamPlanDTO> updates = planIdList.stream().map(planId -> {
-                            ExamPlanDO plan = examPlanMapper.selectById(planId);
-                            if (plan == null)
-                                return null;
-                            int currentMax = plan.getMaxCandidates() != null ? plan.getMaxCandidates() : 0;
-                            int updatedMax = (int)Math.max(currentMax - oldMax + newMax, 0L);
-                            return new ExamPlanDTO(planId, (long)updatedMax);
-                        }).filter(Objects::nonNull).collect(Collectors.toList());
-
-                        //  一次性批量更新
-                        if (!updates.isEmpty()) {
-                            examPlanService.batchUpdatePlanMaxCandidates(updates);
-                        }
-
-                    } else {
-                        throw new BusinessException("系统繁忙，请稍后再试");
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new BusinessException("获取分布式锁失败");
-                } finally {
-                    if (lock.isHeldByCurrentThread()) {
-                        lock.unlock();
-                    }
-                }
-            }
-        }
+//        Long oldMax = Optional.ofNullable(oldClassroom.getMaxCandidates()).orElse(0L);
+//        Long newMax = Optional.ofNullable(req.getMaxCandidates()).orElse(0L);
+//
+//        // 2. 如果新容量 < 旧容量，需要校验是否已被确认考试计划占用
+//        if (newMax < oldMax) {
+//
+//            // 查该考场绑定了哪些考试计划
+//            List<Long> planIds = planClassroomMapper.selectList(new LambdaQueryWrapper<PlancalssroomDO>()
+//                .select(PlancalssroomDO::getPlanId)
+//                .eq(PlancalssroomDO::getClassroomId, id)).stream().map(PlancalssroomDO::getPlanId).toList();
+//
+//            if (CollUtil.isNotEmpty(planIds)) {
+//
+//                // 查是否有已确认考试的计划
+//                boolean hasConfirmed = examPlanMapper.exists(new LambdaQueryWrapper<ExamPlanDO>()
+//                    .in(ExamPlanDO::getId, planIds)
+//                    .eq(ExamPlanDO::getStatus, ExamPlanStatusEnum.IN_FORCE.getValue()));
+//
+//                ValidationUtils.throwIf(hasConfirmed, "该考场已有已确认的考试计划，容量不能设置得小于原容量：" + oldMax);
+//            }
+//        }
+//
+//        boolean capacityChanged = !newMax.equals(oldMax);
+//
+//        //  若容量变化则批量更新 plan
+//        if (capacityChanged) {
+//            List<Long> planIdList = examPlanClassroomMapper.selectByClassroomId(id)
+//                .stream()
+//                .map(ExamPlanClassroomDO::getPlanId)
+//                .filter(Objects::nonNull)
+//                .distinct()
+//                .toList();
+//
+//            if (!planIdList.isEmpty()) {
+//                String lockKey = "lock:exam_plan_update:classroom_" + id;
+//                RLock lock = redissonClient.getLock(lockKey);
+//                try {
+//                    if (lock.tryLock(5, 30, TimeUnit.SECONDS)) {
+//                        //  构造批量更新数据
+//                        List<ExamPlanDTO> updates = planIdList.stream().map(planId -> {
+//                            ExamPlanDO plan = examPlanMapper.selectById(planId);
+//                            if (plan == null)
+//                                return null;
+//                            int currentMax = plan.getMaxCandidates() != null ? plan.getMaxCandidates() : 0;
+//                            int updatedMax = (int)Math.max(currentMax - oldMax + newMax, 0L);
+//                            return new ExamPlanDTO(planId, (long)updatedMax);
+//                        }).filter(Objects::nonNull).collect(Collectors.toList());
+//
+//                        //  一次性批量更新
+//                        if (!updates.isEmpty()) {
+//                            examPlanService.batchUpdatePlanMaxCandidates(updates);
+//                        }
+//
+//                    } else {
+//                        throw new BusinessException("系统繁忙，请稍后再试");
+//                    }
+//                } catch (InterruptedException e) {
+//                    Thread.currentThread().interrupt();
+//                    throw new BusinessException("获取分布式锁失败");
+//                } finally {
+//                    if (lock.isHeldByCurrentThread()) {
+//                        lock.unlock();
+//                    }
+//                }
+//            }
+//        }
 
         // 更新考场信息
         ClassroomDO update = new ClassroomDO();

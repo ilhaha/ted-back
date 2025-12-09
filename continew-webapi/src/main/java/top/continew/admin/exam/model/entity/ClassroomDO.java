@@ -48,6 +48,16 @@ public class ClassroomDO extends BaseDO {
     private Integer isDeleted;
 
     /**
+     * 考场类型，0作业人员考场，1检验人员考场
+     */
+    private Integer classroomType;
+
+    /**
+     * 考场考试类型，0理论考试，1实操考试
+     */
+    private Integer examType;
+
+    /**
      * 最大容纳人数
      */
     private Long maxCandidates;

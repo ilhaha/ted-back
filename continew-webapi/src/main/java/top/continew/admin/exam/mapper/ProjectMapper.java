@@ -24,6 +24,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import top.continew.admin.document.model.resp.DocumentTypeResp;
+import top.continew.admin.exam.model.resp.LocationClassroomVO;
 import top.continew.admin.exam.model.resp.ProjectDetailResp;
 import top.continew.admin.exam.model.resp.ProjectResp;
 import top.continew.admin.exam.model.resp.StudentProjectDetailResp;
@@ -52,7 +53,7 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
      * @param deptId
      * @return
      */
-    List<ProjectVo> getDeptProject(@Param("deptId") Long deptId);
+    List<ProjectVo> getDeptProject(@Param("deptId") Long deptId,@Param("planType") Integer planType);
 
     /**
      * 查询已经绑定了的地址id集合
@@ -104,4 +105,6 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
                                         @Param("userId") Long userId);
 
     List<ProjectCategoryVO> getSelectCategoryProject(@Param("parentIds") List<Long> parentIds);
+
+    List<LocationClassroomVO> getLocationClassroomList(@Param("examType") Integer examType, @Param("isOperation") Integer isOperation);
 }

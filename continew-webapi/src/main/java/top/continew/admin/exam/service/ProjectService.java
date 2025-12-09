@@ -56,7 +56,7 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
     //    List<ProjectVo> getClassRoomSelect(Long locationId);
     List<Map<String, Object>> getClassRoomSelect(Long locationId);
 
-    List<ProjectVo> getDeptProject();
+    List<ProjectVo> getDeptProject(Integer planType);
 
     public void delete(List<Long> ids);
 
@@ -138,4 +138,11 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
      * @return
      */
     PageResp<ProjectResp> orgGetAllProject(ProjectQuery query, PageQuery pageQuery);
+
+    /**
+     * 根据项目的考试人员类型和是否有实操考试获取地点-考场级联选择器
+     *
+     * @return
+     */
+    List<Map<String, Object>> getLocalClassroomChoose(Long projectId,Integer isOperation);
 }

@@ -78,9 +78,9 @@ public class ExamPlanSaveReq {
     private Long locationId;
 
     /**
-     * 机构类型，0作业人员，1检验人员
+     * 计划类型，0作业人员，1检验人员
      */
-    @Schema(description = "机构类型，0作业人员，1检验人员")
+    @Schema(description = "计划类型，0作业人员，1检验人员")
     private Integer planType;
 
     /**
@@ -106,11 +106,16 @@ public class ExamPlanSaveReq {
     @NotBlank(message = "展示图URL不能为空")
     private String imageUrl;
     /**
-     * 考场id列表
+     * 理论考场
      */
-    @Schema(description = "考场ID列表")
-    @NotNull(message = "考场ID列表不能为空")
-    private List<Long> classroomId;
+    @Schema(description = "理论考场")
+    @NotNull(message = "理论考场未选择")
+    private List<Long> theoryClassroomId;
+    /**
+     * 实操考场
+     */
+    @Schema(description = "实操考场")
+    private List<Long> operationClassroomId;
     /**
      * 考试费用
      */

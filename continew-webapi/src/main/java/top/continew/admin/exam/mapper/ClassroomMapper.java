@@ -52,7 +52,7 @@ public interface ClassroomMapper extends BaseMapper<ClassroomDO> {
     @Select("select id,location_name from ted_exam_location where is_deleted = 0")
     List<ExamLocationResp> getExamLocation();
 
-    List<Long> getMaxCandidates(@Param("classroomId") List<Long> classroomId);
+    Long getMaxCandidates(@Param("classroomIds") List<Long> classroomId);
 
     /**
      * 查询当前考场已有人数

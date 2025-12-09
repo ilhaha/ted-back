@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.model.req;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -73,9 +74,14 @@ public class ProjectReq implements Serializable {
     private Long projectStatus;
 
     /**
-     * 项目类型（0-理论考试 1-实操考试）
+     * 项目类型（0-作业人员 1-检验人员）
      */
     private Integer projectType;
+
+    /**
+     * 是否有实操考试（0无，1有）
+     */
+    private Integer isOperation;
 
     /**
      * 项目收费标准

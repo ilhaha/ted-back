@@ -17,6 +17,7 @@
 package top.continew.admin.exam.model.resp;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -94,11 +95,12 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     private Long locationId;
 
     /**
-     * 考试市场
+     * 考试时长
      */
-    @Schema(description = "考试市场")
-    @ExcelProperty(value = "考试市场")
+    @Schema(description = "考试时长")
+    @ExcelProperty(value = "考试时长")
     private Long examDuration;
+
 
     @Schema(description = "审核状态字符串")
     @ExcelProperty(value = "审核状态字符串")
@@ -198,11 +200,24 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     private Long examFee;
 
     /**
-     * 考场id列表
+     * 理论考场
      */
-    @Schema(description = "考场ID列表")
-    @ExcelProperty(value = "考场ID列表")
-    private List<Long> classroomId;
+    @Schema(description = "理论考场")
+    @ExcelProperty(value = "理论考场")
+    private List<Long> theoryClassroomId;
+    /**
+     * 实操考场
+     */
+    @Schema(description = "实操考场")
+    @ExcelProperty(value = "实操考场")
+    private List<Long> operationClassroomId;
+
+    /**
+     * 已报名人数
+     */
+    @Schema(description = "已报名人数")
+    @ExcelProperty(value = "已报名人数")
+    private Integer enrolledCount;
 
     //    /**
     //     * 描述

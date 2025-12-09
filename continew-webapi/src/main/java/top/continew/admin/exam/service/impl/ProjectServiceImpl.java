@@ -462,7 +462,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     }
 
     @Override
-    public List<ProjectVo> getDeptProject() {
+    public List<ProjectVo> getDeptProject(Integer planType) {
         UserTokenDo userInfo = TokenLocalThreadUtil.get();
         ValidationUtils.throwIfNull(userInfo, ErrorMessageConstant.USER_AUTHENTICATION_FAILED);
 
@@ -472,7 +472,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             deptId = userInfo.getDeptId();
         }
 
-        List<ProjectVo> vos = baseMapper.getDeptProject(deptId);
+        List<ProjectVo> vos = baseMapper.getDeptProject(deptId,planType);
 
         return vos;
     }
@@ -603,6 +603,41 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
         // 返回分页查询结果
         return pageResp;
     }
+
+    /**
+     * 根据项目的考试人员类型和是否有实操考试获取地点-考场级联选择器
+     *
+     * @return
+     */
+    @Override
+    public List<Map<String, Object>> getLocalClassroomChoose(Long projectId,Integer isOperation) {
+        ProjectDO projectDO = baseMapper.selectById(projectId);
+        ValidationUtils.throwIfNull(projectDO,"未查询到考试项目信息");
+        List<LocationClassroomVO> list = baseMapper.getLocationClassroomList(projectDO.getProjectType(),isOperation);
+
+        // 转成前端 cascader 需要的格式
+        Map<Long, Map<String, Object>> map = new LinkedHashMap<>();
+
+        for (LocationClassroomVO item : list) {
+            map.putIfAbsent(item.getLocationId(), new LinkedHashMap<>() {{
+                put("label", item.getLocationName());
+                put("value", item.getLocationId());
+                put("selectable", false); // 地点不可选
+                put("children", new ArrayList<>());
+            }});
+
+            if (item.getClassroomId() != null) {
+                ((List<Object>) map.get(item.getLocationId()).get("children"))
+                        .add(new HashMap<String, Object>() {{
+                            put("label", item.getClassroomName());
+                            put("value", item.getClassroomId());
+                        }});
+            }
+        }
+
+        return new ArrayList<>(map.values());
+    }
+
 
     /**
      * 检查用户是否有审核权限

@@ -20,6 +20,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import jakarta.validation.constraints.NotBlank;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
@@ -85,4 +86,6 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
      */
     void batchUpdatePlanMaxCandidates(@Param("planList") List<ExamPlanDTO> planList);
 
+    List<String> listConflictClassrooms(@Param("startTime") LocalDateTime startTime,
+                                        @Param("classroomIds") List<Long> classroomIds);
 }

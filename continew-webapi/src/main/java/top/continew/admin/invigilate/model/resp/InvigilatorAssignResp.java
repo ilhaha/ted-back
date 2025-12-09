@@ -50,4 +50,9 @@ public class InvigilatorAssignResp {
      * 监考状态
      */
     private Integer invigilateStatus;
+
+    /**
+     * 监考密码
+     */
+    private String examPassword;
 }
