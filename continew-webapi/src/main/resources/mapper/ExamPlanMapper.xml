@@ -38,7 +38,7 @@
                  LEFT JOIN sys_user su ON tep.update_user IS NOT NULL AND su.id = tep.update_user
                  LEFT JOIN ted_enroll te
                            ON tep.id = te.exam_plan_id
-                               AND te.enroll_status IN (1, 4)
+                               AND te.enroll_status IN (1, 4, 5)
                                AND te.is_deleted = 0
     </sql>
     <insert id="savePlanClassroom">

@@ -390,22 +390,26 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             ValidationUtils.throwIf(isConflict, "与已报名考试存在时间冲突");
         });
         //2.先是否可以报名（人数是否以达到上限)
-        //2.1获取本场考试信息
-        ExamPlanVO examPlanVO = new ExamPlanVO();
-        BeanUtils.copyProperties(examPlanDO, examPlanVO);
-        examPlanVO.setClassroomList(examPlanMapper.getPlanExamClassroom(examPlanId));
-        int maxNumber = 0;
-        for (Long classroomId : examPlanVO.getClassroomList()) {
-            Long maxCandidates = classroomMapper.selectById(classroomId).getMaxCandidates();
-            maxNumber += maxCandidates;
-        }
-
-        //编写sql查询当前考试人数
-
+//        //2.1获取本场考试信息
+//        ExamPlanVO examPlanVO = new ExamPlanVO();
+//        BeanUtils.copyProperties(examPlanDO, examPlanVO);
+//        examPlanVO.setClassroomList(examPlanMapper.getPlanExamClassroom(examPlanId));
+//        int maxNumber = 0;
+//        for (Long classroomId : examPlanVO.getClassroomList()) {
+//            Long maxCandidates = classroomMapper.selectById(classroomId).getMaxCandidates();
+//            maxNumber += maxCandidates;
+//        }
+//
+//        //编写sql查询当前考试人数
+//        Long actualCount = enrollMapper.getEnrollCount(examPlanId);
+//        //        if (actualCount + 1 > maxNumber) {
+//        //            throw new BusinessException("报名考试计划的人数已经达到:" + maxNumber);
+//        //        }
+//        ValidationUtils.throwIf(actualCount + 1 > maxNumber, "报名考试计划的人数已满:" + maxNumber);
+        //先是否可以报名（人数是否以达到上限)查找最大报名人数
+        Integer maxNumber = examPlanDO.getMaxCandidates();
+        //查找已报名人数
         Long actualCount = enrollMapper.getEnrollCount(examPlanId);
-        //        if (actualCount + 1 > maxNumber) {
-        //            throw new BusinessException("报名考试计划的人数已经达到:" + maxNumber);
-        //        }
         ValidationUtils.throwIf(actualCount + 1 > maxNumber, "报名考试计划的人数已满:" + maxNumber);
         //校验当前时间与考试时间对比
         LocalDateTime now = LocalDateTime.now();
