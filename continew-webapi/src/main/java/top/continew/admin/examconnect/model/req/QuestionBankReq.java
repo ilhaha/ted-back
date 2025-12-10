@@ -71,7 +71,7 @@ public class QuestionBankReq implements Serializable {
      */
     @NotNull(message = "考试类型不能为空")
     @Schema(description = "考试类型")
-    private Long examType;
+    private Integer examType;
 
     /**
      * 题目类型

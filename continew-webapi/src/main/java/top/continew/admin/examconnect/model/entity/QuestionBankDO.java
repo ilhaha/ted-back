@@ -63,7 +63,7 @@ public class QuestionBankDO extends BaseDO {
     /**
      * 考试类型（0-未指定，1-作业人员考试，2-无损/有损检验人员考试，可后续扩展）
      */
-    private Long examType;
+    private Integer examType;
 
     /**
      * 题目内容

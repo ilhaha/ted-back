@@ -31,14 +31,14 @@ public class QuestionDTO {
      */
     private String title;
     /**
-     * 题目类型
+     * 题型（0单选，1判断，2多选）
      */
     private int questionType;
 
     /**
-     * 考试类型
+     * 考试人员类型（1-作业人员，2-检验人员）
      */
-    private Long examType;
+    private Integer examType;
 
     private List<OptionDTO> options;
 }

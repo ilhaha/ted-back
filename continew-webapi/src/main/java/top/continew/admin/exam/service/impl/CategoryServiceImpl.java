@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.constant.ImportQuestionConstant;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.exam.mapper.ProjectMapper;
 import top.continew.admin.exam.model.ExcelParseResult;
@@ -152,13 +153,13 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             String sheetName = workbook.getSheetName(0);
             String[] categoryInfo = sheetName.split(",");
             if (categoryInfo.length != 3) {
-                throw new BusinessException("工作表名称格式应为：分类名称,项目名称,知识类型名称");
+                throw new BusinessException("导入文件模板不符合要求，或所选题目分类与文件内容不匹配");
             }
 
             // 4. 校验 sheet 是否符合模板定义
             SheetInfoDTO sheetInfo = parseSheetInfo(workbook);
             if (!verifySheet(sheetName)) {
-                throw new BusinessException("工作表名称错误，请勿修改模板");
+                throw new BusinessException("导入文件模板不符合要求，或所选题目分类与文件内容不匹配");
             }
 
             // 5. 校验表头
@@ -330,15 +331,20 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     }
 
     private void validateHeader(Row headerRow) {
-        if (headerRow == null || headerRow.getPhysicalNumberOfCells() < 2) {
-            throw new BusinessException("表头缺失或列数不足");
+        if (headerRow == null || headerRow.getPhysicalNumberOfCells() < ImportQuestionConstant.HEADERS.length) {
+            throw new BusinessException("表头缺失或列数不足，应至少包含 " + ImportQuestionConstant.HEADERS.length + " 列");
         }
 
-        if (!"题目标题".equals(getCellValue(headerRow.getCell(0))) || !"题目类型（0单选，1判断，2多选）".equals(getCellValue(headerRow
-            .getCell(1)))) {
-            throw new BusinessException("前两列格式不符合要求");
+        for (int i = 0; i < ImportQuestionConstant.HEADERS.length; i++) {
+            String cellValue = getCellValue(headerRow.getCell(i));
+            if (!ImportQuestionConstant.HEADERS[i].equals(cellValue)) {
+                throw new BusinessException(
+                        String.format("第 %d 列表头不正确，应为「%s」，实际为「%s」", i + 1, ImportQuestionConstant.HEADERS[i], cellValue)
+                );
+            }
         }
     }
+
 
     // 改进后的数据行解析
     private List<QuestionDTO> parseQuestions(Sheet sheet) {
@@ -357,107 +363,117 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             QuestionDTO question = new QuestionDTO();
             try {
                 // 解析基础信息
-                question.setTitle(parseRequiredString(row.getCell(0), "题目标题", rowIdx));
+                question.setTitle(parseRequiredString(row.getCell(0), "问题", rowIdx));
                 question.setQuestionType(parseQuestionType(row.getCell(1), rowIdx));
                 Cell examTypeCell = row.getCell(2);
                 question.setExamType(parseExamType(examTypeCell, rowIdx));
-
-                // 动态解析选项和答案
+                // 解析选项和答案
                 parseDynamicOptions(row, question, rowIdx);
-
                 questions.add(question);
             } catch (BusinessException e) {
-                throw new BusinessException("第" + (rowIdx + 1) + "列数据错误：" + e.getMessage());
+                throw new BusinessException(e.getMessage());
             }
         }
         return questions;
     }
 
-    // 动态解析选项方法
+
     private void parseDynamicOptions(Row row, QuestionDTO question, int rowIdx) {
         List<OptionDTO> options = new ArrayList<>();
-        int colIdx = 3; // 从第四列开始解析选项
 
-        while (colIdx < row.getLastCellNum()) {
-            Cell optionCell = row.getCell(colIdx);
-            Cell answerCell = row.getCell(colIdx + 1);
+        // ---------------- 1. 解析正确答案列（第 7 列） ----------------
+        Cell answerCell = row.getCell(7);
+        String answerRaw = getCellValue(answerCell).trim();
 
-            // 选项列结束判断
-            if (optionCell == null && answerCell == null)
-                break;
-
-            // 解析选项内容
-            String option = getCellValue(optionCell);
-            if (option.isEmpty()) {
-                if (question.getQuestionType() != 1) { // 非判断题必须明确选项
-                    throw new BusinessException("选项内容不能为空");
-                }
-                break;
-            }
-
-            // 解析正确答案标记
-            String answerFlag = getCellValue(answerCell);
-            if (answerFlag.isEmpty()) {
-                throw new BusinessException("选项[" + option + "]必须指定是否正确答案");
-            }
-
-            // 转换答案标记
-            boolean isCorrect = parseAnswerFlag(answerFlag, rowIdx, colIdx + 1);
-            options.add(new OptionDTO(option, isCorrect));
-
-            colIdx += 2; // 移动到下一组选项
+        if (answerRaw.isEmpty()) {
+            throw new BusinessException("第" + (rowIdx + 1) + "行：未填写正确答案");
         }
 
-        // 根据题型验证选项
+        // 先强制校验格式必须是 A/B/C/D（多选可多个）
+        Set<String> answerSet = parseAnswerLetters(answerRaw, rowIdx);
+
+        // ---------------- 2. 解析选项 A~D ----------------
+        char optionChar = 'A';
+
+        for (int col = 3; col <= 6; col++) {
+            Cell cell = row.getCell(col);
+            String optionText = getCellValue(cell).trim();
+
+            if (optionText.isEmpty()) {
+                break;
+            }
+
+            String opt = String.valueOf(optionChar);
+
+            OptionDTO option = new OptionDTO();
+            option.setOption(opt);        // A/B/C/D
+            option.setQuestion(optionText);
+            option.setIsCorrect(answerSet.contains(opt));
+
+            options.add(option);
+            optionChar++;
+        }
+
+        if (options.isEmpty()) {
+            throw new BusinessException("第" + (rowIdx + 1) + "行：至少需要一个选项");
+        }
+
+        // ---------------- 3. 校验选项与答案是否匹配题型 ----------------
         validateOptionsByType(question.getQuestionType(), options, rowIdx);
+
+        // ---------------- 4. 校验答案是否存在于选项中 ----------------
+        validateAnswerInOptions(answerSet, options, rowIdx);
+
         question.setOptions(options);
     }
 
-    //解析考试类型
-    public static Long parseExamType(Cell cell, int rowIdx) {
-        // 1. 校验单元格是否为空
-        if (cell == null || cell.getCellType() == CellType.BLANK) {
-            throw new BusinessException(String.format("第%d列【考试类型】字段不能为空", rowIdx));
+    private Set<String> parseAnswerLetters(String answerRaw, int rowIdx) {
+        Set<String> set = Arrays.stream(answerRaw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+
+        // 校验答案必须是 A/B/C/D
+        for (String s : set) {
+            if (!s.matches("^[A-D]$")) {
+                throw new BusinessException("第" + (rowIdx + 1) + "行：答案只能填写 A、B、C、D");
+            }
         }
 
-        Integer examTypeCode = null;
+        return set;
+    }
+
+    private void validateAnswerInOptions(Set<String> answerSet, List<OptionDTO> options, int rowIdx) {
+        Set<String> optionLabels = options.stream()
+                .map(OptionDTO::getOption)
+                .collect(Collectors.toSet());
+
+        for (String ans : answerSet) {
+            if (!optionLabels.contains(ans)) {
+                throw new BusinessException("第" + (rowIdx + 1) + "行：答案【" + ans + "】没有对应的选项内容");
+            }
+        }
+    }
+
+    //解析考试类型
+    public Integer parseExamType(Cell cell, int rowIdx) {
+        String value = parseRequiredString(cell, "考试人员类型", rowIdx);
+
+        // 去掉空格
+        value = value.trim();
+
         try {
-            // 2. 按数字解析（优先：Excel填0/1/2直接识别）
-            if (cell.getCellType() == CellType.NUMERIC) {
-                // 数字转int（避免小数，比如填2.0会转为2）
-                int code = (int)Math.round(cell.getNumericCellValue());
-                // 校验数字是否在合法范围内（0/1/2）
-                if (code == 0 || code == 1 || code == 2) {
-                    examTypeCode = code;
-                }
-            }
-            // 3. 按文字解析（兼容Excel填中文的场景）
-            else if (cell.getCellType() == CellType.STRING) {
-                String desc = cell.getStringCellValue().trim();
-                // 文字与编码的映射（匹配规则：包含关键词即可）
-                if (desc.contains("未指定")) {
-                    examTypeCode = 0;
-                } else if (desc.contains("作业人员")) {
-                    examTypeCode = 1;
-                } else if (desc.contains("无损") || desc.contains("有损") || desc.contains("检验")) {
-                    examTypeCode = 2;
-                }
+            int type = Integer.parseInt(value);
+
+            // 校验 1 / 2
+            if (type < 1 || type > 2) {
+                throw new BusinessException(String.format("第%d行：考试人员类型必须是 1（作业人员）、2（检验人员）", rowIdx + 1));
             }
 
-            // 4. 校验解析结果是否合法
-            if (examTypeCode == null) {
-                String cellValue = getCellOriginalValue(cell);
-                throw new BusinessException(String
-                    .format("第%d行【考试类型】值不合法：%s。允许值：\n数字：0(未指定)、1(作业人员考试)、2(无损/有损检验人员考试)\n文字：未指定、作业人员考试、无损/有损检验", rowIdx, cellValue));
-            }
+            return type;
 
-            // 5. 转为Long类型返回（匹配后端实体类的Long字段）
-            return examTypeCode.longValue();
-
-        } catch (Exception e) {
-            // 6. 统一捕获异常，封装报错信息
-            String cellValue = getCellOriginalValue(cell);
-            throw new BusinessException(String.format("第%d行【考试类型】解析失败：%s。原因：%s", rowIdx, cellValue, e.getMessage()), e);
+        } catch (NumberFormatException e) {
+            throw new BusinessException(String.format("第%d行：考试人员类型必须为数字 1 或 2", rowIdx + 1));
         }
     }
 
@@ -491,30 +507,42 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     // 题型相关验证
     private void validateOptionsByType(int questionType, List<OptionDTO> options, int rowIdx) {
         long correctCount = options.stream().filter(OptionDTO::getIsCorrect).count();
+
         switch (questionType) {
+
             case 1: // 判断题
+                if (options.size() != 2) {
+                    throw new BusinessException("第" + (rowIdx + 1) + "行：判断题必须有且只有两个选项");
+                }
                 if (correctCount != 1) {
-                    throw new BusinessException("判断题必须有且只有一个正确答案");
+                    throw new BusinessException("第" + (rowIdx + 1) + "行：判断题必须有且只有一个正确答案");
                 }
                 break;
+
             case 0: // 单选题
+                if (options.size() < 2) {
+                    throw new BusinessException("第" + (rowIdx + 1) + "行：单选题至少需要两个选项");
+                }
                 if (correctCount != 1) {
-                    throw new BusinessException("单选题必须有且只有一个正确答案");
-                }
-                if (options.size() < 2) {
-                    throw new BusinessException("单选题至少需要两个选项");
+                    throw new BusinessException("第" + (rowIdx + 1) + "行：单选题必须有且只有一个正确答案");
                 }
                 break;
+
             case 2: // 多选题
-                if (correctCount < 1) {
-                    throw new BusinessException("多选题必须至少有一个正确答案");
-                }
                 if (options.size() < 2) {
-                    throw new BusinessException("多选题至少需要两个选项");
+                    throw new BusinessException("第" + (rowIdx + 1) + "行：多选题至少需要两个选项");
+                }
+                if (correctCount < 2) {
+                    throw new BusinessException("第" + (rowIdx + 1) + "行：多选题至少需要两个正确答案");
                 }
                 break;
+
+            default:
+                throw new BusinessException("第" + (rowIdx + 1) + "行：题型不合法");
         }
     }
+
+
 
     // 改进的单元格读取方法
     private String getCellValue(Cell cell) {
@@ -553,7 +581,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         String sheetName = workbook.getSheetName(0);
         String[] parts = sheetName.split(",");
         if (parts.length != 3) {
-            throw new BusinessException("工作表名称格式应为：分类名称,项目名称,知识类型名称");
+            throw new BusinessException("导入文件模板不符合要求，或所选题目分类与文件内容不匹配");
         }
         return new SheetInfoDTO(parts[0], parts[1], parts[2]);
     }
@@ -561,6 +589,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     // 解析必填字段
     private String parseRequiredString(Cell cell, String fieldName, int rowIdx) {
         String value = (String)getCellValue(cell);
+        value = value.trim();
         if (value.isEmpty()) {
             throw new BusinessException(String.format("第%d行：%s不能为空", rowIdx + 1, fieldName));
         }
@@ -569,17 +598,26 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
     // 解析题目类型
     private int parseQuestionType(Cell cell, int rowIdx) {
-        String value = parseRequiredString(cell, "题目类型", rowIdx);
+        String value = parseRequiredString(cell, "题型", rowIdx);
+
+        // 去掉空格
+        value = value.trim();
+
         try {
             int type = Integer.parseInt(value);
+
+            // 校验 0 / 1 / 2
             if (type < 0 || type > 2) {
-                throw new BusinessException(String.format("第%d行：题目类型值非法（0、1、2）", rowIdx + 1));
+                throw new BusinessException(String.format("第%d行：题型必须是 0（单选）、1（判断）、2（多选）", rowIdx + 1));
             }
+
             return type;
+
         } catch (NumberFormatException e) {
-            throw new BusinessException(String.format("第%d行：题目类型必须为数字", rowIdx + 1));
+            throw new BusinessException(String.format("第%d行：题型必须为数字 0、1 或 2", rowIdx + 1));
         }
     }
+
 
     @Override
     public Long add(CategoryReq req) {

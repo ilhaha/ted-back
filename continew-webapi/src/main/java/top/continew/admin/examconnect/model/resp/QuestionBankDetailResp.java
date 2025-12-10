@@ -70,7 +70,7 @@ public class QuestionBankDetailResp extends BaseDetailResp {
      */
     @Schema(description = "考试类型")
     @ExcelProperty(value = "考试类型")
-    private Long examType;
+    private Integer examType;
 
     /**
      * 知识类型ID

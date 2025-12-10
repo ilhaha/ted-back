@@ -74,7 +74,7 @@ public class QuestionBankResp extends BaseResp {
      * 考试类型（0-未指定，1-作业人员考试，2-无损/有损检验人员考试，可后续扩展）
      */
     @Schema(description = "考试类型")
-    private Long examType;
+    private Integer examType;
 
     /**
      * 题目附件（图片路径）
