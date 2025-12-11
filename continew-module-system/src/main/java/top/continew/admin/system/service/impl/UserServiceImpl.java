@@ -150,11 +150,16 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     @Value("${examine.userRole.organizationId}")
     private Long organizationId;
 
+    @Value("${examine.userRole.workerId}")
+    private Long workerId;
+
     @Resource
     private RedisTemplate redisTemplate;
+
     @Override
     public PageResp<UserResp> page(UserQuery query, PageQuery pageQuery) {
         QueryWrapper<UserDO> queryWrapper = this.buildQueryWrapper(query);
+        queryWrapper.notIn("t3.role_id",Arrays.asList(invigilatorId,candidatesId,organizationId,workerId));
         super.sort(queryWrapper, pageQuery);
         IPage<UserDetailResp> page = baseMapper.selectUserPage(new Page<>(pageQuery.getPage(), pageQuery
             .getSize()), queryWrapper);
@@ -173,7 +178,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
         // 构建条件
         QueryWrapper<UserDO> wrapper = this.buildQueryWrapper(query);
-
+        wrapper.eq("r.id",invigilatorId);
         // 排序（调用你自己的排序器）
         super.sort(wrapper, pageQuery);
 
@@ -791,18 +796,15 @@ public void deleteExamStaff(Long id) {
         Long deptId = query.getDeptId();
         List<Long> userIdList = query.getUserIds();
         // 获取排除用户 ID 列表
-        List<Long> excludeUserIdList = null;
-        if (null != query.getRoleId()) {
-            excludeUserIdList = userRoleService.listUserIdByRoleId(query.getRoleId());
-        }
-        return new QueryWrapper<UserDO>().and(StrUtil.isNotBlank(description), q -> q.like("t1.username", description)
-            .or()
-            .like("t1.nickname", description)
-            .or()
-            .like("t1.description", description))
-            .eq(null != status, "t1.status", status)
-            .between(CollUtil.isNotEmpty(createTimeList), "t1.create_time", CollUtil.getFirst(createTimeList), CollUtil
-                .getLast(createTimeList))
+//        List<Long> excludeUserIdList = null;
+//        if (null != query.getRoleId()) {
+//            excludeUserIdList = userRoleService.listUserIdByRoleId(query.getRoleId());
+//        }
+        return new QueryWrapper<UserDO>().and(StrUtil.isNotBlank(description), q -> q.like("t1.nickname", description))
+                .eq(null != query.getRoleId(),"t3.role_id",query.getRoleId())
+//            .eq(null != status, "t1.status", status)
+//            .between(CollUtil.isNotEmpty(createTimeList), "t1.create_time", CollUtil.getFirst(createTimeList), CollUtil
+//                .getLast(createTimeList))
             .and(null != deptId && !SysConstants.SUPER_DEPT_ID.equals(deptId), q -> {
                 List<Long> deptIdList = deptService.listChildren(deptId)
                     .stream()
@@ -811,8 +813,8 @@ public void deleteExamStaff(Long id) {
                 deptIdList.add(deptId);
                 q.in("t1.dept_id", deptIdList);
             })
-            .in(CollUtil.isNotEmpty(userIdList), "t1.id", userIdList)
-            .notIn(CollUtil.isNotEmpty(excludeUserIdList), "t1.id", excludeUserIdList);
+            .in(CollUtil.isNotEmpty(userIdList), "t1.id", userIdList);
+//            .notIn(CollUtil.isNotEmpty(excludeUserIdList), "t1.id", excludeUserIdList);
     }
 
     /**
