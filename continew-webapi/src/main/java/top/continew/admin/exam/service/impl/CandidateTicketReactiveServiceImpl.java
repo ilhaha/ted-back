@@ -79,7 +79,7 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
     private final CandidateExamPaperMapper candidateExamPaperMapper;
 
     @Override
-    public String generateWorkerTicket(Long userId, String idCard, String examNumber, Long classId) {
+    public String generateWorkerTicket(Long userId, String idCard, String examNumber, Long classId, String className) {
         // 1. 查询准考证数据（同步）
         CandidateTicketDTO dto = examTicketMapper.findTicketByUserAndExamNumber(userId, examNumber);
         if (dto == null) {
@@ -96,6 +96,7 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
         // 3. 解密并组装数据
         dto.setTicketId(aesWithHMAC.verifyAndDecrypt(examNumber));
         dto.setIdCard(aesWithHMAC.verifyAndDecrypt(dto.getIdCard()));
+        dto.setClassCode(className);
         Map<String, Object> dataMap = assembleData(dto);
 
         // 4. 同步下载照片
@@ -209,8 +210,8 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
         dataMap.put("name", getSafeValue(dto.getName()));
         dataMap.put("idCard", getSafeValue(dto.getIdCard()));
         dataMap.put("ticketId", getSafeValue(dto.getTicketId()));
-        dataMap.put("classCode", getSafeValue(dto.getClassName()));
-        dataMap.put("className", getSafeValue(dto.getClassName()));
+        dataMap.put("classCode", getSafeValue(dto.getClassCode()));
+        dataMap.put("className", getSafeValue(dto.getClassCode()));
         dataMap.put("examType", getSafeValue(dto.getExamType()));
         dataMap.put("examItem", getSafeValue(dto.getExamItem()));
         dataMap.put("examRoom", getSafeValue(dto.getExamRoom()));

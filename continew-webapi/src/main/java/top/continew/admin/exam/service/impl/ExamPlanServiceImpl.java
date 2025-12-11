@@ -64,6 +64,8 @@ import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
 import top.continew.admin.invigilate.model.resp.InvigilatorAssignResp;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.training.mapper.OrgClassMapper;
+import top.continew.admin.training.model.entity.OrgClassDO;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
@@ -87,6 +89,7 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -138,7 +141,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
     private final CandidateExamPaperMapper candidateExamPaperMapper;
 
-    private static final SecureRandom RANDOM = new SecureRandom();
+    private final OrgClassMapper orgClassMapper;
 
     @Override
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
@@ -954,12 +957,27 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 情况 2：主任确认，且是作业人员考试
         if (success && isConfirmed && ExamPlanTypeEnum.WORKER.getValue().equals(examPlanDO.getPlanType())) {
-            Random random = new Random();
-            Collections.shuffle(classroomIds, RANDOM);
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            Collections.shuffle(classroomIds, random);
             List<WorkerExamTicketDO> ticketSaveList = new ArrayList<>();
             List<CandidateExamPaperDO> candidateExamPaperDOList = new ArrayList<>();
             long serialNumber = 0;
             // 按报名记录逐个生成准考证
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            // 查询班级信息
+            List<Long> workerClassIds = enrollList.stream()
+                    .map(EnrollDO::getClassId)
+                    .distinct()
+                    .toList();
+            List<OrgClassDO> orgClassDOS = orgClassMapper.selectByIds(workerClassIds);
+
+            Map<Long, String> orgClassNameMap = orgClassDOS.stream()
+                    .collect(Collectors.toMap(
+                            OrgClassDO::getId,
+                            x -> Optional.ofNullable(x.getClassName()).orElse(""),
+                            (k1, k2) -> k1
+                    ));
             for (EnrollDO enroll : enrollList) {
                 ++serialNumber;
                 Long classroomId = classroomIds.get(random.nextInt(classroomIds.size()));
@@ -982,7 +1000,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
                 // 调用确实耗时的方法：生成 PDF
                 String ticketUrl = safeGenerateWorkerTicket(enroll.getUserId(), user.getUsername(), user
-                        .getNickname(), upd.getExamNumber(), classroomId);
+                        .getNickname(), upd.getExamNumber(), enroll.getClassId(),orgClassNameMap.get(enroll.getClassId()));
 
                 // 保存准考证表
                 WorkerExamTicketDO ticket = new WorkerExamTicketDO();
@@ -992,7 +1010,6 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
                 ticketSaveList.add(ticket);
 
-                ObjectMapper objectMapper = new ObjectMapper();
                 ExamPaperVO examPaperVO = questionBankService.generateExamQuestionBank(planId);
                 CandidateExamPaperDO candidateExamPaperDO = new CandidateExamPaperDO();
                 try {
@@ -1083,9 +1100,10 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                                             String idCard,
                                             String nickname,
                                             String encryptedExamNo,
-                                            Long classId) {
+                                            Long classId,
+                                            String className) {
         try {
-            return candidateTicketReactiveService.generateWorkerTicket(userId, idCard, encryptedExamNo, classId);
+            return candidateTicketReactiveService.generateWorkerTicket(userId, idCard, encryptedExamNo, classId,className);
         } catch (Exception e) {
             throw new BusinessException("生成考生【" + nickname + "】的准考证失败，请稍后重试");
         }

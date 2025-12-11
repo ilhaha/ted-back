@@ -25,5 +25,5 @@ public interface CandidateTicketService {
 
     ResponseEntity<byte[]> generateTicket(Long userId, String examNumber);
 
-    String generateWorkerTicket(Long userId, String idCard, String examNumber, Long classId);
+    String generateWorkerTicket(Long userId, String idCard, String examNumber, Long classId, String className);
 }
