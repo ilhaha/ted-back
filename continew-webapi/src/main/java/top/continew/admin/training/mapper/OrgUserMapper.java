@@ -40,7 +40,8 @@ public interface OrgUserMapper extends BaseMapper<TedOrgUser> {
                 SELECT
                     tou.org_id,
                     su.username,
-                    su.nickname
+                    su.phone,
+                    su.id AS userId
                 FROM ted_org_user tou
                 LEFT JOIN sys_user su ON su.id = tou.user_id
                 WHERE tou.is_deleted = 0

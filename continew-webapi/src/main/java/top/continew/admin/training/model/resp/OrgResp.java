@@ -75,10 +75,22 @@ public class OrgResp extends BaseResp {
     private String location;
 
     /**
-     * 绑定的账号信息
+     * 账号id
      */
-    @Schema(description = "绑定的账号信息")
-    private String accountName;
+    @Schema(description = "账号id")
+    private String userId;
+
+    /**
+     * 机构账号
+     */
+    @Schema(description = "机构账号")
+    private String username;
+
+    /**
+     * 联系电话
+     */
+    @Schema(description = "phone")
+    private String phone;
 
     /**
      * 法人

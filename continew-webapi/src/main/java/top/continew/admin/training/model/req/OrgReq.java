@@ -82,4 +82,8 @@ public class OrgReq implements Serializable {
 
     @Schema(description = "营业执照路径")
     private String businessLicense;
+
+    @Schema(description = "账号id")
+    private Long userId;
+
 }

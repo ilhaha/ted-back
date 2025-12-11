@@ -360,4 +360,6 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      * 修改用户详情
      */
     void updateUserDetail(UserDetailDTO req);
+
+    void deleteOrgUser(List<Long> list);
 }

@@ -49,6 +49,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.EnrollStatusConstant;
@@ -72,6 +73,7 @@ import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.UploadService;
+import top.continew.admin.system.service.UserService;
 import top.continew.admin.training.mapper.*;
 import top.continew.admin.training.model.dto.OrgDTO;
 import top.continew.admin.training.model.vo.ParsedExcelResultVO;
@@ -188,6 +190,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Resource
     private OrgTrainingPaymentAuditMapper orgTrainingPaymentAuditMapper;
 
+    private final UserService userService;
+
     @Resource
     private final ExcelUtilReactive excelUtilReactive;
 
@@ -198,36 +202,50 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         PageResp<OrgResp> page = super.page(query, pageQuery);
         List<OrgResp> list = page.getList();
 
-        if (list != null && !list.isEmpty()) {
-            // 1 提取 orgIds
-            List<Long> orgIds = list.stream().map(OrgResp::getId).toList();
+        if (list.isEmpty()) {
+            return page;
+        }
 
-            // 2查询机构分类信息
-            List<Map<String, Object>> categoryRows = orgCategoryRelMapper.listCategoryInfoByOrgIds(orgIds);
-            Map<Long, String> categoryMap = categoryRows.stream()
-                    .collect(Collectors.groupingBy(r -> ((Number) r.get("org_id")).longValue(), Collectors
-                            .mapping(r -> (String) r.get("name"), Collectors.joining("、"))));
+        // 1. 提取 orgIds
+        List<Long> orgIds = list.stream().map(OrgResp::getId).toList();
 
-            // 3 查询机构账号信息（每个机构一个账号）
-            List<Map<String, Object>> accountRows = orgUserMapper.listAccountNamesByOrgIds(orgIds);
+        // 2. 分类
+        List<Map<String, Object>> categoryRows = orgCategoryRelMapper.listCategoryInfoByOrgIds(orgIds);
+        Map<Long, String> categoryMap = categoryRows.stream()
+                .collect(Collectors.groupingBy(
+                        r -> ((Number) r.get("org_id")).longValue(),
+                        Collectors.mapping(r -> (String) r.get("name"), Collectors.joining("、"))
+                ));
 
-            Map<Long, String> accountMap = accountRows.stream()
-                    .collect(Collectors.toMap(r -> ((Number) r.get("org_id")).longValue(), r -> {
-                        String nickname = (String) r.get("nickname");
-                        String username = (String) r.get("username");
-                        String decryptedUsername = aesWithHMAC.verifyAndDecrypt(username);
-                        return nickname + " [ " + decryptedUsername + " ] ";
-                    }, (v1, v2) -> v1));
+        // 3. 账号（注意别名）
+        List<Map<String,Object>> accountRows = orgUserMapper.listAccountNamesByOrgIds(orgIds);
+        Map<Long, Map<String, Object>> accountMap = accountRows.stream()
+                .collect(Collectors.groupingBy(
+                        r -> ((Number) r.get("org_id")).longValue(),
+                        Collectors.collectingAndThen(
+                                Collectors.toList(),
+                                rows -> rows.get(0) // 取第一条防止多条记录
+                        )
+                ));
 
-            // 4 设置分类名和账号名
-            list.forEach(org -> {
-                org.setCategoryNames(categoryMap.getOrDefault(org.getId(), ""));
-                org.setAccountName(accountMap.getOrDefault(org.getId(), ""));
-            });
+        // 4. 回填数据
+        for (OrgResp org : list) {
+            Long orgId = org.getId();
+
+            org.setCategoryNames(categoryMap.getOrDefault(orgId, ""));
+
+            Map<String, Object> acc = accountMap.get(orgId);
+            if (acc != null) {
+                org.setUsername(aesWithHMAC.verifyAndDecrypt((String) acc.get("username")));
+                org.setPhone(aesWithHMAC.verifyAndDecrypt((String) acc.get("phone")));
+                org.setUserId(String.valueOf(acc.get("userId")));
+            }
         }
 
         return page;
     }
+
+
 
     @Override
     public OrgDetailResp get(Long id) {
@@ -252,7 +270,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
     @Override
-    @Transactional // 添加事务保证原子性
+    @Transactional(rollbackFor = Exception.class) // 添加事务保证原子性
     public Long add(OrgReq req) {
         // 社会代号、机构名称、机构信用代码不可重复
         List<OrgDO> orgDOList = baseMapper.selectList(new LambdaQueryWrapper<OrgDO>().eq(OrgDO::getName, req.getName())
@@ -260,7 +278,12 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 .eq(OrgDO::getCode, req.getCode())
                 .or()
                 .eq(OrgDO::getSocialCode, req.getSocialCode()));
-        ValidationUtils.throwIfNotEmpty(orgDOList, "机构代号、机构名称、机构信用代码已存在");
+        boolean orgNotEmpty = ObjectUtil.isNotEmpty(orgDOList);
+        if (orgNotEmpty) {
+            // 删除账号
+            userService.deleteOrgUser(Arrays.asList(req.getUserId()));
+        }
+        ValidationUtils.throwIf(orgNotEmpty, "机构代号、机构名称、机构信用代码已存在");
         Long orgId = super.add(req);
         List<Long> categoryIds = req.getCategoryIds();
 
@@ -274,13 +297,18 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 return relation;
             }).collect(Collectors.toList());
 
-            // 检查插入结果
+            // 插入机构与八大类管理表
             orgCategoryRelMapper.insertBatch(relations);
+
+            // 插入机构与账户表
+            bindUserToOrg(String.valueOf(orgId),String.valueOf(req.getUserId()));
         }
 
         redisTemplate.delete(RedisConstant.EXAM_ORGANIZATION_QUERY);
         return orgId;
     }
+
+
 
     @Override
     @Transactional // 确保事务性
@@ -320,17 +348,44 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> ids) {
-        // 删除主表数据
-        this.removeByIds(ids);
 
-        orgCategoryRelMapper.delete(new LambdaQueryWrapper<OrgCategoryRelationDO>()
-                .in(OrgCategoryRelationDO::getOrgId, ids));
+        // 1. 删除机构主表
+//        this.removeByIds(ids);
 
-        orgUserMapper.delete(new LambdaQueryWrapper<TedOrgUser>().in(TedOrgUser::getOrgId, ids));
+        // 2. 删除机构与分类的关系
+//        orgCategoryRelMapper.delete(new LambdaQueryWrapper<OrgCategoryRelationDO>()
+//                .in(OrgCategoryRelationDO::getOrgId, ids));
 
-        redisTemplate.delete(RedisConstant.EXAM_ORGANIZATION_QUERY);
+        // 3. 查询机构绑定的用户账号
+        List<TedOrgUser> tedOrgUsers = orgUserMapper.selectList(
+                new LambdaQueryWrapper<TedOrgUser>()
+                        .in(TedOrgUser::getOrgId, ids)
+                        .select(TedOrgUser::getUserId, TedOrgUser::getId)
+        );
+
+        if (ObjectUtil.isNotEmpty(tedOrgUsers)) {
+
+            // 3.1 删除机构与用户关联表（按主键 ID 删除！）
+            List<Long> orgUserIds = tedOrgUsers.stream()
+                    .map(TedOrgUser::getId)
+                    .toList();
+            System.out.println(orgUserIds);
+//            orgUserMapper.deleteByIds(orgUserIds);
+
+            // 3.2 删除用户（调用 userService.delete，保证校验 + 清理关联）
+            List<Long> userIds = tedOrgUsers.stream()
+                    .map(TedOrgUser::getUserId)
+                    .toList();
+            System.out.println(userIds);
+//            userService.delete(userIds);
+        }
+
+        // 4. 清除缓存
+//        redisTemplate.delete(RedisConstant.EXAM_ORGANIZATION_QUERY);
     }
+
 
     /**
      * 机构注册学员 非批量注册
@@ -975,19 +1030,34 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     /**
      * 删除机构及其关联的用户信息
      *
-     * @param ids 机构ID
+     * @param id 机构ID
      */
     @Transactional(rollbackFor = Exception.class)
-    public void removeOrgWithRelations(Long ids) {
-        // 删除机构信息
-        this.removeById(ids);
+    public void removeOrgWithRelations(Long id) {
 
-        // 删除机构与用户关联信息
-        orgUserMapper.delete(new LambdaQueryWrapper<TedOrgUser>().eq(TedOrgUser::getOrgId, ids));
-        // 删除机构与分类关联信息
+        // 1. 删除机构主表
+        this.removeById(id);
+
+        // 2. 删除机构与分类的关系
         orgCategoryRelMapper.delete(new LambdaQueryWrapper<OrgCategoryRelationDO>()
-                .eq(OrgCategoryRelationDO::getOrgId, ids));
+                .eq(OrgCategoryRelationDO::getOrgId, id));
 
+        // 3. 查询机构绑定的用户账号
+        TedOrgUser tedOrgUser = orgUserMapper.selectOne(
+                new LambdaQueryWrapper<TedOrgUser>()
+                        .eq(TedOrgUser::getOrgId, id)
+                        .select(TedOrgUser::getUserId, TedOrgUser::getId)
+                        .last("limit 1")
+        );
+
+        if (ObjectUtil.isNotNull(tedOrgUser)) {
+
+            // 3.1 删除机构与用户关联表（按主键 ID 删除！）
+            orgUserMapper.deleteById(tedOrgUser.getId());
+
+            // 3.2 删除用户（调用 userService.delete，保证校验 + 清理关联）
+            userService.delete(Collections.singletonList(tedOrgUser.getUserId()));
+        }
     }
 
     /**

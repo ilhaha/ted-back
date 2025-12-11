@@ -51,6 +51,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.auth.model.dto.ClassroomDTO;
@@ -235,7 +236,8 @@ public void deleteExamStaff(Long id) {
         // 获取手机号
         String phone = req.getPhone();
         // 如果手机号已存在，则抛出异常
-        CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(phone, null), errorMsgTemplate, aesWithHMAC
+        final String errorMsgPhoneTemplate = "新增失败，[{}] 手机号已被使用";
+        CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(phone, null), errorMsgPhoneTemplate, aesWithHMAC
             .verifyAndDecrypt(phone));
     }
 
@@ -314,6 +316,14 @@ public void deleteExamStaff(Long id) {
         super.delete(ids);
         // 踢出在线用户
         ids.forEach(onlineUserService::kickOut);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void deleteOrgUser(List<Long> ids) {
+        // 删除用户和角色关联
+        userRoleService.deleteByUserIds(ids);
+        super.delete(ids);
     }
 
     @Override
