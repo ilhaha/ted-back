@@ -27,11 +27,7 @@
             tc.classroom_name,
             c.name AS category_name,
             p.project_name,
-            CONCAT(
-                    DATE_FORMAT(ep.start_time, '%Y-%m-%d %H:%i'),
-                    ' - ',
-                    DATE_FORMAT(ep.end_time, '%H:%i')
-            ) AS exam_time
+            DATE_FORMAT(ep.start_time, '%Y-%m-%d %H:%i') AS exam_time
         FROM ted_enroll e
                  INNER JOIN sys_user u ON e.user_id = u.id
             AND u.id = #{userId}

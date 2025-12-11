@@ -154,7 +154,8 @@
                            ON tep.id = te.exam_plan_id AND te.enroll_status IN (1, 4) AND te.is_deleted = 0 ${ew.customSqlSegment}
           AND tep.is_deleted = 0
           AND tou.user_id = #{userId}
-        GROUP BY tep.id;
+        GROUP BY tep.id
+        ORDER BY start_time;
     </select>
     <select id="listConflictClassrooms" resultType="java.lang.String">
         SELECT DISTINCT tc.classroom_name
@@ -168,6 +169,14 @@
             #{id}
         </foreach>
         AND DATE(tep.start_time) = DATE(#{startTime})
+    </select>
+    <select id="getPlanExamTheoryClassroom" resultType="java.lang.Long">
+        SELECT tc.id
+        FROM ted_plan_classroom tpc
+                 LEFT JOIN ted_classroom tc
+                           ON tpc.classroom_id = tc.id AND tc.is_deleted = 0
+        WHERE tpc.plan_id = #{planId}
+          AND tc.exam_type = 0
     </select>
 
 

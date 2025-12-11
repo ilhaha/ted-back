@@ -44,7 +44,7 @@ public class CandidateTicketDTO implements Serializable {
     private String ticketId;
 
     /** 班级代码 */
-    private Long classCode;
+    private String classCode;
 
     /** 班级名称 */
     private String className;

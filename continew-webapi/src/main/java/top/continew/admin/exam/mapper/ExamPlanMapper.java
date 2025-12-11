@@ -88,4 +88,11 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
 
     List<String> listConflictClassrooms(@Param("startTime") LocalDateTime startTime,
                                         @Param("classroomIds") List<Long> classroomIds);
+
+    /**
+     * 获取计划分配的所有理论考场ID
+     * @param planId
+     * @return
+     */
+    List<Long> getPlanExamTheoryClassroom(@Param("planId") Long planId);
 }

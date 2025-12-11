@@ -888,9 +888,9 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ExamPlanDO examPlanDO = baseMapper.selectById(planId);
         ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划信息");
 
-        // 1. 查询该计划所有考场
-        List<Long> classroomIds = examPlanMapper.getPlanExamClassroom(planId);
-        ValidationUtils.throwIfEmpty(classroomIds, "考试计划未分配任何考场");
+        // 1. 查询该计划所有理论考场
+        List<Long> classroomIds = examPlanMapper.getPlanExamTheoryClassroom(planId);
+        ValidationUtils.throwIfEmpty(classroomIds, "考试计划未分配理论考场");
 
         // 2. 查询报名记录
         boolean isConfirmed = PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue()
@@ -903,6 +903,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         List<InvigilatorAssignResp> invigilatorList = planInvigilateMapper.getListByPlanId(planId);
         ValidationUtils.throwIfEmpty(invigilatorList, "未选择监考员");
 
+        // 查询项目信息
+        ProjectDO projectDO = projectMapper.selectById(examPlanDO.getExamProjectId());
 
         // 更新构造器
         LambdaUpdateWrapper<ExamPlanDO> updateWrapper = new LambdaUpdateWrapper<>();
@@ -952,33 +954,23 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 情况 2：主任确认，且是作业人员考试
         if (success && isConfirmed && ExamPlanTypeEnum.WORKER.getValue().equals(examPlanDO.getPlanType())) {
+            Random random = new Random();
             Collections.shuffle(classroomIds, RANDOM);
             List<WorkerExamTicketDO> ticketSaveList = new ArrayList<>();
             List<CandidateExamPaperDO> candidateExamPaperDOList = new ArrayList<>();
+            long serialNumber = 0;
             // 按报名记录逐个生成准考证
             for (EnrollDO enroll : enrollList) {
-
-                Long classroomId = findAvailableClassroom(classroomIds, planId);
-                if (classroomId == null) {
-                    break;
-                }
-
-                Integer seatNo = classroomMapper.getSeatNumber(classroomId, planId);
-                if (seatNo == null) {
-                    continue;
-                }
-
-                String seatStr = String.format("%03d", seatNo);
-                String classroomStr = String.format("%03d", classroomId);
-                String randomStr = String.format("%04d", RANDOM.nextInt(10000));
-
+                ++serialNumber;
+                Long classroomId = classroomIds.get(random.nextInt(classroomIds.size()));
                 // 最终准考证号
-                String examNumber = examPlanDO.getPlanYear() + randomStr + classroomStr + seatStr;
+                String serialStr = String.format("%04d", serialNumber);
+                String examNumber = projectDO.getProjectCode() + "B" + examPlanDO.getStartTime() + serialStr;
                 // 更新报名表
                 EnrollDO upd = new EnrollDO();
                 upd.setId(enroll.getId());
                 upd.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
-                upd.setSeatId(Long.valueOf(seatStr));
+                upd.setSeatId(serialNumber);
                 upd.setClassroomId(classroomId);
                 enrollMapper.updateById(upd);
 
@@ -990,7 +982,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
                 // 调用确实耗时的方法：生成 PDF
                 String ticketUrl = safeGenerateWorkerTicket(enroll.getUserId(), user.getUsername(), user
-                        .getNickname(), upd.getExamNumber(), enroll.getClassId());
+                        .getNickname(), upd.getExamNumber(), classroomId);
 
                 // 保存准考证表
                 WorkerExamTicketDO ticket = new WorkerExamTicketDO();

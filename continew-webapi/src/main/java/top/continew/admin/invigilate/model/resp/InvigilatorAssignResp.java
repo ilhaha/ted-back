@@ -55,4 +55,9 @@ public class InvigilatorAssignResp {
      * 监考密码
      */
     private String examPassword;
+
+    /**
+     * 考场考试类型，0理论考试，1实操考试
+     */
+    private Integer examType;
 }
