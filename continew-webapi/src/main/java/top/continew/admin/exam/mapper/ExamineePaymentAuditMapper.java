@@ -47,4 +47,7 @@ public interface ExamineePaymentAuditMapper extends BaseMapper<ExamineePaymentAu
     void deleteFromPayment(@Param("examPlanId") Long examPlanId, @Param("userId") Long userId);
 
     PaymentInfoVO selectPaymentPersonInfo(@Param("candidateId") Long candidateId, @Param("classId") Long classId);
+
+    IPage<ExamineePaymentAuditResp> getWorkerExamineePaymentAudits(@Param("page") Page<ExamineePaymentAuditResp> page,
+                                                                   @Param(Constants.WRAPPER) QueryWrapper<ExamineePaymentAuditDO> queryWrapper);
 }

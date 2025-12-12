@@ -179,7 +179,8 @@
                tepa.qrcode_upload_url,
                tepa.audit_status,
                tepa.reject_reason,
-               tepa.notice_no
+               tepa.notice_no,
+               twet.ticket_url
         FROM ted_enroll te
                  LEFT JOIN ted_org_class toc
                            ON te.class_id = toc.id AND toc.is_deleted = 0

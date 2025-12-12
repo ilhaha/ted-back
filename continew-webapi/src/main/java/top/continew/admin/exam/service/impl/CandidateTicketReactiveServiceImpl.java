@@ -211,7 +211,7 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
         dataMap.put("idCard", getSafeValue(dto.getIdCard()));
         dataMap.put("ticketId", getSafeValue(dto.getTicketId()));
         dataMap.put("classCode", getSafeValue(dto.getClassCode()));
-        dataMap.put("className", getSafeValue(dto.getClassCode()));
+        dataMap.put("className", getSafeValue(dto.getClassName()));
         dataMap.put("examType", getSafeValue(dto.getExamType()));
         dataMap.put("examItem", getSafeValue(dto.getExamItem()));
         dataMap.put("examRoom", getSafeValue(dto.getExamRoom()));

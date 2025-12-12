@@ -56,6 +56,13 @@ public class ExamineePaymentAuditQuery implements Serializable {
     private Long examineeId;
 
     /**
+     * 作业人员班级id
+     */
+    @Schema(description = "作业人员班级id")
+    @Query(type = QueryType.EQ,columns = "tepa.class_id")
+    private Long classId;
+
+    /**
      * 缴费通知单编号（格式：TZSB_PAY_时间戳_随机数）
      */
     @Schema(description = "缴费通知单编号")

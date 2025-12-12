@@ -64,6 +64,12 @@ public class ExamineePaymentAuditResp extends BaseResp {
     private String examineeName;
 
     /**
+     * 作业人员班级
+     */
+    @Schema(description = "作业人员班级")
+    private String className;
+
+    /**
      * 关联报名记录ID
      */
     @Schema(description = "关联报名记录ID")

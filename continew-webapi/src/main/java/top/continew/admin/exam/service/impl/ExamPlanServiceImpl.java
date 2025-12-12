@@ -958,6 +958,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         // 情况 2：主任确认，且是作业人员考试
         if (success && isConfirmed && ExamPlanTypeEnum.WORKER.getValue().equals(examPlanDO.getPlanType())) {
             ThreadLocalRandom random = ThreadLocalRandom.current();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMdd");
             Collections.shuffle(classroomIds, random);
             List<WorkerExamTicketDO> ticketSaveList = new ArrayList<>();
             List<CandidateExamPaperDO> candidateExamPaperDOList = new ArrayList<>();
@@ -983,7 +984,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 Long classroomId = classroomIds.get(random.nextInt(classroomIds.size()));
                 // 最终准考证号
                 String serialStr = String.format("%04d", serialNumber);
-                String examNumber = projectDO.getProjectCode() + "B" + examPlanDO.getStartTime() + serialStr;
+                String examDate = examPlanDO.getStartTime().format(formatter);
+                String examNumber = projectDO.getProjectCode() + "B" + examDate + serialStr;
                 // 更新报名表
                 EnrollDO upd = new EnrollDO();
                 upd.setId(enroll.getId());

@@ -20,6 +20,7 @@ import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.model.req.PaymentAuditConfirmReq;
 import top.continew.admin.exam.model.req.PaymentInfoReq;
+import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.exam.model.resp.PaymentInfoVO;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.ExamineePaymentAuditQuery;
@@ -80,11 +81,10 @@ public interface ExamineePaymentAuditService extends BaseService<ExamineePayment
     /**
      * 缴费审核资料
      *
-     * @param examineePaymentAuditResp 审核请求对象
+     * @param reviewPaymentReq 审核请求对象
      * @return true=审核成功，false=失败
      */
-
-    boolean reviewPayment(ExamineePaymentAuditResp examineePaymentAuditResp);
+    boolean reviewPayment(ReviewPaymentReq reviewPaymentReq);
 
     /**
      * 生成作业人员缴费通知单

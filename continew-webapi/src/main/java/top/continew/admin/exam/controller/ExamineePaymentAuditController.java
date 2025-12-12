@@ -22,6 +22,7 @@ import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
 import top.continew.admin.exam.model.req.PaymentAuditConfirmReq;
 import top.continew.admin.exam.model.req.PaymentInfoReq;
+import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.exam.model.resp.PaymentInfoVO;
 import top.continew.starter.extension.crud.enums.Api;
 
@@ -95,8 +96,8 @@ public class ExamineePaymentAuditController extends BaseController<ExamineePayme
      */
     @PostMapping("/reviewPayment")
     @Operation(summary = "缴费审核接口")
-    public R<Boolean> reviewPayment(@RequestBody @Validated ExamineePaymentAuditResp examineePaymentAuditResp) {
-        boolean result = baseService.reviewPayment(examineePaymentAuditResp);
+    public R<Boolean> reviewPayment(@RequestBody @Validated ReviewPaymentReq reviewPaymentReq) {
+        boolean result = baseService.reviewPayment(reviewPaymentReq);
         return R.ok(result);
     }
 

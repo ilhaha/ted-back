@@ -47,6 +47,7 @@ import top.continew.admin.exam.model.query.ExamineePaymentAuditQuery;
 import top.continew.admin.exam.model.req.ExamineePaymentAuditReq;
 import top.continew.admin.exam.model.req.PaymentAuditConfirmReq;
 import top.continew.admin.exam.model.req.PaymentInfoReq;
+import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditDetailResp;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
 import top.continew.admin.exam.model.resp.PaymentInfoVO;
@@ -75,6 +76,7 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -160,14 +162,17 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
     public PageResp<ExamineePaymentAuditResp> page(ExamineePaymentAuditQuery query, PageQuery pageQuery) {
         QueryWrapper<ExamineePaymentAuditDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tepa.is_deleted", 0);
+        IPage<ExamineePaymentAuditResp> page;
         if (query.getIsWorker()) {
             queryWrapper.isNotNull("tepa.class_id").isNotNull("tepa.qrcode_upload_url");
+            page = baseMapper.getWorkerExamineePaymentAudits(new Page<>(pageQuery
+                    .getPage(), pageQuery.getSize()), queryWrapper);
         } else {
             queryWrapper.isNull("tepa.class_id").isNull("tepa.qrcode_upload_url");
+            page = baseMapper.getExamineePaymentAudits(new Page<>(pageQuery
+                    .getPage(), pageQuery.getSize()), queryWrapper);
         }
         super.sort(queryWrapper, pageQuery);
-        IPage<ExamineePaymentAuditResp> page = baseMapper.getExamineePaymentAudits(new Page<>(pageQuery
-            .getPage(), pageQuery.getSize()), queryWrapper);
         PageResp<ExamineePaymentAuditResp> pageResp = PageResp.build(page, super.getListClass());
         pageResp.getList().forEach(this::fill);
         return pageResp;
@@ -229,69 +234,96 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         return true;
     }
 
-    @Override
-    public boolean reviewPayment(ExamineePaymentAuditResp req) {
-        // 校验传入参数
-        if (req.getId() == null || req.getExamPlanId() == null || req.getExamineeId() == null) {
-            throw new BusinessException("审核请求参数缺失！");
-        }
-        // 查找对应记录
-        ExamineePaymentAuditDO record = examineePaymentAuditMapper
-            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>().eq(ExamineePaymentAuditDO::getId, req.getId())
-                .eq(ExamineePaymentAuditDO::getExamPlanId, req.getExamPlanId())
-                .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
-                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                .last("LIMIT 1"));
 
-        if (record == null) {
-            throw new BusinessException("未找到对应的缴费审核记录！");
-        }
-        Integer currentStatus = record.getAuditStatus();
+    /**
+     * 缴费审核资料
+     *
+     * @param req 审核请求对象
+     * @return true=审核成功，false=失败
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean reviewPayment(ReviewPaymentReq req) {
+
+        // 1. 批量查询所有记录
+        List<ExamineePaymentAuditDO> records = examineePaymentAuditMapper.selectList(
+                new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .in(ExamineePaymentAuditDO::getId, req.getReviewIds())
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+        );
+
+        ValidationUtils.throwIfEmpty(records, "未找到任何需要审核的记录！");
+
         Integer newStatus = req.getAuditStatus();
-        if (newStatus == null || (!newStatus.equals(2) && !newStatus.equals(3))) {
-            throw new BusinessException("非法的审核状态！");
-        }
-        // 根据状态流转规则进行处理
-        switch (currentStatus) {
-            case 0:  // 待缴费
-                throw new BusinessException("考生还没有上传缴费凭证");
-            case 1:  // 已缴费待审核
-                record.setAuditStatus(newStatus);
-                break;
-            case 2:  // 审核通过
-                if (newStatus == 2) {
-                    throw new BusinessException("已审核，无需再次审核");
+        ValidationUtils.throwIf(newStatus == null || (!PaymentAuditStatusEnum.APPROVED.getValue().equals(newStatus)
+                && !PaymentAuditStatusEnum.REJECTED.getValue().equals(newStatus)),"非法的审核状态！");
+
+        Long auditorId = TokenLocalThreadUtil.get().getUserId();
+        LocalDateTime now = LocalDateTime.now();
+
+        //  只保存成功处理的记录
+        List<ExamineePaymentAuditDO> successList = new ArrayList<>();
+
+        for (ExamineePaymentAuditDO record : records) {
+
+                Integer currentStatus = record.getAuditStatus();
+
+                switch (currentStatus) {
+                    case 0:
+                        // 待缴费，跳过
+                        continue;
+
+                    case 1:
+                        record.setAuditStatus(newStatus);
+                        break;
+
+                    case 2:
+                        if (newStatus == 2) {
+                            // 已审核通过且是通过请求，则跳过
+                            continue;
+                        }
+                        record.setAuditStatus(3);
+                        break;
+
+                    case 3:
+                        continue;
+                    case 4:
+                        record.setAuditStatus(newStatus);
+                        break;
+
+                    case 5:
+                        // 退款审核逻辑可能失败，所以 try/catch 包裹
+                        handleRefundAudit(record, newStatus);
+                        break;
+                    case 6:
+                        // 已退款记录跳过
+                        continue;
+                    case 7:
+                        if (newStatus == 2) {
+                            record.setAuditStatus(6);
+                        }
+                        break;
+
+                    default:
+                        // 未知状态跳过
+                        continue;
                 }
-                record.setAuditStatus(3);
-                break;
-            case 3:  // 审核驳回
-            case 4:  // 补正审核
-                record.setAuditStatus(newStatus);
-                break;
-            case 5:  // 退款审核
-                handleRefundAudit(record, newStatus);
-                break;
-            case 6:  // 已退款
-                throw new BusinessException("已退款，不能再次审核");
-            case 7:  // 退款驳回
-                if (newStatus == 2) {
-                    record.setAuditStatus(6); // 已退款
-                }
-                break;
-            default:
-                throw new BusinessException("未知的审核状态！");
+
+                // 公共字段更新
+                record.setRejectReason(req.getRejectReason());
+                record.setAuditorId(auditorId);
+                record.setAuditTime(now);
+                successList.add(record);
         }
-        // 审核数据更新
-        record.setRejectReason(req.getRejectReason());
-        record.setAuditorId(TokenLocalThreadUtil.get().getUserId());
-        record.setAuditTime(LocalDateTime.now());
-        int result = examineePaymentAuditMapper.updateById(record);
-        if (result <= 0) {
-            throw new BusinessException("审核更新失败，请稍后重试！");
+
+        // 3. 批量更新成功记录
+        if (!successList.isEmpty()) {
+            examineePaymentAuditMapper.updateBatchById(successList);
         }
 
         return true;
     }
+
 
     /**
      * 生成作业人员缴费通知单
@@ -486,11 +518,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         if (newStatus == 2) {
             record.setAuditStatus(6); // 已退款
             // ... 业务待定
-
-        } else if (newStatus == 3) {
+        } else  {
             record.setAuditStatus(7); // 退款驳回
-        } else {
-            throw new BusinessException("非法的退款审核状态！");
         }
     }
 

@@ -28,5 +28,20 @@
           AND tocc.class_id = #{classId}
           AND tocc.is_deleted = 0
     </select>
+    <select id="getWorkerExamineePaymentAudits"
+            resultType="top.continew.admin.exam.model.resp.ExamineePaymentAuditResp">
+        SELECT tepa.*,
+               su.nickname        AS examineeName,
+               tep.exam_plan_name AS planName,
+               toc.class_name
+        FROM ted_examinee_payment_audit tepa
+                 LEFT JOIN sys_user su
+                           ON tepa.examinee_id = su.id
+                 LEFT JOIN ted_exam_plan tep
+                           ON tepa.exam_plan_id = tep.id AND tep.is_deleted = 0
+                 LEFT JOIN ted_org_class toc
+                           ON tepa.class_id = toc.id AND toc.is_deleted = 0
+            ${ew.customSqlSegment}
+    </select>
 
 </mapper>
