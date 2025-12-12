@@ -24,4 +24,11 @@ public class LaborFeeQuery implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
+
+
+    /**
+     * 是否启用：1启用 0禁用
+     */
+    @Schema(description = "是否启用：1启用 0禁用")
+    private Boolean isEnabled;
 }

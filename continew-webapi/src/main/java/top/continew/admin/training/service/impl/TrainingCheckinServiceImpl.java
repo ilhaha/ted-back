@@ -187,7 +187,7 @@ public class TrainingCheckinServiceImpl extends BaseServiceImpl<TrainingCheckinM
         List<TrainingCheckinDO> checkinList = trainingCheckinMapper.selectList(wrapper);
 
         if (checkinList.isEmpty()) {
-            throw new RuntimeException("没有符合条件的签到记录");
+            throw new BusinessException("没有符合条件的签到记录");
         }
 
         // 查询用户信息

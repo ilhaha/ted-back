@@ -12,4 +12,12 @@ import top.continew.admin.invigilate.model.resp.LaborFeeResp;
  * @author ilhaha
  * @since 2025/12/11 14:51
  */
-public interface LaborFeeService extends BaseService<LaborFeeResp, LaborFeeDetailResp, LaborFeeQuery, LaborFeeReq> {}
+public interface LaborFeeService extends BaseService<LaborFeeResp, LaborFeeDetailResp, LaborFeeQuery, LaborFeeReq> {
+    /**
+     * 更新劳务费状态
+     *
+     * @param req 劳务费实体
+     * @return 更新结果
+     */
+    boolean toggleLaborFeeEnabled(LaborFeeReq req);
+}
