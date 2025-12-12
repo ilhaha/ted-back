@@ -62,4 +62,9 @@ public class EnrollStatusConstant {
      */
     public static final Integer SUBMITTED = 2;
 
+    /**
+     *
+     */
+    public static final Integer ABSENT  = 3;
+
 }

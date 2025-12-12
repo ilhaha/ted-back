@@ -39,6 +39,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.PlanConstant;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
@@ -404,19 +405,65 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Boolean endExam(Long planId) {
-        // 需改考试计划状态
-        LambdaUpdateWrapper<ExamPlanDO> examPlanDOLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-        examPlanDOLambdaUpdateWrapper.eq(ExamPlanDO::getId, planId)
+
+        // 1. 查询该计划所有报名信息
+        LambdaQueryWrapper<EnrollDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(EnrollDO::getExamPlanId, planId)
+                .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.SIGNED_UP)
+                .select(EnrollDO::getId, EnrollDO::getExamStatus, EnrollDO::getUserId);
+        List<EnrollDO> enrollList = enrollMapper.selectList(wrapper);
+
+        // 2. 检查是否有正在考试的考生（SIGNED_IN）
+        List<Long> signedInList = enrollList.stream()
+                .filter(e -> EnrollStatusConstant.SIGNED_IN.equals(e.getExamStatus()))
+                .map(EnrollDO::getId)
+                .toList();
+
+        ValidationUtils.throwIfNotEmpty(
+                signedInList,
+                "仍有考生正在考试，无法结束考试，请稍后再试"
+        );
+
+        // 3. 找出未签到 → 改成缺勤（ABSENT）
+        List<Long> notSignedInIds = enrollList.stream()
+                .filter(e -> EnrollStatusConstant.NOT_SIGNED_IN.equals(e.getExamStatus()))
+                .map(EnrollDO::getId)
+                .toList();
+
+        if (!notSignedInIds.isEmpty()) {
+            enrollMapper.update(new LambdaUpdateWrapper<EnrollDO>().in(EnrollDO::getId, notSignedInIds)
+                    .set(EnrollDO::getExamStatus, EnrollStatusConstant.ABSENT)
+                    .set(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED));
+        }
+
+        // 4. 找出已交卷 → 改成已完成（COMPLETED）
+        List<Long> submittedIds = enrollList.stream()
+                .filter(e -> EnrollStatusConstant.SUBMITTED.equals(e.getExamStatus()))
+                .map(EnrollDO::getId)
+                .toList();
+
+        if (!submittedIds.isEmpty()) {
+            enrollMapper.update(new LambdaUpdateWrapper<EnrollDO>().in(EnrollDO::getId, submittedIds)
+                    .set(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED));
+        }
+
+        // 5. 更新考试计划状态 → 已结束
+        LambdaUpdateWrapper<ExamPlanDO> planUpdate = new LambdaUpdateWrapper<>();
+        planUpdate.eq(ExamPlanDO::getId, planId)
                 .set(ExamPlanDO::getStatus, PlanConstant.OVER.getStatus());
-        // 修改监考员状态
-        LambdaUpdateWrapper<PlanInvigilateDO> planInvigilateDOLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-        planInvigilateDOLambdaUpdateWrapper.eq(PlanInvigilateDO::getExamPlanId, planId)
+        this.update(planUpdate);
+
+        // 6. 更新监考员状态 → 待审核
+        LambdaUpdateWrapper<PlanInvigilateDO> invUpdate = new LambdaUpdateWrapper<>();
+        invUpdate.eq(PlanInvigilateDO::getExamPlanId, planId)
                 .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatus.PENDING_REVIEW.getCode());
-        planInvigilateMapper.update(planInvigilateDOLambdaUpdateWrapper);
-        return this.update(examPlanDOLambdaUpdateWrapper);
+        planInvigilateMapper.update(invUpdate);
+
+        return true;
     }
+
 
     @Override
     public List<ProjectVo> getSelectOptions() {

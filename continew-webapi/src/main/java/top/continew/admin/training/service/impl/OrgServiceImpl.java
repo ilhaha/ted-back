@@ -1219,17 +1219,67 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 .now()
                 .isAfter(enrollEndTime), "报名时间已截至，无法继续报名");
 
-        // 空检查
+        // 1. 空检查
         List<List<Long>> projectClassCandidateList = orgApplyPreReq.getCandidateIds();
         ValidationUtils.throwIfEmpty(projectClassCandidateList, "未选择报考考生！");
 
+// 2. 收集 candidateId
+        Set<Long> allCandidateIds = projectClassCandidateList.stream()
+                .filter(inner -> inner.size() > 2)
+                .map(inner -> inner.get(2))
+                .collect(Collectors.toSet());
+        ValidationUtils.throwIf(allCandidateIds.isEmpty(), "未选择报考考生！");
+
+// 3. 批量查用户
+        Map<Long, String> userMap = userMapper.selectBatchIds(allCandidateIds).stream()
+                .collect(Collectors.toMap(UserDO::getId, UserDO::getNickname));
+
+// 4. 检查是否同一考生报考多个班级
         Set<Long> seen = new HashSet<>();
-        for (int i = 0; i < projectClassCandidateList.size(); i++) {
-            List<Long> innerList = projectClassCandidateList.get(i);
-            ValidationUtils.throwIf(innerList.size() < 2, "未选择报考考生！");
-            Long value = innerList.get(2);
-            UserDO userDO = userMapper.selectById(value);
-            ValidationUtils.throwIf(!seen.add(value), userDO.getNickname() + "存在与两个班级，只能由一个班级进行报考");
+        for (List<Long> innerList : projectClassCandidateList) {
+            ValidationUtils.throwIf(innerList.size() < 3, "未选择报考考生！");
+            Long candidateId = innerList.get(2);
+            String nickname = userMap.get(candidateId);
+            ValidationUtils.throwIf(!seen.add(candidateId), nickname + "只能报考一个班级，请检查报名信息");
+        }
+
+// 5. 查询是否存在未完成考试的记录（修复 eq -> in）
+        LambdaQueryWrapper<EnrollDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(EnrollDO::getUserId, allCandidateIds)
+                .ne(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
+                .notIn(EnrollDO::getExamStatus, EnrollStatusConstant.SUBMITTED, EnrollStatusConstant.ABSENT)
+                .select(EnrollDO::getExamPlanId, EnrollDO::getUserId);
+
+        List<EnrollDO> enrollDOS = enrollMapper.selectList(wrapper);
+
+        if (ObjectUtil.isNotEmpty(enrollDOS)) {
+            Long examProjectId = examPlanDO.getExamProjectId();
+
+            // 查出未完成记录对应的计划
+            List<Long> planIds = enrollDOS.stream()
+                    .map(EnrollDO::getExamPlanId)
+                    .toList();
+
+            // 查计划对应项目
+            Map<Long, Long> planProjectMap = examPlanMapper.selectByIds(planIds).stream()
+                    .collect(Collectors.toMap(ExamPlanDO::getId, ExamPlanDO::getExamProjectId));
+
+            // 找出同项目未完成考试的考生
+            List<Long> conflictUserIds = enrollDOS.stream()
+                    .filter(e -> examProjectId.equals(planProjectMap.get(e.getExamPlanId())))
+                    .map(EnrollDO::getUserId)
+                    .distinct()
+                    .toList();
+
+            if (!conflictUserIds.isEmpty()) {
+                // 转换为姓名
+                List<String> names = conflictUserIds.stream()
+                        .map(userMap::get)
+                        .toList();
+
+                String msg = "以下考生存在未完成的相同项目考试：" + String.join("、", names);
+                ValidationUtils.throwIf(true, msg);
+            }
         }
 
         // 计算最大人数

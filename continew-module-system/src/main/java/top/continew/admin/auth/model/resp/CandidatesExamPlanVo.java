@@ -78,4 +78,9 @@ public class CandidatesExamPlanVo implements Serializable {
      */
     private String warningShortFilm;
 
+    /**
+     * 考试时长
+     */
+    private Integer examDuration;
+
 }

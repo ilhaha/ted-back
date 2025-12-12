@@ -156,10 +156,10 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         String examNumber = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(req.getExamNumber()));
         String examNumberEncrypt = aesWithHMAC.encryptAndSign(examNumber);
         candidatesExamPlanReq.setExamNumber(examNumberEncrypt);
-        candidatesExamPlanReq.setEnrollStatus(ExamEnrollStatusEnum.SIGNED_UP.getValue());
+//        candidatesExamPlanReq.setEnrollStatus(ExamEnrollStatusEnum.SIGNED_UP.getValue());
         CandidatesExamPlanVo candidatesExamPlanVo = userService.getPlanInfo(candidatesExamPlanReq);
         // 找不到对应的考试
-        ValidationUtils.throwIf(ObjectUtil.isEmpty(candidatesExamPlanVo), "不属于本场考试");
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(candidatesExamPlanVo), "未报名本场考试");
         // 考试未开考
         ValidationUtils.throwIf(!PlanConstant.EXAM_BEGUN.getStatus().equals(candidatesExamPlanVo.getStatus()), "考试未开考");
         // 判断考生是否已考过试
@@ -167,14 +167,14 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
             .getExamStatus()) && EnrollStatusConstant.COMPLETED.equals(candidatesExamPlanVo
                 .getEnrollStatus()), "已参加过这场考试");
         LocalDateTime startTime = candidatesExamPlanVo.getStartTime();
-        LocalDateTime endTime = candidatesExamPlanVo.getEndTime();
+//        LocalDateTime endTime = candidatesExamPlanVo.getEndTime();
         LocalDateTime now = LocalDateTime.now();
         // 当前时间 > 结束时间：考试已结束
-        ValidationUtils.throwIf(now.isAfter(endTime), "考试已结束");
+//        ValidationUtils.throwIf(now.isAfter(endTime), "考试已结束");
         // 当前时间在考试中：不允许进入
-        ValidationUtils.throwIf(now.isAfter(startTime) && now.isBefore(endTime), "正在考试，无法中途进入");
+//        ValidationUtils.throwIf(now.isAfter(startTime) && now.isBefore(endTime), "正在考试，无法中途进入");
         // 开始时间 - 当前时间 > 30分钟： 考试未开始
-        ValidationUtils.throwIf(Duration.between(now, startTime).toMinutes() > 30, "请于考前30分钟内进入");
+//        ValidationUtils.throwIf(Duration.between(now, startTime).toMinutes() > 30, "请于考前30分钟内进入");
 
         // 执行认证
         String token = this.authenticate(user, client);
@@ -199,16 +199,17 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
 
         // 格式化开始时间和结束时间
         String formattedStartTime = startTime.format(formatter);
-        String formattedEndTime = endTime.format(formatter);
+//        String formattedEndTime = endTime.format(formatter);
 
         ExamCandidateInfoVO examCandidateInfoVO = new ExamCandidateInfoVO();
-        examCandidateInfoVO.setExamTime(formattedStartTime + " —— " + formattedEndTime);
+        examCandidateInfoVO.setExamTime(formattedStartTime);
         examCandidateInfoVO.setExamNumber(examNumber);
         examCandidateInfoVO.setPlanName(candidatesExamPlanVo.getPlanName());
         examCandidateInfoVO.setPlanId(candidatesExamPlanVo.getPlanId());
         examCandidateInfoVO.setClassroomId(classroomDTO.getClassroomId());
         examCandidateInfoVO.setClassroomName(classroomDTO.getClassroomName());
         examCandidateInfoVO.setWarningShortFilm(candidatesExamPlanVo.getWarningShortFilm());
+        examCandidateInfoVO.setExamDuration(candidatesExamPlanVo.getExamDuration());
         // 修改考生的考试状态为已签到
         userService.updateExamStatus(user.getId(), examNumberEncrypt, candidatesExamPlanVo
             .getPlanId(), EnrollExamStatusEnum.SIGNED.getValue());
@@ -256,11 +257,10 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm");
         String formattedStartTime = startTime.format(formatter);
-        String formattedEndTime = endTime.format(formatter);
         ExamCandidateInfoVO examCandidateInfoVO = new ExamCandidateInfoVO();
         examCandidateInfoVO.setPlanId(invigilatorPlanDTO.getPlanId());
         examCandidateInfoVO.setPlanName(invigilatorPlanDTO.getExamPlanName());
-        examCandidateInfoVO.setExamTime(formattedStartTime + " —— " + formattedEndTime);
+        examCandidateInfoVO.setExamTime(formattedStartTime);
         examCandidateInfoVO.setClassroomId(classroomDTO.getClassroomId());
         examCandidateInfoVO.setClassroomName(classroomDTO.getClassroomName());
 

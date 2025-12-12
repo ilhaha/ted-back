@@ -70,4 +70,10 @@ public class ExamCandidateInfoVO implements Serializable {
      */
     @Schema(description = "警示短片", example = "警示短片")
     private String warningShortFilm;
+
+    /**
+     * 考试时长
+     */
+    @Schema(description = "考试时长", example = "考试时长")
+    private Integer examDuration;
 }
