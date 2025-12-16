@@ -19,6 +19,9 @@ package top.continew.admin.util;
 import com.alibaba.excel.EasyExcel;
 import com.aspose.cells.PdfSaveOptions;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -184,26 +187,59 @@ public class ExcelUtilReactive {
         }
     }
 
-    // Excel转PDF（同步）
+    // Excel转PDF（同步 + 裁剪）
     public byte[] convertExcelBytesToPdfBytesSync(byte[] excelBytes) {
         try {
             log.info("开始Excel转PDF，输入大小={}KB", excelBytes.length / 1024);
-            try (ByteArrayInputStream in = new ByteArrayInputStream(excelBytes);
-                ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
+            try (ByteArrayInputStream in = new ByteArrayInputStream(excelBytes);
+                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+                // Excel -> PDF
                 com.aspose.cells.Workbook workbook = new com.aspose.cells.Workbook(in);
                 PdfSaveOptions options = new PdfSaveOptions();
                 options.setCompliance(com.aspose.cells.PdfCompliance.PDF_A_1_B);
                 options.setAllColumnsInOnePagePerSheet(true);
                 options.setOnePagePerSheet(true);
+
                 workbook.save(out, options);
+
                 byte[] pdfBytes = out.toByteArray();
                 log.info("Excel转PDF完成，大小={}KB", pdfBytes.length / 1024);
-                return pdfBytes;
+
+                //直接在这里裁剪 PDF
+                // 裁掉顶部，按你实际水印高度调
+                return cropPdfTopWithPdfBox(pdfBytes, 15);
             }
         } catch (Exception e) {
             log.error("Excel转PDF失败", e);
             throw new RuntimeException("PDF转换失败：" + e.getMessage(), e);
+        }
+    }
+    //切割pdf
+    public byte[] cropPdfTopWithPdfBox(byte[] pdfBytes, float cropTopHeight) {
+        try (
+                PDDocument document = PDDocument.load(pdfBytes);
+                ByteArrayOutputStream out = new ByteArrayOutputStream()
+        ) {
+            for (PDPage page : document.getPages()) {
+                PDRectangle mediaBox = page.getMediaBox();
+
+                PDRectangle newBox = new PDRectangle(
+                        mediaBox.getLowerLeftX(),
+                        mediaBox.getLowerLeftY(),
+                        mediaBox.getWidth(),
+                        mediaBox.getHeight() - cropTopHeight
+                );
+
+                page.setMediaBox(newBox);
+                page.setCropBox(newBox);
+            }
+
+            document.save(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("PDF裁剪失败", e);
         }
     }
 
