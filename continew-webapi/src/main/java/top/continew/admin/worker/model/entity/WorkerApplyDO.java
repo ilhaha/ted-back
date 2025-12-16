@@ -16,7 +16,6 @@
 
 package top.continew.admin.worker.model.entity;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -107,7 +106,6 @@ public class WorkerApplyDO extends BaseDO {
      * 学历
      */
     private String education;
-
 
     /**
      * 工作单位

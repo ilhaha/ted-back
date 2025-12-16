@@ -101,7 +101,6 @@ public class ProjectResp extends BaseResp {
     @Schema(description = "项目类型（0-作业人员 1-检验人员）")
     private Integer projectType;
 
-
     /**
      * 是否有实操考试（0无，1有）
      */

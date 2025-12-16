@@ -58,14 +58,10 @@ public class ImportWorkerTemplateConstant {
     /**
      * 学历
      */
-    public static final Set<String> EDUCATION_SET = Set.of(
-            "小学", "初中", "高中", "专科", "本科", "研究生"
-    );
+    public static final Set<String> EDUCATION_SET = Set.of("小学", "初中", "高中", "专科", "本科", "研究生");
 
     /**
      * 政治面貌
      */
-    public static final Set<String> POLITICAL_STATUS_SET = Set.of(
-            "中共党员", "共青团员", "群众"
-    );
+    public static final Set<String> POLITICAL_STATUS_SET = Set.of("中共党员", "共青团员", "群众");
 }

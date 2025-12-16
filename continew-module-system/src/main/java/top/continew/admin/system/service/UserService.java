@@ -340,7 +340,6 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      */
     void updateExamStatus(Long candidateId, String examNumberEncrypt, Long planId, Integer examStatus);
 
-
     PageResp<UserResp> pageExamStaff(UserQuery query, PageQuery pageQuery);
 
     /**
@@ -349,12 +348,10 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      */
     void deleteExamStaff(Long id);
 
-
     /**
      * 获取用户详情
      */
     UserDetailDTO getUserDetail(Long id);
-
 
     /**
      * 修改用户详情

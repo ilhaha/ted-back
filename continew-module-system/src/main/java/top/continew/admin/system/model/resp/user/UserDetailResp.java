@@ -28,7 +28,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import top.continew.admin.common.model.resp.BaseDetailResp;
 import top.continew.admin.common.constant.ContainerConstants;
-import top.continew.admin.common.context.UserContextHolder;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
 import top.continew.admin.system.model.resp.DeptResp;
@@ -40,7 +39,6 @@ import top.continew.starter.security.crypto.annotation.FieldEncrypt;
 import java.io.Serial;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * 用户详情信息
@@ -159,7 +157,6 @@ public class UserDetailResp extends BaseDetailResp {
     @Schema(description = "最后一次修改密码时间", example = "2023-08-08 08:08:08", type = "string")
     private LocalDateTime pwdResetTime;
 
-
     /**
      * 公司名称
      */
@@ -226,9 +223,8 @@ public class UserDetailResp extends BaseDetailResp {
     @Schema(description = "相关工作年限")
     private String relatedWorkYears;
 
-
-//    @Override
-//    public Boolean getDisabled() {
-//        return this.getIsSystem() || Objects.equals(this.getId(), UserContextHolder.getUserId());
-//    }
+    //    @Override
+    //    public Boolean getDisabled() {
+    //        return this.getIsSystem() || Objects.equals(this.getId(), UserContextHolder.getUserId());
+    //    }
 }

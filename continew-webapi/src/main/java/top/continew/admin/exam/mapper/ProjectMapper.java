@@ -53,7 +53,7 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
      * @param deptId
      * @return
      */
-    List<ProjectVo> getDeptProject(@Param("deptId") Long deptId,@Param("planType") Integer planType);
+    List<ProjectVo> getDeptProject(@Param("deptId") Long deptId, @Param("planType") Integer planType);
 
     /**
      * 查询已经绑定了的地址id集合
@@ -106,5 +106,6 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
 
     List<ProjectCategoryVO> getSelectCategoryProject(@Param("parentIds") List<Long> parentIds);
 
-    List<LocationClassroomVO> getLocationClassroomList(@Param("examType") Integer examType, @Param("isOperation") Integer isOperation);
+    List<LocationClassroomVO> getLocationClassroomList(@Param("examType") Integer examType,
+                                                       @Param("isOperation") Integer isOperation);
 }

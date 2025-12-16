@@ -21,9 +21,12 @@ import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
+import top.continew.admin.exam.model.req.ExamPlanStartReq;
+import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.service.ProjectService;
@@ -63,16 +66,28 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     @Resource
     private ExamPlanService examPlanService;
 
+    /**
+     * 监考员进行开考
+     *
+     * @param req
+     * @param req
+     * @return
+     */
+    @PostMapping("/start")
+    public ExamCandidateInfoVO startExam(@Validated @RequestBody ExamPlanStartReq req){
+        return baseService.startExam(req);
+    }
 
     /**
      * 调整考试/报名时间
+     * 
      * @param req
      * @param planId
      * @return
      */
     @PostMapping("/adjustPlanTime/{planId}")
-    public Boolean adjustPlanTime(@Validated @RequestBody AdjustPlanTimeReq req, @PathVariable("planId") Long planId ) {
-        return baseService.adjustPlanTime(req,planId);
+    public Boolean adjustPlanTime(@Validated @RequestBody AdjustPlanTimeReq req, @PathVariable("planId") Long planId) {
+        return baseService.adjustPlanTime(req, planId);
     }
 
     /**
@@ -123,6 +138,18 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     @GetMapping({"/org/page"})
     public PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery, @Validated PageQuery pageQuery) {
         return examPlanService.orgGetPlanList(examPlanQuery, pageQuery);
+    }
+
+    /**
+     * 监考员获取监考计划列表
+     *
+     * @param examPlanQuery 考试计划查询参数
+     * @param pageQuery     分页参数
+     * @return 分页结果
+     */
+    @GetMapping({"/invigilate/page"})
+    public PageResp<InvigilateExamPlanVO> invigilateGetPlanList(ExamPlanQuery examPlanQuery, @Validated PageQuery pageQuery) {
+        return examPlanService.invigilateGetPlanList(examPlanQuery, pageQuery);
     }
 
     @Operation(summary = "批量导入考试计划")

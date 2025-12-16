@@ -172,6 +172,7 @@ public class AuthServiceImpl implements AuthService {
         return loginResp;
     }
 
+
     @Override
     public LoginResp candidatesOrInviteLogin(LoginReq req, HttpServletRequest request) {
         AuthTypeEnum authType = req.getAuthType();

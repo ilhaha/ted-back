@@ -176,7 +176,6 @@ public class WorkerApplyDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "学历")
     private String education;
 
-
     /**
      * 工作单位
      */

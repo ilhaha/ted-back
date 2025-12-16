@@ -25,8 +25,6 @@ import top.continew.admin.common.constant.ContainerConstants;
 import top.continew.admin.common.context.UserContextHolder;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
-import top.continew.starter.security.mask.annotation.JsonMask;
-import top.continew.starter.security.mask.enums.MaskType;
 
 import java.io.Serial;
 import java.util.List;

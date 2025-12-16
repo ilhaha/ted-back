@@ -105,7 +105,6 @@ public class OrgClassDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "作业人员总人数")
     private Long workerCount;
 
-
     /**
      * 作业人员资料待审核人数
      */

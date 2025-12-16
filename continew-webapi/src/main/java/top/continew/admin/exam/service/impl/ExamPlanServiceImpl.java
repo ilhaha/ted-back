@@ -39,6 +39,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.auth.model.dto.ClassroomDTO;
+import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.PlanConstant;
 import top.continew.admin.common.constant.enums.*;
@@ -49,16 +51,19 @@ import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.dto.ExamPlanExcelRowDTO;
-import top.continew.admin.exam.model.dto.TimeRangeDTO;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
+import top.continew.admin.exam.model.req.ExamPlanStartReq;
+import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.service.CandidateTicketService;
 import top.continew.admin.examconnect.model.resp.ExamPaperVO;
 import top.continew.admin.examconnect.service.QuestionBankService;
+import top.continew.admin.invigilate.mapper.LaborFeeMapper;
 import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
+import top.continew.admin.invigilate.model.entity.LaborFeeDO;
 import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
 import top.continew.admin.invigilate.model.enums.InvigilateStatus;
 import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
@@ -82,7 +87,7 @@ import top.continew.admin.exam.service.ExamPlanService;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -124,7 +129,6 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Resource
     private ExamineePaymentAuditMapper examineePaymentAuditMapper;
 
-
     @Value("${examine.userRole.invigilatorId}")
     private Long invigilatorId;
 
@@ -143,6 +147,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     private final CandidateExamPaperMapper candidateExamPaperMapper;
 
     private final OrgClassMapper orgClassMapper;
+
+    private final LaborFeeMapper laborFeeMapper;
 
     @Override
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
@@ -165,16 +171,16 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ExamPlanDetailResp examPlanDetailResp = baseMapper.selectDetailById(id);
         ValidationUtils.throwIfNull(examPlanDetailResp, "未查询到考试计划信息");
         // 查询计划对应的考场信息
-//        LambdaQueryWrapper<ExamPlanClassroomDO> examPlanClassroomDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
-//        examPlanClassroomDOLambdaQueryWrapper.eq(ExamPlanClassroomDO::getPlanId, id)
-//                .select(ExamPlanClassroomDO::getClassroomId,ExamPlanClassroomDO::getPlanId);
-//        List<ExamPlanClassroomDO> examPlanClassroomDOS = examPlanClassroomMapper
-//                .selectList(examPlanClassroomDOLambdaQueryWrapper);
-//        if (ObjectUtil.isNotEmpty(examPlanClassroomDOS)) {
-//            examPlanDetailResp.setClassroomId(examPlanClassroomDOS.stream()
-//                    .map(ExamPlanClassroomDO::getClassroomId)
-//                    .collect(Collectors.toList()));
-//        }
+        //        LambdaQueryWrapper<ExamPlanClassroomDO> examPlanClassroomDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        //        examPlanClassroomDOLambdaQueryWrapper.eq(ExamPlanClassroomDO::getPlanId, id)
+        //                .select(ExamPlanClassroomDO::getClassroomId,ExamPlanClassroomDO::getPlanId);
+        //        List<ExamPlanClassroomDO> examPlanClassroomDOS = examPlanClassroomMapper
+        //                .selectList(examPlanClassroomDOLambdaQueryWrapper);
+        //        if (ObjectUtil.isNotEmpty(examPlanClassroomDOS)) {
+        //            examPlanDetailResp.setClassroomId(examPlanClassroomDOS.stream()
+        //                    .map(ExamPlanClassroomDO::getClassroomId)
+        //                    .collect(Collectors.toList()));
+        //        }
         this.fill(examPlanDetailResp);
         return examPlanDetailResp;
     }
@@ -184,58 +190,54 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     public void save(ExamPlanSaveReq req) {
 
         // 禁止计划重名
-        ExamPlanDO examPlanName = baseMapper.selectOne(new QueryWrapper<ExamPlanDO>()
-                .eq("exam_plan_name", req.getExamPlanName())
-                .eq("is_deleted", 0)
-                .eq("plan_type",req.getPlanType()));
+        ExamPlanDO examPlanName = baseMapper.selectOne(new QueryWrapper<ExamPlanDO>().eq("exam_plan_name", req
+                .getExamPlanName()).eq("is_deleted", 0).eq("plan_type", req.getPlanType()));
         ValidationUtils.throwIfNotNull(examPlanName, "考试计划名称已存在");
 
         // 1. 构建对象
         ExamPlanDO examPlanDO = getExamPlanDO(req);
 
         // 2. 校验报名结束时间
-        ValidationUtils.throwIf(
-                !DateUtil.validateEnrollmentTime(examPlanDO.getEnrollEndTime(), examPlanDO.getStartTime()),
-                "报名结束时间不能晚于考试开始时间"
-        );
+        ValidationUtils.throwIf(!DateUtil.validateEnrollmentTime(examPlanDO.getEnrollEndTime(), examPlanDO
+                .getStartTime()), "报名结束时间不能晚于考试开始时间");
 
         // 3. 合并考场 ID（理论 + 实操）
-//        List<Long> classroomIds = new ArrayList<>();
-//        List<Long> theoryIds = req.getTheoryClassroomId();
-//        List<Long> operIds = req.getOperationClassroomId();
-//        Integer maxCandidates = req.getMaxCandidates();
-//
-//        if (!CollectionUtils.isEmpty(theoryIds)) {
-//            classroomIds.addAll(theoryIds);
-//        }
-//        if (!CollectionUtils.isEmpty(operIds)) {
-//            classroomIds.addAll(operIds);
-//        }
-//
-//        // 4. 判断考场是否冲突（为空则不会查数据库）
-//        if (!CollectionUtils.isEmpty(classroomIds)) {
-//            List<String> conflictClassrooms = baseMapper.listConflictClassrooms(req.getStartTime(), classroomIds);
-//            ValidationUtils.throwIfNotEmpty(
-//                    conflictClassrooms,
-//                    "以下考场当天已存在考试：" + String.join("、", conflictClassrooms)
-//            );
-//        }
-//
-//        // 5. 验证理论/实操考场容量（避免空列表导致 SQL 报错）
-//        long theoryCapacity = CollectionUtils.isEmpty(theoryIds)
-//                ? 0
-//                : classroomMapper.getMaxCandidates(theoryIds);
-//
-//        boolean hasOperCapacity = CollectionUtils.isEmpty(operIds);
-//        long operCapacity = hasOperCapacity
-//                ? 0
-//                : classroomMapper.getMaxCandidates(operIds);
-//
-//        ValidationUtils.throwIf(maxCandidates > theoryCapacity,
-//                "理论考场容量不足，无法容纳当前考试人数");
-//
-//        ValidationUtils.throwIf(!hasOperCapacity && maxCandidates > operCapacity,
-//                "实操考场容量不足，无法容纳当前考试人数");
+        //        List<Long> classroomIds = new ArrayList<>();
+        //        List<Long> theoryIds = req.getTheoryClassroomId();
+        //        List<Long> operIds = req.getOperationClassroomId();
+        //        Integer maxCandidates = req.getMaxCandidates();
+        //
+        //        if (!CollectionUtils.isEmpty(theoryIds)) {
+        //            classroomIds.addAll(theoryIds);
+        //        }
+        //        if (!CollectionUtils.isEmpty(operIds)) {
+        //            classroomIds.addAll(operIds);
+        //        }
+        //
+        //        // 4. 判断考场是否冲突（为空则不会查数据库）
+        //        if (!CollectionUtils.isEmpty(classroomIds)) {
+        //            List<String> conflictClassrooms = baseMapper.listConflictClassrooms(req.getStartTime(), classroomIds);
+        //            ValidationUtils.throwIfNotEmpty(
+        //                    conflictClassrooms,
+        //                    "以下考场当天已存在考试：" + String.join("、", conflictClassrooms)
+        //            );
+        //        }
+        //
+        //        // 5. 验证理论/实操考场容量（避免空列表导致 SQL 报错）
+        //        long theoryCapacity = CollectionUtils.isEmpty(theoryIds)
+        //                ? 0
+        //                : classroomMapper.getMaxCandidates(theoryIds);
+        //
+        //        boolean hasOperCapacity = CollectionUtils.isEmpty(operIds);
+        //        long operCapacity = hasOperCapacity
+        //                ? 0
+        //                : classroomMapper.getMaxCandidates(operIds);
+        //
+        //        ValidationUtils.throwIf(maxCandidates > theoryCapacity,
+        //                "理论考场容量不足，无法容纳当前考试人数");
+        //
+        //        ValidationUtils.throwIf(!hasOperCapacity && maxCandidates > operCapacity,
+        //                "实操考场容量不足，无法容纳当前考试人数");
 
         // 6. copy 属性（必须在容量判断之后）
         BeanUtils.copyProperties(req, examPlanDO);
@@ -247,11 +249,10 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         this.save(examPlanDO);
 
         // 9. 保存考场关联
-//        if (!CollectionUtils.isEmpty(classroomIds)) {
-//            examPlanMapper.savePlanClassroom(examPlanDO.getId(), classroomIds);
-//        }
+        //        if (!CollectionUtils.isEmpty(classroomIds)) {
+        //            examPlanMapper.savePlanClassroom(examPlanDO.getId(), classroomIds);
+        //        }
     }
-
 
     /**
      * 判读考试计划的考试时间对应的考场是否冲突
@@ -286,7 +287,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         //        examPlanDO.setEndTime(DateUtil.parse(dateRange.get(1)));
         ProjectDO projectDO = projectMapper.selectById(examPlanSaveReq.getExamProjectId());
         examPlanDO.setStartTime(examPlanSaveReq.getStartTime());
-//        examPlanDO.setEndTime(examPlanSaveReq.getStartTime().plusMinutes(projectDO.getExamDuration()));
+        //        examPlanDO.setEndTime(examPlanSaveReq.getStartTime().plusMinutes(projectDO.getExamDuration()));
         examPlanDO.setPlanType(projectDO.getProjectType());
         return examPlanDO;
     }
@@ -421,10 +422,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 .map(EnrollDO::getId)
                 .toList();
 
-        ValidationUtils.throwIfNotEmpty(
-                signedInList,
-                "仍有考生正在考试，无法结束考试，请稍后再试"
-        );
+        ValidationUtils.throwIfNotEmpty(signedInList, "仍有考生正在考试，无法结束考试，请稍后再试");
 
         // 3. 找出未签到 → 改成缺勤（ABSENT）
         List<Long> notSignedInIds = enrollList.stream()
@@ -451,8 +449,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 5. 更新考试计划状态 → 已结束
         LambdaUpdateWrapper<ExamPlanDO> planUpdate = new LambdaUpdateWrapper<>();
-        planUpdate.eq(ExamPlanDO::getId, planId)
-                .set(ExamPlanDO::getStatus, PlanConstant.OVER.getStatus());
+        planUpdate.eq(ExamPlanDO::getId, planId).set(ExamPlanDO::getStatus, PlanConstant.OVER.getStatus());
         this.update(planUpdate);
 
         // 6. 更新监考员状态 → 待审核
@@ -463,7 +460,6 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         return true;
     }
-
 
     @Override
     public List<ProjectVo> getSelectOptions() {
@@ -567,7 +563,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 ExamPlanDO existingPlan = baseMapper.selectOne(new QueryWrapper<ExamPlanDO>()
                         .eq("exam_plan_name", planName)
                         .eq("is_deleted", 0)
-                        .eq("plan_type",projectDO.getProjectType()));
+                        .eq("plan_type", projectDO.getProjectType()));
                 if (existingPlan != null) {
                     throw new BusinessException("第" + rowIndex + "行：计划名称已存在系统中");
                 }
@@ -582,7 +578,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 LocalDateTime signupEndTime = examStartTime.minusDays(1).withHour(23).withMinute(59).withSecond(59);
 
                 rowList.add(new ExamPlanExcelRowDTO(planName, projectDO
-                        .getId(), signupStartTime, signupEndTime, examStartTime,maxCandidates,projectDO.getProjectType(), rowIndex));
+                        .getId(), signupStartTime, signupEndTime, examStartTime, maxCandidates, projectDO
+                        .getProjectType(), rowIndex));
             }
 
             // 批量插入
@@ -694,15 +691,16 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 .getStartTime()), "报名结束时间不能晚于考试开始时间");
 
         // 考试开始时间不能早于当前时间
-        ValidationUtils.throwIf(
-                req.getStartTime().isBefore(LocalDateTime.now().minusSeconds(2)),
-                "考试开始时间不能早于当前时间"
-        );
+        ValidationUtils.throwIf(req.getStartTime().isBefore(LocalDateTime.now().minusSeconds(2)), "考试开始时间不能早于当前时间");
         Integer invigilatorCount = req.getInvigilatorCount();
         List<Long> classroomIds = new ArrayList<>();
         List<Long> theoryIds = req.getTheoryClassroomId();
         List<Long> operIds = req.getOperationClassroomId();
         ValidationUtils.throwIf(invigilatorCount < (theoryIds.size() + operIds.size()), "所设置的监考员人数不足以分配到全部考场");
+
+        // 判断有没有启用监考员劳务费
+        LaborFeeDO laborFeeDO = laborFeeMapper.selectOne(new LambdaQueryWrapper<LaborFeeDO>().eq(LaborFeeDO::getIsEnabled, Boolean.TRUE));
+        ValidationUtils.throwIfNull(laborFeeDO, "当前未配置启用中的监考劳务费规则");
 
         if (!CollectionUtils.isEmpty(theoryIds)) {
             classroomIds.addAll(theoryIds);
@@ -712,29 +710,25 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         }
 
         // 2. 查询报名记录
-//        ValidationUtils.throwIfEmpty(enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
-//                .eq(EnrollDO::getExamPlanId, id)), "未查询到考生报名信息");
+        //        ValidationUtils.throwIfEmpty(enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
+        //                .eq(EnrollDO::getExamPlanId, id)), "未查询到考生报名信息");
 
         if (!CollectionUtils.isEmpty(classroomIds)) {
             List<String> conflictClassrooms = baseMapper.listConflictClassrooms(req.getStartTime(), classroomIds);
-            ValidationUtils.throwIfNotEmpty(
-                    conflictClassrooms,
-                    "以下考场当天已存在考试：" + String.join("、", conflictClassrooms)
-            );
+            ValidationUtils.throwIfNotEmpty(conflictClassrooms, "以下考场当天已存在考试：" + String.join("、", conflictClassrooms));
         }
 
-
-//        // 4.如果是新的考场人数小于之前的考场人数，无法成功
-//        LambdaQueryWrapper<ExamineePaymentAuditDO> examineePaymentAuditDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
-//        examineePaymentAuditDOLambdaQueryWrapper.eq(ExamineePaymentAuditDO::getExamPlanId, id)
-//                .eq(ExamineePaymentAuditDO::getAuditStatus, PaymentAuditStatusEnum.APPROVED.getValue());
-//        Long candidateCount = examineePaymentAuditMapper.selectCount(examineePaymentAuditDOLambdaQueryWrapper);
-//        Long totalCapacity = classroomMapper.selectByIds(req.getClassroomId())
-//                .stream()
-//                .mapToLong(ClassroomDO::getMaxCandidates)
-//                .sum();
-//        ValidationUtils.throwIf(candidateCount > totalCapacity, String
-//                .format("已报名 %d 人，但所选考场最多只能容纳 %d 人，请重新选择考场", candidateCount, totalCapacity));
+        //        // 4.如果是新的考场人数小于之前的考场人数，无法成功
+        //        LambdaQueryWrapper<ExamineePaymentAuditDO> examineePaymentAuditDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        //        examineePaymentAuditDOLambdaQueryWrapper.eq(ExamineePaymentAuditDO::getExamPlanId, id)
+        //                .eq(ExamineePaymentAuditDO::getAuditStatus, PaymentAuditStatusEnum.APPROVED.getValue());
+        //        Long candidateCount = examineePaymentAuditMapper.selectCount(examineePaymentAuditDOLambdaQueryWrapper);
+        //        Long totalCapacity = classroomMapper.selectByIds(req.getClassroomId())
+        //                .stream()
+        //                .mapToLong(ClassroomDO::getMaxCandidates)
+        //                .sum();
+        //        ValidationUtils.throwIf(candidateCount > totalCapacity, String
+        //                .format("已报名 %d 人，但所选考场最多只能容纳 %d 人，请重新选择考场", candidateCount, totalCapacity));
 
         // 5. 如果是检验类型，校验报名人员是否全部审核通过
         if (ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType())) {
@@ -755,17 +749,17 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ValidationUtils.throwIf(unpaidCount > 0, "存在考试人员未提交缴费通知单或审核未通过，请到考生缴费审核管理完成审核");
 
         // 7. 计算考试结束时间
-//        ProjectDO projectDO = projectMapper.selectById(req.getExamProjectId());
-//        ValidationUtils.throwIfNull(projectDO, "未查询到考试项目");
+        //        ProjectDO projectDO = projectMapper.selectById(req.getExamProjectId());
+        //        ValidationUtils.throwIfNull(projectDO, "未查询到考试项目");
 
-//        req.setStartTime(req.getStartTime());
-//        req.setEndTime(req.getStartTime().plusMinutes(projectDO.getExamDuration()));
+        //        req.setStartTime(req.getStartTime());
+        //        req.setEndTime(req.getStartTime().plusMinutes(projectDO.getExamDuration()));
 
         req.setIsFinalConfirmed(PlanFinalConfirmedStatus.DIRECTOR_PENDING.getValue());
 
         // 8.在选择的考试的时间，考场有没有是否有别的考试
-//        ValidationUtils.throwIf(hasClassroomTimeConflict(req.getStartTime(), req.getEndTime(), req
-//                .getClassroomId(), id) > 0, "所选考场在所选时间段前后30分钟内已有考试计划，请调整考试时间或更换考场。");
+        //        ValidationUtils.throwIf(hasClassroomTimeConflict(req.getStartTime(), req.getEndTime(), req
+        //                .getClassroomId(), id) > 0, "所选考场在所选时间段前后30分钟内已有考试计划，请调整考试时间或更换考场。");
 
         req.setAssignType(InvigilatorAssignTypeEnum.RANDOM_FIRST.getValue());
 
@@ -780,21 +774,23 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             examPlanMapper.savePlanClassroom(examPlanDO.getId(), classroomIds);
 
             // 11.随机分配监考人员
-            randomInvigilator(classroomIds, examPlanDO.getStartTime(), examPlanDO
-                    .getEndTime(), id, invigilatorCount);
+            randomInvigilator(classroomIds, examPlanDO.getStartTime(), id, invigilatorCount, laborFeeDO);
         }
     }
 
     private void randomInvigilator(List<Long> classroomIds,
                                    LocalDateTime startTime,
-                                   LocalDateTime endTime,
                                    Long planId,
-                                   Integer invigilatorNum) {
-        // 获取所选时间段有空闲的监考人员
+                                   Integer invigilatorNum,
+                                   LaborFeeDO laborFeeDO) {
+        // 获取所选时间段有空闲的监考人员并上传了对应八大类资质的
         List<AvailableInvigilatorResp> availableInvigilatorList = planInvigilateMapper
-                .selectAvailableInvigilators(startTime, endTime, planId, invigilatorId, null);
-        ValidationUtils.throwIf(ObjectUtil.isEmpty(availableInvigilatorList) || availableInvigilatorList
-                .size() < invigilatorNum, "当前时间段可分配的监考员数量不足");
+                .selectAvailableInvigilators(startTime, planId, invigilatorId);
+        for (AvailableInvigilatorResp availableInvigilatorResp : availableInvigilatorList) {
+            System.out.println(availableInvigilatorResp.getNickname());
+        }
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(availableInvigilatorList) || availableInvigilatorList.size() < invigilatorNum,
+                "当前时间段可分配的监考员或有资质的监考员数量不足");
         Collections.shuffle(availableInvigilatorList);
         List<AvailableInvigilatorResp> assignedAvailableInvigilatorList = availableInvigilatorList
                 .subList(0, invigilatorNum);
@@ -831,6 +827,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 record.setClassroomId(classroomId);
                 // 监考状态
                 record.setInvigilateStatus(InvigilateStatusEnum.NOT_START.getValue());
+                record.setTheoryFee(laborFeeDO.getTheoryFee());
+                record.setPracticalFee(laborFeeDO.getPracticalFee());
                 records.add(record);
             }
         }
@@ -868,10 +866,15 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ExamPlanDO examPlanDO = baseMapper.selectById(planId);
         ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划");
         // 判断是否已有监考员确认，如果有无法再次随机
-        Long notStartCount = planInvigilateMapper.selectCount(new LambdaQueryWrapper<PlanInvigilateDO>()
-                .eq(PlanInvigilateDO::getExamPlanId, examPlanDO.getId())
-                .eq(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.NOT_START.getValue()));
-        ValidationUtils.throwIf(notStartCount > 0, "已有监考员完成确认，当前无法重新随机分配！");
+//        Long notStartCount = planInvigilateMapper.selectCount(new LambdaQueryWrapper<PlanInvigilateDO>()
+//            .eq(PlanInvigilateDO::getExamPlanId, examPlanDO.getId())
+//            .eq(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.NOT_START.getValue()));
+//        ValidationUtils.throwIf(notStartCount > 0, "已有监考员完成确认，当前无法重新随机分配！");
+
+        // 判断有没有启用监考员劳务费
+        LaborFeeDO laborFeeDO = laborFeeMapper.selectOne(new LambdaQueryWrapper<LaborFeeDO>().eq(LaborFeeDO::getIsEnabled, Boolean.TRUE));
+        ValidationUtils.throwIfNull(laborFeeDO, "当前未配置启用中的监考劳务费规则");
+
         // 1. 先删除原监考员
         planInvigilateMapper.delete(new LambdaQueryWrapper<PlanInvigilateDO>()
                 .eq(PlanInvigilateDO::getExamPlanId, planId));
@@ -882,7 +885,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 .select(PlancalssroomDO::getClassroomId)).stream().map(PlancalssroomDO::getClassroomId).toList();
 
         // 3. 随机分配监考逻辑
-        randomInvigilator(classroomIds, examPlanDO.getStartTime(), examPlanDO.getEndTime(), planId, invigilatorNum);
+        randomInvigilator(classroomIds, examPlanDO.getStartTime(), planId, invigilatorNum, laborFeeDO);
         // 4.修改计划分配监考员类型
         baseMapper.update(new LambdaUpdateWrapper<ExamPlanDO>()
                 .set(ExamPlanDO::getAssignType, InvigilatorAssignTypeEnum.RANDOM_SECOND.getValue())
@@ -902,15 +905,14 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ExamPlanDO examPlanDO = baseMapper.selectById(planId);
         ValidationUtils.throwIfNull(examPlanDO, "未查询到计划信息");
 
-        // 2. 查询空闲监考员（包含状态=5可以忽略冲突）
+        // 2. 查询空闲监考员
         List<AvailableInvigilatorResp> availableInvigilatorResps = planInvigilateMapper
-                .selectAvailableInvigilators(examPlanDO.getStartTime(), examPlanDO
-                        .getEndTime(), planId, invigilatorId, rejectedInvigilatorId);
+                .selectAvailableInvigilators(examPlanDO.getStartTime(), planId, invigilatorId);
 
-        // 3. 查询已经安排的监考员（非被拒绝状态）
+        // 3. 查询已经安排的监考员
         List<Long> assignedInvigilatorIds = planInvigilateMapper.selectList(new LambdaQueryWrapper<PlanInvigilateDO>()
                 .eq(PlanInvigilateDO::getExamPlanId, planId)
-                .ne(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.REJECTED.getValue())
+                .eq(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.NOT_START.getValue())
                 .select(PlanInvigilateDO::getInvigilatorId)).stream().map(PlanInvigilateDO::getInvigilatorId).toList();
 
         // 4. 过滤已经安排的监考员
@@ -943,8 +945,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ValidationUtils.throwIfEmpty(classroomIds, "考试计划未分配理论考场");
 
         // 2. 查询报名记录
-        boolean isConfirmed = PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue()
-                .equals(isFinalConfirmed);
+        boolean isConfirmed = PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue().equals(isFinalConfirmed);
         List<EnrollDO> enrollList = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
                 .eq(EnrollDO::getExamPlanId, planId));
         ValidationUtils.throwIf(ObjectUtil.isEmpty(enrollList) && isConfirmed, "未查询到考生报名信息");
@@ -970,7 +971,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                     .eq(PlanInvigilateDO::getExamPlanId, planId));
 
             // 删除考场
-            planClassroomMapper.delete(new LambdaQueryWrapper<PlancalssroomDO>().eq(PlancalssroomDO::getPlanId, planId));
+            planClassroomMapper.delete(new LambdaQueryWrapper<PlancalssroomDO>()
+                    .eq(PlancalssroomDO::getPlanId, planId));
         }
 
         // 执行更新
@@ -978,8 +980,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 生成开考密码
         // 相同考场监考员开考密码相同
-        Map<Long, List<InvigilatorAssignResp>> groupByClassroom =
-                invigilatorList.stream().collect(Collectors.groupingBy(InvigilatorAssignResp::getClassroomId));
+        Map<Long, List<InvigilatorAssignResp>> groupByClassroom = invigilatorList.stream()
+                .collect(Collectors.groupingBy(InvigilatorAssignResp::getClassroomId));
 
         List<PlanInvigilateDO> updateList = new ArrayList<>();
 
@@ -1014,18 +1016,12 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             ObjectMapper objectMapper = new ObjectMapper();
 
             // 查询班级信息
-            List<Long> workerClassIds = enrollList.stream()
-                    .map(EnrollDO::getClassId)
-                    .distinct()
-                    .toList();
+            List<Long> workerClassIds = enrollList.stream().map(EnrollDO::getClassId).distinct().toList();
             List<OrgClassDO> orgClassDOS = orgClassMapper.selectByIds(workerClassIds);
 
             Map<Long, String> orgClassNameMap = orgClassDOS.stream()
-                    .collect(Collectors.toMap(
-                            OrgClassDO::getId,
-                            x -> Optional.ofNullable(x.getClassName()).orElse(""),
-                            (k1, k2) -> k1
-                    ));
+                    .collect(Collectors.toMap(OrgClassDO::getId, x -> Optional.ofNullable(x.getClassName()).orElse(""), (k1,
+                                                                                                                         k2) -> k1));
             for (EnrollDO enroll : enrollList) {
                 ++serialNumber;
                 Long classroomId = classroomIds.get(random.nextInt(classroomIds.size()));
@@ -1049,7 +1045,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
                 // 调用确实耗时的方法：生成 PDF
                 String ticketUrl = safeGenerateWorkerTicket(enroll.getUserId(), user.getUsername(), user
-                        .getNickname(), upd.getExamNumber(), enroll.getClassId(),orgClassNameMap.get(enroll.getClassId()));
+                        .getNickname(), upd.getExamNumber(), enroll.getClassId(), orgClassNameMap.get(enroll.getClassId()));
 
                 // 保存准考证表
                 WorkerExamTicketDO ticket = new WorkerExamTicketDO();
@@ -1085,6 +1081,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
     /**
      * 调整考试/报名时间
+     *
      * @param req
      * @param planId
      * @return
@@ -1110,14 +1107,97 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 .getStartTime()), "报名结束时间不能晚于考试开始时间");
 
         // 考试开始时间不能早于当前时间
-        ValidationUtils.throwIf(
-                req.getStartTime().isBefore(LocalDateTime.now().minusSeconds(2)),
-                "考试开始时间不能早于当前时间"
-        );
+        ValidationUtils.throwIf(req.getStartTime().isBefore(LocalDateTime.now().minusSeconds(2)), "考试开始时间不能早于当前时间");
 
         update.setId(planId);
         update.setStartTime(req.getStartTime());
         return baseMapper.updateById(update) > 0;
+    }
+
+    /**
+     * 监考员获取监考计划列表
+     *
+     * @param examPlanQuery 考试计划查询参数
+     * @param pageQuery     分页参数
+     * @return 分页结果
+     */
+    @Override
+    public PageResp<InvigilateExamPlanVO> invigilateGetPlanList(ExamPlanQuery examPlanQuery, PageQuery pageQuery) {
+        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+        QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(examPlanQuery);
+        queryWrapper.eq("tep.is_deleted", 0);
+        // 执行分页查询
+        IPage<InvigilateExamPlanVO> page = baseMapper.invigilateGetPlanList(new Page<>(pageQuery.getPage(), pageQuery
+                .getSize()), queryWrapper, userTokenDo.getUserId());
+
+        // 将查询结果转换成 PageResp 对象
+        PageResp<InvigilateExamPlanVO> pageResp = PageResp.build(page, InvigilateExamPlanVO.class);
+        // 遍历查询结果列表，调用 fill 方法填充额外字段或处理数据
+        pageResp.getList().forEach(this::fill);
+
+        return pageResp;
+    }
+
+    /**
+     * 监考员进行开考
+     *
+     * @param req
+     * @param req
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ExamCandidateInfoVO startExam(ExamPlanStartReq req) {
+        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+        // 根据计划id、监考考场获取监考信息
+        Long planId = req.getExamPlanId();
+        Long classroomId = req.getClassroomId();
+        // 查询计划信息
+        ExamPlanDO examPlanDO = baseMapper.selectById(planId);
+        ValidationUtils.throwIf(
+                !PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue()
+                        .equals(examPlanDO.getIsFinalConfirmed()),
+                "考试计划尚未完成最终确认，暂无法开考"
+        );
+        ValidationUtils.throwIf(PlanConstant.OVER.getStatus().equals(examPlanDO.getStatus()), "考试已结束");
+
+        PlanInvigilateDO planInvigilateDO = planInvigilateMapper.selectOne(new LambdaQueryWrapper<PlanInvigilateDO>()
+                .eq(PlanInvigilateDO::getExamPlanId, planId)
+                .eq(PlanInvigilateDO::getClassroomId, classroomId)
+                .eq(PlanInvigilateDO::getInvigilatorId, userTokenDo.getUserId())
+                .last("limit 1")
+                .select(PlanInvigilateDO::getExamPassword));
+        ValidationUtils.throwIfNull(
+                planInvigilateDO,
+                "当前考场暂无可开考的监考任务"
+        );
+        ValidationUtils.throwIf(
+                !req.getExamPassword().equals(planInvigilateDO.getExamPassword()),
+                "开考密码错误，请核对后重试"
+        );
+
+        LocalDateTime startTime = examPlanDO.getStartTime();
+        LocalDateTime now = LocalDateTime.now();
+        // 开始时间 - 当前时间 > 15分钟： 考前45分钟才可以进去
+        ValidationUtils.throwIf(Duration.between(now, startTime).toMinutes() > 15, "请于考前15分钟内进入");
+
+        // 修改考试计划状态
+       baseMapper.update(new LambdaUpdateWrapper<ExamPlanDO>().set(ExamPlanDO::getStatus, PlanConstant.EXAM_BEGUN.getStatus())
+               .eq(ExamPlanDO::getId,planId));
+
+        // 查出考场对应的信息
+        ClassroomDO classroomDO = classroomMapper.selectById(classroomId);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm");
+        String formattedStartTime = startTime.format(formatter);
+        ExamCandidateInfoVO examCandidateInfoVO = new ExamCandidateInfoVO();
+        examCandidateInfoVO.setPlanId(planId);
+        examCandidateInfoVO.setPlanName(examPlanDO.getExamPlanName());
+        examCandidateInfoVO.setExamTime(formattedStartTime);
+        examCandidateInfoVO.setClassroomId(classroomId);
+        examCandidateInfoVO.setClassroomName(classroomDO.getClassroomName());
+
+        return examCandidateInfoVO;
     }
 
     /**
@@ -1152,7 +1232,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                                             Long classId,
                                             String className) {
         try {
-            return candidateTicketReactiveService.generateWorkerTicket(userId, idCard, encryptedExamNo, classId,className);
+            return candidateTicketReactiveService
+                    .generateWorkerTicket(userId, idCard, encryptedExamNo, classId, className);
         } catch (Exception e) {
             throw new BusinessException("生成考生【" + nickname + "】的准考证失败，请稍后重试");
         }

@@ -19,8 +19,6 @@ package top.continew.admin.training.model.vo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import top.continew.starter.security.mask.annotation.JsonMask;
-import top.continew.starter.security.mask.enums.MaskType;
 
 import java.io.Serializable;
 

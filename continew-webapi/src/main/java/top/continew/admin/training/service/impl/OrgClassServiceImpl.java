@@ -44,7 +44,6 @@ import top.continew.admin.training.model.entity.OrgDO;
 import top.continew.admin.training.model.vo.SelectClassVO;
 import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.starter.core.exception.BusinessException;
-import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
@@ -111,11 +110,9 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
         IPage<OrgClassDetailResp> page;
         if (OrgClassType.INSPECTORS_TYPE.getClassType().equals(query.getClassType())) {
-            page = baseMapper.page(new Page<>(pageQuery.getPage(), pageQuery
-                    .getSize()), queryWrapper);
-        }else {
-            page = baseMapper.workerClassPage(new Page<>(pageQuery.getPage(), pageQuery
-                    .getSize()), queryWrapper);
+            page = baseMapper.page(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+        } else {
+            page = baseMapper.workerClassPage(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
         }
         PageResp<OrgClassResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
@@ -171,9 +168,8 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
                 String qrUrl = generateAndUploadQr(classId, qrContent);
 
                 // 更新二维码地址
-                baseMapper.update(new LambdaUpdateWrapper<OrgClassDO>()
-                        .eq(OrgClassDO::getId, classId)
-                        .set(OrgClassDO::getQrcodeApplyUrl, qrUrl));
+                baseMapper.update(new LambdaUpdateWrapper<OrgClassDO>().eq(OrgClassDO::getId, classId)
+                    .set(OrgClassDO::getQrcodeApplyUrl, qrUrl));
             } catch (Exception e) {
                 throw new BusinessException("二维码生成失败，请稍后重试");
             }
@@ -181,7 +177,6 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
         return classId;
     }
-
 
     /**
      * 生成班级编号
@@ -195,28 +190,26 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         String year = LocalDate.now().format(DateTimeFormatter.ofPattern("yy"));
 
         // 校验学校代号
-        if (orgCode == null || orgCode.isEmpty()) orgCode = "00";
+        if (orgCode == null || orgCode.isEmpty())
+            orgCode = "00";
 
         // 项目
         ProjectDO projectDO = projectMapper.selectById(req.getProjectId());
-        if (projectDO == null) throw new BusinessException("项目不存在");
+        if (projectDO == null)
+            throw new BusinessException("项目不存在");
 
         // 统计今年同类型同项目班级数量
         LocalDateTime startOfYear = Year.now().atDay(1).atStartOfDay();
         LocalDateTime endOfYear = Year.now().atMonth(12).atEndOfMonth().atTime(23, 59, 59);
 
-        Long count = baseMapper.selectCount(new LambdaQueryWrapper<OrgClassDO>()
-                .eq(OrgClassDO::getClassType, req.getClassType())
-                .ge(OrgClassDO::getCreateTime, startOfYear)
-                .le(OrgClassDO::getCreateTime, endOfYear));
+        Long count = baseMapper.selectCount(new LambdaQueryWrapper<OrgClassDO>().eq(OrgClassDO::getClassType, req
+            .getClassType()).ge(OrgClassDO::getCreateTime, startOfYear).le(OrgClassDO::getCreateTime, endOfYear));
 
         Long sequence = count + 1;
         String sequenceStr = String.format("%03d", sequence);
 
         return examType + year + orgCode + projectDO.getProjectCode() + sequenceStr;
     }
-
-
 
     @Override
     public void update(OrgClassReq req, Long id) {
@@ -225,11 +218,11 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         OrgDO orgDO = orgUserMapper.selectOrgByUserId(userTokenDo.getUserId());
 
         // 检查是否重名（排除当前记录）
-//        LambdaQueryWrapper<OrgClassDO> wrapper = new LambdaQueryWrapper<>();
-//        wrapper.eq(OrgClassDO::getClassName, req.getClassName())
-//                .eq(OrgClassDO::getOrgId, orgDO.getId())
-//                .ne(OrgClassDO::getId, id);
-//        ValidationUtils.throwIf(baseMapper.selectCount(wrapper) > 0, "班级名称 [ " + req.getClassName() + " ] 已存在");
+        //        LambdaQueryWrapper<OrgClassDO> wrapper = new LambdaQueryWrapper<>();
+        //        wrapper.eq(OrgClassDO::getClassName, req.getClassName())
+        //                .eq(OrgClassDO::getOrgId, orgDO.getId())
+        //                .ne(OrgClassDO::getId, id);
+        //        ValidationUtils.throwIf(baseMapper.selectCount(wrapper) > 0, "班级名称 [ " + req.getClassName() + " ] 已存在");
 
         // 设置机构 ID 并更新
         req.setOrgId(orgDO.getId());
@@ -241,7 +234,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
      */
     private String buildQrContent(Long classId) throws UnsupportedEncodingException {
         String encryptedClassId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String
-                .valueOf(classId)), StandardCharsets.UTF_8);
+            .valueOf(classId)), StandardCharsets.UTF_8);
         return qrcodeUrl + "?classId=" + encryptedClassId;
     }
 

@@ -158,6 +158,7 @@ public class SocialLoginHandler extends AbstractLoginHandler<SocialLoginReq> {
         return null;
     }
 
+
     /**
      * 获取 AuthRequest
      *

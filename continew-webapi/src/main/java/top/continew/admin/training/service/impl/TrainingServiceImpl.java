@@ -29,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import top.continew.admin.common.constant.RedisConstant;
@@ -66,8 +65,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -142,7 +139,7 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
 
         // **一次性查询所有章节**
         List<ChapterDO> allChapters = chapterMapper.selectList(new LambdaQueryWrapper<ChapterDO>()
-                .eq(ChapterDO::getTrainingId, tedTrainingId));
+            .eq(ChapterDO::getTrainingId, tedTrainingId));
 
         if (CollectionUtils.isEmpty(allChapters)) {
             TrainTreeResp resp = new TrainTreeResp();
@@ -152,7 +149,7 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
         }
         // **一次性查询所有视频**
         List<VideoDO> allVideos = videoMapper.selectList(new LambdaQueryWrapper<VideoDO>().in(allChapters
-                .isEmpty(), VideoDO::getChapterId, allChapters.stream().map(ChapterDO::getId).toList()));
+            .isEmpty(), VideoDO::getChapterId, allChapters.stream().map(ChapterDO::getId).toList()));
 
         // **将视频数据映射到章节**
         Map<Long, List<VideoDO>> videoMap = allVideos.stream().collect(Collectors.groupingBy(VideoDO::getChapterId));
@@ -179,7 +176,7 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
 
         // **一次性查询所有章节**
         List<ChapterDO> allChapters = chapterMapper.selectList(new LambdaQueryWrapper<ChapterDO>()
-                .eq(ChapterDO::getTrainingId, tedTrainingId));
+            .eq(ChapterDO::getTrainingId, tedTrainingId));
 
         if (CollectionUtils.isEmpty(allChapters)) {
             TrainTreeResp resp = new TrainTreeResp();
@@ -189,14 +186,14 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
         }
         //查询视频观看记录
         List<WatchRecordDO> watchRecordDOS = watchRecordMapper.selectList(new LambdaQueryWrapper<WatchRecordDO>()
-                .eq(WatchRecordDO::getStudentId, userId));
+            .eq(WatchRecordDO::getStudentId, userId));
         //封装map
         Map<Long, WatchRecordDO> recordDOMap = watchRecordDOS.stream()
-                .collect(Collectors.toMap(WatchRecordDO::getVideoId, record -> record));
+            .collect(Collectors.toMap(WatchRecordDO::getVideoId, record -> record));
 
         // **一次性查询所有视频**
         List<VideoDO> allVideos = videoMapper.selectList(new LambdaQueryWrapper<VideoDO>().in(allChapters
-                .isEmpty(), VideoDO::getChapterId, allChapters.stream().map(ChapterDO::getId).toList()));
+            .isEmpty(), VideoDO::getChapterId, allChapters.stream().map(ChapterDO::getId).toList()));
 
         //统计每个视频的学习时长  及百分比
         allVideos = allVideos.stream().peek(item -> {
@@ -217,8 +214,8 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
                 BigDecimal watchedDurationBigDecimal = BigDecimal.valueOf(watchedDuration);
                 item.setLearningTime(formatDuration(watchedDuration));
                 item.setLearningPercentage(watchedDurationBigDecimal.divide(totalBigDecimal, 2, RoundingMode.HALF_UP) // 计算百分比，保留 2 位小数
-                        .multiply(BigDecimal.valueOf(100)) // 转换为百分比
-                        .doubleValue() // 转回 double
+                    .multiply(BigDecimal.valueOf(100)) // 转换为百分比
+                    .doubleValue() // 转回 double
                 );
             }
         }).collect(Collectors.toList());
@@ -239,14 +236,14 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
         int total = trainingDO.getTotalDuration();//总视频时长
 
         StudentTrainingDO studentTrainingDO = studentTrainingMapper
-                .selectOne(new LambdaQueryWrapper<StudentTrainingDO>().eq(StudentTrainingDO::getStudentId, userId)
-                        .eq(StudentTrainingDO::getTrainingId, trainTreeReq.getTedTrainingId()));
+            .selectOne(new LambdaQueryWrapper<StudentTrainingDO>().eq(StudentTrainingDO::getStudentId, userId)
+                .eq(StudentTrainingDO::getTrainingId, trainTreeReq.getTedTrainingId()));
         if (!ObjectUtil.isEmpty(studentTrainingDO)) {
             //学生学习时长
             int studied = studentTrainingDO.getTotalDuration();
             overallPercentage = total == 0
-                    ? 0.0
-                    : BigDecimal.valueOf(studied)
+                ? 0.0
+                : BigDecimal.valueOf(studied)
                     .multiply(BigDecimal.valueOf(100)) // 转换为百分比
                     .divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP) // 保留两位小数
                     .doubleValue();
@@ -272,8 +269,8 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
 
         // 执行分页查询，获取 TrainingResp 类型的分页数据
         IPage<TrainingResp> page = baseMapper.selectCurrentKSPage(new Page<>(pageQuery.getPage(), pageQuery.getSize()), // 创建分页对象，指定当前页和每页大小
-                queryWrapper, // 查询条件
-                userId // 用户 ID，可能用于权限控制
+            queryWrapper, // 查询条件
+            userId // 用户 ID，可能用于权限控制
         );
         // 将查询结果转换成 PageResp 对象，方便前端处理
         PageResp<TrainingResp> pageResp = PageResp.build(page, super.getListClass());
@@ -282,8 +279,8 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
 
         //查出总学习时长
         StudentTrainingDO studentTrainingDO = studentTrainingMapper
-                .selectOne(new LambdaQueryWrapper<StudentTrainingDO>().eq(StudentTrainingDO::getStudentId, userId)
-                        .eq(StudentTrainingDO::getIsDeleted, 0));
+            .selectOne(new LambdaQueryWrapper<StudentTrainingDO>().eq(StudentTrainingDO::getStudentId, userId)
+                .eq(StudentTrainingDO::getIsDeleted, 0));
         pageResp.getList().forEach((item) -> {
             Integer totalStudyDuration = studentTrainingDO.getTotalDuration();
             //封装学习时长
@@ -329,6 +326,7 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
         //
         //        return trainingDOS;
     }
+
     public Boolean updateStudyTimeRecord(StudyTimeRecordReq req) {
         Long userId = UserContextHolder.getUserId();
         Long videoId = req.getVideoId();
@@ -338,18 +336,17 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
         String hashKey = videoId + ":" + userId;
 
         // 读取缓存旧进度
-        Integer oldTime = (Integer) redisTemplate.opsForHash().get(redisKey, hashKey);
+        Integer oldTime = (Integer)redisTemplate.opsForHash().get(redisKey, hashKey);
         if (oldTime == null) {
             // 缓存为空，从数据库加载
-            WatchRecordDO record = watchRecordMapper.selectOne(
-                    new LambdaQueryWrapper<WatchRecordDO>()
-                            .eq(WatchRecordDO::getStudentId, userId)
-                            .eq(WatchRecordDO::getVideoId, videoId)
-            );
+            WatchRecordDO record = watchRecordMapper.selectOne(new LambdaQueryWrapper<WatchRecordDO>()
+                .eq(WatchRecordDO::getStudentId, userId)
+                .eq(WatchRecordDO::getVideoId, videoId));
 
             if (record == null) {
                 // 数据库也没有，插入新纪录
-                if (!watchRecordLock.tryLock()) return false;
+                if (!watchRecordLock.tryLock())
+                    return false;
                 try {
                     record = new WatchRecordDO();
                     record.setStudentId(userId);
@@ -373,23 +370,20 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
         if (newTime > oldTime) {
             int increment = newTime - oldTime;
 
-            if (!watchRecordLock.tryLock()) return false;
+            if (!watchRecordLock.tryLock())
+                return false;
             try {
-                WatchRecordDO record = watchRecordMapper.selectOne(
-                        new LambdaQueryWrapper<WatchRecordDO>()
-                                .eq(WatchRecordDO::getStudentId, userId)
-                                .eq(WatchRecordDO::getVideoId, videoId)
-                );
+                WatchRecordDO record = watchRecordMapper.selectOne(new LambdaQueryWrapper<WatchRecordDO>()
+                    .eq(WatchRecordDO::getStudentId, userId)
+                    .eq(WatchRecordDO::getVideoId, videoId));
 
                 record.setWatchedDuration(newTime);
                 watchRecordMapper.updateById(record);
 
                 // 更新学生总时长
-                StudentTrainingDO studentTraining = studentTrainingMapper.selectOne(
-                        new LambdaQueryWrapper<StudentTrainingDO>()
-                                .eq(StudentTrainingDO::getStudentId, userId)
-                                .eq(StudentTrainingDO::getTrainingId, req.getTrainId())
-                );
+                StudentTrainingDO studentTraining = studentTrainingMapper
+                    .selectOne(new LambdaQueryWrapper<StudentTrainingDO>().eq(StudentTrainingDO::getStudentId, userId)
+                        .eq(StudentTrainingDO::getTrainingId, req.getTrainId()));
 
                 if (studentTraining != null) {
                     studentTraining.setTotalDuration(studentTraining.getTotalDuration() + increment);
@@ -423,21 +417,21 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
                     throw new RuntimeException("学习时长错误");
                 } else {
                     WatchRecordDO watchRecordDO = watchRecordMapper.selectOne(new LambdaQueryWrapper<WatchRecordDO>()
-                            .eq(WatchRecordDO::getVideoId, videoId)
-                            .eq(WatchRecordDO::getStudentId, userId));
+                        .eq(WatchRecordDO::getVideoId, videoId)
+                        .eq(WatchRecordDO::getStudentId, userId));
                     //判断是否第一次看完视频
                     if (watchRecordDO == null || watchRecordDO.getStatus() == 0) {
                         Integer watchTotalTime = null;
                         Long trainingId = videoMapper.selectById(videoId).getTrainingId();
                         StudentTrainingDO studentTrainingDO = studentTrainingMapper
-                                .selectOne(new LambdaQueryWrapper<StudentTrainingDO>()
-                                        .eq(StudentTrainingDO::getTrainingId, trainingId)
-                                        .eq(StudentTrainingDO::getStudentId, userId));
+                            .selectOne(new LambdaQueryWrapper<StudentTrainingDO>()
+                                .eq(StudentTrainingDO::getTrainingId, trainingId)
+                                .eq(StudentTrainingDO::getStudentId, userId));
                         if (!ObjectUtil.isEmpty(watchRecordDO)) {
                             watchTotalTime = studentTrainingDO.getTotalDuration() + videoDO.getDuration();
                             studentTrainingDO.setStatus(1);
                             studentTrainingDO.setTotalDuration(studentTrainingDO.getTotalDuration() + videoDO
-                                    .getDuration());
+                                .getDuration());
                             studentTrainingMapper.updateById(studentTrainingDO);
                         } else {
                             watchTotalTime = videoDO.getDuration();
@@ -456,9 +450,9 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
                         if (watchTotalTime >= (totalDuration)) {
                             UpdateWrapper<StudentTrainingDO> studentTrainingDOUpdateWrapper = new UpdateWrapper<>();
                             studentTrainingDOUpdateWrapper.set("status", 2)
-                                    .set("total_duration", totalDuration)
-                                    .eq("training_id", trainingId)
-                                    .eq("student_id", userId);
+                                .set("total_duration", totalDuration)
+                                .eq("training_id", trainingId)
+                                .eq("student_id", userId);
                             studentTrainingMapper.update(studentTrainingDOUpdateWrapper);
                         }
                     }
@@ -547,8 +541,8 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
             throw new RuntimeException("视频id不能为空");
         }
         WatchRecordDO watchRecordDO = watchRecordMapper.selectOne(new LambdaQueryWrapper<WatchRecordDO>()
-                .eq(WatchRecordDO::getStudentId, userId)
-                .eq(WatchRecordDO::getVideoId, videoId));
+            .eq(WatchRecordDO::getStudentId, userId)
+            .eq(WatchRecordDO::getVideoId, videoId));
         if (watchRecordDO == null) {
             if (!watchRecordLock.tryLock()) {
                 resp.setStudyTime(0);
@@ -601,9 +595,9 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
         }
         UpdateWrapper<StudentTrainingDO> studentTrainingDOUpdateWrapper = new UpdateWrapper<>();
         studentTrainingDOUpdateWrapper.set("status", 1)
-                .eq("status", 0)
-                .eq("student_id", userId)
-                .eq("training_id", trainingId);
+            .eq("status", 0)
+            .eq("student_id", userId)
+            .eq("training_id", trainingId);
         studentTrainingMapper.update(studentTrainingDOUpdateWrapper);
         return resp;
     }
@@ -625,7 +619,7 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
     private List<ChapterDO> buildChapterTree(List<ChapterDO> allChapters, Map<Long, List<VideoDO>> videoMap) {
         // 章节映射表，Key: 章节 ID，Value: 章节对象
         Map<Long, ChapterDO> chapterMap = allChapters.stream()
-                .collect(Collectors.toMap(ChapterDO::getId, chapter -> chapter));
+            .collect(Collectors.toMap(ChapterDO::getId, chapter -> chapter));
 
         // 存储最终的章节树
         List<ChapterDO> rootChapters = new ArrayList<>();
@@ -694,14 +688,14 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
             return getOrgTrainingRespPageResp(query, pageQuery);
             //
         } else
-            //1.2是用户
-            if (userRoleDO.getRoleId().equals(userRoleDO1.getId())) {
-                return getUserTrainingRespPageResp(query, pageQuery);
-            } else
-            //1.3是超级管理员
-            {
-                return getAllTrainingRespPageResp(query, pageQuery);
-            }
+        //1.2是用户
+        if (userRoleDO.getRoleId().equals(userRoleDO1.getId())) {
+            return getUserTrainingRespPageResp(query, pageQuery);
+        } else
+        //1.3是超级管理员
+        {
+            return getAllTrainingRespPageResp(query, pageQuery);
+        }
 
     }
 
@@ -726,14 +720,14 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
             QueryWrapper<StudentTrainingDO> studentTrainingDOQueryWrapper1 = new QueryWrapper<>();
             studentTrainingDOQueryWrapper1.select("training_id").eq("student_id", userId);
             List<StudentTrainingDO> studentTrainingDOS1 = studentTrainingMapper
-                    .selectList(studentTrainingDOQueryWrapper1);
+                .selectList(studentTrainingDOQueryWrapper1);
             Set<Long> existingTrainingIds = studentTrainingDOS1.stream()
-                    .map(StudentTrainingDO::getTrainingId)   // 提取 training_id
-                    .collect(Collectors.toSet());
+                .map(StudentTrainingDO::getTrainingId)   // 提取 training_id
+                .collect(Collectors.toSet());
             List<Long> newTrainingIds = trainingIds.stream()
-                    .filter(trainId -> !existingTrainingIds.contains(trainId)) // 排除已存在的
-                    .distinct()                                            // 去重（避免重复插入）
-                    .collect(Collectors.toList());
+                .filter(trainId -> !existingTrainingIds.contains(trainId)) // 排除已存在的
+                .distinct()                                            // 去重（避免重复插入）
+                .collect(Collectors.toList());
             for (Long trainId : newTrainingIds) {
                 StudentTrainingDO studentTrainingDO = new StudentTrainingDO();
                 studentTrainingDO.setTrainingId(trainId);
@@ -756,7 +750,7 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
 
         // 执行分页查询
         IPage<TrainingResp> page = baseMapper.gettrainingList(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+            .getSize()), queryWrapper);
 
         // 将查询结果转换成 PageResp 对象
         PageResp<TrainingResp> pageResp = PageResp.build(page, super.getListClass());
@@ -772,8 +766,8 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
             //1.1查询学生已经学习的时长
             QueryWrapper<StudentTrainingDO> studentTrainingDOQueryWrapper1 = new QueryWrapper<>();
             studentTrainingDOQueryWrapper1.select("total_duration")
-                    .eq("student_id", userId)
-                    .eq("training_id", item.getId());
+                .eq("student_id", userId)
+                .eq("training_id", item.getId());
             StudentTrainingDO studentTrainingDO = studentTrainingMapper.selectOne(studentTrainingDOQueryWrapper1);
             Integer viewVideoTime = studentTrainingDO.getTotalDuration();
             //1.2如果未学习
@@ -781,25 +775,25 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
             if (viewVideoTime == null) {
                 item.setLearningTime(String.valueOf(0));
                 if (totalDuration != null) {
-                    item.setLearningPercentage((double) 0);
+                    item.setLearningPercentage((double)0);
                 }
                 return;
             }
             //1.3如果已经有学习时长
-            item.setLearningTime(formatDuration((Integer) viewVideoTime));
+            item.setLearningTime(formatDuration((Integer)viewVideoTime));
             if (totalDuration != null) {
-                if ((Integer) viewVideoTime > totalDuration * 60) {
+                if ((Integer)viewVideoTime > totalDuration * 60) {
                     item.setLearningPercentage(100.0);
                 } else {
                     int percentage = 0;
                     if (temp <= 60) {
-                        percentage = ((Integer) viewVideoTime * 100) / (temp == 0 ? 1 : temp);
+                        percentage = ((Integer)viewVideoTime * 100) / (temp == 0 ? 1 : temp);
                     } else {
-                        percentage = ((Integer) viewVideoTime * 100) / (totalDuration.equals(0)
-                                ? 1
-                                : totalDuration) / 60;
+                        percentage = ((Integer)viewVideoTime * 100) / (totalDuration.equals(0)
+                            ? 1
+                            : totalDuration) / 60;
                     }
-                    item.setLearningPercentage((double) (percentage));
+                    item.setLearningPercentage((double)(percentage));
                 }
             }
         });
@@ -843,7 +837,7 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
 
             // 执行分页查询
             IPage<TrainingResp> page = baseMapper.gettrainingList(new Page<>(pageQuery.getPage(), pageQuery
-                    .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
 
             // 将查询结果转换成 PageResp 对象
             pageResp = PageResp.build(page, super.getListClass());
@@ -866,7 +860,7 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
 
         // 执行分页查询
         IPage<TrainingResp> page = baseMapper.gettrainingList(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+            .getSize()), queryWrapper);
 
         // 将查询结果转换成 PageResp 对象
         PageResp<TrainingResp> pageResp = PageResp.build(page, super.getListClass());
@@ -889,12 +883,12 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
         Long orgId = getOrganizationIdByUserId();
         //2.3 插入培训表
         TrainingDO trainingDO = TrainingDO.builder()
-                .title(req.getTitle())
-                .description(req.getDescription())
-                .expertId(expertDO.getId())
-                //            .fee(req.getFee())
-                .coverPath(req.getCoverPath())
-                .build();
+            .title(req.getTitle())
+            .description(req.getDescription())
+            .expertId(expertDO.getId())
+            //            .fee(req.getFee())
+            .coverPath(req.getCoverPath())
+            .build();
         trainingMapper.insert(trainingDO);
         Long trainingDOId = trainingDO.getId();
         //2.4插入培训机构关联表
@@ -949,8 +943,8 @@ public class TrainingServiceImpl extends BaseServiceImpl<TrainingMapper, Trainin
             Long orgId = getOrganizationIdByUserId();
             UpdateWrapper<TedExpertFree> tedExpertFreeUpdateWrapper = new UpdateWrapper<>();
             tedExpertFreeUpdateWrapper.eq("organization_id", orgId)
-                    .eq("project_id", id)
-                    .set("expert_id", req.getExpertId());
+                .eq("project_id", id)
+                .set("expert_id", req.getExpertId());
             expertFreeMapper.update(tedExpertFreeUpdateWrapper);
         }
         //4.更新培训视频的审核状态为未审核

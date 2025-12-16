@@ -16,7 +16,6 @@
 
 package top.continew.admin.training.model.resp;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -104,7 +103,6 @@ public class OrgClassResp extends BaseResp {
      */
     @Schema(description = "作业人员总人数")
     private Long workerCount;
-
 
     /**
      * 作业人员资料待审核人数

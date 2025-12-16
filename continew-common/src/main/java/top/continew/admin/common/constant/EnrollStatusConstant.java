@@ -57,14 +57,20 @@ public class EnrollStatusConstant {
      */
     public static final Integer SIGNED_IN = 1;
 
+
+    /**
+     * 考试状态：正在考试
+     */
+    public static final Integer IN_PROGRESS = 4;
+
     /**
      * 考试状态：已交卷
      */
     public static final Integer SUBMITTED = 2;
 
     /**
-     *
+     * 考试状态：缺考
      */
-    public static final Integer ABSENT  = 3;
+    public static final Integer ABSENT = 3;
 
 }

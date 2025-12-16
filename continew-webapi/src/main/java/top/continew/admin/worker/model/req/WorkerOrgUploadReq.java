@@ -17,7 +17,6 @@
 package top.continew.admin.worker.model.req;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import top.continew.admin.document.model.dto.DocFileDTO;
@@ -32,7 +31,6 @@ import java.util.List;
  */
 @Data
 public class WorkerOrgUploadReq {
-
 
     /**
      * 作业人员信息id

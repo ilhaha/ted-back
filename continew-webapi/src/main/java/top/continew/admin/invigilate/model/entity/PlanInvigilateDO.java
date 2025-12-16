@@ -21,9 +21,11 @@ import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 
+import top.continew.admin.common.model.entity.BaseDO;
 import top.continew.starter.extension.crud.model.entity.BaseIdDO;
 
 import java.io.Serial;
+import java.math.BigDecimal;
 import java.time.*;
 
 /**
@@ -34,7 +36,7 @@ import java.time.*;
  */
 @Data
 @TableName("ted_plan_invigilate")
-public class PlanInvigilateDO extends BaseIdDO {
+public class PlanInvigilateDO extends BaseDO {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -48,6 +50,16 @@ public class PlanInvigilateDO extends BaseIdDO {
      * 监考人员id
      */
     private Long invigilatorId;
+
+    /**
+     * 实操考试劳务费单价（元）
+     */
+    private BigDecimal practicalFee;
+
+    /**
+     * 理论考试劳务费单价（元）
+     */
+    private BigDecimal theoryFee;
 
     /**
      * 考试开始时间
@@ -75,4 +87,9 @@ public class PlanInvigilateDO extends BaseIdDO {
      * 考场号
      */
     private Long classroomId;
+
+    /**
+     * 删除标记(0未删,1已删)
+     */
+    private Boolean isDeleted;
 }

@@ -79,8 +79,9 @@ public class AuthController {
         return authService.login(req, request);
     }
 
+
     @SaIgnore
-    @Operation(summary = "监考员考试端登录", description = "开考密码登录")
+    @Operation(summary = "监考员考试端登录(监考密码)", description = "开考密码登录")
     @PostMapping("/invigilator/login")
     public LoginResp InvigilatorLogin(@Validated @RequestBody LoginReq req, HttpServletRequest request) {
         return authService.invigilatorLogin(req, request);

@@ -26,6 +26,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +42,10 @@ import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.config.ali.AliYunConfig;
 import top.continew.admin.constant.SmsConstants;
 import top.continew.admin.exam.mapper.ExamPlanMapper;
+import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.query.ExamPlanQuery;
+import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
+import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.invigilate.constant.StatueConstant;
 import top.continew.admin.invigilate.mapper.ExamRecords1Mapper;
 import top.continew.admin.invigilate.model.entity.Grades;
@@ -56,6 +62,8 @@ import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
 import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
@@ -92,24 +100,6 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
     @Autowired
     private final AliYunConfig smsConfig;
 
-    @Override
-    public ExamRespList pageByInvigilatorId(Long invigilatorId,
-                                            Integer invigilateStatus,
-                                            Integer pageSize,
-                                            Integer currentPage) {
-        //1.计算offset
-        int offset = (currentPage - 1) * pageSize;
-        //2.分页查询数据
-        List<InvigilatorPlanResp> enrollResps = planInvigilateMapper
-            .queryEnrollRespByInvigilatorIdAndInvigilateStatus(invigilatorId, invigilateStatus, pageSize, offset);
-        //3.查询总条数
-        Long total = planInvigilateMapper.queryTotal(invigilatorId, invigilateStatus);
-        //4.返回数据
-        ExamRespList examRespList = new ExamRespList();
-        examRespList.setEnrollRespList(enrollResps);
-        examRespList.setTotal(total);
-        return examRespList;
-    }
 
     @Override
     public InvigilateExamDetailResp getInvigilateExamDetail(Long invigilatorId, Long examId) {
@@ -412,7 +402,7 @@ public class PlanInvigilateServiceImpl extends BaseServiceImpl<PlanInvigilateMap
         return baseMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>()
             .eq(PlanInvigilateDO::getId, planInvigilateId)
             .set(PlanInvigilateDO::getInvigilatorId, req.getInvigilateId())
-            .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.TO_CONFIRM.getValue())) > 0;
+            .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.NOT_START.getValue())) > 0;
     }
 
 }

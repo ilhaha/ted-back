@@ -60,7 +60,7 @@ public class EnrollDO extends BaseDO {
     private Long examProjectId;
 
     /**
-     * 考试状态（0：未报名，1：已报名：2：已完成，3：已过期）
+     * 报名状态（0：未报名，1：已报名：2：已完成，3：已过期）
      */
     private Integer enrollStatus;
 
@@ -82,7 +82,7 @@ public class EnrollDO extends BaseDO {
     private String examNumber;
 
     /**
-     * 考试状态（0未签到、1已签到、2已交卷、3缺考）
+     * 考试状态（0未签到、1已签到、2已交卷、3缺考、4正在考试）
      */
     private Integer examStatus;
 

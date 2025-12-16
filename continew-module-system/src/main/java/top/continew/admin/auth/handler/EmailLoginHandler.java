@@ -79,4 +79,5 @@ public class EmailLoginHandler extends AbstractLoginHandler<EmailLoginReq> {
     public LoginResp invigilatorLogin(EmailLoginReq req, ClientResp client, HttpServletRequest request) {
         return null;
     }
+
 }

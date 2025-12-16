@@ -79,10 +79,11 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      *
      * @return
      */
-    WorkerApplyVO getWorkerNeedUploadDoc(Long workerIdOrClassId,Boolean isBatch);
+    WorkerApplyVO getWorkerNeedUploadDoc(Long workerIdOrClassId, Boolean isBatch);
 
     /**
      * 机构上传某个考生的资料
+     * 
      * @param workerOrgUploadReq
      * @return
      */
@@ -90,6 +91,7 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
 
     /**
      * 根据班级id获取未上上传资料的作业人员数
+     * 
      * @param classId
      * @return
      */
@@ -97,16 +99,21 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
 
     /**
      * 机构上传某个班级的资料
+     * 
      * @param classId
      * @param idCardFiles
      * @param applyForms
      * @param projectDocs
      * @return
      */
-    UploadResulResp orgBatchUploadDoc(Long classId, List<MultipartFile> idCardFiles, List<MultipartFile> applyForms, List<MultipartFile> projectDocs);
+    UploadResulResp orgBatchUploadDoc(Long classId,
+                                      List<MultipartFile> idCardFiles,
+                                      List<MultipartFile> applyForms,
+                                      List<MultipartFile> projectDocs);
 
     /**
      * 机构提交作业人员资料进行审核
+     * 
      * @param classId
      * @return
      */

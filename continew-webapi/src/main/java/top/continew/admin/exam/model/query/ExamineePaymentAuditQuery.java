@@ -59,7 +59,7 @@ public class ExamineePaymentAuditQuery implements Serializable {
      * 作业人员班级id
      */
     @Schema(description = "作业人员班级id")
-    @Query(type = QueryType.EQ,columns = "tepa.class_id")
+    @Query(type = QueryType.EQ, columns = "tepa.class_id")
     private Long classId;
 
     /**

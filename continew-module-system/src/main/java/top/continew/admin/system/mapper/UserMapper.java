@@ -21,7 +21,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.google.common.base.Equivalence;
 import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.annotations.Param;
 import top.continew.admin.auth.model.dto.ClassroomDTO;
@@ -68,11 +67,7 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
      * @return 分页列表信息
      */
 
-    IPage<UserDetailResp> selectExamStaffPage(
-            Page<?> page,
-            @Param(Constants.WRAPPER) Wrapper<UserDO> queryWrapper);
-
-
+    IPage<UserDetailResp> selectExamStaffPage(Page<?> page, @Param(Constants.WRAPPER) Wrapper<UserDO> queryWrapper);
 
     /**
      * 查询列表
@@ -262,14 +257,11 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
                           @Param("planId") Long planId,
                           @Param("examStatus") Integer examStatus);
 
-
     /**
      * 删除考务人员资质证明
      */
     @Delete("DELETE FROM ted_user_qualification WHERE user_id = #{userId}")
     void deleteUserQualificationsByUserId(@Param("userId") Long userId);
-
-
 
     /**
      * 根据ID查询用户详细信息

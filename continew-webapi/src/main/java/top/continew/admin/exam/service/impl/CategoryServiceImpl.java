@@ -338,13 +338,11 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         for (int i = 0; i < ImportQuestionConstant.HEADERS.length; i++) {
             String cellValue = getCellValue(headerRow.getCell(i));
             if (!ImportQuestionConstant.HEADERS[i].equals(cellValue)) {
-                throw new BusinessException(
-                        String.format("第 %d 列表头不正确，应为「%s」，实际为「%s」", i + 1, ImportQuestionConstant.HEADERS[i], cellValue)
-                );
+                throw new BusinessException(String
+                    .format("第 %d 列表头不正确，应为「%s」，实际为「%s」", i + 1, ImportQuestionConstant.HEADERS[i], cellValue));
             }
         }
     }
-
 
     // 改进后的数据行解析
     private List<QuestionDTO> parseQuestions(Sheet sheet) {
@@ -376,7 +374,6 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         }
         return questions;
     }
-
 
     private void parseDynamicOptions(Row row, QuestionDTO question, int rowIdx) {
         List<OptionDTO> options = new ArrayList<>();
@@ -429,9 +426,9 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
     private Set<String> parseAnswerLetters(String answerRaw, int rowIdx) {
         Set<String> set = Arrays.stream(answerRaw.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toSet());
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toSet());
 
         // 校验答案必须是 A/B/C/D
         for (String s : set) {
@@ -444,9 +441,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     }
 
     private void validateAnswerInOptions(Set<String> answerSet, List<OptionDTO> options, int rowIdx) {
-        Set<String> optionLabels = options.stream()
-                .map(OptionDTO::getOption)
-                .collect(Collectors.toSet());
+        Set<String> optionLabels = options.stream().map(OptionDTO::getOption).collect(Collectors.toSet());
 
         for (String ans : answerSet) {
             if (!optionLabels.contains(ans)) {
@@ -542,8 +537,6 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         }
     }
 
-
-
     // 改进的单元格读取方法
     private String getCellValue(Cell cell) {
         if (cell == null)
@@ -617,7 +610,6 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             throw new BusinessException(String.format("第%d行：题型必须为数字 0、1 或 2", rowIdx + 1));
         }
     }
-
 
     @Override
     public Long add(CategoryReq req) {

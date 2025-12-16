@@ -59,8 +59,6 @@ import top.continew.starter.core.validation.CheckUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -297,7 +295,6 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         IdCardFileInfoResp fileInfoResp = new IdCardFileInfoResp();
         BeanUtils.copyProperties(fileInfo, fileInfoResp);
 
-
         // 处理人脸证件照
         if (frontOrBack != null && frontOrBack == 2) {
             fileInfoResp.setFacePhoto(fileInfo.getUrl());
@@ -308,7 +305,9 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         try {
             boolean flag = frontOrBack == 1;
             IdCardDo idCardDo = idCardRecognition.uploadIdCard(file.getInputStream(), flag);
-            ValidationUtils.throwIf(ObjectUtils.isEmpty(idCardDo), flag ? "身份证正面信息识别失败" : (frontOrBack == 2) ? "一寸免冠照上传失败" : "身份证反面信息识别失败");
+            ValidationUtils.throwIf(ObjectUtils.isEmpty(idCardDo), flag
+                ? "身份证正面信息识别失败"
+                : (frontOrBack == 2) ? "一寸免冠照上传失败" : "身份证反面信息识别失败");
             if (flag) {
                 fileInfoResp.setRealName(idCardDo.getName());
                 fileInfoResp.setGender(idCardDo.getSex() ? "女" : "男");

@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.invigilate.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -32,7 +48,6 @@ import top.continew.admin.invigilate.service.LaborFeeService;
 @RequiredArgsConstructor
 public class LaborFeeServiceImpl extends BaseServiceImpl<LaborFeeMapper, LaborFeeDO, LaborFeeResp, LaborFeeDetailResp, LaborFeeQuery, LaborFeeReq> implements LaborFeeService {
 
-
     @Autowired
     private LaborFeeMapper laborFeeMapper;
 
@@ -48,13 +63,13 @@ public class LaborFeeServiceImpl extends BaseServiceImpl<LaborFeeMapper, LaborFe
         Page<LaborFeeDO> page = new Page<>(pageQuery.getPage(), pageQuery.getSize());
 
         LambdaQueryWrapper<LaborFeeDO> wrapper = Wrappers.<LaborFeeDO>lambdaQuery()
-                // 按查询条件过滤
-                .eq(query.getIsEnabled() != null, LaborFeeDO::getIsEnabled, query.getIsEnabled())
+            // 按查询条件过滤
+            .eq(query.getIsEnabled() != null, LaborFeeDO::getIsEnabled, query.getIsEnabled())
 
-                // 启用数据永远置顶
-                .orderByDesc(LaborFeeDO::getIsEnabled)
-                // 按更新时间降序
-                .orderByDesc(LaborFeeDO::getUpdateTime);
+            // 启用数据永远置顶
+            .orderByDesc(LaborFeeDO::getIsEnabled)
+            // 按更新时间降序
+            .orderByDesc(LaborFeeDO::getUpdateTime);
 
         Page<LaborFeeDO> result = laborFeeMapper.selectPage(page, wrapper);
         return PageResp.build(result, LaborFeeResp.class);
@@ -76,23 +91,20 @@ public class LaborFeeServiceImpl extends BaseServiceImpl<LaborFeeMapper, LaborFe
         if (targetEnabled) {
             // 禁用其他已启用的记录
             LambdaUpdateWrapper<LaborFeeDO> updateWrapper = Wrappers.<LaborFeeDO>lambdaUpdate()
-                    .eq(LaborFeeDO::getIsEnabled, true)
-                    .ne(currentId != null, LaborFeeDO::getId, currentId);
+                .eq(LaborFeeDO::getIsEnabled, true)
+                .ne(currentId != null, LaborFeeDO::getId, currentId);
 
             LaborFeeDO updateDO = new LaborFeeDO();
             updateDO.setIsEnabled(false); // 不要链式调用
             laborFeeMapper.update(updateDO, updateWrapper);
         } else {
             // 禁止全部禁用
-            Long enabledCount = laborFeeMapper.selectCount(
-                    Wrappers.<LaborFeeDO>lambdaQuery().eq(LaborFeeDO::getIsEnabled, true)
-            );
+            Long enabledCount = laborFeeMapper.selectCount(Wrappers.<LaborFeeDO>lambdaQuery()
+                .eq(LaborFeeDO::getIsEnabled, true));
             if (enabledCount == 1) {
-                LaborFeeDO onlyEnabled = laborFeeMapper.selectOne(
-                        Wrappers.<LaborFeeDO>lambdaQuery()
-                                .eq(LaborFeeDO::getIsEnabled, true)
-                                .last("LIMIT 1")
-                );
+                LaborFeeDO onlyEnabled = laborFeeMapper.selectOne(Wrappers.<LaborFeeDO>lambdaQuery()
+                    .eq(LaborFeeDO::getIsEnabled, true)
+                    .last("LIMIT 1"));
                 if (onlyEnabled != null && onlyEnabled.getId().equals(currentId)) {
                     throw new BusinessException("必须至少保留一条启用的配置，不能全部禁用");
                 }
@@ -121,6 +133,7 @@ public class LaborFeeServiceImpl extends BaseServiceImpl<LaborFeeMapper, LaborFe
         return laborFeeDO;
 
     }
+
     @Override
     public Long add(LaborFeeReq req) {
         LaborFeeDO laborFeeDO = convertToEntity(req);

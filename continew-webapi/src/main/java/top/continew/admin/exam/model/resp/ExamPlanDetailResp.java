@@ -17,7 +17,6 @@
 package top.continew.admin.exam.model.resp;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -100,7 +99,6 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     @Schema(description = "考试时长")
     @ExcelProperty(value = "考试时长")
     private Long examDuration;
-
 
     @Schema(description = "审核状态字符串")
     @ExcelProperty(value = "审核状态字符串")

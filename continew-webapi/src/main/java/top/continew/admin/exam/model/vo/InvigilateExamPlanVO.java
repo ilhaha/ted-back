@@ -14,38 +14,39 @@
  * limitations under the License.
  */
 
-package top.continew.admin.exam.model.req;
+package top.continew.admin.exam.model.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-
-import java.io.Serial;
-import java.io.Serializable;
-import java.time.*;
+import java.time.LocalDateTime;
 
 /**
- * 创建或修改项目参数
+ * @author ilhaha
+ * @Create 2025/10/16 15:31
  *
- * @author Anton
- * @since 2025/03/11 15:14
+ *         监考员获取监考的计划信息
  */
 @Data
-@Schema(description = "创建或修改项目参数")
-public class ProjectReq implements Serializable {
-
-    @Serial
-    private static final long serialVersionUID = 1L;
-
-    private Long id;
+public class InvigilateExamPlanVO {
 
     /**
-     * 八大类ID
+     * 考试计划id
      */
-    private Long categoryId;;
+    private Long planId;
 
     /**
-     * 项目名称
+     * 考试计划名称
+     */
+    private String planName;
+
+    /**
+     * 考试项目id
+     */
+    private Long projectId;
+
+    /**
+     * 考试项目
      */
     private String projectName;
 
@@ -58,33 +59,45 @@ public class ProjectReq implements Serializable {
      * 考试时长(分钟)
      */
     private Integer examDuration;
-    /**
-     * 部门id
-     */
-    private Long deptId;
 
     /**
-     * 展示图
+     * 八大类
      */
-    private String imageUrl;
-    /**
-     * 项目状态
-     */
-    private Long projectStatus;
+    private String categoryName;
 
     /**
-     * 项目类型（0-作业人员 1-检验人员）
+     * 考试开始时间
      */
-    private Integer projectType;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm", timezone = "GMT+8")
+    private LocalDateTime startTime;
+
 
     /**
-     * 是否有实操考试（0无，1有）
+     * 考试人员类型
      */
-    private Integer isOperation;
+    private Integer planType;
 
     /**
-     * 项目收费标准
+     * 监考状态
      */
-    private Long examFee;
+    private Integer invigilateStatus;
+
+
+    /**
+     * 监考考场名称
+     */
+    private String classroomName;
+
+    /**
+     * 监考考场id
+     */
+    private String classroomId;
+
+    /**
+     * 考场类型
+     */
+    private Integer examType;
+
+
 
 }

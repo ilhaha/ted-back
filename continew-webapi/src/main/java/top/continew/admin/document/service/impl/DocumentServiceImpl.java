@@ -125,7 +125,6 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         return result;
     }
 
-
     @Override
     public PageResp<CandidateDocumentResp> pageByCandidate(DocumentQuery query, PageQuery pageQuery) {
         // 1. 先查出 document 表的分页数据（你已有）
@@ -133,18 +132,16 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         queryWrapper.eq("is_deleted", 0);
         super.sort(queryWrapper, pageQuery);
 
-        IPage<DocumentDO> page = baseMapper.selectPage(
-                new Page<>(pageQuery.getPage(), pageQuery.getSize()),
-                queryWrapper
-        );
+        IPage<DocumentDO> page = baseMapper.selectPage(new Page<>(pageQuery.getPage(), pageQuery
+            .getSize()), queryWrapper);
 
         // 转成 DocumentResp
         PageResp<DocumentResp> temp = PageResp.build(page, super.getListClass());
 
         // 2. 查询资料分类缓存
         Map<Long, String> typeIdToNameMap = documentTypeCache.getDocumentTypeCache()
-                .stream()
-                .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
+            .stream()
+            .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
 
         // 3. 查询所有用户信息
         List<UserDTO> userDTOList = documentMapper.getUserInfoList();
@@ -192,7 +189,6 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         result.setTotal(finalList.size());
         return result;
     }
-
 
     @Override
     public DocumentDetailResp get(Long id) {

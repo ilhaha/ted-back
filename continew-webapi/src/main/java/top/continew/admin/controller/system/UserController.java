@@ -37,7 +37,6 @@ import top.continew.admin.common.constant.RegexConstants;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
-import top.continew.admin.invigilate.model.resp.UserQualificationResp;
 import top.continew.admin.invigilate.service.PlanInvigilateService;
 import top.continew.admin.system.model.dto.UserDetailDTO;
 import top.continew.admin.system.model.entity.UserDO;
@@ -249,8 +248,10 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     public PageResp<UserResp> pageExamStaff(UserQuery query, PageQuery pageQuery) {
         return userService.pageExamStaff(query, pageQuery);
     }
+
     /**
      * 删除考务人员
+     * 
      * @param id 考务人员ID
      */
     @DeleteMapping("/examStaff/{id}")
@@ -260,14 +261,17 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
 
     /**
      * 查询用户详细信息
+     * 
      * @param id 用户ID
      */
     @GetMapping("/detail/{id}")
     public UserDetailDTO getUserDetail(@PathVariable Long id) {
         return userService.getUserDetail(id);
     }
+
     /**
      * 修改用户详细信息
+     * 
      * @param id 用户ID
      */
     /**

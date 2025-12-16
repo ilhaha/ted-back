@@ -49,7 +49,7 @@ public interface PlanInvigilateMapper extends BaseMapper<PlanInvigilateDO> {
      * @param invigilateStatus
      * @return
      */
-    @Select("select tep.id,tep.exam_plan_name as planName,tep.start_time,tep.end_time,tep.image_url from ted_plan_invigilate tpi " + "inner join ted_exam_plan tep on tpi.exam_plan_id = tep.id " + "where tpi.invigilator_id = #{invigilatorId} and tpi.invigilate_status = #{invigilateStatus} and tep.is_deleted=0 " + "order by tep.start_time desc " + "limit #{pageSize} offset #{offset}")
+    @Select("select tep.id,tep.exam_plan_name as planName,tep.start_time,tep.end_time,tep.image_url from ted_plan_invigilate tpi " + "inner join ted_exam_plan tep on tpi.exam_plan_id = tep.id " + "where tpi.invigilator_id = #{invigilatorId}  AND tpi.is_deleted = 0 and tpi.invigilate_status = #{invigilateStatus} and tep.is_deleted=0 " + "order by tep.start_time desc " + "limit #{pageSize} offset #{offset}")
     List<InvigilatorPlanResp> queryEnrollRespByInvigilatorIdAndInvigilateStatus(Long invigilatorId,
                                                                                 Integer invigilateStatus,
                                                                                 int pageSize,
@@ -192,8 +192,6 @@ public interface PlanInvigilateMapper extends BaseMapper<PlanInvigilateDO> {
     List<InvigilatorAssignResp> getListByPlanId(@Param("planId") Long planId);
 
     List<AvailableInvigilatorResp> selectAvailableInvigilators(@Param("startTime") LocalDateTime startTime,
-                                                               @Param("endTime") LocalDateTime endTime,
                                                                @Param("planId") Long planId,
-                                                               @Param("invigilatorRole") Long invigilatorRole,
-                                                               @Param("rejectedInvigilatorId") Long rejectedInvigilatorId);
+                                                               @Param("invigilatorRole") Long invigilatorRole);
 }

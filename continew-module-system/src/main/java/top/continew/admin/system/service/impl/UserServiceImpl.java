@@ -18,7 +18,6 @@ package top.continew.admin.system.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.file.FileNameUtil;
@@ -46,7 +45,6 @@ import lombok.extern.slf4j.Slf4j;
 import me.ahoo.cosid.IdGenerator;
 import me.ahoo.cosid.provider.DefaultIdGeneratorProvider;
 import net.dreamlu.mica.core.result.R;
-import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -96,7 +94,6 @@ import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.query.SortQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
-import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.starter.web.util.FileUploadUtils;
 import top.continew.starter.core.util.SpringUtils;
@@ -159,7 +156,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     @Override
     public PageResp<UserResp> page(UserQuery query, PageQuery pageQuery) {
         QueryWrapper<UserDO> queryWrapper = this.buildQueryWrapper(query);
-        queryWrapper.notIn("t3.role_id",Arrays.asList(invigilatorId,candidatesId,organizationId,workerId));
+        queryWrapper.notIn("t3.role_id", Arrays.asList(invigilatorId, candidatesId, organizationId, workerId));
         super.sort(queryWrapper, pageQuery);
         IPage<UserDetailResp> page = baseMapper.selectUserPage(new Page<>(pageQuery.getPage(), pageQuery
             .getSize()), queryWrapper);
@@ -178,15 +175,13 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
         // 构建条件
         QueryWrapper<UserDO> wrapper = this.buildQueryWrapper(query);
-        wrapper.eq("r.id",invigilatorId);
+        wrapper.eq("r.id", invigilatorId);
         // 排序（调用你自己的排序器）
         super.sort(wrapper, pageQuery);
 
         // 调用新 Mapper 方法
-        IPage<UserDetailResp> page = baseMapper.selectExamStaffPage(
-                new Page<>(pageQuery.getPage(), pageQuery.getSize()),
-                wrapper
-        );
+        IPage<UserDetailResp> page = baseMapper.selectExamStaffPage(new Page<>(pageQuery.getPage(), pageQuery
+            .getSize()), wrapper);
 
         // 解密
         page.setRecords(page.getRecords().stream().map(item -> {
@@ -201,30 +196,29 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         return pageResp;
     }
 
-@Override
-@Transactional(rollbackFor = Exception.class)
-public void deleteExamStaff(Long id) {
-    // 参数校验
-    if (id == null) {
-        throw new IllegalArgumentException("用户ID不能为空");
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteExamStaff(Long id) {
+        // 参数校验
+        if (id == null) {
+            throw new IllegalArgumentException("用户ID不能为空");
+        }
+        // 检查用户是否存在
+        UserDO user = super.getById(id);
+        if (user == null) {
+            throw new BusinessException("用户不存在，ID: " + id);
+        }
+        // 删除用户和角色关联
+        userRoleService.deleteByUserIds(Collections.singletonList(id));
+        // 删除用户
+        super.delete(Collections.singletonList(id));
+        // 删除用户资质证明
+        userMapper.deleteUserQualificationsByUserId(id);
+        // 删除历史密码
+        userPasswordHistoryService.deleteByUserIds(Collections.singletonList(id));
+        // 踢出在线用户
+        onlineUserService.kickOut(id);
     }
-    // 检查用户是否存在
-    UserDO user = super.getById(id);
-    if (user == null) {
-        throw new BusinessException("用户不存在，ID: " + id);
-    }
-    // 删除用户和角色关联
-    userRoleService.deleteByUserIds(Collections.singletonList(id));
-    // 删除用户
-    super.delete(Collections.singletonList(id));
-    // 删除用户资质证明
-    userMapper.deleteUserQualificationsByUserId(id);
-    // 删除历史密码
-    userPasswordHistoryService.deleteByUserIds(Collections.singletonList(id));
-    // 踢出在线用户
-    onlineUserService.kickOut(id);
-}
-
 
     @Override
     public void beforeAdd(UserReq req) {
@@ -242,8 +236,8 @@ public void deleteExamStaff(Long id) {
         String phone = req.getPhone();
         // 如果手机号已存在，则抛出异常
         final String errorMsgPhoneTemplate = "新增失败，[{}] 手机号已被使用";
-        CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(phone, null), errorMsgPhoneTemplate, aesWithHMAC
-            .verifyAndDecrypt(phone));
+        CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this
+            .isPhoneExists(phone, null), errorMsgPhoneTemplate, aesWithHMAC.verifyAndDecrypt(phone));
     }
 
     @Override
@@ -796,15 +790,15 @@ public void deleteExamStaff(Long id) {
         Long deptId = query.getDeptId();
         List<Long> userIdList = query.getUserIds();
         // 获取排除用户 ID 列表
-//        List<Long> excludeUserIdList = null;
-//        if (null != query.getRoleId()) {
-//            excludeUserIdList = userRoleService.listUserIdByRoleId(query.getRoleId());
-//        }
+        //        List<Long> excludeUserIdList = null;
+        //        if (null != query.getRoleId()) {
+        //            excludeUserIdList = userRoleService.listUserIdByRoleId(query.getRoleId());
+        //        }
         return new QueryWrapper<UserDO>().and(StrUtil.isNotBlank(description), q -> q.like("t1.nickname", description))
-                .eq(null != query.getRoleId(),"t3.role_id",query.getRoleId())
-//            .eq(null != status, "t1.status", status)
-//            .between(CollUtil.isNotEmpty(createTimeList), "t1.create_time", CollUtil.getFirst(createTimeList), CollUtil
-//                .getLast(createTimeList))
+            .eq(null != query.getRoleId(), "t3.role_id", query.getRoleId())
+            //            .eq(null != status, "t1.status", status)
+            //            .between(CollUtil.isNotEmpty(createTimeList), "t1.create_time", CollUtil.getFirst(createTimeList), CollUtil
+            //                .getLast(createTimeList))
             .and(null != deptId && !SysConstants.SUPER_DEPT_ID.equals(deptId), q -> {
                 List<Long> deptIdList = deptService.listChildren(deptId)
                     .stream()
@@ -814,7 +808,7 @@ public void deleteExamStaff(Long id) {
                 q.in("t1.dept_id", deptIdList);
             })
             .in(CollUtil.isNotEmpty(userIdList), "t1.id", userIdList);
-//            .notIn(CollUtil.isNotEmpty(excludeUserIdList), "t1.id", excludeUserIdList);
+        //            .notIn(CollUtil.isNotEmpty(excludeUserIdList), "t1.id", excludeUserIdList);
     }
 
     /**
@@ -1177,7 +1171,6 @@ public void deleteExamStaff(Long id) {
         this.fill(userDetailDTO);
         return userDetailDTO;
     }
-
 
     @Override
     public void updateUserDetail(UserDetailDTO req) {

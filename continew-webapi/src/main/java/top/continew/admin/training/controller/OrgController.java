@@ -76,7 +76,7 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     @Operation(summary = "解析导入作业人员Excel")
     @PostMapping("/parsed/worker/{classId}")
     public ExcelParseResultVO parsedWorkerExcel(@RequestPart("file") MultipartFile file,
-                                            @PathVariable("classId") Long classId) {
+                                                @PathVariable("classId") Long classId) {
         return baseService.parsedWorkerExcel(file, classId);
     }
 
@@ -86,12 +86,12 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
      * @param file
      * @return
      */
-//    @Operation(summary = "批量导入作业人员")
-//    @PostMapping("/import/worker/{classId}")
-//    public ParsedExcelResultVO importWorker(@RequestPart("file") MultipartFile file,
-//                                            @PathVariable("classId") Long classId) {
-//        return baseService.importWorker(file, classId);
-//    }
+    //    @Operation(summary = "批量导入作业人员")
+    //    @PostMapping("/import/worker/{classId}")
+    //    public ParsedExcelResultVO importWorker(@RequestPart("file") MultipartFile file,
+    //                                            @PathVariable("classId") Long classId) {
+    //        return baseService.importWorker(file, classId);
+    //    }
 
     /**
      * 根据班级id下载导入作业人员模板

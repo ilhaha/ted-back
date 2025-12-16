@@ -22,8 +22,6 @@ import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import org.hibernate.validator.constraints.Length;
-
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.*;
@@ -57,9 +55,9 @@ public class OrgClassReq implements Serializable {
     /**
      * 班级名称
      */
-//    @Schema(description = "班级名称")
-//    @NotBlank(message = "班级名称不能为空")
-//    @Length(max = 255, message = "班级名称长度不能超过 {max} 个字符")
+    //    @Schema(description = "班级名称")
+    //    @NotBlank(message = "班级名称不能为空")
+    //    @Length(max = 255, message = "班级名称长度不能超过 {max} 个字符")
     private String className;
 
     /**

@@ -108,7 +108,6 @@ public class WorkerOrgImportReq implements Serializable {
      */
     private String education;
 
-
     /**
      * 工作单位
      */

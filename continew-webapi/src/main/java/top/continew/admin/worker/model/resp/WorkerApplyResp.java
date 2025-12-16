@@ -22,8 +22,6 @@ import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import top.continew.admin.common.model.resp.BaseResp;
-import top.continew.starter.security.mask.annotation.JsonMask;
-import top.continew.starter.security.mask.enums.MaskType;
 
 import java.io.Serial;
 import java.time.*;
@@ -64,7 +62,7 @@ public class WorkerApplyResp extends BaseResp {
      * 作业人员手机号
      */
     @Schema(description = "作业人员手机号")
-//    @JsonMask(MaskType.MOBILE_PHONE)
+    //    @JsonMask(MaskType.MOBILE_PHONE)
     private String phone;
 
     /**
@@ -157,7 +155,6 @@ public class WorkerApplyResp extends BaseResp {
      * 学历
      */
     private String education;
-
 
     /**
      * 工作单位

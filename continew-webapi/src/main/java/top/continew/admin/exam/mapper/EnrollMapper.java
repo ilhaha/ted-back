@@ -74,17 +74,18 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
     IPage<ExamCandidateVO> getExamCandidates(@Param("page") Page<EnrollDO> page,
                                              @Param(Constants.WRAPPER) QueryWrapper<EnrollDO> queryWrapper);
 
-//    /**
-//     * 获取当前考试已有人数
-//     */
-//    @Select("select sum(enrolled_count) from ted_plan_classroom where plan_id = #{examPlanId}")
-//    Long getEnrollCount(@Param("examPlanId") Long examPlanId);
+    //    /**
+    //     * 获取当前考试已有人数
+    //     */
+    //    @Select("select sum(enrolled_count) from ted_plan_classroom where plan_id = #{examPlanId}")
+    //    Long getEnrollCount(@Param("examPlanId") Long examPlanId);
 
     /**
      * 获取当前考试已有人数
      */
     @Select("select count(1) from ted.ted_enroll where exam_plan_id= #{examPlanId} and is_deleted = 0 and enroll_status in(1, 4, 5)")
     Long getEnrollCount(@Param("examPlanId") Long examPlanId);
+
     /**
      * 取消报名
      */

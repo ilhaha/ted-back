@@ -37,7 +37,7 @@ public enum WorkerApplyReviewStatusEnum {
 
     WAIT_UPLOAD(4, "待上传资料"),
 
-    DOC_UPLOADED(5,"资料已上传");
+    DOC_UPLOADED(5, "资料已上传");
 
     private final Integer value;
     private final String description;

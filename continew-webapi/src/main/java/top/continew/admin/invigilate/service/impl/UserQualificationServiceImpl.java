@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.invigilate.service.impl;
 
 import lombok.RequiredArgsConstructor;
@@ -37,10 +53,9 @@ public class UserQualificationServiceImpl extends BaseServiceImpl<UserQualificat
     @Override
     public boolean addQualification(UserQualificationReq req) {
 
-        Long count = lambdaQuery()
-                .eq(UserQualificationDO::getUserId, req.getUserId())
-                .eq(UserQualificationDO::getCategoryId, req.getCategoryId())
-                .count();
+        Long count = lambdaQuery().eq(UserQualificationDO::getUserId, req.getUserId())
+            .eq(UserQualificationDO::getCategoryId, req.getCategoryId())
+            .count();
 
         if (count != null && count > 0) {
             throw new BusinessException("该用户此类别资质已存在，请勿重复添加");
@@ -55,10 +70,9 @@ public class UserQualificationServiceImpl extends BaseServiceImpl<UserQualificat
 
     @Override
     public boolean hasQualification(Long userId, Long categoryId) {
-        Long count = lambdaQuery()
-                .eq(UserQualificationDO::getUserId, userId)
-                .eq(UserQualificationDO::getCategoryId, categoryId)
-                .count();
+        Long count = lambdaQuery().eq(UserQualificationDO::getUserId, userId)
+            .eq(UserQualificationDO::getCategoryId, categoryId)
+            .count();
 
         return count != null && count > 0;
     }

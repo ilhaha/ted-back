@@ -156,25 +156,23 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         String examNumber = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(req.getExamNumber()));
         String examNumberEncrypt = aesWithHMAC.encryptAndSign(examNumber);
         candidatesExamPlanReq.setExamNumber(examNumberEncrypt);
-//        candidatesExamPlanReq.setEnrollStatus(ExamEnrollStatusEnum.SIGNED_UP.getValue());
+        //        candidatesExamPlanReq.setEnrollStatus(ExamEnrollStatusEnum.SIGNED_UP.getValue());
         CandidatesExamPlanVo candidatesExamPlanVo = userService.getPlanInfo(candidatesExamPlanReq);
         // 找不到对应的考试
-        ValidationUtils.throwIf(ObjectUtil.isEmpty(candidatesExamPlanVo), "未报名本场考试");
-        // 考试未开考
-        ValidationUtils.throwIf(!PlanConstant.EXAM_BEGUN.getStatus().equals(candidatesExamPlanVo.getStatus()), "考试未开考");
-        // 判断考生是否已考过试
-        ValidationUtils.throwIf(EnrollStatusConstant.SUBMITTED.equals(candidatesExamPlanVo
-            .getExamStatus()) && EnrollStatusConstant.COMPLETED.equals(candidatesExamPlanVo
-                .getEnrollStatus()), "已参加过这场考试");
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(candidatesExamPlanVo), "请核对身份证号或准考证号是否正确");
+        ValidationUtils.throwIf(!PlanConstant.EXAM_BEGUN.getStatus()
+            .equals(candidatesExamPlanVo.getStatus()) || (EnrollStatusConstant.SUBMITTED.equals(candidatesExamPlanVo
+                .getExamStatus()) && EnrollStatusConstant.COMPLETED.equals(candidatesExamPlanVo
+                    .getEnrollStatus())), "请确认考试是否已开始，或是否已参加过本场考试");
         LocalDateTime startTime = candidatesExamPlanVo.getStartTime();
-//        LocalDateTime endTime = candidatesExamPlanVo.getEndTime();
+        //        LocalDateTime endTime = candidatesExamPlanVo.getEndTime();
         LocalDateTime now = LocalDateTime.now();
         // 当前时间 > 结束时间：考试已结束
-//        ValidationUtils.throwIf(now.isAfter(endTime), "考试已结束");
+        //        ValidationUtils.throwIf(now.isAfter(endTime), "考试已结束");
         // 当前时间在考试中：不允许进入
-//        ValidationUtils.throwIf(now.isAfter(startTime) && now.isBefore(endTime), "正在考试，无法中途进入");
+        //        ValidationUtils.throwIf(now.isAfter(startTime) && now.isBefore(endTime), "正在考试，无法中途进入");
         // 开始时间 - 当前时间 > 30分钟： 考试未开始
-//        ValidationUtils.throwIf(Duration.between(now, startTime).toMinutes() > 30, "请于考前30分钟内进入");
+        //        ValidationUtils.throwIf(Duration.between(now, startTime).toMinutes() > 30, "请于考前30分钟内进入");
 
         // 执行认证
         String token = this.authenticate(user, client);
@@ -199,7 +197,7 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
 
         // 格式化开始时间和结束时间
         String formattedStartTime = startTime.format(formatter);
-//        String formattedEndTime = endTime.format(formatter);
+        //        String formattedEndTime = endTime.format(formatter);
 
         ExamCandidateInfoVO examCandidateInfoVO = new ExamCandidateInfoVO();
         examCandidateInfoVO.setExamTime(formattedStartTime);
@@ -231,10 +229,9 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         ValidationUtils.throwIf(invigilatorPlanDTO.getStatus().equals(PlanConstant.OVER.getStatus()), "考试已结束");
 
         LocalDateTime startTime = invigilatorPlanDTO.getStartTime();
-        LocalDateTime endTime = invigilatorPlanDTO.getEndTime();
         LocalDateTime now = LocalDateTime.now();
-        // 开始时间 - 当前时间 > 45分钟： 考前45分钟才可以进去
-        ValidationUtils.throwIf(Duration.between(now, startTime).toMinutes() > 45, "请于考前45分钟内进入");
+        // 开始时间 - 当前时间 > 15分钟： 考前45分钟才可以进去
+        ValidationUtils.throwIf(Duration.between(now, startTime).toMinutes() > 15, "请于考前15分钟内进入");
 
         UserDO user = userService.getById(invigilatorPlanDTO.getInvigilatorId());
 
@@ -272,6 +269,8 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
             .examCandidateInfoVO(examCandidateInfoVO)
             .build();
     }
+
+
 
     @Override
     public void preLogin(AccountLoginReq req, ClientResp client, HttpServletRequest request) {

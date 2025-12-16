@@ -17,10 +17,13 @@
 package top.continew.admin.exam.service;
 
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
+import top.continew.admin.exam.model.req.ExamPlanStartReq;
+import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
@@ -138,9 +141,29 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 调整考试/报名时间
+     * 
      * @param req
      * @param planId
      * @return
      */
     Boolean adjustPlanTime(AdjustPlanTimeReq req, Long planId);
+
+    /**
+     * 监考员获取监考计划列表
+     *
+     * @param examPlanQuery 考试计划查询参数
+     * @param pageQuery     分页参数
+     * @return 分页结果
+     */
+    PageResp<InvigilateExamPlanVO> invigilateGetPlanList(ExamPlanQuery examPlanQuery, PageQuery pageQuery);
+
+    /**
+     * 监考员进行开考
+     *
+     * @param req
+     * @param req
+     * @return
+     */
+    ExamCandidateInfoVO startExam(ExamPlanStartReq req);
+
 }

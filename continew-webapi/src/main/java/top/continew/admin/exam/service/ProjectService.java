@@ -144,5 +144,5 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
      *
      * @return
      */
-    List<Map<String, Object>> getLocalClassroomChoose(Long projectId,Integer isOperation);
+    List<Map<String, Object>> getLocalClassroomChoose(Long projectId, Integer isOperation);
 }

@@ -20,12 +20,12 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import jakarta.validation.constraints.NotBlank;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.entity.UserNamesDO;
 import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
+import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.starter.data.mp.base.BaseMapper;
@@ -91,8 +91,13 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
 
     /**
      * 获取计划分配的所有理论考场ID
+     * 
      * @param planId
      * @return
      */
     List<Long> getPlanExamTheoryClassroom(@Param("planId") Long planId);
+
+    IPage<InvigilateExamPlanVO> invigilateGetPlanList(@Param("page") Page<Object> objectPage,
+                                                      @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper,
+                                                      @Param("userId") Long userId);
 }

@@ -17,7 +17,6 @@
 package top.continew.admin.worker.controller;
 
 import cn.dev33.satoken.annotation.SaIgnore;
-import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.worker.model.req.*;
@@ -52,6 +51,7 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
 
     /**
      * 机构提交作业人员资料进行审核
+     * 
      * @param classId
      * @return
      */
@@ -60,9 +60,9 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
         return baseService.submitDoc(classId);
     }
 
-
     /**
      * 根据班级id获取未上上传资料的作业人员数
+     * 
      * @param classId
      * @return
      */
@@ -73,6 +73,7 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
 
     /**
      * 机构上传某个班级的资料
+     * 
      * @param classId
      * @param idCardFiles
      * @param applyForms
@@ -83,12 +84,13 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
     public UploadResulResp orgBatchUploadDoc(@PathVariable("classId") Long classId,
                                              @RequestPart("idCardFiles") List<MultipartFile> idCardFiles,
                                              @RequestPart("applyForms") List<MultipartFile> applyForms,
-                                             @RequestPart(value = "projectDocs",required = false) List<MultipartFile> projectDocs) {
-        return baseService.orgBatchUploadDoc(classId,idCardFiles,applyForms,projectDocs);
+                                             @RequestPart(value = "projectDocs", required = false) List<MultipartFile> projectDocs) {
+        return baseService.orgBatchUploadDoc(classId, idCardFiles, applyForms, projectDocs);
     }
 
     /**
      * 机构上传某个考生的资料
+     * 
      * @param workerOrgUploadReq
      * @return
      */
@@ -161,7 +163,7 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
      */
     @PostMapping("/doc/{workerIdOrClassId}/{isBatch}")
     public WorkerApplyVO getWorkerNeedUploadDoc(@PathVariable("workerIdOrClassId") Long workerIdOrClassId,
-                                        @PathVariable("isBatch") Boolean isBatch) {
-        return baseService.getWorkerNeedUploadDoc(workerIdOrClassId,isBatch);
+                                                @PathVariable("isBatch") Boolean isBatch) {
+        return baseService.getWorkerNeedUploadDoc(workerIdOrClassId, isBatch);
     }
 }

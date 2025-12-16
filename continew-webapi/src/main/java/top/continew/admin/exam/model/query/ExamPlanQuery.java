@@ -81,4 +81,10 @@ public class ExamPlanQuery implements Serializable {
     @Query(type = QueryType.EQ, columns = "tep.status")
     private Integer status;
 
+    /**
+     * 监考状态
+     */
+    @Query(type = QueryType.EQ, columns = "tpi.invigilate_status")
+    private Integer invigilateStatus;
+
 }

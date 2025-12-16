@@ -21,8 +21,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 
-import java.util.Map;
-
 /**
  * @author ilhaha
  * @Create 2025/11/5 16:51
@@ -30,7 +28,7 @@ import java.util.Map;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ExcelRowSuccessVO extends WorkerApplyDO{
+public class ExcelRowSuccessVO extends WorkerApplyDO {
 
     private String excelName;
 

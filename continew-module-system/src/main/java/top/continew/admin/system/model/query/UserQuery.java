@@ -22,8 +22,6 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
-import top.continew.starter.data.core.annotation.Query;
-import top.continew.starter.data.core.enums.QueryType;
 
 import java.io.Serial;
 import java.io.Serializable;

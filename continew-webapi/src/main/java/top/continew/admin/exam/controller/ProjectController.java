@@ -62,8 +62,9 @@ public class ProjectController extends BaseController<ProjectService, ProjectRes
      */
     @Operation(summary = "根据考场考试类型获取地点-考场级联选择器")
     @GetMapping("/local/classroom/{projectId}/{isOperation}")
-    public List<Map<String, Object>> getLocalClassroomChoose(@PathVariable("projectId") Long projectId,@PathVariable("isOperation") Integer isOperation) {
-        return baseService.getLocalClassroomChoose(projectId,isOperation);
+    public List<Map<String, Object>> getLocalClassroomChoose(@PathVariable("projectId") Long projectId,
+                                                             @PathVariable("isOperation") Integer isOperation) {
+        return baseService.getLocalClassroomChoose(projectId, isOperation);
     }
 
     /**

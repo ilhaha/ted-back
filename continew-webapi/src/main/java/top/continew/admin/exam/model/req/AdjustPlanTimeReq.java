@@ -45,10 +45,8 @@ public class AdjustPlanTimeReq implements Serializable {
     @Future(message = "考试开始时间必须是未来时间")
     private LocalDateTime startTime;
 
-
     @Schema(description = "报名开始时间范围")
     @Size(min = 2, max = 2, message = "报名开始时间范围必须包含 2 个时间点")
     private List<@Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$", message = "报名开始时间格式不正确") String> enrollList;
-
 
 }

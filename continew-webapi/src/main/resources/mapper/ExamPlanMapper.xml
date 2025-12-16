@@ -178,6 +178,30 @@
         WHERE tpc.plan_id = #{planId}
           AND tc.exam_type = 0
     </select>
+    <select id="invigilateGetPlanList" resultType="top.continew.admin.exam.model.vo.InvigilateExamPlanVO">
+        SELECT tep.id AS 'plan_id', tep.plan_type,
+               tep.exam_plan_name AS 'plan_name', tep.start_time,
+               tp.project_name,
+               tp.id AS 'project_id', tp.project_code,
+               tp.exam_duration,
+               tc.`name` AS 'category_name', tpi.invigilate_status,
+               classroom.classroom_name,
+               classroom.exam_type,
+               classroom.id AS 'classroom_id'
+        FROM ted_plan_invigilate tpi
+                 INNER JOIN ted_exam_plan tep
+                            ON tpi.exam_plan_id = tep.id
+                 LEFT JOIN ted_project tp
+                           ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN ted_category tc
+                           ON tp.category_id = tc.id AND tc.is_deleted = 0
+                 LEFT JOIN ted_classroom classroom
+                           ON tpi.classroom_id = classroom.id AND classroom.is_deleted = 0 ${ew.customSqlSegment}
+        AND tpi.invigilator_id = #{userId}
+            AND tpi.is_deleted = 0
+            AND tep.is_deleted = 0
+        ORDER BY tep.start_time
+    </select>
 
 
     <update id="batchUpdatePlanMaxCandidates">
