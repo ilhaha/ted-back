@@ -24,16 +24,16 @@
                t1.create_user,
                t1.update_user,
                t1.create_time,
-               t1.update_time,
-               t1.province_id,
-               t1.city_id,
-               t2.district as province_name,
-               t3.district as city_name,
-               t4.district as street_name
+               t1.update_time
+--                t1.province_id,
+--                t1.city_id,
+--                t2.district as province_name,
+--                t3.district as city_name,
+--                t4.district as street_name
         FROM ted_exam_location as t1
-                 LEFT JOIN ted_rc_district as t2 on t1.province_id = t2.district_id
-                 LEFT JOIN ted_rc_district as t3 on t1.city_id = t3.district_id
-                 LEFT JOIN ted_rc_district as t4 on t1.street_id = t4.district_id
+--                  LEFT JOIN ted_rc_district as t2 on t1.province_id = t2.district_id
+--                  LEFT JOIN ted_rc_district as t3 on t1.city_id = t3.district_id
+--                  LEFT JOIN ted_rc_district as t4 on t1.street_id = t4.district_id
             ${ew.customSqlSegment}
     </select>
 

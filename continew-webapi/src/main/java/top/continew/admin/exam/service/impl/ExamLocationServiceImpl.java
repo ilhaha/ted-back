@@ -66,6 +66,18 @@ public class ExamLocationServiceImpl extends BaseServiceImpl<ExamLocationMapper,
         return build;
     }
 
+    @Override
+    public Long add(ExamLocationReq req) {
+        ExamLocationDO examLocationDO = new ExamLocationDO();
+        examLocationDO.setLocationName(req.getLocationName());
+        examLocationDO.setProvinceId(2L);
+        examLocationDO.setCityId(52L);
+        examLocationDO.setStreetId(503L);
+        examLocationDO.setDetailedAddress(req.getDetailedAddress());
+        baseMapper.insert(examLocationDO);
+        return null;
+    }
+
     /**
      * 重写获取考试详情
      */
