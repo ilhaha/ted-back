@@ -16,18 +16,25 @@
         ${ew.customSqlSegment}
     </select>
 
-    <select id="getDeptProject" resultType="top.continew.admin.exam.model.vo.ProjectVo">
+    <select id="getDeptProjectTree"
+            resultType="top.continew.admin.exam.model.vo.ProjectCategoryProjectFlatVo">
         SELECT
-        tp.project_name as `label`,
-        tp.id as `value`,
-        tp.is_operation
-        FROM ted_project AS tp
+        tc.id        AS categoryId,
+        tc.name      AS categoryName,
+
+        tp.id        AS projectId,
+        tp.project_name AS projectName,
+        tp.is_operation AS isOperation
+        FROM ted_project tp
+        JOIN ted_category tc ON tc.id = tp.category_id
         WHERE tp.is_deleted = 0
+        AND tc.is_deleted = 0
+        AND tp.project_status = 2
+        AND tp.project_type = #{planType}
         <if test="deptId != null">
             AND tp.dept_id = #{deptId}
         </if>
-        and tp.project_status = 2
-        AND tp.project_type = #{planType}
+        ORDER BY tc.id, tp.id
     </select>
 
     <select id="selectBindingLocationByIds" resultType="java.lang.Long">

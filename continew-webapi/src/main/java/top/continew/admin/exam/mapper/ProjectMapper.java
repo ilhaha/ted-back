@@ -28,6 +28,7 @@ import top.continew.admin.exam.model.resp.LocationClassroomVO;
 import top.continew.admin.exam.model.resp.ProjectDetailResp;
 import top.continew.admin.exam.model.resp.ProjectResp;
 import top.continew.admin.exam.model.resp.StudentProjectDetailResp;
+import top.continew.admin.exam.model.vo.ProjectCategoryProjectFlatVo;
 import top.continew.admin.exam.model.vo.ProjectClassroomFlatVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.training.model.vo.ProjectCategoryVO;
@@ -53,7 +54,10 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
      * @param deptId
      * @return
      */
-    List<ProjectVo> getDeptProject(@Param("deptId") Long deptId, @Param("planType") Integer planType);
+    List<ProjectCategoryProjectFlatVo> getDeptProjectTree(
+            @Param("deptId") Long deptId,
+            @Param("planType") Integer planType
+    );
 
     /**
      * 查询已经绑定了的地址id集合

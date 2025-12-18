@@ -108,20 +108,35 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     @Override
     @Transactional
     public Long add(ProjectReq req) {
-        //检测新增参数，不允许重复添加(确保名称+八大类唯一)
-        String projectName = req.getProjectName();
-        Long categoryId = req.getCategoryId();
-        QueryWrapper queryWrapper = new QueryWrapper<ProjectDO>().eq("project_name", projectName)
-            .eq("category_id", categoryId)
-            .eq("is_deleted", 0);
+
+        // ① 校验项目编码唯一
+        ValidationUtils.throwIf(
+                baseMapper.selectCount(
+                        new QueryWrapper<ProjectDO>()
+                                .eq("project_code", req.getProjectCode())
+                                .eq("is_deleted", 0)
+                ) > 0,
+                "项目编码已存在"
+        );
+
+        // ② 校验项目名称 + 八大类唯一（你原来的逻辑）
+        QueryWrapper<ProjectDO> queryWrapper = new QueryWrapper<ProjectDO>()
+                .eq("project_name", req.getProjectName())
+                .eq("category_id", req.getCategoryId())
+                .eq("is_deleted", 0);
+
         ProjectDO projectDO = baseMapper.selectOne(queryWrapper);
         ValidationUtils.throwIfNotNull(projectDO, "项目名称已存在");
 
-        //保留Anton逻辑
+        // ③ Anton 原逻辑
         UserTokenDo userInfo = TokenLocalThreadUtil.get();
         ValidationUtils.throwIfNull(userInfo, ErrorMessageConstant.USER_AUTHENTICATION_FAILED);
+
         req.setDeptId(userInfo.getDeptId());
+        req.setProjectStatus(1L);
+
         redisUtil.delete(RedisConstant.EXAM_PROJECT_SELECT);
+
         return super.add(req);
     }
 
@@ -462,33 +477,83 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     }
 
     @Override
-    public List<ProjectVo> getDeptProject(Integer planType) {
+    public List<ProjectCategoryTreeVo> getDeptProject(Integer planType) {
+
         UserTokenDo userInfo = TokenLocalThreadUtil.get();
         ValidationUtils.throwIfNull(userInfo, ErrorMessageConstant.USER_AUTHENTICATION_FAILED);
 
-        // 当前是超管用户  可以获取全部
         Long deptId = null;
         if (!UserConstant.ADMIN_USER_ID.equals(userInfo.getUserId())) {
             deptId = userInfo.getDeptId();
         }
 
-        List<ProjectVo> vos = baseMapper.getDeptProject(deptId, planType);
+        List<ProjectCategoryProjectFlatVo> flats =
+                baseMapper.getDeptProjectTree(deptId, planType);
 
-        return vos;
+        Map<Long, ProjectCategoryTreeVo> categoryMap = new LinkedHashMap<>();
+
+        for (ProjectCategoryProjectFlatVo flat : flats) {
+
+            ProjectCategoryTreeVo categoryVo = categoryMap.computeIfAbsent(
+                    flat.getCategoryId(),
+                    id -> {
+                        ProjectCategoryTreeVo vo = new ProjectCategoryTreeVo();
+                        vo.setValue(flat.getCategoryId());
+                        vo.setLabel(flat.getCategoryName());
+                        vo.setChildren(new ArrayList<>());
+                        return vo;
+                    }
+            );
+
+            ProjectVo projectVo = new ProjectVo();
+            projectVo.setValue(flat.getProjectId());
+            projectVo.setLabel(flat.getProjectName());
+            projectVo.setIsOperation(flat.getIsOperation());
+
+            categoryVo.getChildren().add(projectVo);
+        }
+
+        return new ArrayList<>(categoryMap.values());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(ProjectReq req, Long id) {
-        ProjectDO ProjectStatus = baseMapper.selectOne(new QueryWrapper<ProjectDO>().eq("id", id));
-        if (!Objects.equals(req.getProjectStatus(), ProjectStatus.getProjectStatus())) {
+        // 1. 查询原数据
+        ProjectDO oldProject = baseMapper.selectById(id);
+        ValidationUtils.throwIfNull(oldProject, "项目不存在");
+
+        // 2. 校验 projectCode 唯一（排除自身）
+        ValidationUtils.throwIf(
+                lambdaQuery()
+                        .eq(ProjectDO::getProjectCode, req.getProjectCode())
+                        .eq(ProjectDO::getIsDeleted, 0)
+                        .ne(ProjectDO::getId, id)
+                        .exists(),
+                "项目编码已存在"
+        );
+
+        // 3. 校验 名称 + 分类 唯一（排除自身）
+        ValidationUtils.throwIf(
+                lambdaQuery()
+                        .eq(ProjectDO::getProjectName, req.getProjectName())
+                        .eq(ProjectDO::getCategoryId, req.getCategoryId())
+                        .eq(ProjectDO::getIsDeleted, 0)
+                        .ne(ProjectDO::getId, id)
+                        .exists(),
+                "项目名称已存在"
+        );
+
+        // 4. 项目状态变更权限校验
+        if (!Objects.equals(req.getProjectStatus(), oldProject.getProjectStatus())) {
             UserTokenDo userInfo = TokenLocalThreadUtil.get();
             ValidationUtils.throwIfNull(userInfo, ErrorMessageConstant.USER_AUTHENTICATION_FAILED);
-            // 检查权限
-            //            boolean hasPermission = checkPermission(userInfo);
-            //            ValidationUtils.throwIf(!hasPermission, "权限不足，无法修改该状态");
+            // TODO 权限校验
         }
+        // 5. 清缓存
         redisUtil.delete(RedisConstant.EXAM_PROJECT_SELECT);
+
+        // 6. 更新
         super.update(req, id);
     }
 
