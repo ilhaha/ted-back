@@ -162,10 +162,21 @@
             ${ew.customSqlSegment}
     </select>
     <select id="getExamCandidates" resultType="top.continew.admin.exam.model.vo.ExamCandidateVO">
-        SELECT sys_user.id, sys_user.username, sys_user.nickname, te.exam_number, te.exam_status
+        SELECT sys_user.id,
+               sys_user.username,
+               sys_user.nickname,
+               te.exam_number,
+               te.exam_status,
+               tev.violation_desc,
+               tev.illegal_url,
+               ter.exam_scores
         FROM ted_enroll te
                  LEFT JOIN sys_user
                            ON te.user_id = sys_user.id
+                 LEFT JOIN ted_exam_violation tev
+                           ON te.user_id = tev.candidate_id AND tev.plan_id = #{planId} AND tev.is_deleted = 0
+                 LEFT JOIN ted_exam_records ter
+                           ON te.user_id = ter.candidate_id AND ter.plan_id = #{planId} AND ter.is_deleted = 0
             ${ew.customSqlSegment}
     </select>
     <select id="getWorkerApplyList" resultType="top.continew.admin.exam.model.resp.EnrollResp">
@@ -194,17 +205,15 @@
     </select>
     <select id="selectAuditNoticeToClass"
             resultType="top.continew.admin.exam.model.resp.WorkerAuditNoticeResp">
-        SELECT
-            tepa.audit_notice_url,
-            su.nickname
+        SELECT tepa.audit_notice_url,
+               su.nickname
         FROM ted_examinee_payment_audit tepa
                  JOIN ted_enroll te
                       ON tepa.enroll_id = te.id
                           AND te.is_deleted = 0
                  JOIN sys_user su
                       ON te.user_id = su.id
-        WHERE
-            tepa.is_deleted = 0
+        WHERE tepa.is_deleted = 0
           AND tepa.class_id = #{classId}
           AND te.exam_plan_id = #{planId}
     </select>
@@ -212,6 +221,6 @@
         SELECT COUNT(id)
         FROM ted_enroll
         WHERE exam_plan_id = #{examPlanId}
-            AND enroll_status IN (1,4)
+          AND enroll_status IN (1, 4)
     </select>
 </mapper>

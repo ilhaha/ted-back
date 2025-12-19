@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.model.resp;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -71,4 +72,10 @@ public class CategoryResp extends BaseResp {
     private Long topicNumber;
 
     private String videoUrl;
+
+    /**
+     * 是否开启电子监考违规行为提醒功能（1开启，0未开启）
+     */
+    @Schema(description = "是否开启电子监考违规行为提醒功能（1开启，0未开启）")
+    private Boolean enableProctorWarning;
 }

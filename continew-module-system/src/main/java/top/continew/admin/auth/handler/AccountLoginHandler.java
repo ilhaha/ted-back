@@ -162,17 +162,9 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         ValidationUtils.throwIf(ObjectUtil.isEmpty(candidatesExamPlanVo), "请核对身份证号或准考证号是否正确");
         ValidationUtils.throwIf(!PlanConstant.EXAM_BEGUN.getStatus()
             .equals(candidatesExamPlanVo.getStatus()) || (EnrollStatusConstant.SUBMITTED.equals(candidatesExamPlanVo
-                .getExamStatus()) && EnrollStatusConstant.COMPLETED.equals(candidatesExamPlanVo
+                .getExamStatus()) || EnrollStatusConstant.COMPLETED.equals(candidatesExamPlanVo
                     .getEnrollStatus())), "请确认考试是否已开始，或是否已参加过本场考试");
         LocalDateTime startTime = candidatesExamPlanVo.getStartTime();
-        //        LocalDateTime endTime = candidatesExamPlanVo.getEndTime();
-        LocalDateTime now = LocalDateTime.now();
-        // 当前时间 > 结束时间：考试已结束
-        //        ValidationUtils.throwIf(now.isAfter(endTime), "考试已结束");
-        // 当前时间在考试中：不允许进入
-        //        ValidationUtils.throwIf(now.isAfter(startTime) && now.isBefore(endTime), "正在考试，无法中途进入");
-        // 开始时间 - 当前时间 > 30分钟： 考试未开始
-        //        ValidationUtils.throwIf(Duration.between(now, startTime).toMinutes() > 30, "请于考前30分钟内进入");
 
         // 执行认证
         String token = this.authenticate(user, client);
@@ -197,7 +189,6 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
 
         // 格式化开始时间和结束时间
         String formattedStartTime = startTime.format(formatter);
-        //        String formattedEndTime = endTime.format(formatter);
 
         ExamCandidateInfoVO examCandidateInfoVO = new ExamCandidateInfoVO();
         examCandidateInfoVO.setExamTime(formattedStartTime);
@@ -208,6 +199,7 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         examCandidateInfoVO.setClassroomName(classroomDTO.getClassroomName());
         examCandidateInfoVO.setWarningShortFilm(candidatesExamPlanVo.getWarningShortFilm());
         examCandidateInfoVO.setExamDuration(candidatesExamPlanVo.getExamDuration());
+        examCandidateInfoVO.setEnableProctorWarning(candidatesExamPlanVo.getEnableProctorWarning());
         // 修改考生的考试状态为已签到
         userService.updateExamStatus(user.getId(), examNumberEncrypt, candidatesExamPlanVo
             .getPlanId(), EnrollExamStatusEnum.SIGNED.getValue());

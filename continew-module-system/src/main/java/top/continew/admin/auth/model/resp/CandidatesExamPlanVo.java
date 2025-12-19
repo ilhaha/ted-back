@@ -16,6 +16,7 @@
 
 package top.continew.admin.auth.model.resp;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -61,12 +62,12 @@ public class CandidatesExamPlanVo implements Serializable {
     /**
      * 考试状态
      */
-    private Long examStatus;
+    private Integer examStatus;
 
     /**
      * 报名状态
      */
-    private Long enrollStatus;
+    private Integer enrollStatus;
 
     /**
      * 考试计划状态
@@ -82,5 +83,10 @@ public class CandidatesExamPlanVo implements Serializable {
      * 考试时长
      */
     private Integer examDuration;
+
+    /**
+     * 是否开启违规行为提醒
+     */
+    private Boolean enableProctorWarning;
 
 }

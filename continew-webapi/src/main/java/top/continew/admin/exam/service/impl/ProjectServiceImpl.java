@@ -505,12 +505,15 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
                     }
             );
 
-            ProjectVo projectVo = new ProjectVo();
-            projectVo.setValue(flat.getProjectId());
-            projectVo.setLabel(flat.getProjectName());
-            projectVo.setIsOperation(flat.getIsOperation());
+            // 判断项目是否存在
+            if (flat.getProjectId() != null) {
+                ProjectVo projectVo = new ProjectVo();
+                projectVo.setValue(flat.getProjectId());
+                projectVo.setLabel(flat.getProjectName());
+                projectVo.setIsOperation(flat.getIsOperation());
 
-            categoryVo.getChildren().add(projectVo);
+                categoryVo.getChildren().add(projectVo);
+            }
         }
 
         return new ArrayList<>(categoryMap.values());

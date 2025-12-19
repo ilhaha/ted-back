@@ -17,6 +17,7 @@
 package top.continew.admin.exam.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.io.FileUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -25,20 +26,27 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
+import net.dreamlu.mica.core.utils.ObjectUtil;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
+import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.ExamRecordsRegisterationProgressEnum;
 import top.continew.admin.common.constant.ExamRecordsReviewStatusEnum;
+import top.continew.admin.common.constant.enums.ExamViolationTypeEnum;
 import top.continew.admin.common.util.AESWithHMAC;
+import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.system.model.req.file.GeneralFileReq;
+import top.continew.admin.system.model.resp.FileInfoResp;
+import top.continew.admin.system.service.UploadService;
 import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -50,8 +58,13 @@ import top.continew.admin.exam.model.resp.ExamRecordsDetailResp;
 import top.continew.admin.exam.model.resp.ExamRecordsResp;
 import top.continew.admin.exam.service.ExamRecordsService;
 
+import javax.imageio.ImageIO;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.util.Collections;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 /**
@@ -81,6 +94,10 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
 
     @Resource
     private AESWithHMAC aesWithHMAC;
+
+    private final ExamViolationMapper examViolationMapper;
+
+    private final UploadService uploadService;
 
     @Override
     public PageResp<ExamRecordsResp> examRecordsPage(ExamRecordsQuery query, PageQuery pageQuery) {
@@ -158,17 +175,46 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         return Collections.emptyList();
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void candidatesAdd(ExamRecordsDO examRecordsDO) {
-        // 修改考生对应的考试计划状态
-        LambdaUpdateWrapper<EnrollDO> enrollDOLambdaUpdateWrapper = new LambdaUpdateWrapper<>();
-        enrollDOLambdaUpdateWrapper.set(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
-            .set(EnrollDO::getExamStatus, EnrollStatusConstant.SUBMITTED)
-            .eq(EnrollDO::getUserId, examRecordsDO.getCandidateId())
-            .eq(EnrollDO::getExamPlanId, examRecordsDO.getPlanId());
-        enrollMapper.update(enrollDOLambdaUpdateWrapper);
-        // 插入考试记录
+
+        // 1. 修改报名状态
+        LambdaUpdateWrapper<EnrollDO> enrollUpdate = new LambdaUpdateWrapper<>();
+        enrollUpdate.set(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
+                .eq(EnrollDO::getUserId, examRecordsDO.getCandidateId())
+                .eq(EnrollDO::getExamPlanId, examRecordsDO.getPlanId());
+
+        Integer violationType = examRecordsDO.getViolationType();
+
+        // 2. 有违规（达到规则）
+        if (!ExamViolationTypeEnum.NO_SWITCH.getValue().equals(violationType)) {
+
+            enrollUpdate.set(EnrollDO::getExamStatus, EnrollStatusConstant.VIOLATION);
+
+            ExamViolationDO violation = new ExamViolationDO();
+            violation.setCandidateId(examRecordsDO.getCandidateId());
+            violation.setPlanId(examRecordsDO.getPlanId());
+            violation.setViolationDesc(
+                    ExamViolationTypeEnum.getDescriptionByValue(violationType)
+            );
+            List<String> violationScreenshots = examRecordsDO.getViolationScreenshots();
+            if (ObjectUtil.isNotEmpty(violationScreenshots)) {
+                String screenshotUrls = String.join(",", violationScreenshots);
+                violation.setIllegalUrl(screenshotUrls);
+            }
+            // 2.2 插入违规记录
+            examViolationMapper.insert(violation);
+
+        } else {
+            // 3. 未达到违规规则
+            enrollUpdate.set(EnrollDO::getExamStatus, EnrollStatusConstant.SUBMITTED);
+        }
+
+        // 5. 更新报名状态
+        enrollMapper.update(enrollUpdate);
+
+        // 6. 插入考试记录
         baseMapper.insert(examRecordsDO);
     }
 }

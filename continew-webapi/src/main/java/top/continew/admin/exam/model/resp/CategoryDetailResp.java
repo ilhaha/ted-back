@@ -72,4 +72,11 @@ public class CategoryDetailResp extends BaseDetailResp {
 
     private Long topicNumber;
     private String videoUrl;
+
+    /**
+     * 是否开启电子监考违规行为提醒功能（1开启，0未开启）
+     */
+    @Schema(description = "是否开启电子监考违规行为提醒功能（1开启，0未开启）")
+    @ExcelProperty(value = "是否开启电子监考违规行为提醒功能（1开启，0未开启）")
+    private Boolean enableProctorWarning;
 }

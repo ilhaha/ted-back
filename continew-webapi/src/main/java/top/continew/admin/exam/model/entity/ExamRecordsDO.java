@@ -25,6 +25,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import top.continew.admin.common.model.entity.BaseDO;
 
 import java.io.Serial;
+import java.util.List;
 
 /**
  * 考试记录实体
@@ -85,4 +86,16 @@ public class ExamRecordsDO extends BaseDO {
      */
     @Schema(description = "考试试卷")
     private String examPaper;
+
+    /**
+     * 违规类型
+     */
+    @TableField(exist = false)
+    private Integer violationType;
+
+    /**
+     * 违规图片集合
+     */
+    @TableField(exist = false)
+    private List<String> violationScreenshots;
 }

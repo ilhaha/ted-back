@@ -55,4 +55,10 @@ public class CategoryDO extends BaseDO {
      * 是否删除（0-未删除，1-已删除）
      */
     private Boolean isDeleted;
+
+
+    /**
+     * 是否开启电子监考违规行为提醒功能（1开启，0未开启）
+     */
+    private Boolean enableProctorWarning;
 }

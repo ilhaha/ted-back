@@ -56,4 +56,7 @@ public class CategoryReq implements Serializable {
 
     private Long topicNumber;
     private String videoUrl;
+
+    private Boolean enableProctorWarning;
+
 }

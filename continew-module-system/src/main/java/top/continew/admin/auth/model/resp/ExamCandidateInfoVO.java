@@ -72,6 +72,12 @@ public class ExamCandidateInfoVO implements Serializable {
     private String warningShortFilm;
 
     /**
+     * 是否开启违规行为提醒
+     */
+    @Schema(description = "是否开启违规行为提醒", example = "是否开启违规行为提醒")
+    private Boolean enableProctorWarning;
+
+    /**
      * 考试时长
      */
     @Schema(description = "考试时长", example = "考试时长")

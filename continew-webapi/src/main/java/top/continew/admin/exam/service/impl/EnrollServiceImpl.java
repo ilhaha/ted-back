@@ -120,12 +120,12 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     public EnrollDetailResp getAllDetailEnrollList(Long examPlanId) {
         // 调用enrollMapper的getAllDetailEnrollList方法，传入项目id，获取所有报名详情列表
         EnrollDetailResp detailEnrollList = enrollMapper.getAllDetailEnrollList(examPlanId, TokenLocalThreadUtil.get()
-            .getUserId());
+                .getUserId());
         //查询项目对应的收费标准
         QueryWrapper<ProjectDO> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("id", examPlanMapper.selectById(examPlanId).getExamProjectId())
-            .eq("is_deleted", 0)
-            .select("exam_fee");
+                .eq("is_deleted", 0)
+                .select("exam_fee");
         ProjectDO projectDO = projectMapper.selectOne(queryWrapper);
         // 返回所有报名详情列表
         detailEnrollList.setExamFee(projectDO.getExamFee());
@@ -179,7 +179,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         // 5️ 执行分页查询
         IPage<EnrollStatusResp> page = baseMapper.getEnrollList(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper, userTokenDo.getUserId());
+                .getSize()), queryWrapper, userTokenDo.getUserId());
 
         // 6️ 封装返回结果
         PageResp<EnrollStatusResp> pageResp = PageResp.build(page, EnrollStatusResp.class);
@@ -241,16 +241,16 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                 String classroomId = String.format("%03d", assignedClassroomId);
                 String planYear = examPlanVO.getPlanYear();
                 String seatPart = String.format("%03d", classroomMapper.getSeatNumber(assignedClassroomId, examPlanDO
-                    .getId()));
+                        .getId()));
                 String randomPart = String.format("%04d", random.nextInt(10000));
                 String examNumber = planYear + randomPart + classroomId + seatPart;
 
                 // 检查报名表是否已存在
                 EnrollDO existing = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
-                    .eq(EnrollDO::getExamPlanId, planId)
-                    .eq(EnrollDO::getUserId, userId)
-                    .eq(EnrollDO::getIsDeleted, false)
-                    .last("LIMIT 1"));
+                        .eq(EnrollDO::getExamPlanId, planId)
+                        .eq(EnrollDO::getUserId, userId)
+                        .eq(EnrollDO::getIsDeleted, false)
+                        .last("LIMIT 1"));
 
                 if (existing != null) {
                     // 如果之前有记录（比如上传资料时插入的状态=4），则只更新状态为已报名
@@ -312,16 +312,16 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                 String classroomId = String.format("%03d", assignedClassroomId);
                 String planYear = examPlanVO.getPlanYear();
                 String seatPart = String.format("%03d", classroomMapper.getSeatNumber(assignedClassroomId, examPlanDO
-                    .getId()));
+                        .getId()));
                 String randomPart = String.format("%04d", random.nextInt(10000));
                 String examNumber = planYear + randomPart + classroomId + seatPart;
 
                 // 检查报名表是否已存在
                 EnrollDO existing = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>()
-                    .eq(EnrollDO::getExamPlanId, planId)
-                    .eq(EnrollDO::getUserId, userId)
-                    .eq(EnrollDO::getIsDeleted, false)
-                    .last("LIMIT 1"));
+                        .eq(EnrollDO::getExamPlanId, planId)
+                        .eq(EnrollDO::getUserId, userId)
+                        .eq(EnrollDO::getIsDeleted, false)
+                        .last("LIMIT 1"));
 
                 if (existing != null) {
                     // 如果之前有记录（比如上传资料时插入的状态=4），则只更新状态为已报名
@@ -371,7 +371,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     /**
      * 校验时间人数
-     * 
+     *
      * @param examPlanId 考试计划ID
      */
     @Override
@@ -379,13 +379,13 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
         ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划");
         ValidationUtils.throwIf(!ExamPlanTypeEnum.INSPECTION.getValue()
-            .equals(examPlanDO.getPlanType()), "无法报名作业人员考试计划");
+                .equals(examPlanDO.getPlanType()), "无法报名作业人员考试计划");
         //1.检查是否存在报名时间冲突
         List<EnrollResp> enrollRespList = enrollMapper.getEnrolledPlan(TokenLocalThreadUtil.get().getUserId());
         enrollRespList.forEach(enrollResp -> {
             boolean isConflict = !enrollResp.getExamEndTime().isBefore(examPlanDO.getStartTime()) && !enrollResp
-                .getExamStartTime()
-                .isAfter(examPlanDO.getEndTime());
+                    .getExamStartTime()
+                    .isAfter(examPlanDO.getEndTime());
 
             ValidationUtils.throwIf(isConflict, "与已报名考试存在时间冲突");
         });
@@ -435,28 +435,28 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         //校验是否缴费
         ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper
-            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
-                .eq(ExamineePaymentAuditDO::getExamineeId, userId)
-                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                .select(ExamineePaymentAuditDO::getAuditStatus));
+                .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
+                        .eq(ExamineePaymentAuditDO::getExamineeId, userId)
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                        .select(ExamineePaymentAuditDO::getAuditStatus));
         ValidationUtils.throwIfNull(examineePaymentAuditDO, "未找到考试缴费记录，请先提交缴费凭证再查看准考证");
         ValidationUtils.throwIf(!Objects.equals(examineePaymentAuditDO.getAuditStatus(), 2), "缴费凭证未上传或未审核通过，无法查看准考证");
 
         // 校验报名资格
         SpecialCertificationApplicantDO applicantDO = specialCertificationApplicantMapper
-            .selectOne(new LambdaQueryWrapper<SpecialCertificationApplicantDO>()
-                .eq(SpecialCertificationApplicantDO::getPlanId, examPlanId)
-                .eq(SpecialCertificationApplicantDO::getCandidatesId, userId)
-                .eq(SpecialCertificationApplicantDO::getIsDeleted, false)
-                .last("LIMIT 1"));
+                .selectOne(new LambdaQueryWrapper<SpecialCertificationApplicantDO>()
+                        .eq(SpecialCertificationApplicantDO::getPlanId, examPlanId)
+                        .eq(SpecialCertificationApplicantDO::getCandidatesId, userId)
+                        .eq(SpecialCertificationApplicantDO::getIsDeleted, false)
+                        .last("LIMIT 1"));
         ValidationUtils.throwIfNull(applicantDO, "未找到报名申请，请先提交报名再查看准考证");
         ValidationUtils.throwIf(!Objects.equals(applicantDO.getStatus(), 1), "报名状态无效（未通过/已取消），无法查看准考证");
 
         // 校验考试计划
         ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
         ValidationUtils.throwIf(examPlanDO == null || examPlanDO
-            .getIsFinalConfirmed() != 2, "考试计划考试时间和考试地点未最终确认，无法查看准考证信息");
+                .getIsFinalConfirmed() != 2, "考试计划考试时间和考试地点未最终确认，无法查看准考证信息");
 
         // 先查是否已生成准考证（避免重复生成）
         IdentityCardExamInfoVO identityCardExamInfoVO = enrollMapper.viewIdentityCardInfo(examPlanId, userId);
@@ -499,7 +499,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         super.sort(queryWrapper, pageQuery);
 
         IPage<ExamCandidateVO> page = baseMapper.getExamCandidates(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper, enrollQuery.getPlanId());
         // 将查询结果转换成 PageResp 对象
         PageResp<ExamCandidateVO> pageResp = PageResp.build(page, ExamCandidateVO.class);
         pageResp.setList(pageResp.getList().stream().map(item -> {
@@ -536,13 +536,13 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         // 缴费状态校验（仅当前用户的缴费记录）
         ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper
-            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
-                .eq(ExamineePaymentAuditDO::getExamineeId, userId) // 关键：加考生ID筛选
-                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                .select(ExamineePaymentAuditDO::getAuditStatus));
+                .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
+                        .eq(ExamineePaymentAuditDO::getExamineeId, userId) // 关键：加考生ID筛选
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                        .select(ExamineePaymentAuditDO::getAuditStatus));
         ValidationUtils.throwIf(examineePaymentAuditDO != null && Objects.equals(examineePaymentAuditDO
-            .getAuditStatus(), 2), "缴费审核已通过，请先申请退款，通过后，再取消报名");
+                .getAuditStatus(), 2), "缴费审核已通过，请先申请退款，通过后，再取消报名");
 
         // 执行删除
         examineePaymentAuditMapper.deleteFromPayment(examPlanId, userId);
@@ -552,7 +552,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     /**
      * 下载某个考生的缴费通知单
-     * 
+     *
      * @param enrollId
      * @return
      */
@@ -561,8 +561,8 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         EnrollDO enrollDO = baseMapper.selectById(enrollId);
         ValidationUtils.throwIfNull(enrollDO, "未查询到报名信息");
         ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper
-            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                .eq(ExamineePaymentAuditDO::getEnrollId, enrollId));
+                .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getEnrollId, enrollId));
         ValidationUtils.throwIfNull(examineePaymentAuditDO, "未生成缴费通知单");
         String auditNoticeUrl = examineePaymentAuditDO.getAuditNoticeUrl();
         ValidationUtils.throwIfNull(auditNoticeUrl, "未生成缴费通知单");
@@ -582,7 +582,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     /**
      * 下载某个班级的考试缴费通知单
-     * 
+     *
      * @param classId
      * @param planId
      * @return
@@ -593,7 +593,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         ValidationUtils.throwIfEmpty(auditNoticeList, "该班级下未查询到报名信息");
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ZipOutputStream zos = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
+             ZipOutputStream zos = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
 
             for (WorkerAuditNoticeResp notice : auditNoticeList) {
                 String url = notice.getAuditNoticeUrl();
@@ -629,7 +629,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     /**
      * 下载某个考生的准考证
-     * 
+     *
      * @param enrollId
      * @return
      */
@@ -657,7 +657,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     /**
      * 下载某个班级的准考证
-     * 
+     *
      * @param classId
      * @param planId
      * @return
@@ -670,11 +670,11 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         ValidationUtils.throwIfEmpty(enrollDOS, "该班级未生成准考证");
         List<Long> enrollIds = enrollDOS.stream().map(EnrollDO::getId).toList();
         List<WorkerExamTicketDO> workerExamTicketDOS = workerExamTicketMapper
-            .selectList(new LambdaQueryWrapper<WorkerExamTicketDO>().in(WorkerExamTicketDO::getEnrollId, enrollIds));
+                .selectList(new LambdaQueryWrapper<WorkerExamTicketDO>().in(WorkerExamTicketDO::getEnrollId, enrollIds));
         ValidationUtils.throwIfEmpty(workerExamTicketDOS, "该班级未生成准考证");
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ZipOutputStream zos = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
+             ZipOutputStream zos = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
 
             for (WorkerExamTicketDO workerExamTicketDO : workerExamTicketDOS) {
                 String url = workerExamTicketDO.getTicketUrl();
@@ -710,7 +710,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     /**
      * 重写删除
-     * 
+     *
      * @param ids
      */
     @Override
@@ -726,7 +726,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         // 3️ 批量查询考试计划信息
         List<ExamPlanDO> examPlanList = examPlanMapper.selectBatchIds(planIds);
         Map<Long, ExamPlanDO> planMap = examPlanList.stream()
-            .collect(Collectors.toMap(ExamPlanDO::getId, Function.identity()));
+                .collect(Collectors.toMap(ExamPlanDO::getId, Function.identity()));
 
         // 4️ 考试时间校验
         LocalDateTime now = LocalDateTime.now();
@@ -742,7 +742,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         // 5️ 批量删除缴费审核记录
         // 构造批量条件：同一语句删除多条
         examineePaymentAuditMapper.delete(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-            .in(ExamineePaymentAuditDO::getEnrollId, enrollDOList.stream().map(EnrollDO::getId).toList()));
+                .in(ExamineePaymentAuditDO::getEnrollId, enrollDOList.stream().map(EnrollDO::getId).toList()));
 
         // 6️ 删除报名记录（父类批量删除）
         super.delete(ids);

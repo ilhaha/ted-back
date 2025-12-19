@@ -52,4 +52,19 @@ public class ExamCandidateVO implements Serializable {
      * 考试状态
      */
     private Integer examStatus;
+
+    /**
+     * 违规描述
+     */
+    private String violationDesc;
+
+    /**
+     * 违规图片
+     */
+    private String illegalUrl;
+
+    /**
+     * 考试分数
+     */
+    private String examScores;
 }

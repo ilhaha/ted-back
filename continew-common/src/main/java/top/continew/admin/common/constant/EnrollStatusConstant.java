@@ -69,6 +69,11 @@ public class EnrollStatusConstant {
     public static final Integer SUBMITTED = 2;
 
     /**
+     * 考试状态：违规操作
+     */
+    public static final Integer VIOLATION = 5;
+
+    /**
      * 考试状态：缺考
      */
     public static final Integer ABSENT = 3;

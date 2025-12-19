@@ -19,18 +19,18 @@
     <select id="getDeptProjectTree"
             resultType="top.continew.admin.exam.model.vo.ProjectCategoryProjectFlatVo">
         SELECT
-        tc.id        AS categoryId,
-        tc.name      AS categoryName,
-
-        tp.id        AS projectId,
+        tc.id AS categoryId,
+        tc.name AS categoryName,
+        tp.id AS projectId,
         tp.project_name AS projectName,
         tp.is_operation AS isOperation
-        FROM ted_project tp
-        JOIN ted_category tc ON tc.id = tp.category_id
-        WHERE tp.is_deleted = 0
-        AND tc.is_deleted = 0
+        FROM ted_category tc
+        LEFT JOIN ted_project tp
+        ON tc.id = tp.category_id
+        AND tp.is_deleted = 0
         AND tp.project_status = 2
         AND tp.project_type = #{planType}
+        WHERE tc.is_deleted = 0
         <if test="deptId != null">
             AND tp.dept_id = #{deptId}
         </if>

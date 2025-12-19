@@ -72,7 +72,8 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
                                     @Param(Constants.WRAPPER) QueryWrapper<EnrollDO> queryWrapper);
 
     IPage<ExamCandidateVO> getExamCandidates(@Param("page") Page<EnrollDO> page,
-                                             @Param(Constants.WRAPPER) QueryWrapper<EnrollDO> queryWrapper);
+                                             @Param(Constants.WRAPPER) QueryWrapper<EnrollDO> queryWrapper,
+                                             @Param("planId") Long planId);
 
     //    /**
     //     * 获取当前考试已有人数

@@ -620,6 +620,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
     @Override
     public void update(CategoryReq req, Long id) {
+        System.out.println(req);
         super.update(req, id);
         stringRedisTemplate.delete(RedisConstant.EXAM_CATEGORY_SELECT);
     }
