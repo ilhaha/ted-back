@@ -82,7 +82,7 @@ public class EnrollDO extends BaseDO {
     private String examNumber;
 
     /**
-     * 考试状态（0未签到、1已签到、2已交卷、3缺考、4正在考试）
+     * 考试状态（0未签到、1已签到、2已交卷、3缺考、4正在考试、5有违规操作、6补考、7补考正在考试）
      */
     private Integer examStatus;
 

@@ -71,6 +71,11 @@ public class ExamRecordsDO extends BaseDO {
     private Integer reviewStatus;
 
     /**
+     * 考试类型（0首考、1补考）
+     */
+    private Integer attemptType;
+
+    /**
      * 计划名称（后加）
      */
     @TableField(exist = false)

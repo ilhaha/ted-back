@@ -169,7 +169,8 @@
                te.exam_status,
                tev.violation_desc,
                tev.illegal_url,
-               ter.exam_scores
+               ter.exam_scores,
+               ter.attempt_type
         FROM ted_enroll te
                  LEFT JOIN sys_user
                            ON te.user_id = sys_user.id

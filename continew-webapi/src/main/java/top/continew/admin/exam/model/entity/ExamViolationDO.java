@@ -40,4 +40,10 @@ public class ExamViolationDO extends BaseDO {
      * 违规图片
      */
     private String illegalUrl;
+
+    /**
+     * 逻辑删除
+     */
+    private Integer isDeleted;
+
 }

@@ -19,6 +19,7 @@ package top.continew.admin.exam.controller;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import top.continew.admin.exam.model.req.MakeUpExamReq;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
@@ -50,6 +51,18 @@ import java.util.Map;
 public class EnrollController extends BaseController<EnrollService, EnrollResp, EnrollDetailResp, EnrollQuery, EnrollReq> {
     @Resource
     private EnrollService enrollService;
+
+
+    /**
+     * 监考员设置考生补考
+     * @param req
+     * @return
+     */
+    @PostMapping("/makeUp/exam")
+    public Boolean makeUpExam(@Validated @RequestBody MakeUpExamReq req) {
+        return enrollService.makeUpExam(req);
+    }
+
 
     /**
      * 下载某个班级的准考证

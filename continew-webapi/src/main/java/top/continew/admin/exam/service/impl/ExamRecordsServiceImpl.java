@@ -35,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.ExamRecordsRegisterationProgressEnum;
 import top.continew.admin.common.constant.ExamRecordsReviewStatusEnum;
+import top.continew.admin.common.constant.enums.ExamRecordAttemptEnum;
 import top.continew.admin.common.constant.enums.ExamViolationTypeEnum;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.InMemoryMultipartFile;
@@ -64,6 +65,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
@@ -178,43 +180,79 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void candidatesAdd(ExamRecordsDO examRecordsDO) {
+        // 1 查询是否已有考试记录
+        ExamRecordsDO existingRecord = baseMapper.selectOne(
+                new LambdaQueryWrapper<ExamRecordsDO>()
+                        .eq(ExamRecordsDO::getCandidateId, examRecordsDO.getCandidateId())
+                        .eq(ExamRecordsDO::getPlanId, examRecordsDO.getPlanId())
+                        .last("limit 1")
+        );
 
-        // 1. 修改报名状态
+        // 2 修改报名状态基础信息
         LambdaUpdateWrapper<EnrollDO> enrollUpdate = new LambdaUpdateWrapper<>();
-        enrollUpdate.set(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
-                .eq(EnrollDO::getUserId, examRecordsDO.getCandidateId())
-                .eq(EnrollDO::getExamPlanId, examRecordsDO.getPlanId());
+        enrollUpdate.eq(EnrollDO::getUserId, examRecordsDO.getCandidateId())
+                .eq(EnrollDO::getExamPlanId, examRecordsDO.getPlanId())
+                .set(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
+                .set(EnrollDO::getExamStatus, !ExamViolationTypeEnum.NO_SWITCH.getValue().equals(examRecordsDO.getViolationType())
+                        ? EnrollStatusConstant.VIOLATION : EnrollStatusConstant.SUBMITTED);
 
-        Integer violationType = examRecordsDO.getViolationType();
+        enrollMapper.update(enrollUpdate);
 
-        // 2. 有违规（达到规则）
-        if (!ExamViolationTypeEnum.NO_SWITCH.getValue().equals(violationType)) {
+        // 3 获取成绩（默认0）
+        int newScore = examRecordsDO.getExamScores() != null ? Integer.parseInt(examRecordsDO.getExamScores()) : 0;
 
-            enrollUpdate.set(EnrollDO::getExamStatus, EnrollStatusConstant.VIOLATION);
+        // 4 判断是否补考已有记录
+        if (existingRecord != null && ExamRecordAttemptEnum.RETAKE.getValue().equals(existingRecord.getAttemptType())) {
+            int oldScore = existingRecord.getExamScores() != null ? Integer.parseInt(existingRecord.getExamScores()) : 0;
 
-            ExamViolationDO violation = new ExamViolationDO();
-            violation.setCandidateId(examRecordsDO.getCandidateId());
-            violation.setPlanId(examRecordsDO.getPlanId());
-            violation.setViolationDesc(
-                    ExamViolationTypeEnum.getDescriptionByValue(violationType)
-            );
-            List<String> violationScreenshots = examRecordsDO.getViolationScreenshots();
-            if (ObjectUtil.isNotEmpty(violationScreenshots)) {
-                String screenshotUrls = String.join(",", violationScreenshots);
-                violation.setIllegalUrl(screenshotUrls);
+            // 4.1 新成绩高 → 更新旧记录
+            if (newScore > oldScore) {
+                existingRecord.setExamScores(String.valueOf(newScore));
+                existingRecord.setExamPaper(examRecordsDO.getExamPaper());
+                baseMapper.updateById(existingRecord);
             }
-            // 2.2 插入违规记录
-            examViolationMapper.insert(violation);
 
+            // 4.2 不管新旧高低，都处理违规
+            handleViolation(examRecordsDO);
+
+            // 补考逻辑结束
+            return;
+        }
+
+        // 5 首考或无旧记录 → 处理违规
+        Integer violationType = examRecordsDO.getViolationType();
+        if (!Objects.equals(violationType, ExamViolationTypeEnum.NO_SWITCH.getValue())) {
+            enrollUpdate.set(EnrollDO::getExamStatus, EnrollStatusConstant.VIOLATION);
+            handleViolation(examRecordsDO);
         } else {
-            // 3. 未达到违规规则
             enrollUpdate.set(EnrollDO::getExamStatus, EnrollStatusConstant.SUBMITTED);
         }
 
-        // 5. 更新报名状态
-        enrollMapper.update(enrollUpdate);
-
-        // 6. 插入考试记录
+        // 7 插入考试记录
         baseMapper.insert(examRecordsDO);
     }
+
+    /**
+     * 处理违规记录插入
+     */
+    private void handleViolation(ExamRecordsDO examRecordsDO) {
+        Integer violationType = examRecordsDO.getViolationType();
+        if (violationType == null || ExamViolationTypeEnum.NO_SWITCH.getValue().equals(violationType)) {
+            return;
+        }
+
+        ExamViolationDO violation = new ExamViolationDO();
+        violation.setCandidateId(examRecordsDO.getCandidateId());
+        violation.setPlanId(examRecordsDO.getPlanId());
+        violation.setViolationDesc(ExamViolationTypeEnum.getDescriptionByValue(violationType));
+
+        List<String> violationScreenshots = examRecordsDO.getViolationScreenshots();
+        if (violationScreenshots != null && !violationScreenshots.isEmpty()) {
+            violation.setIllegalUrl(String.join(",", violationScreenshots));
+        }
+
+        examViolationMapper.insert(violation);
+    }
+
+
 }

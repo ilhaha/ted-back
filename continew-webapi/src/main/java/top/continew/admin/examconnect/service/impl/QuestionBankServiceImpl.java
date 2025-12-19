@@ -273,7 +273,8 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         }
         // 修改考试的考试状态
         enrollMapper.update(new LambdaUpdateWrapper<EnrollDO>()
-                .set(EnrollDO::getExamStatus,EnrollStatusConstant.IN_PROGRESS)
+                .set(EnrollDO::getExamStatus,EnrollStatusConstant.SIGNED_IN.equals(enrollDO.getExamStatus()) ?
+                        EnrollStatusConstant.IN_PROGRESS : EnrollStatusConstant.RETAKE_IN_PROGRESS)
                 .eq(EnrollDO::getId,enrollDO.getId()));
         return examPaperVO;
     }
@@ -295,8 +296,8 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         EnrollDO enrollDO = enrollMapper.selectOne(enrollDOLambdaQueryWrapper);
         ValidationUtils.throwIfNull(enrollDO, "未查询到该考生报名信息");
         ValidationUtils.throwIf(
-                !EnrollStatusConstant.SIGNED_IN.equals(enrollDO.getExamStatus()),
-                "当前考生考试状态不允许重置试卷，仅【已签到】状态可重置"
+                !EnrollStatusConstant.SIGNED_IN.equals(enrollDO.getExamStatus()) && !restPaperReq.getIsMakeUp(),
+                "当前考生考试状态不允许重置试卷，仅【已签到、补考】状态可重置"
         );
         // 删除之前的试卷
         Long enrollId = enrollDO.getId();

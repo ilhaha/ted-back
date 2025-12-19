@@ -67,4 +67,9 @@ public class ExamCandidateVO implements Serializable {
      * 考试分数
      */
     private String examScores;
+
+    /**
+     * 考试类型（0首考、1补考）
+     */
+    private Integer attemptType;
 }

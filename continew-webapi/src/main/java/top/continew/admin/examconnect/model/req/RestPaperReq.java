@@ -36,4 +36,9 @@ public class RestPaperReq {
 
     @NotNull(message = "未选择考试计划")
     private Long planId;
+
+    /**
+     * 是否是补考重置试卷
+     */
+    private Boolean isMakeUp;
 }

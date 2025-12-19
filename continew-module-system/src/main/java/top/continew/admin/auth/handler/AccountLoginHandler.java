@@ -200,9 +200,11 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         examCandidateInfoVO.setWarningShortFilm(candidatesExamPlanVo.getWarningShortFilm());
         examCandidateInfoVO.setExamDuration(candidatesExamPlanVo.getExamDuration());
         examCandidateInfoVO.setEnableProctorWarning(candidatesExamPlanVo.getEnableProctorWarning());
-        // 修改考生的考试状态为已签到
-        userService.updateExamStatus(user.getId(), examNumberEncrypt, candidatesExamPlanVo
-            .getPlanId(), EnrollExamStatusEnum.SIGNED.getValue());
+        // 修改考生的考试状态为已签到(如果是补考不修改)
+        if (!EnrollStatusConstant.RETAKE.equals(candidatesExamPlanVo.getExamStatus())) {
+            userService.updateExamStatus(user.getId(), examNumberEncrypt, candidatesExamPlanVo
+                    .getPlanId(), EnrollExamStatusEnum.SIGNED.getValue());
+        }
         return LoginResp.builder()
             .token(token)
             .role(UserConstant.CANDIDATES_ROLE_FLAG)

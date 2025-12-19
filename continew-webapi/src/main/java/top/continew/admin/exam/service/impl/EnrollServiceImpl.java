@@ -21,6 +21,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
@@ -38,15 +39,19 @@ import org.springframework.web.client.RestTemplate;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
 import top.continew.admin.common.constant.enums.ExamPlanTypeEnum;
+import top.continew.admin.common.constant.enums.ExamRecordAttemptEnum;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.*;
+import top.continew.admin.exam.model.req.MakeUpExamReq;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.ExamPlanVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
+import top.continew.admin.examconnect.model.req.RestPaperReq;
+import top.continew.admin.examconnect.service.QuestionBankService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
@@ -107,6 +112,12 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     private final RestTemplate restTemplate = new RestTemplate();
 
     private final WorkerExamTicketMapper workerExamTicketMapper;
+
+    private final ExamRecordsMapper examRecordsMapper;
+
+    private final ExamViolationMapper examViolationMapper;
+
+    private final QuestionBankService questionBankService;
 
     /**
      * 获取报名相关所有信息
@@ -706,6 +717,55 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    /**
+     * 监考员设置考生补考
+     * @param req
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean makeUpExam(MakeUpExamReq req) {
+        Long candidateId = req.getCandidateId();
+        Long planId = req.getPlanId();
+        // 查询考生考试记录
+        ExamRecordsDO examRecordsDO = examRecordsMapper.selectOne(new LambdaQueryWrapper<ExamRecordsDO>()
+                .eq(ExamRecordsDO::getCandidateId, candidateId)
+                .eq(ExamRecordsDO::getPlanId, planId)
+                .last("limit 1"));
+        ValidationUtils.throwIfNull(examRecordsDO,"未查询到该考生的考试记录");
+        int examScores = ObjectUtil.isNull(examRecordsDO.getExamScores()) ? 0 : Integer.parseInt(examRecordsDO.getExamScores());
+        ValidationUtils.throwIf(examScores >= 60,
+                "考生成绩合格，无需补考"
+        );
+
+        ValidationUtils.throwIf(!ExamRecordAttemptEnum.FIRST.getValue().equals(examRecordsDO.getAttemptType()),"补考次数已用完，无法再次补考");
+        //  更新考试记录为补考
+        examRecordsMapper.update(
+                null,
+                new LambdaUpdateWrapper<ExamRecordsDO>()
+                        .eq(ExamRecordsDO::getId, examRecordsDO.getId())
+                        .set(ExamRecordsDO::getAttemptType, ExamRecordAttemptEnum.RETAKE.getValue())
+        );
+
+        // 如果考生首次考试有违规行为先删除
+        examViolationMapper.delete(new LambdaQueryWrapper<ExamViolationDO>()
+                .eq(ExamViolationDO::getCandidateId, candidateId)
+                .eq(ExamViolationDO::getPlanId, planId));
+
+        //  重新生成试卷
+        RestPaperReq restPaperReq = new RestPaperReq();
+        BeanUtils.copyProperties(req, restPaperReq);
+        restPaperReq.setIsMakeUp(Boolean.TRUE);
+        questionBankService.restPaper(restPaperReq);
+
+        // 修改考试的考试状态
+        return this.update(new LambdaUpdateWrapper<EnrollDO>()
+                .eq(EnrollDO::getExamPlanId, planId)
+                .eq(EnrollDO::getUserId,candidateId)
+                .set(EnrollDO::getEnrollStatus,EnrollStatusConstant.SIGNED_UP)
+                .set(EnrollDO::getExamStatus,EnrollStatusConstant.RETAKE));
     }
 
     /**

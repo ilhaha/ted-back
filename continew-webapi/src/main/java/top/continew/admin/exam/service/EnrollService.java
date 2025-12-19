@@ -17,6 +17,7 @@
 package top.continew.admin.exam.service;
 
 import org.springframework.http.ResponseEntity;
+import top.continew.admin.exam.model.req.MakeUpExamReq;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
@@ -151,4 +152,12 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      * @return
      */
     ResponseEntity<byte[]> downloadClassTicket(Long classId, Long planId);
+
+
+    /**
+     * 监考员设置考生补考
+     * @param req
+     * @return
+     */
+    Boolean makeUpExam(MakeUpExamReq req);
 }
