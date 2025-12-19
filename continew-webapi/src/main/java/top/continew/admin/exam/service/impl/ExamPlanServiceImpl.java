@@ -696,8 +696,12 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         List<Long> classroomIds = new ArrayList<>();
         List<Long> theoryIds = req.getTheoryClassroomId();
         List<Long> operIds = req.getOperationClassroomId();
-        ValidationUtils.throwIf(invigilatorCount < (theoryIds.size() + operIds.size()), "所设置的监考员人数不足以分配到全部考场");
-
+        ValidationUtils.throwIf(
+                invigilatorCount <
+                        ((theoryIds == null ? 0 : theoryIds.size()) +
+                                (operIds == null ? 0 : operIds.size())),
+                "所设置的监考员人数不足以分配到全部考场"
+        );
         // 判断有没有启用监考员劳务费
         LaborFeeDO laborFeeDO = laborFeeMapper.selectOne(new LambdaQueryWrapper<LaborFeeDO>().eq(LaborFeeDO::getIsEnabled, Boolean.TRUE));
         ValidationUtils.throwIfNull(laborFeeDO, "当前未配置启用中的监考劳务费规则");
