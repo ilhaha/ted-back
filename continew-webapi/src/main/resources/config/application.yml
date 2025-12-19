@@ -299,7 +299,7 @@ management.health:
     enabled: false
 
 aliyun:
-  accessKeyPath: D:\work\ted\token.properties
+  accessKeyPath: E:\ted\token.properties
   keyId: ALIBABA_CLOUD_ACCESS_KEY_ID
   keySecret: ALIBABA_CLOUD_ACCESS_KEY_SECRET
   region: cn-hangzhou
@@ -315,5 +315,10 @@ aliyun:
   endpoint: dysmsapi.aliyuncs.com
   ocr:
     endpoint: ocr-api.cn-hangzhou.aliyuncs.com
+
+  oss:
+    endpoint: oss-cn-shenzhen.aliyuncs.com
+    bucketName: onedt-exam-system
+    localBasePath: D:\oss\oss-images   # 本地保存路径
 
 

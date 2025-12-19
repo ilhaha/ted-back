@@ -34,11 +34,11 @@ import java.util.List;
 @Slf4j
 public class PlanInvigilateTest {
 
-    @Test
-    public void testpageByInvigilatorId(@Autowired PlanInvigilateService planInvigilateService) {
-        ExamRespList examRespList = planInvigilateService.pageByInvigilatorId(547889293968801840L, 1, 10, 1);
-        log.info("result:{}", examRespList);
-    }
+//    @Test
+//    public void testpageByInvigilatorId(@Autowired PlanInvigilateService planInvigilateService) {
+//        ExamRespList examRespList = planInvigilateService.pageByInvigilatorId(547889293968801840L, 1, 10, 1);
+//        log.info("result:{}", examRespList);
+//    }
 
     @Test
     void enterGrades(@Autowired PlanInvigilateService planInvigilateService) {

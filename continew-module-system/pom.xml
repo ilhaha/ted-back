@@ -36,5 +36,12 @@
             <version>33.4.8-jre</version>
             <scope>compile</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>3.17.2</version>
+        </dependency>
+
     </dependencies>
 </project>
