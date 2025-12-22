@@ -26,6 +26,17 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class QuestionDTO {
+
+    /**
+     * 项目代码
+     */
+    private String projectCode;
+
+    /**
+     * 知识类型名称
+     */
+    private String knowledgeName;
+
     /**
      * 题目标题
      */
@@ -33,7 +44,7 @@ public class QuestionDTO {
     /**
      * 题型（0单选，1判断，2多选）
      */
-    private int questionType;
+    private Integer questionType;
 
     /**
      * 考试人员类型（1-作业人员，2-检验人员）

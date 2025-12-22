@@ -33,6 +33,7 @@ import top.continew.admin.exam.model.entity.ExamPlanDO;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 考试计划 Mapper
@@ -100,4 +101,6 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
     IPage<InvigilateExamPlanVO> invigilateGetPlanList(@Param("page") Page<Object> objectPage,
                                                       @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper,
                                                       @Param("userId") Long userId);
+
+    List<Map<String, Object>> findExamPlansByUsername(@Param("username") String username);
 }

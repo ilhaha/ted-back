@@ -23,6 +23,7 @@ import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
+import top.continew.admin.exam.model.resp.CascaderOptionResp;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -165,5 +166,12 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @return
      */
     ExamCandidateInfoVO startExam(ExamPlanStartReq req);
+
+    /**
+     * 根据考生身份证获取考生的所有考试准考证号
+     * @param username
+     * @return
+     */
+    List<CascaderOptionResp> getExamNumbersByUsername(String username);
 
 }

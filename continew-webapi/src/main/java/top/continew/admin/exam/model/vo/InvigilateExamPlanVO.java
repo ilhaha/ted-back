@@ -98,6 +98,21 @@ public class InvigilateExamPlanVO {
      */
     private Integer examType;
 
+    /**
+     * 最终确认时间地点（0：待管理员确定 1：待中心主任确定 2：中心主任确定 3：中心主任驳回）
+     */
+    private Integer isFinalConfirmed;
+
+    /**
+     * 监考地点
+     */
+    private String locationName;
+
+    /**
+     * 详细地址
+     */
+    private String detailedAddress;
+
 
 
 }

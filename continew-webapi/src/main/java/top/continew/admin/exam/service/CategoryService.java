@@ -50,5 +50,5 @@ public interface CategoryService extends BaseService<CategoryResp, CategoryDetai
      */
     AllPathVo getAllPath(Long id);
 
-    ExcelParseResult verifyExcel(MultipartFile file);
+    Boolean verifyExcel(MultipartFile file);
 }

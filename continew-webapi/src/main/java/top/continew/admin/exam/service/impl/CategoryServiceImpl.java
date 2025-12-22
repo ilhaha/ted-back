@@ -17,6 +17,7 @@
 package top.continew.admin.exam.service.impl;
 
 import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
@@ -32,6 +33,7 @@ import top.continew.admin.common.constant.ImportQuestionConstant;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.exam.mapper.ProjectMapper;
 import top.continew.admin.exam.model.ExcelParseResult;
+import top.continew.admin.exam.model.dto.ProjectInfoDTO;
 import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.exam.model.resp.AllPathVo;
 import top.continew.admin.exam.model.req.dto.OptionDTO;
@@ -96,8 +98,8 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         } else {
             List<ProjectVo> selectOptions = baseMapper.getSelectOptions();
             stringRedisTemplate.opsForValue()
-                .set(RedisConstant.EXAM_CATEGORY_SELECT, JSON.toJSONString(selectOptions), RedisConstant
-                    .randomTTL(), TimeUnit.MILLISECONDS);
+                    .set(RedisConstant.EXAM_CATEGORY_SELECT, JSON.toJSONString(selectOptions), RedisConstant
+                            .randomTTL(), TimeUnit.MILLISECONDS);
             return selectOptions;
         }
     }
@@ -128,13 +130,13 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
     /**
      * 校验导入excel
-     * 
+     *
      * @param file
      * @return
      */
     @Override
     @Transactional
-    public ExcelParseResult verifyExcel(MultipartFile file) {
+    public Boolean verifyExcel(MultipartFile file) {
         // 1. 文件非空校验
         if (file == null || file.isEmpty()) {
             throw new BusinessException("文件不能为空");
@@ -149,121 +151,219 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         try (InputStream is = file.getInputStream()) {
             Workbook workbook = WorkbookFactory.create(is);
 
-            // 3. 校验 sheet 名称格式（示例：分类名称[1],项目名称[2],知识类型名称[3]）
-            String sheetName = workbook.getSheetName(0);
-            String[] categoryInfo = sheetName.split(",");
-            if (categoryInfo.length != 3) {
-                throw new BusinessException("导入文件模板不符合要求，或所选题目分类与文件内容不匹配");
-            }
-
-            // 4. 校验 sheet 是否符合模板定义
-            SheetInfoDTO sheetInfo = parseSheetInfo(workbook);
-            if (!verifySheet(sheetName)) {
-                throw new BusinessException("导入文件模板不符合要求，或所选题目分类与文件内容不匹配");
-            }
-
             // 5. 校验表头
             Sheet sheet = workbook.getSheetAt(0);
             validateHeader(sheet.getRow(0));
 
             // 6. 解析题目信息
             List<QuestionDTO> questions = parseQuestions(sheet);
+
             ValidationUtils.throwIfEmpty(questions, "题目不能为空");
 
-            // 7. 提取ID信息（名称中括号格式：名称[id]）
-            Long categoryId = Long.valueOf(extractBeforeBracket(categoryInfo[0]));
-            Long projectId = Long.valueOf(extractBeforeBracket(categoryInfo[1]));
-            Long knowledgeTypeId = Long.valueOf(extractBeforeBracket(categoryInfo[2]));
 
             // 8. 校验数据库中是否已有相同题目（去重）
-            List<QuestionDTO> filteredQuestions = filterExistingQuestions(questions, categoryId, projectId, knowledgeTypeId);
+            List<QuestionBankDO> filteredQuestions = validateAndPrepareQuestions(questions);
 
             // 9. 写入数据库
-            setQuestionBankMapper(knowledgeTypeId, filteredQuestions, categoryId, projectId);
+            setQuestionBankMapper(filteredQuestions);
 
             // 10. 返回结果（包含导入题目）
-            return new ExcelParseResult(sheetInfo, filteredQuestions);
+            return Boolean.TRUE;
 
         } catch (EncryptedDocumentException e) {
             throw new BusinessException("文件加密无法读取");
         } catch (IOException e) {
             throw new BusinessException("文件读取失败");
         } catch (NumberFormatException e) {
-            throw new BusinessException("工作表名称中ID格式不正确，请检查模板格式");
+            throw new BusinessException("工作表名称中数据格式不正确，请检查模板格式");
         }
     }
 
     /**
-     * 过滤数据库中已存在的题目，避免重复导入
+     * 项目是否存在
+     *
+     * @param questions
      */
     /**
-     * 过滤数据库中已存在的题目（题干相同且选项完全一致的视为重复）
+     * 校验 Excel 导入题目中的项目和知识类型是否存在，并过滤数据库已存在的题目
      */
-    private List<QuestionDTO> filterExistingQuestions(List<QuestionDTO> questions,
-                                                      Long categoryId,
-                                                      Long projectId,
-                                                      Long knowledgeTypeId) {
+    private List<QuestionBankDO> validateAndPrepareQuestions(List<QuestionDTO> questions) {
         if (questions == null || questions.isEmpty()) {
             throw new BusinessException("Excel中未解析到题目信息");
         }
 
-        // 收集题目文本（去空格、换行）
-        List<String> questionTexts = questions.stream()
-            .map(QuestionDTO::getTitle)
-            .filter(Objects::nonNull)
-            .map(q -> q.trim().replaceAll("\\s+", ""))
-            .distinct()
-            .collect(Collectors.toList());
+        /* ================== 1. 校验项目是否存在 ================== */
+        Set<String> projectCodes = questions.stream()
+                .map(QuestionDTO::getProjectCode)
+                .filter(code -> code != null && !code.trim().isEmpty())
+                .map(String::trim)
+                .collect(Collectors.toSet());
 
-        // 查询数据库中同分类、同项目、同知识类型下的题目及其选项集合
-        List<Map<String, Object>> existingList = questionBankMapper
-            .selectExistingQuestions(questionTexts, categoryId, projectId, knowledgeTypeId);
-
-        if (existingList == null || existingList.isEmpty()) {
-            return questions; // 数据库无重复，全部导入
+        if (projectCodes.isEmpty()) {
+            throw new BusinessException("Excel中未填写项目代码");
         }
 
-        // 构建数据库已有题目对应的选项集合映射 Map<题目, List<选项组合字符串>>
-        final Map<String, List<String>> existingMap = existingList.stream()
-            .collect(Collectors.groupingBy(m -> ((String)m.get("question")).trim().replaceAll("\\s+", ""), Collectors
-                .mapping(m -> {
-                    String ans = (String)m.get("allOptions");
-                    return ans == null ? "" : ans.trim().replaceAll("\\s+", "");
-                }, Collectors.toList())));
+        // 查询项目，拿到 projectId 和 categoryId
+        List<ProjectDO> projectList = projectMapper.selectList(
+                new LambdaQueryWrapper<ProjectDO>()
+                        .in(ProjectDO::getProjectCode, projectCodes)
+                        .select(ProjectDO::getId, ProjectDO::getProjectCode, ProjectDO::getCategoryId)
+        );
 
-        // 过滤出未重复的新题
+        if (projectList.isEmpty()) {
+            throw new BusinessException("Excel中的项目代码均不存在");
+        }
+
+        // Map<projectCode, ProjectInfo>
+        Map<String, ProjectInfoDTO> projectCodeInfoMap = projectList.stream()
+                .collect(Collectors.toMap(
+                        ProjectDO::getProjectCode,
+                        p -> new ProjectInfoDTO(p.getId(), p.getCategoryId())
+                ));
+
+        // 不存在的项目代码
+        List<String> notExistProjects = projectCodes.stream()
+                .filter(code -> !projectCodeInfoMap.containsKey(code))
+                .collect(Collectors.toList());
+
+        if (!notExistProjects.isEmpty()) {
+            throw new BusinessException("以下项目代码不存在：" + String.join("、", notExistProjects));
+        }
+
+        /* ================== 2. 校验知识类型是否存在 ================== */
+        Set<String> excelProjectKnowledgeKeys = questions.stream()
+                .filter(q -> q.getKnowledgeName() != null && !q.getKnowledgeName().trim().isEmpty())
+                .map(q -> {
+                    Long projectId = projectCodeInfoMap.get(q.getProjectCode().trim()).getProjectId();
+                    return projectId + "_" + q.getKnowledgeName().trim();
+                })
+                .collect(Collectors.toSet());
+
+        if (excelProjectKnowledgeKeys.isEmpty()) {
+            throw new BusinessException("Excel中未填写知识类型名称");
+        }
+
+        List<KnowledgeTypeDO> knowledgeList = knowledgeTypeMapper.selectList(
+                new LambdaQueryWrapper<KnowledgeTypeDO>()
+                        .in(KnowledgeTypeDO::getProjectId, projectCodeInfoMap.values().stream()
+                                .map(ProjectInfoDTO::getProjectId).collect(Collectors.toSet()))
+                        .select(KnowledgeTypeDO::getId, KnowledgeTypeDO::getProjectId, KnowledgeTypeDO::getName)
+        );
+
+        // Map<"projectId_knowledgeName", knowledgeTypeId>
+        Map<String, Long> knowledgeNameIdMap = knowledgeList.stream()
+                .collect(Collectors.toMap(
+                        k -> k.getProjectId() + "_" + k.getName().trim(),
+                        KnowledgeTypeDO::getId
+                ));
+
+        List<String> notExistKnowledge = excelProjectKnowledgeKeys.stream()
+                .filter(key -> !knowledgeNameIdMap.containsKey(key))
+                .map(key -> {
+                    String[] arr = key.split("_", 2);
+                    Long projectId = Long.valueOf(arr[0]);
+                    String knowledgeName = arr[1];
+
+                    String projectCode = projectCodeInfoMap.entrySet().stream()
+                            .filter(e -> e.getValue().getProjectId().equals(projectId))
+                            .map(Map.Entry::getKey)
+                            .findFirst()
+                            .orElse("未知项目");
+
+                    return "项目【" + projectCode + "】的知识类型【" + knowledgeName + "】";
+                })
+                .collect(Collectors.toList());
+
+        if (!notExistKnowledge.isEmpty()) {
+            throw new BusinessException("以下知识类型不存在：" + String.join("、", notExistKnowledge));
+        }
+
+        /* ================== 3. 过滤数据库已存在的题目 ================== */
+        List<QuestionDTO> newQuestions = filterExistingQuestions(questions, projectCodeInfoMap, knowledgeNameIdMap);
+
+        /* ================== 4. 构建 QuestionBankDO 列表 ================== */
+        List<QuestionBankDO> questionBankDOS = newQuestions.stream().map(item -> {
+            ProjectInfoDTO info = projectCodeInfoMap.get(item.getProjectCode().trim());
+            Long knowledgeTypeId = knowledgeNameIdMap.get(info.getProjectId() + "_" + item.getKnowledgeName().trim());
+
+            QuestionBankDO questionBankDO = new QuestionBankDO();
+            questionBankDO.setCategoryId(info.getCategoryId());
+            questionBankDO.setSubCategoryId(info.getProjectId());
+            questionBankDO.setKnowledgeTypeId(knowledgeTypeId);
+            questionBankDO.setQuestionType(item.getQuestionType());
+            questionBankDO.setQuestion(item.getTitle());
+            questionBankDO.setOptions(item.getOptions());
+            questionBankDO.setExamType(item.getExamType());
+            return questionBankDO;
+        }).collect(Collectors.toList());
+
+        return questionBankDOS;
+    }
+
+    /**
+     * 过滤数据库中已存在的题目（题干相同且选项完全一致的视为重复）
+     */
+    private List<QuestionDTO> filterExistingQuestions(List<QuestionDTO> questions,
+                                                      Map<String, ProjectInfoDTO> projectCodeInfoMap,
+                                                      Map<String, Long> knowledgeNameIdMap) {
+        List<String> questionTexts = questions.stream()
+                .map(QuestionDTO::getTitle)
+                .filter(Objects::nonNull)
+                .map(q -> q.trim().replaceAll("\\s+", ""))
+                .distinct()
+                .collect(Collectors.toList());
+
+        Set<Long> projectIds = questions.stream()
+                .map(q -> projectCodeInfoMap.get(q.getProjectCode().trim()).getProjectId())
+                .collect(Collectors.toSet());
+
+        Set<Long> knowledgeTypeIds = questions.stream()
+                .map(q -> knowledgeNameIdMap.get(
+                        projectCodeInfoMap.get(q.getProjectCode().trim()).getProjectId() + "_" + q.getKnowledgeName().trim()
+                ))
+                .collect(Collectors.toSet());
+
+        List<Map<String, Object>> existingList = questionBankMapper.selectExistingQuestionsByProjectAndKnowledge(
+                questionTexts, projectIds, knowledgeTypeIds
+        );
+
+        final Map<String, List<String>> existingMap = existingList.stream()
+                .collect(Collectors.groupingBy(
+                        m -> ((String) m.get("question")).trim().replaceAll("\\s+", ""),
+                        Collectors.mapping(m -> {
+                            String ans = (String) m.get("allOptions");
+                            return ans == null ? "" : ans.trim().replaceAll("\\s+", "");
+                        }, Collectors.toList())
+                ));
+
         List<QuestionDTO> newQuestions = questions.stream().filter(q -> {
             String qTitle = q.getTitle() == null ? "" : q.getTitle().trim().replaceAll("\\s+", "");
 
-            // 组装 Excel 当前题目的选项集合（包括是否正确）
             String qOptions;
             if (q.getOptions() != null && !q.getOptions().isEmpty()) {
                 qOptions = q.getOptions().stream().map(opt -> {
                     String content = opt.getQuestion() == null ? "" : opt.getQuestion().trim().replaceAll("\\s+", "");
                     int correct = Boolean.TRUE.equals(opt.getIsCorrect()) ? 1 : 0;
                     return content + "[" + correct + "]";
-                })
-                    .sorted() // 排序避免顺序差异
-                    .collect(Collectors.joining("、"));
+                }).sorted().collect(Collectors.joining("、"));
             } else {
                 qOptions = "";
             }
 
             List<String> existingOptionsList = existingMap.get(qTitle);
             if (existingOptionsList == null || existingOptionsList.isEmpty()) {
-                return true; // 数据库中无此题目，直接导入
+                return true;
             }
 
-            // 判断是否存在完全相同的选项集合（任意一条一致则视为重复）
             boolean duplicate = existingOptionsList.stream()
-                .anyMatch(dbOptions -> compareOptionSets(dbOptions, qOptions));
-
-            return !duplicate; // 不重复则保留导入
+                    .anyMatch(dbOptions -> compareOptionSets(dbOptions, qOptions));
+            return !duplicate;
         }).collect(Collectors.toList());
 
         if (newQuestions.isEmpty()) {
             throw new BusinessException("所有题目（含选项）均已存在，无需重复导入");
         }
+
         return newQuestions;
     }
 
@@ -277,38 +377,27 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             return false;
 
         Set<String> dbSet = Arrays.stream(dbOptions.split("[、,，;；]"))
-            .map(s -> s.trim().toUpperCase())
-            .filter(s -> !s.isEmpty())
-            .collect(Collectors.toSet());
+                .map(s -> s.trim().toUpperCase())
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
 
         Set<String> excelSet = Arrays.stream(excelOptions.split("[、,，;；]"))
-            .map(s -> s.trim().toUpperCase())
-            .filter(s -> !s.isEmpty())
-            .collect(Collectors.toSet());
+                .map(s -> s.trim().toUpperCase())
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
 
         return dbSet.equals(excelSet);
     }
 
-    private void setQuestionBankMapper(Long knowledgeTypeId,
-                                       List<QuestionDTO> questions,
-                                       Long categoryId,
-                                       Long projectId) {
-        List<QuestionBankDO> questionBankDOS = questions.stream().map(item -> {
-            QuestionBankDO questionBankDO = new QuestionBankDO();
-            questionBankDO.setCategoryId(categoryId);
-            questionBankDO.setSubCategoryId(projectId);
-            questionBankDO.setKnowledgeTypeId(knowledgeTypeId);
-            questionBankDO.setQuestionType(item.getQuestionType());
-            questionBankDO.setQuestion(item.getTitle());
-            questionBankDO.setOptions(item.getOptions());
-            questionBankDO.setExamType(item.getExamType());
-            return questionBankDO;
-        }).collect(Collectors.toList());
-
-        questionBankMapper.insertBatch(questionBankDOS);
+    private void setQuestionBankMapper(List<QuestionBankDO> questions) {
+        if (questions == null || questions.isEmpty()) {
+            return;
+        }
+        // 批量插入题目
+        questionBankMapper.insertBatch(questions);
 
         List<StepDO> stepDOS = new ArrayList<>();
-        for (QuestionBankDO questionBankDO : questionBankDOS) {
+        for (QuestionBankDO questionBankDO : questions) {
             for (OptionDTO option : questionBankDO.getOptions()) {
                 StepDO stepDO = new StepDO();
                 stepDO.setQuestionBankId(questionBankDO.getId());
@@ -318,9 +407,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             }
         }
 
-        boolean b = stepMapper.insertBatch(stepDOS);
-        //添加成功提示
-
+        stepMapper.insertBatch(stepDOS);
     }
 
     public static String extractBeforeBracket(String input) {
@@ -331,7 +418,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     }
 
     private void validateHeader(Row headerRow) {
-        if (headerRow == null || headerRow.getPhysicalNumberOfCells() < ImportQuestionConstant.HEADERS.length) {
+        if (headerRow == null || headerRow.getPhysicalNumberOfCells() != ImportQuestionConstant.HEADERS.length) {
             throw new BusinessException("表头缺失或列数不足，应至少包含 " + ImportQuestionConstant.HEADERS.length + " 列");
         }
 
@@ -339,7 +426,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             String cellValue = getCellValue(headerRow.getCell(i));
             if (!ImportQuestionConstant.HEADERS[i].equals(cellValue)) {
                 throw new BusinessException(String
-                    .format("第 %d 列表头不正确，应为「%s」，实际为「%s」", i + 1, ImportQuestionConstant.HEADERS[i], cellValue));
+                        .format("第 %d 列表头不正确，应为「%s」，实际为「%s」", i + 1, ImportQuestionConstant.HEADERS[i], cellValue));
             }
         }
     }
@@ -348,25 +435,35 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     private List<QuestionDTO> parseQuestions(Sheet sheet) {
         List<QuestionDTO> questions = new ArrayList<>();
 
+        // 从第 2 行开始（假设 0=说明，1=表头）
         for (int rowIdx = 2; rowIdx <= sheet.getLastRowNum(); rowIdx++) {
             Row row = sheet.getRow(rowIdx);
-            if (row == null)
-                break; // 遇到空行停止
-
-            // 检查题目标题是否为空
-            String title = getCellValue(row.getCell(0));
-            if (title == null || title.trim().isEmpty())
+            if (row == null) {
                 break;
+            }
+
+            // 问题列在第 2 列
+            String title = getCellValue(row.getCell(2));
+            if (title == null || title.trim().isEmpty()) {
+                break;
+            }
 
             QuestionDTO question = new QuestionDTO();
             try {
-                // 解析基础信息
-                question.setTitle(parseRequiredString(row.getCell(0), "问题", rowIdx));
-                question.setQuestionType(parseQuestionType(row.getCell(1), rowIdx));
-                Cell examTypeCell = row.getCell(2);
-                question.setExamType(parseExamType(examTypeCell, rowIdx));
-                // 解析选项和答案
+                // 项目代码
+                question.setProjectCode(parseRequiredString(row.getCell(0), "项目代码", rowIdx));
+                // 知识类型名称
+                question.setKnowledgeName(parseRequiredString(row.getCell(1), "知识类型名称", rowIdx));
+                // 问题
+                question.setTitle(parseRequiredString(row.getCell(2), "问题", rowIdx));
+                // 题型（第 8 列）
+                question.setQuestionType(parseQuestionType(row.getCell(8), rowIdx));
+                // 选项从第 4 列开始（A、B、C、D...）
                 parseDynamicOptions(row, question, rowIdx);
+
+                // 考试人员类型（第 9 列）
+                question.setExamType(parseExamType(row.getCell(9), rowIdx));
+
                 questions.add(question);
             } catch (BusinessException e) {
                 throw new BusinessException(e.getMessage());
@@ -375,13 +472,13 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         return questions;
     }
 
+
     private void parseDynamicOptions(Row row, QuestionDTO question, int rowIdx) {
         List<OptionDTO> options = new ArrayList<>();
 
         // ---------------- 1. 解析正确答案列（第 7 列） ----------------
         Cell answerCell = row.getCell(7);
         String answerRaw = getCellValue(answerCell).trim();
-
         if (answerRaw.isEmpty()) {
             throw new BusinessException("第" + (rowIdx + 1) + "行：未填写正确答案");
         }
@@ -426,10 +523,9 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
     private Set<String> parseAnswerLetters(String answerRaw, int rowIdx) {
         Set<String> set = Arrays.stream(answerRaw.split(","))
-            .map(String::trim)
-            .filter(s -> !s.isEmpty())
-            .collect(Collectors.toSet());
-
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
         // 校验答案必须是 A/B/C/D
         for (String s : set) {
             if (!s.matches("^[A-D]$")) {
@@ -457,18 +553,16 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         // 去掉空格
         value = value.trim();
 
-        try {
-            int type = Integer.parseInt(value);
-
-            // 校验 1 / 2
-            if (type < 1 || type > 2) {
-                throw new BusinessException(String.format("第%d行：考试人员类型必须是 1（作业人员）、2（检验人员）", rowIdx + 1));
-            }
-
-            return type;
-
-        } catch (NumberFormatException e) {
-            throw new BusinessException(String.format("第%d行：考试人员类型必须为数字 1 或 2", rowIdx + 1));
+        // 中文题型映射到数字
+        switch (value) {
+            case "作业人员":
+                return 1;
+            case "检验人员":
+                return 2;
+            default:
+                throw new BusinessException(
+                        String.format("第%d行：考试人员类型必须填写作业人员、或检验人员", rowIdx + 1)
+                );
         }
     }
 
@@ -502,18 +596,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     // 题型相关验证
     private void validateOptionsByType(int questionType, List<OptionDTO> options, int rowIdx) {
         long correctCount = options.stream().filter(OptionDTO::getIsCorrect).count();
-
         switch (questionType) {
-
-            case 1: // 判断题
-                if (options.size() != 2) {
-                    throw new BusinessException("第" + (rowIdx + 1) + "行：判断题必须有且只有两个选项");
-                }
-                if (correctCount != 1) {
-                    throw new BusinessException("第" + (rowIdx + 1) + "行：判断题必须有且只有一个正确答案");
-                }
-                break;
-
             case 0: // 单选题
                 if (options.size() < 2) {
                     throw new BusinessException("第" + (rowIdx + 1) + "行：单选题至少需要两个选项");
@@ -522,7 +605,14 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
                     throw new BusinessException("第" + (rowIdx + 1) + "行：单选题必须有且只有一个正确答案");
                 }
                 break;
-
+            case 1: // 判断题
+                if (options.size() != 2) {
+                    throw new BusinessException("第" + (rowIdx + 1) + "行：判断题必须有且只有两个选项");
+                }
+                if (correctCount != 1) {
+                    throw new BusinessException("第" + (rowIdx + 1) + "行：判断题必须有且只有一个正确答案");
+                }
+                break;
             case 2: // 多选题
                 if (options.size() < 2) {
                     throw new BusinessException("第" + (rowIdx + 1) + "行：多选题至少需要两个选项");
@@ -549,7 +639,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
                 if (DateUtil.isCellDateFormatted(cell)) {
                     return new SimpleDateFormat("yyyy-MM-dd").format(cell.getDateCellValue());
                 }
-                return String.valueOf((int)cell.getNumericCellValue());
+                return String.valueOf((int) cell.getNumericCellValue());
             case BOOLEAN:
                 return String.valueOf(cell.getBooleanCellValue());
             default:
@@ -581,7 +671,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
     // 解析必填字段
     private String parseRequiredString(Cell cell, String fieldName, int rowIdx) {
-        String value = (String)getCellValue(cell);
+        String value = getCellValue(cell);
         value = value.trim();
         if (value.isEmpty()) {
             throw new BusinessException(String.format("第%d行：%s不能为空", rowIdx + 1, fieldName));
@@ -590,24 +680,24 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     }
 
     // 解析题目类型
-    private int parseQuestionType(Cell cell, int rowIdx) {
+    private Integer parseQuestionType(Cell cell, int rowIdx) {
         String value = parseRequiredString(cell, "题型", rowIdx);
 
         // 去掉空格
         value = value.trim();
 
-        try {
-            int type = Integer.parseInt(value);
-
-            // 校验 0 / 1 / 2
-            if (type < 0 || type > 2) {
-                throw new BusinessException(String.format("第%d行：题型必须是 0（单选）、1（判断）、2（多选）", rowIdx + 1));
-            }
-
-            return type;
-
-        } catch (NumberFormatException e) {
-            throw new BusinessException(String.format("第%d行：题型必须为数字 0、1 或 2", rowIdx + 1));
+        // 中文题型映射到数字
+        switch (value) {
+            case "单选题":
+                return 0;
+            case "判断题":
+                return 1;
+            case "多选题":
+                return 2;
+            default:
+                throw new BusinessException(
+                        String.format("第%d行：题型必须填写单选题、判断题或多选题", rowIdx + 1)
+                );
         }
     }
 
@@ -620,7 +710,6 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
     @Override
     public void update(CategoryReq req, Long id) {
-        System.out.println(req);
         super.update(req, id);
         stringRedisTemplate.delete(RedisConstant.EXAM_CATEGORY_SELECT);
     }

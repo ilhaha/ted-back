@@ -47,6 +47,7 @@ import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.DateUtil;
+import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
@@ -55,6 +56,7 @@ import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
+import top.continew.admin.exam.model.resp.CascaderOptionResp;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -70,11 +72,13 @@ import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
 import top.continew.admin.invigilate.model.resp.InvigilatorAssignResp;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.system.service.UserService;
 import top.continew.admin.training.mapper.OrgClassMapper;
 import top.continew.admin.training.model.entity.OrgClassDO;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
+import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -149,6 +153,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     private final OrgClassMapper orgClassMapper;
 
     private final LaborFeeMapper laborFeeMapper;
+
+    private UserService userService;
 
     @Override
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
@@ -790,9 +796,6 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         // 获取所选时间段有空闲的监考人员并上传了对应八大类资质的
         List<AvailableInvigilatorResp> availableInvigilatorList = planInvigilateMapper
                 .selectAvailableInvigilators(startTime, planId, invigilatorId);
-        for (AvailableInvigilatorResp availableInvigilatorResp : availableInvigilatorList) {
-            System.out.println(availableInvigilatorResp.getNickname());
-        }
         ValidationUtils.throwIf(ObjectUtil.isEmpty(availableInvigilatorList) || availableInvigilatorList.size() < invigilatorNum,
                 "当前时间段可分配的监考员或有资质的监考员数量不足");
         Collections.shuffle(availableInvigilatorList);
@@ -1189,6 +1192,12 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
        baseMapper.update(new LambdaUpdateWrapper<ExamPlanDO>().set(ExamPlanDO::getStatus, PlanConstant.EXAM_BEGUN.getStatus())
                .eq(ExamPlanDO::getId,planId));
 
+       // 修改监考员状态
+        planInvigilateMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>()
+                .set(PlanInvigilateDO::getInvigilateStatus,InvigilateStatusEnum.DURING_NVIGILATION.getValue())
+                .eq(PlanInvigilateDO::getClassroomId,classroomId)
+                .eq(PlanInvigilateDO::getExamPlanId,planId));
+
         // 查出考场对应的信息
         ClassroomDO classroomDO = classroomMapper.selectById(classroomId);
 
@@ -1203,6 +1212,51 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         return examCandidateInfoVO;
     }
+
+    /**
+     * 根据考生身份证获取考生的所有考试准考证号
+     * @param username
+     * @return
+     */
+    @Override
+    public List<CascaderOptionResp> getExamNumbersByUsername(String username) {
+        // 解密用户名
+        String verifyUsername = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(username));
+        ValidationUtils.throwIfNull(verifyUsername, "请核对身份证号是否正确");
+
+        String usernameDB = aesWithHMAC.encryptAndSign(verifyUsername);
+
+        UserDO user = userMapper.selectByUsername(usernameDB);
+        ValidationUtils.throwIf(cn.hutool.core.util.ObjectUtil.isEmpty(user), "请核对身份证号是否正确");
+
+        List<Map<String, Object>> list = baseMapper.findExamPlansByUsername(usernameDB);
+        ValidationUtils.throwIfEmpty(list, "未查询到考试");
+
+        // 过滤掉 exam_plan_id 为 null 的记录再分组
+        Map<Long, List<Map<String, Object>>> groupMap = list.stream()
+                .filter(m -> m.get("exam_plan_id") != null && m.get("exam_number") != null)
+                .collect(Collectors.groupingBy(m -> (Long) m.get("exam_plan_id")));
+
+        List<CascaderOptionResp> cascaderList = new ArrayList<>();
+
+        for (Map.Entry<Long, List<Map<String, Object>>> entry : groupMap.entrySet()) {
+            Long planId = entry.getKey();
+            String planName = (String) entry.getValue().get(0).get("exam_plan_name");
+
+            List<CascaderOptionResp> children = entry.getValue().stream()
+                    .map(m -> {
+                        String examNumber = (String) m.get("exam_number");
+                        String decryptedNumber = aesWithHMAC.verifyAndDecrypt(examNumber);
+                        return new CascaderOptionResp(decryptedNumber, decryptedNumber);
+                    })
+                    .toList();
+
+            cascaderList.add(new CascaderOptionResp(planId, planName, children));
+        }
+
+        return cascaderList;
+    }
+
 
     /**
      * 随机生成监考员开考密码

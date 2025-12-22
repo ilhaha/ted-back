@@ -181,13 +181,15 @@
     <select id="invigilateGetPlanList" resultType="top.continew.admin.exam.model.vo.InvigilateExamPlanVO">
         SELECT tep.id AS 'plan_id', tep.plan_type,
                tep.exam_plan_name AS 'plan_name', tep.start_time,
+               tep.is_final_confirmed,
                tp.project_name,
                tp.id AS 'project_id', tp.project_code,
                tp.exam_duration,
                tc.`name` AS 'category_name', tpi.invigilate_status,
                classroom.classroom_name,
                classroom.exam_type,
-               classroom.id AS 'classroom_id'
+               classroom.id AS 'classroom_id', tel.location_name,
+               tel.detailed_address
         FROM ted_plan_invigilate tpi
                  INNER JOIN ted_exam_plan tep
                             ON tpi.exam_plan_id = tep.id
@@ -196,11 +198,25 @@
                  LEFT JOIN ted_category tc
                            ON tp.category_id = tc.id AND tc.is_deleted = 0
                  LEFT JOIN ted_classroom classroom
-                           ON tpi.classroom_id = classroom.id AND classroom.is_deleted = 0 ${ew.customSqlSegment}
-        AND tpi.invigilator_id = #{userId}
+                           ON tpi.classroom_id = classroom.id AND classroom.is_deleted = 0
+                 LEFT JOIN ted_location_classroom tlc
+                           ON classroom.id = tlc.classroom_id AND tlc.is_deleted = 0
+                 LEFT JOIN ted_exam_location tel
+                           ON tlc.location_id = tel.id AND tel.is_deleted = 0 ${ew.customSqlSegment}
+            AND tpi.invigilator_id = #{userId}
             AND tpi.is_deleted = 0
             AND tep.is_deleted = 0
         ORDER BY tep.start_time
+    </select>
+    <select id="findExamPlansByUsername" resultType="java.util.Map">
+        SELECT tep.exam_plan_name, te.exam_number,tep.id AS exam_plan_id
+        FROM sys_user su
+                 LEFT JOIN ted_enroll te
+                           ON su.id = te.user_id AND te.is_deleted = 0
+                 LEFT JOIN ted_exam_plan tep
+                           ON te.exam_plan_id = tep.id AND tep.is_deleted = 0
+        WHERE su.username = #{username}
+          AND te.enroll_status = 1
     </select>
 
 

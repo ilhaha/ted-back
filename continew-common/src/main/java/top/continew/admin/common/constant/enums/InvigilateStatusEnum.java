@@ -22,7 +22,7 @@ import lombok.Getter;
 public enum InvigilateStatusEnum {
 
     NOT_START(0, "待监考"), TO_FILL(1, "待录入"), TO_AUDIT(2, "待审核"), FINISHED(3, "已完成"), TO_CONFIRM(4, "待监考员确认"),
-    REJECTED(5, "监考员拒绝监考");
+    REJECTED(5, "监考员拒绝监考"),DURING_NVIGILATION(6, "监考中");
 
     private final Integer value;
     private final String description;

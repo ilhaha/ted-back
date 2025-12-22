@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.controller;
 
+import cn.dev33.satoken.annotation.SaIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
+import top.continew.admin.exam.model.resp.CascaderOptionResp;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectCategoryTreeVo;
@@ -66,6 +68,17 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     @Resource
     private ExamPlanService examPlanService;
+
+    /**
+     * 根据考生身份证获取考生的所有考试准考证号
+     * @param username
+     * @return
+     */
+    @SaIgnore
+    @GetMapping("/examNumbers")
+    public  List<CascaderOptionResp> getExamNumbersByUsername(@RequestParam String username) {
+        return baseService.getExamNumbersByUsername(username);
+    }
 
     /**
      * 监考员进行开考

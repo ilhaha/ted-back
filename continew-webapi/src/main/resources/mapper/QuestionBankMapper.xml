@@ -78,7 +78,40 @@
         </if>
         GROUP BY qb.id, qb.question
     </select>
-
+    <select id="selectExistingQuestionsByProjectAndKnowledge" resultType="map">
+        SELECT
+        qb.id AS id,
+        qb.question AS question,
+        COALESCE(
+        GROUP_CONCAT(CONCAT(TRIM(s.question), '[', s.is_correct_answer, ']')
+        ORDER BY s.id SEPARATOR '、'),
+        ''
+        ) AS allOptions
+        FROM ted_question_bank qb
+        LEFT JOIN ted_step s
+        ON qb.id = s.question_bank_id
+        AND s.is_deleted = 0
+        WHERE qb.is_deleted = 0
+        <if test="projectIds != null and projectIds.size() > 0">
+            AND qb.sub_category_id IN
+            <foreach collection="projectIds" item="pid" open="(" separator="," close=")">
+                #{pid}
+            </foreach>
+        </if>
+        <if test="knowledgeTypeIds != null and knowledgeTypeIds.size() > 0">
+            AND qb.knowledge_type_id IN
+            <foreach collection="knowledgeTypeIds" item="kid" open="(" separator="," close=")">
+                #{kid}
+            </foreach>
+        </if>
+        <if test="questionList != null and questionList.size() > 0">
+            AND qb.question IN
+            <foreach collection="questionList" item="q" open="(" separator="," close=")">
+                #{q}
+            </foreach>
+        </if>
+        GROUP BY qb.id, qb.question
+    </select>
 
 
 
