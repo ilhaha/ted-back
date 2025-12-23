@@ -16,14 +16,17 @@
 
 package top.continew.admin.examconnect.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -69,15 +72,39 @@ public class KnowledgeTypeServiceImpl extends BaseServiceImpl<KnowledgeTypeMappe
     @Transactional(rollbackFor = Exception.class)
     public Long add(KnowledgeTypeReq req) {
         validateProportionSum(req, null);
+        validateUnique(req, null);
         return super.add(req);
     }
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(KnowledgeTypeReq req, Long id) {
         validateProportionSum(req, id);
+        validateUnique(req, id);
         super.update(req, id);
     }
+
+
+    /**
+     * 校验知识类型名称在所属八大类和项目下的唯一性（新增、修改通用）
+     */
+    private void validateUnique(KnowledgeTypeReq req, Long excludeId) {
+        LambdaQueryWrapper<KnowledgeTypeDO> qw = Wrappers.lambdaQuery();
+
+        qw.eq(KnowledgeTypeDO::getName, req.getName())
+                .eq(KnowledgeTypeDO::getProjectId, req.getProjectId())
+                .eq(KnowledgeTypeDO::getIsDeleted, 0);
+        // 修改时排除自身
+        if (excludeId != null) {
+            qw.ne(KnowledgeTypeDO::getId, excludeId);
+        }
+        boolean exists = this.count(qw) > 0;
+        if (exists) {
+            throw new BusinessException("该知识类型在所属八大类和项目下已存在，请勿重复添加");
+        }
+    }
+
 
     /**
      * 校验某项目所有知识类型的占比总和是否超过 100%（新增、修改通用）

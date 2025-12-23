@@ -50,6 +50,18 @@ public class KnowledgeTypeResp extends BaseResp {
     @Schema(description = "项目名称")
     private String projectName;
 
+
+    /**     * 所属八大类id
+     */
+    @Schema(description = "所属八大类id")
+    private String categoryId;
+
+    /**
+     * 所属八大类名称
+     */
+    @Schema(description = "所属八大类名称")
+    private String categoryName;
+
     /**
      * 知识类型名称
      */

@@ -11,10 +11,11 @@ import org.springframework.context.annotation.Configuration;
  */
 @Data
 @Configuration
-@ConfigurationProperties(prefix = "aliyun")
+@ConfigurationProperties(prefix = "continew.oss.aliyun")
 public class AliyunProperties {
 
     private String accessKeyPath;
+
     private String region;
 
     private Oss oss = new Oss();

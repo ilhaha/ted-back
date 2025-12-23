@@ -29,7 +29,9 @@
         ON tc.id = tp.category_id
         AND tp.is_deleted = 0
         AND tp.project_status = 2
-        AND tp.project_type = #{planType}
+        <if test="planType != null and planType != 2">
+            AND tp.project_type = #{planType}
+        </if>
         WHERE tc.is_deleted = 0
         <if test="deptId != null">
             AND tp.dept_id = #{deptId}

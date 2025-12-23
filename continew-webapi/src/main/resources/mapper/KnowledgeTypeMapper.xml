@@ -6,21 +6,24 @@
         SELECT
             t1.id,
             t1.project_id,
-            t2.project_name as projectName,
+            t2.project_name AS projectName,
+            t5.name AS categoryName,
             t1.`name`,
             t1.proportion,
-            t3.nickname as create_user_str,
-            t4.nickname as update_user_str,
+            t3.nickname AS create_user_str,
+            t4.nickname AS update_user_str,
             t1.create_time,
             t1.update_time
-        FROM
-            ted_knowledge_type as t1
-        LEFT JOIN ted_project as t2 ON t1.project_id = t2.id
-        LEFT JOIN sys_user as t3 ON t1.create_user = t3.id
-        LEFT JOIN sys_user as t4 ON t1.update_user = t4.id
+        FROM ted_knowledge_type t1
+                 LEFT JOIN ted_project t2
+                           ON t1.project_id = t2.id
+                 LEFT JOIN ted_category t5
+                           ON t2.category_id = t5.id
+                 LEFT JOIN sys_user t3
+                           ON t1.create_user = t3.id
+                 LEFT JOIN sys_user t4
+                           ON t1.update_user = t4.id
     </sql>
-
-
     <select id="selectKnowledgeTypePage"
             resultType="top.continew.admin.examconnect.model.resp.KnowledgeTypeResp">
         <include refid="selectKnowledgeTypePage"/>
