@@ -126,7 +126,7 @@
     </select>
     <select id="getEnrolledPlan" resultType="top.continew.admin.exam.model.resp.EnrollResp">
         select start_time as examStartTime,
-               end_time   as examEndTime,
+               enroll_end_time   as EnrollEndTime,
                ted_exam_plan.id
         from ted_exam_plan
                  left join ted.ted_enroll on ted_enroll.exam_plan_id = ted_exam_plan.id

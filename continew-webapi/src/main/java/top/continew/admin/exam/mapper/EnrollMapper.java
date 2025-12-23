@@ -87,6 +87,16 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
     @Select("select count(1) from ted.ted_enroll where exam_plan_id= #{examPlanId} and is_deleted = 0 and enroll_status in(1, 4, 5)")
     Long getEnrollCount(@Param("examPlanId") Long examPlanId);
 
+
+
+    /**
+     * 是否存在占名额的报名记录
+     */
+    @Select("select count(1) > 0 from ted.ted_enroll where exam_plan_id= #{examPlanId} and user_id = #{userId} and is_deleted = 0 and enroll_status in(1, 4, 5)")
+    boolean existsValidEnroll(@Param("examPlanId") Long examPlanId,
+                              @Param("userId") Long userId);
+
+
     /**
      * 取消报名
      */

@@ -391,15 +391,26 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划");
         ValidationUtils.throwIf(!ExamPlanTypeEnum.INSPECTION.getValue()
                 .equals(examPlanDO.getPlanType()), "无法报名作业人员考试计划");
-        //1.检查是否存在报名时间冲突
-        List<EnrollResp> enrollRespList = enrollMapper.getEnrolledPlan(TokenLocalThreadUtil.get().getUserId());
-        enrollRespList.forEach(enrollResp -> {
-            boolean isConflict = !enrollResp.getExamEndTime().isBefore(examPlanDO.getStartTime()) && !enrollResp
-                    .getExamStartTime()
-                    .isAfter(examPlanDO.getEndTime());
-
-            ValidationUtils.throwIf(isConflict, "与已报名考试存在时间冲突");
-        });
+        LocalDateTime now = LocalDateTime.now();
+        // 考试开始后不能报名
+        ValidationUtils.throwIf(
+                !now.isBefore(examPlanDO.getStartTime()),
+                "考试已开始，无法报名"
+        );
+        // 报名截止后不能报名
+        ValidationUtils.throwIf(
+                now.isAfter(examPlanDO.getEnrollEndTime()),
+                "已超过报名截止时间，无法报名"
+        );
+//        //1.检查是否存在报名时间冲突
+//        List<EnrollResp> enrollRespList = enrollMapper.getEnrolledPlan(TokenLocalThreadUtil.get().getUserId());
+//        enrollRespList.forEach(enrollResp -> {
+//            boolean isConflict = !enrollResp.getExamEndTime().isBefore(examPlanDO.getStartTime()) && !enrollResp
+//                    .getExamStartTime()
+//                    .isAfter(examPlanDO.getEndTime());
+//
+//            ValidationUtils.throwIf(isConflict, "与已报名考试存在时间冲突");
+//        });
         //2.先是否可以报名（人数是否以达到上限)
         //        //2.1获取本场考试信息
         //        ExamPlanVO examPlanVO = new ExamPlanVO();
@@ -417,16 +428,20 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         //        //            throw new BusinessException("报名考试计划的人数已经达到:" + maxNumber);
         //        //        }
         //        ValidationUtils.throwIf(actualCount + 1 > maxNumber, "报名考试计划的人数已满:" + maxNumber);
-        //先是否可以报名（人数是否以达到上限)查找最大报名人数
+        // 最大报名人数
         Integer maxNumber = examPlanDO.getMaxCandidates();
-        //查找已报名人数
-        Long actualCount = enrollMapper.getEnrollCount(examPlanId);
-        ValidationUtils.throwIf(actualCount + 1 > maxNumber, "报名考试计划的人数已满:" + maxNumber);
-        //校验当前时间与考试时间对比
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime enrollStartTime = examPlanDO.getEnrollStartTime();
-        LocalDateTime enrollEndTime = examPlanDO.getEnrollEndTime();
-        ValidationUtils.throwIf(now.isBefore(enrollStartTime) || now.isAfter(enrollEndTime), "当前时间不在报名时间内");
+        // 当前用户
+        Long userId = TokenLocalThreadUtil.get().getUserId();
+        // 是否已经占名额（已报名 / 审核中 / 待补正 ）
+        boolean hasValidEnroll = enrollMapper.existsValidEnroll(examPlanId, userId);
+        // 只有“首次报名”才校验名额
+        if (!hasValidEnroll) {
+            Long actualCount = enrollMapper.getEnrollCount(examPlanId);
+            ValidationUtils.throwIf(
+                    actualCount >= maxNumber,
+                    "报名考试计划的人数已满:" + maxNumber
+            );
+        }
     }
 
     /**
@@ -721,6 +736,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     /**
      * 监考员设置考生补考
+     *
      * @param req
      * @return
      */
@@ -734,13 +750,13 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                 .eq(ExamRecordsDO::getCandidateId, candidateId)
                 .eq(ExamRecordsDO::getPlanId, planId)
                 .last("limit 1"));
-        ValidationUtils.throwIfNull(examRecordsDO,"未查询到该考生的考试记录");
+        ValidationUtils.throwIfNull(examRecordsDO, "未查询到该考生的考试记录");
         int examScores = ObjectUtil.isNull(examRecordsDO.getExamScores()) ? 0 : Integer.parseInt(examRecordsDO.getExamScores());
         ValidationUtils.throwIf(examScores >= 60,
                 "考生成绩合格，无需补考"
         );
 
-        ValidationUtils.throwIf(!ExamRecordAttemptEnum.FIRST.getValue().equals(examRecordsDO.getAttemptType()),"补考次数已用完，无法再次补考");
+        ValidationUtils.throwIf(!ExamRecordAttemptEnum.FIRST.getValue().equals(examRecordsDO.getAttemptType()), "补考次数已用完，无法再次补考");
         //  更新考试记录为补考
         examRecordsMapper.update(
                 null,
@@ -763,9 +779,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         // 修改考试的考试状态
         return this.update(new LambdaUpdateWrapper<EnrollDO>()
                 .eq(EnrollDO::getExamPlanId, planId)
-                .eq(EnrollDO::getUserId,candidateId)
-                .set(EnrollDO::getEnrollStatus,EnrollStatusConstant.SIGNED_UP)
-                .set(EnrollDO::getExamStatus,EnrollStatusConstant.RETAKE));
+                .eq(EnrollDO::getUserId, candidateId)
+                .set(EnrollDO::getEnrollStatus, EnrollStatusConstant.SIGNED_UP)
+                .set(EnrollDO::getExamStatus, EnrollStatusConstant.RETAKE));
     }
 
     /**
