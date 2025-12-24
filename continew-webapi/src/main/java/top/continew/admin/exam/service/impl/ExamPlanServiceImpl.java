@@ -204,8 +204,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ExamPlanDO examPlanDO = getExamPlanDO(req);
 
         // 2. 校验报名结束时间
-        ValidationUtils.throwIf(!DateUtil.validateEnrollmentTime(examPlanDO.getEnrollEndTime(), examPlanDO
-                .getStartTime()), "报名结束时间不能晚于考试开始时间");
+//        ValidationUtils.throwIf(!DateUtil.validateEnrollmentTime(examPlanDO.getEnrollEndTime(), examPlanDO
+//                .getStartTime()), "报名结束时间不能晚于考试开始时间");
 
         // 3. 合并考场 ID（理论 + 实操）
         //        List<Long> classroomIds = new ArrayList<>();
@@ -693,11 +693,11 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         req.setEnrollEndTime(DateUtil.parse(enrollList.get(1)));
 
         // 校验报名结束时间不能晚于考试开始时间
-        ValidationUtils.throwIf(!DateUtil.validateEnrollmentTime(req.getEnrollEndTime(), req
-                .getStartTime()), "报名结束时间不能晚于考试开始时间");
+//        ValidationUtils.throwIf(!DateUtil.validateEnrollmentTime(req.getEnrollEndTime(), req
+//                .getStartTime()), "报名结束时间不能晚于考试开始时间");
 
         // 考试开始时间不能早于当前时间
-        ValidationUtils.throwIf(req.getStartTime().isBefore(LocalDateTime.now().minusSeconds(2)), "考试开始时间不能早于当前时间");
+//        ValidationUtils.throwIf(req.getStartTime().isBefore(LocalDateTime.now().minusSeconds(2)), "考试开始时间不能早于当前时间");
         Integer invigilatorCount = req.getInvigilatorCount();
         List<Long> classroomIds = new ArrayList<>();
         List<Long> theoryIds = req.getTheoryClassroomId();
@@ -723,10 +723,10 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         //        ValidationUtils.throwIfEmpty(enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
         //                .eq(EnrollDO::getExamPlanId, id)), "未查询到考生报名信息");
 
-        if (!CollectionUtils.isEmpty(classroomIds)) {
-            List<String> conflictClassrooms = baseMapper.listConflictClassrooms(req.getStartTime(), classroomIds);
-            ValidationUtils.throwIfNotEmpty(conflictClassrooms, "以下考场当天已存在考试：" + String.join("、", conflictClassrooms));
-        }
+//        if (!CollectionUtils.isEmpty(classroomIds)) {
+//            List<String> conflictClassrooms = baseMapper.listConflictClassrooms(req.getStartTime(), classroomIds);
+//            ValidationUtils.throwIfNotEmpty(conflictClassrooms, "以下考场当天已存在考试：" + String.join("、", conflictClassrooms));
+//        }
 
         //        // 4.如果是新的考场人数小于之前的考场人数，无法成功
         //        LambdaQueryWrapper<ExamineePaymentAuditDO> examineePaymentAuditDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
@@ -1110,11 +1110,11 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         update.setEnrollEndTime(DateUtil.parse(enrollList.get(1)));
 
         // 校验报名结束时间不能晚于考试开始时间
-        ValidationUtils.throwIf(!DateUtil.validateEnrollmentTime(update.getEnrollEndTime(), req
-                .getStartTime()), "报名结束时间不能晚于考试开始时间");
+//        ValidationUtils.throwIf(!DateUtil.validateEnrollmentTime(update.getEnrollEndTime(), req
+//                .getStartTime()), "报名结束时间不能晚于考试开始时间");
 
         // 考试开始时间不能早于当前时间
-        ValidationUtils.throwIf(req.getStartTime().isBefore(LocalDateTime.now().minusSeconds(2)), "考试开始时间不能早于当前时间");
+//        ValidationUtils.throwIf(req.getStartTime().isBefore(LocalDateTime.now().minusSeconds(2)), "考试开始时间不能早于当前时间");
 
         update.setId(planId);
         update.setStartTime(req.getStartTime());

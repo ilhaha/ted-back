@@ -319,6 +319,6 @@ aliyun:
   oss:
     endpoint: oss-cn-shenzhen.aliyuncs.com
     bucketName: onedt-exam-system
-    localBasePath: D:\oss\oss-images   # 本地保存路径
+    localBasePath: D:\oss\oss-images
 
 

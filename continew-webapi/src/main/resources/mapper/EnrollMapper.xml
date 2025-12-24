@@ -224,4 +224,22 @@
         WHERE exam_plan_id = #{examPlanId}
           AND enroll_status IN (1, 4)
     </select>
+    <select id="getInspectorApplyList" resultType="top.continew.admin.exam.model.resp.EnrollResp">
+        SELECT te.id,
+               te.create_time,
+               su.nickname AS nick_name,
+               tepa.payment_time,
+               tepa.audit_notice_url,
+               tepa.payment_proof_url,
+               tepa.qrcode_upload_url,
+               tepa.audit_status,
+               tepa.reject_reason,
+               tepa.notice_no
+        FROM ted_enroll te
+                 LEFT JOIN sys_user su
+                           ON te.user_id = su.id
+                 LEFT JOIN ted_examinee_payment_audit tepa
+                           ON te.id = tepa.enroll_id AND tepa.is_deleted = 0 ${ew.customSqlSegment}
+        ORDER BY te.create_time DESC
+    </select>
 </mapper>

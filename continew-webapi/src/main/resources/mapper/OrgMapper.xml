@@ -227,11 +227,10 @@
                  LEFT JOIN ted_project tp
                            ON tc.id = tp.category_id AND tp.is_deleted = 0
                  LEFT JOIN ted_org_class toc
-                           ON tp.id = toc.project_id AND toc.is_deleted = 0
+                           ON tp.id = toc.project_id AND toc.is_deleted = 0 AND toc.org_id = org.id
         WHERE org.is_deleted = 0
           AND toc.class_type = #{type}
         ORDER BY org.id, tp.id, toc.id;
-
     </select>
     <select id="getSelectOrgProjectClassByType"
             resultType="top.continew.admin.training.model.vo.OrgProjectClassVO">

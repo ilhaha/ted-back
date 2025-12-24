@@ -354,12 +354,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
             // 3.1 删除机构与用户关联表（按主键 ID 删除！）
             List<Long> orgUserIds = tedOrgUsers.stream().map(TedOrgUser::getId).toList();
-            System.out.println(orgUserIds);
             //            orgUserMapper.deleteByIds(orgUserIds);
 
             // 3.2 删除用户（调用 userService.delete，保证校验 + 清理关联）
             List<Long> userIds = tedOrgUsers.stream().map(TedOrgUser::getUserId).toList();
-            System.out.println(userIds);
             //            userService.delete(userIds);
         }
 
@@ -1138,7 +1136,6 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         OrgDTO orgDTO = orgMapper.getOrgId(userTokenDo.getUserId());
         List<OrgProjectClassCandidateVO> flatList = baseMapper.getSelectProjectClassCandidate(orgDTO
             .getId(), projectId, planType, planId);
-
         // 组装层级结构
         Map<Long, ProjectCategoryVO> projectMap = new LinkedHashMap<>();
 

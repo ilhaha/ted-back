@@ -45,5 +45,8 @@
         WHERE project_id = #{projectId}
           AND class_type = #{classType}
           AND is_deleted = 0
+        <if test="orgId != null">
+            AND org_id = #{orgId}
+        </if>
     </select>
 </mapper>

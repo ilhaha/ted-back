@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.OrgClassType;
+import top.continew.admin.common.constant.SelectClassConstants;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -41,6 +42,7 @@ import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.UploadService;
 import top.continew.admin.training.mapper.OrgUserMapper;
 import top.continew.admin.training.model.entity.OrgDO;
+import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.admin.training.model.vo.SelectClassVO;
 import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.starter.core.exception.BusinessException;
@@ -259,13 +261,23 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
     /**
      * 根据项目类型和班级类型获取班级选择器
-     *
+     * orgQueryFlag 1 机构查询 0 后台查询
      * @param projectId
      * @param classType
      * @return
      */
     @Override
-    public List<SelectClassVO> getSelectClassByProject(Long projectId, Integer classType) {
-        return baseMapper.getSelectClassByProject(projectId, classType);
+    public List<SelectClassVO> getSelectClassByProject(Long projectId, Integer classType,Integer orgQueryFlag) {
+        // 查询当前用户属于哪个机构
+        Long orgId = null;
+        if (SelectClassConstants.ORG_QUERY.equals(orgQueryFlag)) {
+            UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+            TedOrgUser tedOrgUser = orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>()
+                    .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
+                    .select(TedOrgUser::getOrgId, TedOrgUser::getId)
+                    .last("limit 1"));
+            orgId = tedOrgUser.getOrgId();
+        }
+        return baseMapper.getSelectClassByProject(projectId, classType,orgId);
     }
 }

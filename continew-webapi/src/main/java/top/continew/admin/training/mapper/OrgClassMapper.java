@@ -40,7 +40,8 @@ public interface OrgClassMapper extends BaseMapper<OrgClassDO> {
     List<ProjectCategoryVO> getSelectClassByProjectIds(List<Long> projectIds);
 
     List<SelectClassVO> getSelectClassByProject(@Param("projectId") Long projectId,
-                                                @Param("classType") Integer classType);
+                                                @Param("classType") Integer classType,
+                                                @Param("orgId") Long orgId);
 
     IPage<OrgClassDetailResp> workerClassPage(@Param("page") Page page,
                                               @Param("ew") QueryWrapper<OrgClassDO> queryWrapper);

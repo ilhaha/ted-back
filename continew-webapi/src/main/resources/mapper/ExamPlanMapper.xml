@@ -3,43 +3,62 @@
 <mapper namespace="top.continew.admin.exam.mapper.ExamPlanMapper">
 
     <sql id="selectPlanPage">
-        SELECT tep.id,
-               tep.plan_year,
-               tep.exam_plan_name,
-               tep.start_time,
-               tep.image_url,
-               tep.end_time,
-               tep.max_candidates,
-               tep.actual_candidates,
-               tep.plan_type,
-               tep.assign_type,
-               tep.status,
-               tep.approval_time,
-               tep.enroll_start_time,
-               tep.enroll_end_time,
-               tep.create_user,
-               tep.update_user,
-               tep.is_final_confirmed,
-               CASE
-                   WHEN tep.update_user IS NOT NULL THEN su.nickname
-                   ELSE NULL
-                   END      AS approvedUser,
-               tep.create_time,
-               tep.update_time,
-               tep.exam_fee,
-               tel.location_name,
-               tp.project_name,
-               tep.exam_project_id,
-               tep.location_id,
-               COUNT(te.id) AS enrolled_count
+        SELECT
+            tep.id,
+            tep.plan_year,
+            tep.exam_plan_name,
+            tep.start_time,
+            tep.image_url,
+            tep.end_time,
+            tep.max_candidates,
+            tep.actual_candidates,
+            tep.plan_type,
+            tep.assign_type,
+            tep.status,
+            tep.approval_time,
+            tep.enroll_start_time,
+            tep.enroll_end_time,
+            tep.create_user,
+            tep.update_user,
+            tep.is_final_confirmed,
+            CASE
+                WHEN tep.update_user IS NOT NULL THEN su.nickname
+                ELSE NULL
+                END AS approvedUser,
+            tep.create_time,
+            tep.update_time,
+            tep.exam_fee,
+            tel.location_name,
+            tp.project_name,
+            tep.exam_project_id,
+            tep.location_id,
+            IFNULL(ec.enrolled_count, 0) AS enrolled_count,
+            pwd.exam_password
         FROM ted_exam_plan tep
                  LEFT JOIN ted_exam_location tel ON tel.id = tep.location_id
                  LEFT JOIN ted_project tp ON tp.id = tep.exam_project_id
-                 LEFT JOIN sys_user su ON tep.update_user IS NOT NULL AND su.id = tep.update_user
-                 LEFT JOIN ted_enroll te
-                           ON tep.id = te.exam_plan_id
-                               AND te.enroll_status IN (1, 4, 5)
-                               AND te.is_deleted = 0
+                 LEFT JOIN sys_user su ON su.id = tep.update_user
+                 LEFT JOIN (
+            SELECT
+                exam_plan_id,
+                COUNT(id) AS enrolled_count
+            FROM ted_enroll
+            WHERE enroll_status IN (1, 4, 5)
+              AND is_deleted = 0
+            GROUP BY exam_plan_id
+        ) ec ON ec.exam_plan_id = tep.id
+                 LEFT JOIN (
+            SELECT
+                tpi.exam_plan_id,
+                MAX(tpi.exam_password) AS exam_password
+            FROM ted_plan_invigilate tpi
+                     JOIN ted_classroom tc
+                          ON tpi.classroom_id = tc.id
+                              AND tc.classroom_type = 0
+                              AND tc.exam_type = 0
+            WHERE tpi.is_deleted = 0
+            GROUP BY tpi.exam_plan_id
+        ) pwd ON pwd.exam_plan_id = tep.id
     </sql>
     <insert id="savePlanClassroom">
         INSERT INTO ted_plan_classroom (plan_id, classroom_id)
@@ -57,7 +76,6 @@
     <select id="selectExamPlanPage" resultType="top.continew.admin.exam.model.resp.ExamPlanDetailResp">
         <include refid="selectPlanPage"/>
         ${ew.customSqlSegment}
-        GROUP BY tep.id
         ORDER BY tep.id DESC
     </select>
 
@@ -155,7 +173,7 @@
           AND tep.is_deleted = 0
           AND tou.user_id = #{userId}
         GROUP BY tep.id
-        ORDER BY start_time;
+        ORDER BY tep.id DESC;
     </select>
     <select id="listConflictClassrooms" resultType="java.lang.String">
         SELECT DISTINCT tc.classroom_name

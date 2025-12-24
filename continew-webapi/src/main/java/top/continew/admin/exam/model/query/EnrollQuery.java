@@ -58,4 +58,17 @@ public class EnrollQuery implements Serializable {
     @Query(type = QueryType.EQ, columns = "toc.id")
     private Long classId;
 
+    /**
+     * 是否是机构查询
+     * true 是  false 后台查询
+     */
+    @QueryIgnore
+    private Boolean isOrgQuery;
+
+    /**
+     * 计划类型 0-作业人员 1-检验人员
+     */
+    @QueryIgnore
+    private Integer planType;
+
 }

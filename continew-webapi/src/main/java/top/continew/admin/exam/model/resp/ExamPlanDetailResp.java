@@ -217,6 +217,13 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "已报名人数")
     private Integer enrolledCount;
 
+    /**
+     * 开考密码
+     */
+    @Schema(description = "开考密码")
+    @ExcelProperty(value = "开考密码")
+    private Integer examPassword;
+
     //    /**
     //     * 描述
     //     */

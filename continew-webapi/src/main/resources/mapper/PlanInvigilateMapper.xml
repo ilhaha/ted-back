@@ -34,12 +34,18 @@
                tpi.invigilate_status,
                tpi.id,
                tpi.exam_password,
-               tc.exam_type
+               tc.exam_type,
+               tel.detailed_address,
+               tel.location_name
         from ted_plan_invigilate tpi
                  LEFT JOIN ted_classroom tc
                            ON tpi.classroom_id = tc.id AND tc.is_deleted = 0
                  LEFT JOIN sys_user su
                            ON tpi.invigilator_id = su.id
+                 LEFT JOIN ted_location_classroom tlc
+                           ON tc.id = tlc.classroom_id AND tlc.is_deleted = 0
+                 LEFT JOIN ted_exam_location tel
+                           ON tlc.location_id = tel.id AND tel.is_deleted = 0
         where tpi.exam_plan_id = #{planId}
           AND tpi.is_deleted = 0
     </select>

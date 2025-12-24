@@ -60,4 +60,14 @@ public class InvigilatorAssignResp {
      * 考场考试类型，0理论考试，1实操考试
      */
     private Integer examType;
+
+    /**
+     * 考点地址
+     */
+    private String detailedAddress;
+
+    /**
+     * 考点名称
+     */
+    private String locationName;
 }

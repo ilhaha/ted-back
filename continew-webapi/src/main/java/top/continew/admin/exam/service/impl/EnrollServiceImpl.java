@@ -53,6 +53,8 @@ import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
 import top.continew.admin.examconnect.model.req.RestPaperReq;
 import top.continew.admin.examconnect.service.QuestionBankService;
 import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.training.mapper.OrgUserMapper;
+import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
@@ -118,6 +120,8 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     private final ExamViolationMapper examViolationMapper;
 
     private final QuestionBankService questionBankService;
+
+    private final OrgUserMapper orgUserMapper;
 
     /**
      * 获取报名相关所有信息
@@ -839,7 +843,23 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         IPage<EnrollResp> page;
         // 机构查看报名情况
         if (ObjectUtil.isNotEmpty(query.getPlanId())) {
-            page = baseMapper.getWorkerApplyList(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+            if (query.getIsOrgQuery()) {
+                // 查询当前用户属于哪个机构
+                UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+                TedOrgUser tedOrgUser = orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>()
+                        .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
+                        .select(TedOrgUser::getOrgId, TedOrgUser::getId)
+                        .last("limit 1"));
+                queryWrapper.eq("toc.org_id", tedOrgUser.getOrgId());
+            }
+            // 作业人员
+            if (ExamPlanTypeEnum.WORKER.getValue().equals(query.getPlanType())) {
+                page = baseMapper.getWorkerApplyList(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+            }else {
+                // 检验人员
+                queryWrapper.isNull("te.class_id");
+                page = baseMapper.getInspectorApplyList(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+            }
         } else {
             queryWrapper.eq("te.enroll_Status", 1);
             page = baseMapper.getEnrollPage(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);

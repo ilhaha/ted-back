@@ -196,4 +196,10 @@ ExamPlanResp extends BaseResp {
      */
     @Schema(description = "已报名人数")
     private Integer enrolledCount;
+
+    /**
+     * 开考密码
+     */
+    @Schema(description = "开考密码")
+    private Integer examPassword;
 }
