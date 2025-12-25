@@ -24,6 +24,7 @@ import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
 import top.continew.admin.exam.model.resp.CascaderOptionResp;
+import top.continew.admin.exam.model.resp.CascaderPlanResp;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -173,5 +174,12 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @return
      */
     List<CascaderOptionResp> getExamNumbersByUsername(String username);
+
+    /**
+     * 根据计划考试人员类型获取项目-考试计划级联选择器
+     * @param planType
+     * @return
+     */
+    List<CascaderPlanResp> getCascaderProjectPlan(Integer planType);
 
 }

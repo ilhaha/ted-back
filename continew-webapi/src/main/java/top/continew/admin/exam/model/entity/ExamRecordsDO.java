@@ -58,7 +58,33 @@ public class ExamRecordsDO extends BaseDO {
     /**
      * 考试得分，(项目id_得分#项目id_得分#)
      */
-    private String examScores;
+    private Integer examScores;
+
+    /**
+     * 实操成绩
+     */
+    private Integer operScores;
+
+    /**
+     * 实操成绩录入状态（0未录入，1已录入）
+     */
+    private Integer operInputStatus;
+
+    /**
+     * 道路成绩
+     */
+    private Integer roadScores;
+
+
+    /**
+     * 道路成绩录入状态（0未录入，1已录入）
+     */
+    private Integer roadInputStatus;
+
+    /**
+     * 证书是否已生成（0：未生成，1：已生成）
+     */
+    private Integer isCertificateGenerated;
 
     /**
      * 是否删除，0:未删除，1:已删除

@@ -336,6 +336,10 @@ examine:
   deptId:
     examCenterId: 1
 
+# 有道路考试的八大类ID
+certificate:
+  road-exam-type-id: 21
+
 aes:
   key: 4F7g9H2kLm0qXz1B
   hmac-key: k28Fh6sJ8Pq5Lt9N7rXsD3Mb0WdFz2Qv

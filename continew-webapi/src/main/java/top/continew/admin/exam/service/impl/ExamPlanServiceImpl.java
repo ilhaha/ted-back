@@ -57,6 +57,7 @@ import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
 import top.continew.admin.exam.model.resp.CascaderOptionResp;
+import top.continew.admin.exam.model.resp.CascaderPlanResp;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -160,6 +161,9 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
         QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tep.is_deleted", 0);
+        if (!ExamPlanStatusEnum.STARTED.getValue().equals(query.getStatus())) {
+            queryWrapper.ne("tep.status", ExamPlanStatusEnum.STARTED);
+        }
         super.sort(queryWrapper, pageQuery);
 
         IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPage(new Page<>(pageQuery.getPage(), pageQuery
@@ -419,7 +423,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         LambdaQueryWrapper<EnrollDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EnrollDO::getExamPlanId, planId)
                 .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.SIGNED_UP)
-                .select(EnrollDO::getId, EnrollDO::getExamStatus, EnrollDO::getUserId);
+                .select(EnrollDO::getId, EnrollDO::getExamStatus);
         List<EnrollDO> enrollList = enrollMapper.selectList(wrapper);
 
         // 2. 检查是否有正在考试的考生（SIGNED_IN）
@@ -461,7 +465,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         // 6. 更新监考员状态 → 待审核
         LambdaUpdateWrapper<PlanInvigilateDO> invUpdate = new LambdaUpdateWrapper<>();
         invUpdate.eq(PlanInvigilateDO::getExamPlanId, planId)
-                .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatus.PENDING_REVIEW.getCode());
+                .eq(PlanInvigilateDO::getInvigilatorId,TokenLocalThreadUtil.get().getUserId())
+                .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatus.COMPLETED.getCode());
         planInvigilateMapper.update(invUpdate);
 
         return true;
@@ -1256,6 +1261,63 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         return cascaderList;
     }
+
+
+    /**
+     * 根据计划考试人员类型获取项目-考试计划级联选择器
+     * @param planType
+     * @return
+     */
+    @Override
+    public List<CascaderPlanResp> getCascaderProjectPlan(Integer planType) {
+        // 1. 查询数据库，获取项目和计划信息
+        List<Map<String, Object>> projectPlanList = baseMapper.selectListByPlanType(planType);
+
+        if (projectPlanList.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 2. 按项目分组
+        Map<Long, List<Map<String, Object>>> projectGroupMap = projectPlanList.stream()
+                .collect(Collectors.groupingBy(item -> (Long) item.get("project_id")));
+
+        // 3. 构建 CascaderPlanResp 结构
+        List<CascaderPlanResp> result = projectGroupMap.entrySet().stream()
+                .map(entry -> {
+                    Long projectId = entry.getKey();
+                    List<Map<String, Object>> plans = entry.getValue();
+
+                    // 项目名称为空则跳过这个项目
+                    String projectName = (String) plans.get(0).get("project_name");
+                    if (projectName == null) return null;
+
+                    CascaderPlanResp projectResp = new CascaderPlanResp();
+                    projectResp.setValue(projectId);
+                    projectResp.setLabel(projectName);
+
+                    // 子级计划，过滤掉 plan_name 为 null 的记录
+                    List<CascaderPlanResp> children = plans.stream()
+                            .filter(p -> p.get("exam_plan_name") != null)
+                            .map(p -> {
+                                CascaderPlanResp planResp = new CascaderPlanResp();
+                                planResp.setValue((Long) p.get("plan_id"));
+                                planResp.setLabel((String) p.get("exam_plan_name"));
+                                // 不设置 children，保持两层结构
+                                return planResp;
+                            })
+                            .toList();
+
+                    projectResp.setChildren(children);
+                    return projectResp;
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        return result;
+    }
+
+
+
 
 
     /**

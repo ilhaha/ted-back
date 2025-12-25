@@ -131,6 +131,11 @@ public class OrgExamPlanVO {
     private String examFee;
 
     /**
+     * 考试费用
+     */
+    private String projectExamFee;
+
+    /**
      * 剩余报名人数
      */
     private Integer remainingSlots;

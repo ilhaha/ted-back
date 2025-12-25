@@ -3,62 +3,55 @@
 <mapper namespace="top.continew.admin.exam.mapper.ExamPlanMapper">
 
     <sql id="selectPlanPage">
-        SELECT
-            tep.id,
-            tep.plan_year,
-            tep.exam_plan_name,
-            tep.start_time,
-            tep.image_url,
-            tep.end_time,
-            tep.max_candidates,
-            tep.actual_candidates,
-            tep.plan_type,
-            tep.assign_type,
-            tep.status,
-            tep.approval_time,
-            tep.enroll_start_time,
-            tep.enroll_end_time,
-            tep.create_user,
-            tep.update_user,
-            tep.is_final_confirmed,
-            CASE
-                WHEN tep.update_user IS NOT NULL THEN su.nickname
-                ELSE NULL
-                END AS approvedUser,
-            tep.create_time,
-            tep.update_time,
-            tep.exam_fee,
-            tel.location_name,
-            tp.project_name,
-            tep.exam_project_id,
-            tep.location_id,
-            IFNULL(ec.enrolled_count, 0) AS enrolled_count,
-            pwd.exam_password
+        SELECT tep.id,
+               tep.plan_year,
+               tep.exam_plan_name,
+               tep.start_time,
+               tep.image_url,
+               tep.end_time,
+               tep.max_candidates,
+               tep.actual_candidates,
+               tep.plan_type,
+               tep.assign_type,
+               tep.status,
+               tep.approval_time,
+               tep.enroll_start_time,
+               tep.enroll_end_time,
+               tep.create_user,
+               tep.update_user,
+               tep.is_final_confirmed,
+               CASE
+                   WHEN tep.update_user IS NOT NULL THEN su.nickname
+                   ELSE NULL
+                   END                      AS approvedUser,
+               tep.create_time,
+               tep.update_time,
+               tep.exam_fee,
+               tel.location_name,
+               tp.project_name,
+               tep.exam_project_id,
+               tep.location_id,
+               IFNULL(ec.enrolled_count, 0) AS enrolled_count,
+               pwd.exam_password
         FROM ted_exam_plan tep
                  LEFT JOIN ted_exam_location tel ON tel.id = tep.location_id
                  LEFT JOIN ted_project tp ON tp.id = tep.exam_project_id
                  LEFT JOIN sys_user su ON su.id = tep.update_user
-                 LEFT JOIN (
-            SELECT
-                exam_plan_id,
-                COUNT(id) AS enrolled_count
-            FROM ted_enroll
-            WHERE enroll_status IN (1, 4, 5)
-              AND is_deleted = 0
-            GROUP BY exam_plan_id
-        ) ec ON ec.exam_plan_id = tep.id
-                 LEFT JOIN (
-            SELECT
-                tpi.exam_plan_id,
-                MAX(tpi.exam_password) AS exam_password
-            FROM ted_plan_invigilate tpi
-                     JOIN ted_classroom tc
-                          ON tpi.classroom_id = tc.id
-                              AND tc.classroom_type = 0
-                              AND tc.exam_type = 0
-            WHERE tpi.is_deleted = 0
-            GROUP BY tpi.exam_plan_id
-        ) pwd ON pwd.exam_plan_id = tep.id
+                 LEFT JOIN (SELECT exam_plan_id,
+                                   COUNT(id) AS enrolled_count
+                            FROM ted_enroll
+                            WHERE enroll_status IN (1, 4, 5)
+                              AND is_deleted = 0
+                            GROUP BY exam_plan_id) ec ON ec.exam_plan_id = tep.id
+                 LEFT JOIN (SELECT tpi.exam_plan_id,
+                                   MAX(tpi.exam_password) AS exam_password
+                            FROM ted_plan_invigilate tpi
+                                     JOIN ted_classroom tc
+                                          ON tpi.classroom_id = tc.id
+                                              AND tc.classroom_type = 0
+                                              AND tc.exam_type = 0
+                            WHERE tpi.is_deleted = 0
+                            GROUP BY tpi.exam_plan_id) pwd ON pwd.exam_plan_id = tep.id
     </sql>
     <insert id="savePlanClassroom">
         INSERT INTO ted_plan_classroom (plan_id, classroom_id)
@@ -157,6 +150,7 @@
                tp.project_name,
                tp.project_code,
                tp.exam_duration,
+               tp.exam_fee                                  AS project_exam_fee,
                tc.`name`                                    AS category_name,
                (tep.max_candidates - COUNT(DISTINCT te.id)) AS remaining_slots
         FROM ted_exam_plan tep
@@ -224,10 +218,11 @@
             AND tpi.invigilator_id = #{userId}
             AND tpi.is_deleted = 0
             AND tep.is_deleted = 0
+            AND tep.is_final_confirmed = 2
         ORDER BY tep.start_time
     </select>
     <select id="findExamPlansByUsername" resultType="java.util.Map">
-        SELECT tep.exam_plan_name, te.exam_number,tep.id AS exam_plan_id
+        SELECT tep.exam_plan_name, te.exam_number, tep.id AS exam_plan_id
         FROM sys_user su
                  LEFT JOIN ted_enroll te
                            ON su.id = te.user_id AND te.is_deleted = 0
@@ -235,6 +230,18 @@
                            ON te.exam_plan_id = tep.id AND tep.is_deleted = 0
         WHERE su.username = #{username}
           AND te.enroll_status = 1
+    </select>
+    <select id="selectListByPlanType" resultType="java.util.Map">
+        SELECT tp.id  AS project_id,
+               tp.project_name,
+               tep.id AS plan_id,
+               tep.exam_plan_name
+        FROM ted_project tp
+                 LEFT JOIN ted_exam_plan tep
+                           ON tp.id = tep.exam_project_id
+                               AND tep.is_deleted = 0
+                               AND tep.plan_type = #{planType}
+        WHERE tp.is_deleted = 0
     </select>
 
 

@@ -28,6 +28,7 @@ import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
 import top.continew.admin.exam.model.resp.CascaderOptionResp;
+import top.continew.admin.exam.model.resp.CascaderPlanResp;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectCategoryTreeVo;
@@ -68,6 +69,18 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     @Resource
     private ExamPlanService examPlanService;
+
+
+    /**
+     * 根据计划考试人员类型获取项目-考试计划级联选择器
+     * @param planType
+     * @return
+     */
+    @GetMapping("/project/cascader/{planType}")
+    public  List<CascaderPlanResp> getCascaderProjectPlan(@PathVariable("planType") Integer planType) {
+        return baseService.getCascaderProjectPlan(planType);
+    }
+
 
     /**
      * 根据考生身份证获取考生的所有考试准考证号

@@ -103,4 +103,6 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
                                                       @Param("userId") Long userId);
 
     List<Map<String, Object>> findExamPlansByUsername(@Param("username") String username);
+
+    List<Map<String, Object>> selectListByPlanType(@Param("planType") Integer planType);
 }

@@ -1,11 +1,43 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="top.continew.admin.exam.mapper.ExamRecordsMapper">
-    <select id="getexamRecords" resultType="top.continew.admin.exam.model.entity.ExamRecordsDO">
-        SELECT ter.*, tep.exam_plan_name AS planName, su.nickname AS candidateName
-        FROM ted_exam_records ter
-                 LEFT JOIN ted_exam_plan tep ON ter.plan_id = tep.id
-                 LEFT JOIN sys_user su ON ter.candidate_id = su.id
+    <select id="getexamRecords" resultType="top.continew.admin.exam.model.dto.ExamRecordDTO">
+        SELECT ter.id,
+               ter.plan_id,
+               ter.candidate_id,
+               ter.exam_scores,
+               ter.oper_scores,
+               ter.oper_input_status,
+               ter.road_scores,
+               ter.road_input_status,
+               ter.attempt_type,
+               ter.is_certificate_generated,
+               ter.exam_paper,
+               ter.registration_progress,
+               ter.create_time,
+               tep.exam_plan_name AS planName,
+               su.nickname        AS candidateName,
+               su.username,
+               tp.is_operation,
+               tp.project_name,
+               toc.class_name,
+               CASE
+                   WHEN tc.id = #{roadExamTypeId} THEN 1
+                   ELSE 0
+                   END            AS is_road
+        FROM ted_exam_records AS ter
+                 LEFT JOIN ted_exam_plan AS tep
+                           ON ter.plan_id = tep.id AND tep.is_deleted = 0
+                 LEFT JOIN ted_project AS tp
+                           ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN ted_category AS tc
+                           ON tp.category_id = tc.id AND tc.is_deleted = 0
+                 LEFT JOIN sys_user AS su
+                           ON ter.candidate_id = su.id
+                 LEFT JOIN ted_enroll AS te
+                           ON ter.plan_id = te.exam_plan_id AND te.user_id = su.id AND te.is_deleted = 0
+                 LEFT JOIN ted_org_class AS toc
+                           ON te.class_id = toc.id AND toc.is_deleted = 0
             ${ew.getCustomSqlSegment}
     </select>
     <select id="getRecordsById" resultType="top.continew.admin.exam.model.entity.ExamRecordsDO">
@@ -14,6 +46,46 @@
                  LEFT JOIN ted_exam_plan tep ON ter.plan_id = tep.id
                  LEFT JOIN sys_user su ON ter.candidate_id = su.id
         WHERE ter.id = #{id}
+    </select>
+
+    <select id="hasOperationOrRoadExam" resultType="top.continew.admin.exam.model.dto.ExamPresenceDTO">
+        SELECT tp.is_operation,
+               CASE
+                   WHEN tc.id = #{roadExamTypeId} THEN 1
+                   ELSE 0
+                   END AS is_road
+        FROM ted_exam_plan tep
+                 LEFT JOIN ted_project tp
+                           ON tep.exam_project_id = tp.id
+                               AND tp.is_deleted = 0
+                 LEFT JOIN ted_category tc
+                           ON tp.category_id = tc.id
+                               AND tc.is_deleted = 0
+        WHERE tep.id = #{planId}
+          AND tep.is_deleted = 0
+    </select>
+
+    <select id="checkPlanHasExamType" resultType="top.continew.admin.exam.model.dto.CheckPlanHasExamTypeDTO">
+        SELECT
+        tep.id AS planId,
+        tep.exam_plan_name AS planName,
+        tp.is_operation AS isOperation,
+        CASE
+        WHEN tc.id = 21 THEN 1
+        ELSE 0
+        END AS isRoad
+        FROM ted_exam_plan tep
+        LEFT JOIN ted_project tp
+        ON tep.exam_project_id = tp.id
+        AND tp.is_deleted = 0
+        LEFT JOIN ted_category tc
+        ON tp.category_id = tc.id
+        AND tc.is_deleted = 0
+        WHERE tep.id IN
+        <foreach collection="planIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND tep.is_deleted = 0
     </select>
 
 </mapper>

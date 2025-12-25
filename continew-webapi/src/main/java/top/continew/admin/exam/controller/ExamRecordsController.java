@@ -20,6 +20,7 @@ import cn.dev33.satoken.annotation.SaIgnore;
 import jakarta.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
+import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.starter.extension.crud.enums.Api;
 
@@ -53,6 +54,16 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
 
     @Resource
     private ExamRecordsService baseService;
+
+    /**
+     * 录入实操、导入成绩
+     * @param inputScoresReq
+     * @return
+     */
+    @PostMapping("/input")
+    public Boolean inputScores(@RequestBody @Validated InputScoresReq inputScoresReq) {
+        return baseService.inputScores(inputScoresReq);
+    }
 
     /**
      * 考生交卷

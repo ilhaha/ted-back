@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.model.resp;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -102,4 +103,70 @@ public class ExamRecordsResp extends BaseResp {
      */
     @Schema(description = "考试试卷")
     private String examPaper;
+
+    /**
+     * 实操成绩
+     */
+    @Schema(description = "实操成绩")
+    @ExcelProperty(value = "实操成绩")
+    private Integer operScores;
+
+    /**
+     * 道路成绩
+     */
+    @Schema(description = "道路成绩")
+    @ExcelProperty(value = "道路成绩")
+    private Integer roadScores;
+
+    /**
+     * 实操成绩录入状态（0未录入，1已录入）
+     */
+    @Schema(description = "实操成绩录入状态（0未录入，1已录入）")
+    @ExcelProperty(value = "实操成绩录入状态（0未录入，1已录入）")
+    private Integer operInputStatus;
+
+    /**
+     * 道路成绩录入状态（0未录入，1已录入）
+     */
+    @Schema(description = "道路成绩录入状态（0未录入，1已录入）")
+    @ExcelProperty(value = "道路成绩录入状态（0未录入，1已录入）")
+    private Integer roadInputStatus;
+
+
+    /**
+     * 证书是否已生成（0：未生成，1：已生成）
+     */
+    @Schema(description = " 证书是否已生成（0：未生成，1：已生成）")
+    @ExcelProperty(value = " 证书是否已生成（0：未生成，1：已生成）")
+    private Integer isCertificateGenerated;
+
+    /**
+     * 考生身份证
+     */
+    private String username;
+
+    /**
+     * 是否有实操考试
+     */
+    private Integer isOperation;
+
+    /**
+     * 是否有道路考试
+     */
+    private Integer isRoad;
+
+    /**
+     * 项目名称
+     */
+    private String projectName;
+
+    /**
+     * 所属班级
+     */
+    private String className;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createTime;
 }

@@ -17,6 +17,7 @@
 package top.continew.admin.exam.service;
 
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
+import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -49,4 +50,10 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
 
     void candidatesAdd(ExamRecordsDO examRecordsDO);
 
+    /**
+     * 录入实操、导入成绩
+     * @param inputScoresReq
+     * @return
+     */
+    Boolean inputScores(InputScoresReq inputScoresReq);
 }

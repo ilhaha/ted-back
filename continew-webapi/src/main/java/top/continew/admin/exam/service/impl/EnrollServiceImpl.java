@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import top.continew.admin.common.constant.EnrollStatusConstant;
+import top.continew.admin.common.constant.ExamRecordConstants;
 import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
 import top.continew.admin.common.constant.enums.ExamPlanTypeEnum;
 import top.continew.admin.common.constant.enums.ExamRecordAttemptEnum;
@@ -755,9 +756,8 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                 .eq(ExamRecordsDO::getPlanId, planId)
                 .last("limit 1"));
         ValidationUtils.throwIfNull(examRecordsDO, "未查询到该考生的考试记录");
-        int examScores = ObjectUtil.isNull(examRecordsDO.getExamScores()) ? 0 : Integer.parseInt(examRecordsDO.getExamScores());
-        ValidationUtils.throwIf(examScores >= 60,
-                "考生成绩合格，无需补考"
+        ValidationUtils.throwIf(examRecordsDO.getExamScores() >= ExamRecordConstants.PASSING_SCORE,
+                "考生成绩及格，无需补考"
         );
 
         ValidationUtils.throwIf(!ExamRecordAttemptEnum.FIRST.getValue().equals(examRecordsDO.getAttemptType()), "补考次数已用完，无法再次补考");

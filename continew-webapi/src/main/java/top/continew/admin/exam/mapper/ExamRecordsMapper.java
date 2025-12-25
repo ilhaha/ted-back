@@ -21,8 +21,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
+import top.continew.admin.exam.model.dto.CheckPlanHasExamTypeDTO;
+import top.continew.admin.exam.model.dto.ExamPresenceDTO;
+import top.continew.admin.exam.model.dto.ExamRecordDTO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
+
+import java.util.List;
 
 /**
  * 考试记录 Mapper
@@ -31,8 +36,19 @@ import top.continew.admin.exam.model.entity.ExamRecordsDO;
  * @since 2025/03/17 09:13
  */
 public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
-    IPage<ExamRecordsDO> getexamRecords(@Param("page") Page<ExamRecordsDO> page,
-                                        @Param(Constants.WRAPPER) QueryWrapper<ExamRecordsDO> queryWrapper);
+    IPage<ExamRecordDTO> getexamRecords(@Param("page") Page<ExamRecordsDO> page,
+                                        @Param(Constants.WRAPPER) QueryWrapper<ExamRecordsDO> queryWrapper,
+                                        @Param("roadExamTypeId") Long roadExamTypeId);
 
     ExamRecordsDO getRecordsById(Long id);
+
+    ExamPresenceDTO hasOperationOrRoadExam(@Param("planId") Long planId, @Param("roadExamTypeId") Long roadExamTypeId);
+
+    /**
+     * 判断考试计划是否有某种考试
+     * @param planIds
+     * @return
+     */
+    List<CheckPlanHasExamTypeDTO> checkPlanHasExamType(@Param("planIds") List<Long> planIds,@Param("roadExamTypeId") Long roadExamTypeId);
+
 }
