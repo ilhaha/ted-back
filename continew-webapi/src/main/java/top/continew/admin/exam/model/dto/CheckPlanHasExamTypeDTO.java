@@ -12,7 +12,7 @@ public class CheckPlanHasExamTypeDTO {
     /**
      * 计划id
      */
-    private Integer planId;
+    private Long planId;
 
     /**
      * 计划名称

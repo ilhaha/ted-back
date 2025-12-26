@@ -21,6 +21,7 @@ import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import top.continew.starter.data.core.annotation.Query;
+import top.continew.starter.data.core.annotation.QueryIgnore;
 import top.continew.starter.data.core.enums.QueryType;
 
 import java.io.Serial;
@@ -75,6 +76,11 @@ public class ExamRecordsQuery implements Serializable {
     @Query(type = QueryType.LIKE,columns = "su.nickname")
     private String candidateName;
 
+    /**
+     * 考生身份证
+     */
+    @QueryIgnore
+    private String username;
 
 
 }

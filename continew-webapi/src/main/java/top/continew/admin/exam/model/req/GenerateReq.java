@@ -13,7 +13,7 @@ import java.util.List;
  * @Create 2025/12/25 9:07
  */
 @Data
-public class InputScoresReq {
+public class GenerateReq {
 
     /**
      * 考试记录id
@@ -22,17 +22,10 @@ public class InputScoresReq {
     private List<Long> recordIds;
 
     /**
-     * 分数
+     * 计划类型，0-作业人员 1-检验人员
      */
-    @NotNull(message = "分数不能为空")
-    @Min(value = 0, message = "分数不能小于 0")
-    @Max(value = 100, message = "分数不能大于 100")
-    private Integer scores;
+    @NotNull(message = "未填写计划类型")
+    private Integer planType;
 
-    /**
-     * 录入成绩类型：1 实操成绩 2 道路成绩
-     */
-    @NotNull(message = "成绩类型不能为空")
-    private Integer scoresType;
 }
 

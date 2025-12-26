@@ -23,6 +23,11 @@ public class LicenseCertificateDO extends BaseDO {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 考试记录id
+     */
+    private Long recordId;
+
+    /**
      * 数据来源
      */
     private String datasource;
@@ -46,6 +51,11 @@ public class LicenseCertificateDO extends BaseDO {
      * 原单位名称
      */
     private String originalComName;
+
+    /**
+     * 一寸免冠照
+     */
+    private String facePhoto;
 
     /**
      * 单位名称

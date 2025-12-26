@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum ExamScoreEntryStatusEnum {
 
-    NO_Entry(0, "未录入"),
+    NO_ENTRY(0, "未录入"),
 
     ENTERED(1, "已录入");
 

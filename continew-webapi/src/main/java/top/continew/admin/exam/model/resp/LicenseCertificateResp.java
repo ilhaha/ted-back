@@ -1,5 +1,6 @@
 package top.continew.admin.exam.model.resp;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,6 +22,12 @@ public class LicenseCertificateResp extends BaseResp {
 
     @Serial
     private static final long serialVersionUID = 1L;
+
+    /**
+     * 考试记录id
+     */
+    @Schema(description = "考试记录id")
+    private Long recordId;
 
     /**
      * 数据来源

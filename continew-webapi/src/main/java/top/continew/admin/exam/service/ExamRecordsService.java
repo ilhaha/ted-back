@@ -16,7 +16,9 @@
 
 package top.continew.admin.exam.service;
 
+import org.springframework.http.ResponseEntity;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
+import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -56,4 +58,19 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
      * @return
      */
     Boolean inputScores(InputScoresReq inputScoresReq);
+
+    /**
+     * 生成资格证书
+     * @param generateReq
+     * @return
+     */
+    Boolean generateQualificationCertificate(GenerateReq generateReq);
+
+    /**
+     * 下载资格证书
+     * @param recordIds
+     * @return
+     */
+    ResponseEntity<byte[]> downloadQualificationCertificate(List<Long> recordIds,Integer planType);
+
 }

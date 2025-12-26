@@ -27,6 +27,13 @@ public class LicenseCertificateDetailResp extends BaseDetailResp {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 考试记录id
+     */
+    @Schema(description = "考试记录id")
+    @ExcelProperty(value = "考试记录id")
+    private Long recordId;
+
+    /**
      * 数据来源
      */
     @Schema(description = "数据来源")

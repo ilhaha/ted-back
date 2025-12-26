@@ -87,5 +87,62 @@
         </foreach>
         AND tep.is_deleted = 0
     </select>
+    <select id="selectCertificateInfoByRecordIds"
+            resultType="top.continew.admin.exam.model.dto.ExamRecordCertificateDTO">
+        SELECT ter.id,
+        su.id AS candidate_id,
+        su.nickname,
+        su.username,
+        te.user_id,
+        twa.work_unit,
+        twa.face_photo,
+        tc.`name` AS category_name,
+        tp.project_name,
+        tp.project_code
+        FROM ted_exam_records ter
+        LEFT JOIN sys_user su
+        ON ter.candidate_id = su.id
+        LEFT JOIN ted_enroll te
+        ON ter.plan_id = te.exam_plan_id AND ter.candidate_id = te.user_id AND te.is_deleted = 0
+        LEFT JOIN ted_worker_apply twa
+        ON te.class_id = twa.class_id AND su.username = twa.id_card_number AND twa.is_deleted = 0
+        LEFT JOIN ted_exam_plan tep
+        ON ter.plan_id = tep.id AND tep.is_deleted = 0
+        LEFT JOIN ted_project tp
+        ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+        LEFT JOIN ted_category tc
+        ON tp.category_id = tc.id AND tc.is_deleted = 0
+        WHERE ter.is_deleted = 0
+        AND ter.id IN
+        <foreach collection="recordIds"
+                 item="id"
+                 open="("
+                 close=")"
+                 separator=",">
+            #{id}
+        </foreach>
+    </select>
+    <select id="selectEnrollWithClass"
+            resultType="top.continew.admin.exam.model.dto.EnrollWithClassDTO">
+        SELECT te.user_id AS candidate_id,
+        te.exam_plan_id AS plan_id,
+        toc.class_name
+        FROM ted_enroll te
+        LEFT JOIN ted_org_class toc
+        ON te.class_id = toc.id
+        AND toc.is_deleted = 0
+        WHERE te.is_deleted = 0
+        AND
+        <foreach collection="pairs"
+                 item="item"
+                 separator=" OR "
+                 open="("
+                 close=")">
+            (te.user_id = #{item.userId}
+            AND te.exam_plan_id = #{item.examPlanId})
+        </foreach>
+    </select>
+
+
 
 </mapper>

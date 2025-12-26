@@ -18,8 +18,10 @@ package top.continew.admin.exam.controller;
 
 import cn.dev33.satoken.annotation.SaIgnore;
 import jakarta.annotation.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
+import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.starter.extension.crud.enums.Api;
@@ -54,6 +56,27 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
 
     @Resource
     private ExamRecordsService baseService;
+
+    /**
+     * 下载资格证书
+     * @param recordIds
+     * @return
+     */
+    @PostMapping("/download/{planType}")
+    public ResponseEntity<byte[]> downloadQualificationCertificate(@RequestBody List<Long> recordIds,
+                                                                   @PathVariable("planType") Integer planType) {
+        return baseService.downloadQualificationCertificate(recordIds,planType);
+    }
+
+    /**
+     * 生成资格证书
+     * @param generateReq
+     * @return
+     */
+    @PostMapping("/generate")
+    public Boolean generateQualificationCertificate(@RequestBody @Validated GenerateReq generateReq){
+        return baseService.generateQualificationCertificate(generateReq);
+    }
 
     /**
      * 录入实操、导入成绩

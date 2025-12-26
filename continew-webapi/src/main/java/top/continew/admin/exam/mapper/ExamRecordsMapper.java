@@ -21,9 +21,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
-import top.continew.admin.exam.model.dto.CheckPlanHasExamTypeDTO;
-import top.continew.admin.exam.model.dto.ExamPresenceDTO;
-import top.continew.admin.exam.model.dto.ExamRecordDTO;
+import top.continew.admin.exam.model.dto.*;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 
@@ -50,5 +48,21 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
      * @return
      */
     List<CheckPlanHasExamTypeDTO> checkPlanHasExamType(@Param("planIds") List<Long> planIds,@Param("roadExamTypeId") Long roadExamTypeId);
+
+    /**
+     * 获取证书信息
+     * @param recordIds
+     * @return
+     */
+    List<ExamRecordCertificateDTO> selectCertificateInfoByRecordIds(@Param("recordIds") List<Long> recordIds);
+
+    /**
+     * 根据考生id和计划id获取所在班级
+     * @param pairs
+     * @return
+     */
+    List<EnrollWithClassDTO> selectEnrollWithClass(
+            @Param("pairs") List<UserPlanPairDTO> pairs
+    );
 
 }
