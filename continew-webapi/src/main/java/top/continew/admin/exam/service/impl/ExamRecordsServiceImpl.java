@@ -36,16 +36,22 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 import top.continew.admin.common.constant.*;
 import top.continew.admin.common.constant.enums.*;
+import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
+import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.*;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
+import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
+import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.training.mapper.OrgUserMapper;
+import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
@@ -105,8 +111,11 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
 
     private final ExamViolationMapper examViolationMapper;
 
-
     private final LicenseCertificateMapper licenseCertificateMapper;
+
+    private final PlanInvigilateMapper planInvigilateMapper;
+
+    private final OrgUserMapper orgUserMapper;
 
     @Override
     public PageResp<ExamRecordsResp> examRecordsPage(ExamRecordsQuery query, PageQuery pageQuery) {
@@ -115,16 +124,24 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         QueryWrapper<ExamRecordsDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("ter.is_deleted", 0);
         String username = query.getUsername();
-        if (ObjectUtil.isNotNull(username)) {
+        if (StrUtil.isNotBlank(username)) {
             queryWrapper.eq("su.username", aesWithHMAC.encryptAndSign(username));
         }
-
         // 根据 pageQuery 里的排序参数，对查询结果进行排序
         super.sort(queryWrapper, pageQuery);
-        // 执行分页查询
-        IPage<ExamRecordDTO> page = baseMapper.getexamRecords(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper, roadExamTypeId);
 
+        if (Boolean.TRUE.equals(query.getIsOrgQuery())) {
+            // 查询当前用户属于哪个机构
+            UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+            TedOrgUser tedOrgUser = orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>()
+                    .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
+                    .select(TedOrgUser::getOrgId, TedOrgUser::getId)
+                    .last("limit 1"));
+            queryWrapper.eq("toc.org_id", tedOrgUser.getOrgId());
+        }
+        // 查询
+        IPage<ExamRecordDTO> page = baseMapper.getexamRecords(new Page<>(pageQuery.getPage(), pageQuery
+                .getSize()), queryWrapper, roadExamTypeId);;
         // 将查询结果转换成 PageResp 对象
         PageResp<ExamRecordsResp> pageResp = PageResp.build(page, super.getListClass());
         List<ExamRecordsResp> list = pageResp.getList();
@@ -335,8 +352,15 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
                     .set(ExamRecordsDO::getRoadInputStatus, ExamScoreEntryStatusEnum.ENTERED.getValue());
         }
 
+
+        // 修改计划中所有监考员的状态为已完成
+        planInvigilateMapper.update( new LambdaUpdateWrapper<PlanInvigilateDO>()
+                .in(PlanInvigilateDO::getExamPlanId,distinctPlanIds)
+                .set(PlanInvigilateDO::getInvigilateStatus,InvigilateStatusEnum.FINISHED.getValue()));
+
         // 批量修改成绩
         updateWrapper.in(ExamRecordsDO::getId, recordIds);
+
         return baseMapper.update(updateWrapper) > 0;
     }
 

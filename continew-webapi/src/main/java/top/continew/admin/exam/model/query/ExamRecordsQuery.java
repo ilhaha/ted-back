@@ -82,5 +82,11 @@ public class ExamRecordsQuery implements Serializable {
     @QueryIgnore
     private String username;
 
+    /**
+     * 是否是机构查询
+     */
+    @QueryIgnore
+    private Boolean isOrgQuery;
+
 
 }

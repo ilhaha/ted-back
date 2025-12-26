@@ -76,6 +76,7 @@ import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.service.UserService;
 import top.continew.admin.training.mapper.OrgClassMapper;
 import top.continew.admin.training.model.entity.OrgClassDO;
+import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
@@ -1269,7 +1270,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
      * @return
      */
     @Override
-    public List<CascaderPlanResp> getCascaderProjectPlan(Integer planType) {
+    public List<CascaderPlanResp> getCascaderProjectPlan(Integer planType,Boolean isOrgQuery) {
         // 1. 查询数据库，获取项目和计划信息
         List<Map<String, Object>> projectPlanList = baseMapper.selectListByPlanType(planType);
 
@@ -1312,6 +1313,20 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 })
                 .filter(Objects::nonNull)
                 .toList();
+
+        if (Boolean.TRUE.equals(isOrgQuery)) {
+            UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+            List<Long> orgBindProjectIds =
+                    baseMapper.selectOrgBindProjectId(userTokenDo.getUserId());
+
+            if (orgBindProjectIds == null || orgBindProjectIds.isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            result = result.stream()
+                    .filter(p -> orgBindProjectIds.contains(p.getValue()))
+                    .toList();
+        }
 
         return result;
     }

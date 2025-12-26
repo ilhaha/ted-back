@@ -42,7 +42,7 @@ public class AdjustPlanTimeReq implements Serializable {
      * 考试开始时间
      */
     @NotNull(message = "考试开始时间不能为空")
-    @Future(message = "考试开始时间必须是未来时间")
+//    @Future(message = "考试开始时间必须是未来时间")
     private LocalDateTime startTime;
 
     @Schema(description = "报名开始时间范围")

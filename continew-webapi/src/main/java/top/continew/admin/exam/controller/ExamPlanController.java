@@ -76,9 +76,10 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
      * @param planType
      * @return
      */
-    @GetMapping("/project/cascader/{planType}")
-    public  List<CascaderPlanResp> getCascaderProjectPlan(@PathVariable("planType") Integer planType) {
-        return baseService.getCascaderProjectPlan(planType);
+    @GetMapping("/project/cascader/{planType}/{isOrgQuery}")
+    public  List<CascaderPlanResp> getCascaderProjectPlan(@PathVariable("planType") Integer planType,
+                                                          @PathVariable("isOrgQuery") Boolean isOrgQuery) {
+        return baseService.getCascaderProjectPlan(planType,isOrgQuery);
     }
 
 

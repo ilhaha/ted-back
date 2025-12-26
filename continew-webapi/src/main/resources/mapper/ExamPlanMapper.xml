@@ -241,7 +241,19 @@
                            ON tp.id = tep.exam_project_id
                                AND tep.is_deleted = 0
                                AND tep.plan_type = #{planType}
+                               AND tep.status = 6
         WHERE tp.is_deleted = 0
+    </select>
+    <select id="selectOrgBindProjectId" resultType="java.lang.Long">
+        SELECT tp.id
+        FROM sys_user su
+                 JOIN ted_org_user tou
+                      ON su.id = tou.user_id AND tou.is_deleted = 0
+                 JOIN ted_org_category_relation tocr
+                      ON tou.org_id = tocr.org_id AND tocr.is_deleted = 0
+                 JOIN ted_project tp
+                      ON tocr.category_id = tp.category_id AND tp.is_deleted = 0 AND tp.project_status = 2
+        WHERE su.id = #{userId}
     </select>
 
 

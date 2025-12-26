@@ -180,6 +180,6 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @param planType
      * @return
      */
-    List<CascaderPlanResp> getCascaderProjectPlan(Integer planType);
+    List<CascaderPlanResp> getCascaderProjectPlan(Integer planType,Boolean isOrgQuery);
 
 }
