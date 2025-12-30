@@ -58,6 +58,14 @@ public class PersonQualificationResp extends BaseResp {
     @Schema(description = "资格项目代码")
     private String qualificationCategoryCode;
 
+
+
+    /**
+     * 审核状态：0-待审核，1-审核通过，2-审核不通过
+     */
+    @Schema(description = "审核状态：0-待审核，1-审核通过，2-审核不通过")
+    private Integer auditStatus;
+
     /**
      * 更新人ID
      */

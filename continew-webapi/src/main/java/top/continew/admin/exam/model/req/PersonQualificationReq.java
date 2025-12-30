@@ -38,13 +38,37 @@ public class PersonQualificationReq implements Serializable {
      */
     @Schema(description = "身份证号")
     @NotBlank(message = "身份证号不能为空")
-    @Length(max = 18, message = "身份证号长度不能超过 {max} 个字符")
     private String idCard;
+
+
+    /**
+     * 文化程度
+     */
+    @Schema(description = "文化程度")
+    private String education;
+
+    /**
+     * 联系电话
+     */
+    @Schema(description = "联系电话")
+    private String phone;
+
+    /**
+     * 聘用单位
+     */
+    @Schema(description = "聘用单位")
+    private String employer;
+
+    /**
+     * 资格项目代码
+     */
+    @Schema(description = "资格项目代码")
+    private String qualificationCategoryCode;
+
 
     /**
      * 创建人ID
      */
     @Schema(description = "创建人ID")
-    @NotNull(message = "创建人ID不能为空")
     private Long createUser;
 }
