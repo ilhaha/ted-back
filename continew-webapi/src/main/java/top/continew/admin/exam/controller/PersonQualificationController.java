@@ -1,5 +1,7 @@
 package top.continew.admin.exam.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.web.multipart.MultipartFile;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,4 +25,14 @@ import top.continew.admin.exam.service.PersonQualificationService;
 @Tag(name = "人员复审信息表管理 API")
 @RestController
 @CrudRequestMapping(value = "/exam/personQualification", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE, Api.EXPORT})
-public class PersonQualificationController extends BaseController<PersonQualificationService, PersonQualificationResp, PersonQualificationDetailResp, PersonQualificationQuery, PersonQualificationReq> {}
+public class PersonQualificationController extends BaseController<PersonQualificationService, PersonQualificationResp, PersonQualificationDetailResp, PersonQualificationQuery, PersonQualificationReq> {
+
+
+
+    @Operation(summary = "批量导入复审人员信息")
+    @PostMapping("/import/excel")
+    public Boolean importExcel(@RequestPart("file") MultipartFile file) {
+        baseService.importExcel(file);
+        return true;
+    }
+}
