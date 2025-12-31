@@ -2,6 +2,7 @@ package top.continew.admin.exam.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.exam.model.req.PersonQualificationAuditReq;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,11 +29,16 @@ import top.continew.admin.exam.service.PersonQualificationService;
 public class PersonQualificationController extends BaseController<PersonQualificationService, PersonQualificationResp, PersonQualificationDetailResp, PersonQualificationQuery, PersonQualificationReq> {
 
 
-
     @Operation(summary = "批量导入复审人员信息")
     @PostMapping("/import/excel")
     public Boolean importExcel(@RequestPart("file") MultipartFile file) {
         baseService.importExcel(file);
         return true;
     }
+
+    @PostMapping("/audit")
+    public void audit(@RequestBody PersonQualificationAuditReq req) {
+        baseService.audit(req);
+    }
+
 }

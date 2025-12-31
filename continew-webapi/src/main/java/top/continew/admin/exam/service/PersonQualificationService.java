@@ -1,6 +1,7 @@
 package top.continew.admin.exam.service;
 
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.exam.model.req.PersonQualificationAuditReq;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.PersonQualificationQuery;
 import top.continew.admin.exam.model.req.PersonQualificationReq;
@@ -22,4 +23,10 @@ public interface PersonQualificationService extends BaseService<PersonQualificat
      * @param file
      */
     void importExcel(MultipartFile file);
+
+
+    /**
+     * 审核人员复审信息
+     */
+    void audit(PersonQualificationAuditReq req);
 }

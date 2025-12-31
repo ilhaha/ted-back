@@ -20,6 +20,7 @@ import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.exam.mapper.LicenseCertificateMapper;
 import top.continew.admin.exam.model.dto.ExamPlanExcelRowDTO;
 import top.continew.admin.exam.model.entity.*;
+import top.continew.admin.exam.model.req.PersonQualificationAuditReq;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -39,10 +40,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.ResolverStyle;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -94,7 +92,7 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
         LicenseCertificateDO licenseCertificateDO =
                 LicenseCertificateMapper.selectOne(
                         new LambdaQueryWrapper<LicenseCertificateDO>()
-                                .eq(LicenseCertificateDO::getIdcardNo,aesWithHMAC.encryptAndSign(IdCard))
+                                .eq(LicenseCertificateDO::getIdcardNo, aesWithHMAC.encryptAndSign(IdCard))
                                 .eq(LicenseCertificateDO::getPsnName, req.getName())
                                 .eq(LicenseCertificateDO::getPsnlcnsItemCode, req.getQualificationCategoryCode())
 
@@ -160,7 +158,7 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
 
     @Override
     public void update(PersonQualificationReq req, Long id) {
-       // 查询复审记录
+        // 查询复审记录
         PersonQualificationDO personQualificationDO = baseMapper.selectById(id);
         if (personQualificationDO == null) {
             throw new BusinessException("复审记录不存在");
@@ -348,6 +346,82 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
             throw new BusinessException("Excel 文件被加密，无法读取");
         } catch (IOException e) {
             throw new BusinessException("Excel 文件读取失败");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void audit(PersonQualificationAuditReq req) {
+
+        // 查询复审记录
+        PersonQualificationDO entity = this.getById(req.getId());
+        if (entity == null) {
+            throw new BusinessException("复审记录不存在");
+        }
+
+        // 只能审核【待审核】
+        if (!Objects.equals(entity.getAuditStatus(), 0)) {
+            throw new BusinessException("该记录已审核，不能重复操作");
+        }
+
+        Integer auditStatus = req.getAuditStatus();
+
+        PersonQualificationDO update = new PersonQualificationDO();
+        update.setId(entity.getId());
+
+        // 审核逻辑
+        if (Objects.equals(auditStatus, 1)) {
+            //审核通过 → 修改许可证书
+            update.setAuditStatus(1);
+            // 查询许可证书
+            LicenseCertificateDO certificate =
+                    LicenseCertificateMapper.selectOne(
+                            new LambdaQueryWrapper<LicenseCertificateDO>()
+                                    .eq(LicenseCertificateDO::getIdcardNo, entity.getIdCard())
+                                    .eq(LicenseCertificateDO::getPsnName, entity.getName())
+                                    .eq(LicenseCertificateDO::getPsnlcnsItemCode, entity.getQualificationCategoryCode())
+                    );
+            if (certificate == null) {
+                throw new BusinessException("未找到对应的许可证书，无法完成复审");
+            }
+            // ====== 更新许可证书 ======
+            // 审核通过时间（当天）
+            LocalDate auditDate = LocalDate.now();
+            // 新有效期 = 审核时间 + 4 年
+            LocalDate newEndDate = auditDate.plusYears(4);
+            certificate.setEndDate(newEndDate);
+
+            // 更新时间（证书签发日期、授权日期、证书有效期）
+            certificate.setCertDate(LocalDate.now());
+            certificate.setAuthDate(LocalDate.now());
+            certificate.setUpdateTime(LocalDateTime.now());
+
+            //更新单位
+            certificate.setComName(entity.getEmployer());
+            certificate.setOriginalComName(certificate.getComName());
+
+            int rows = LicenseCertificateMapper.updateById(certificate);
+            if (rows <= 0) {
+                throw new BusinessException("许可证书更新失败");
+            }
+
+        } else if (Objects.equals(auditStatus, 2)) {
+            // 审核不通过
+            // ===============================
+            update.setAuditStatus(2);
+
+            // 一般不通过不修改证书
+            // 如需记录，可在复审表中存 remark
+
+        } else {
+            throw new BusinessException("非法的审核状态");
+        }
+
+        //更新复审记录
+        update.setUpdateTime(LocalDateTime.now());
+        boolean success = this.updateById(update);
+        if (!success) {
+            throw new BusinessException("审核失败，请重试");
         }
     }
 
