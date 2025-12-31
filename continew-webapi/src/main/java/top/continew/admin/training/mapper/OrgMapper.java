@@ -117,4 +117,12 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
     List<OrgProjectClassVO> getSelectOrgProjectClassByType(@Param("orgId") Long orgId, @Param("type") Integer type);
 
     List<String> getNeedUploadDoc(@Param("classId") Long classId);
+
+    /**
+     * 根据项目id查询出考试及格或考试未录入成绩的考试名单
+     * @param projectId
+     * @return
+     */
+    List<Long> getPassedButUncertifiedCandidateIds(@Param("projectId") Long projectId);
+
 }

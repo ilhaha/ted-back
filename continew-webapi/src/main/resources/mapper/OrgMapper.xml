@@ -258,6 +258,18 @@
           AND tdt.type_name != '身份证'
     </select>
 
+    <select id="getPassedButUncertifiedCandidateIds" resultType="java.lang.Long">
+        SELECT ter.candidate_id
+        FROM ted_exam_plan tep
+                 JOIN ted_project tp
+                      ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                 JOIN ted_exam_records ter
+                      ON tep.id = ter.plan_id AND ter.exam_result_status IN (1, 2) AND
+                         ter.is_certificate_generated = 0 AND ter.is_deleted = 0
+        WHERE tep.exam_project_id = #{projectId}
+          AND tep.is_deleted = 0
+    </select>
+
 
     <update id="approveStudent" parameterType="java.lang.Long">
         update ted_org_candidate

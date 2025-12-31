@@ -63,6 +63,8 @@ import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.entity.LicenseCertificateDO;
+import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
@@ -101,8 +103,10 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -191,6 +195,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Resource
     private final ExcelUtilReactive excelUtilReactive;
+
+    private final LicenseCertificateMapper licenseCertificateMapper;
 
     private static final long EXPIRE_TIME = 7;  // 过期时间（天）
 
@@ -1218,7 +1224,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             ValidationUtils.throwIf(!seen.add(candidateId), nickname + "只能报考一个班级，请检查报名信息");
         }
 
-        // 5. 查询是否存在未完成考试的记录（修复 eq -> in）
+        // 5. 查询是否存在未完成考试的记录
         LambdaQueryWrapper<EnrollDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(EnrollDO::getUserId, allCandidateIds)
             .ne(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
@@ -1252,20 +1258,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 String msg = "以下考生存在未完成的相同项目考试：" + String.join("、", names);
                 ValidationUtils.throwIf(true, msg);
             }
+
         }
 
-        // 计算最大人数
-        //        ExamPlanVO examPlanVO = new ExamPlanVO();
-        //        BeanUtils.copyProperties(examPlanDO, examPlanVO);
-        //        examPlanVO.setClassroomList(examPlanMapper.getPlanExamClassroom(examPlanId));
-        //
-        //        int maxNumber = 0;
-        //        List<ClassroomDO> classroomDOS = classroomMapper.selectList(new LambdaQueryWrapper<ClassroomDO>()
-        //                .in(ClassroomDO::getId, examPlanVO.getClassroomList()));
-        //        for (ClassroomDO classroomDO : classroomDOS) {
-        //            maxNumber += classroomDO.getMaxCandidates();
-        //        }
-        //
         Long actualCount = enrollMapper.getPlanEnrollCount(examPlanId);
         Integer maxCandidates = examPlanDO.getMaxCandidates();
 
@@ -1287,6 +1282,67 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 .toList());
             throw new BusinessException("以下考生已报名该考试计划：" + existedNames);
         }
+
+        // 判断考试考试记录合格但未生成证书、成绩未录入的都不能报名
+        ProjectDO projectDO = projectMapper.selectById(examPlanDO.getExamProjectId());
+
+        // 已合格但未生成证书 或 成绩未录入的考生
+        List<Long> passedButUncertifiedCandidateIds =
+                baseMapper.getPassedButUncertifiedCandidateIds(projectDO.getId());
+
+        // 取交集
+        List<Long> conflictCandidateIds = CollectionUtil.emptyIfNull(passedButUncertifiedCandidateIds)
+                .stream()
+                .filter(allCandidateIds::contains)
+                .toList();
+        // 只要有冲突，直接抛异常
+        if (ObjectUtil.isNotEmpty(conflictCandidateIds)) {
+            List<String> names = conflictCandidateIds.stream()
+                    .map(userMap::get)
+                    .filter(ObjectUtil::isNotEmpty)
+                    .toList();
+
+            String msg = "以下考生已参加相同项目考试，但成绩未录入或证书尚未生成，暂不可报名："
+                    + String.join("、", names);
+
+            throw new BusinessException(msg);
+        }
+
+        // 证书未过期无法报名
+        String projectCode = projectDO.getProjectCode();
+        List<LicenseCertificateDO> licenseCertificateDOS =
+                licenseCertificateMapper.selectList(new LambdaQueryWrapper<LicenseCertificateDO>()
+                        .in(LicenseCertificateDO::getCandidateId, allCandidateIds)
+                        .eq(LicenseCertificateDO::getPsnlcnsItemCode, projectCode)
+                );
+        if (CollUtil.isNotEmpty(licenseCertificateDOS)) {
+            YearMonth currentMonth = YearMonth.now();
+
+            List<Long> blockedCandidateIds = licenseCertificateDOS.stream()
+                    .filter(item -> {
+                        LocalDate endDate = item.getEndDate();
+                        if (endDate == null) {
+                            return false;
+                        }
+                        YearMonth endMonth = YearMonth.from(endDate);
+                        // endMonth >= currentMonth → 证书未过期
+                        return !endMonth.isBefore(currentMonth);
+                    })
+                    .map(LicenseCertificateDO::getCandidateId)
+                    .distinct()
+                    .toList();
+
+            if (CollUtil.isNotEmpty(blockedCandidateIds)) {
+                String existedNames = userMapper.selectByIds(blockedCandidateIds)
+                        .stream()
+                        .map(UserDO::getNickname)
+                        .filter(StrUtil::isNotBlank)
+                        .collect(Collectors.joining("、"));
+
+                throw new BusinessException("以下考生证书仍在有效期内，暂不可报名考试：" + existedNames);
+            }
+        }
+
 
         // 插入报名表
         List<EnrollDO> insertEnrollList = projectClassCandidateList.stream().map(item -> {

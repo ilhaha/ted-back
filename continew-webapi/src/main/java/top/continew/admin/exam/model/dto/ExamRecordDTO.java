@@ -66,6 +66,11 @@ public class ExamRecordDTO {
     private Integer isCertificateGenerated;
 
     /**
+     * 考试结果（0不及格，1及格）
+     */
+    private Integer examResultStatus;
+
+    /**
      * 考试类型（0首考、1补考）
      */
     private Integer attemptType;

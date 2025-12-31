@@ -13,6 +13,7 @@
                ter.attempt_type,
                ter.is_certificate_generated,
                ter.exam_paper,
+               ter.exam_result_status,
                ter.registration_progress,
                ter.create_time,
                tep.exam_plan_name AS planName,

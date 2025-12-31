@@ -265,14 +265,35 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         // 7 插入考试记录
         // 获取计划是否有实操考试、道路考试
         ExamPresenceDTO examPlanOperAndRoadDTO = baseMapper.hasOperationOrRoadExam(examRecordsDO.getPlanId(), roadExamTypeId);
-        if (ProjectHasExamTypeEnum.NO.getValue().equals(examPlanOperAndRoadDTO.getIsOperation())) {
-            // 没有实操考试默认考试成绩为70
+        // 标记是否有实操/道路
+        boolean hasOper = ProjectHasExamTypeEnum.YES.getValue().equals(examPlanOperAndRoadDTO.getIsOperation());
+        boolean hasRoad = ProjectHasExamTypeEnum.YES.getValue().equals(examPlanOperAndRoadDTO.getIsRoad());
+
+        // 只有两个都没有时直接合格
+        if (!hasOper && !hasRoad) {
             examRecordsDO.setOperScores(ExamRecordConstants.PASSING_SCORE);
             examRecordsDO.setOperInputStatus(ExamScoreEntryStatusEnum.ENTERED.getValue());
-        }
-        if (ProjectHasExamTypeEnum.NO.getValue().equals(examPlanOperAndRoadDTO.getIsRoad())) {
+
             examRecordsDO.setRoadInputStatus(ExamScoreEntryStatusEnum.ENTERED.getValue());
+
+            examRecordsDO.setExamResultStatus(examRecordsDO.getExamScores() >= ExamRecordConstants.PASSING_SCORE ?
+                    ExamResultStatusEnum.PASSED.getValue()
+                    : ExamResultStatusEnum.FAILED.getValue());
+        } else {
+            // 如果任意一个存在，则成绩未录入
+            if (!hasOper) {
+                examRecordsDO.setOperScores(ExamRecordConstants.PASSING_SCORE);
+                examRecordsDO.setOperInputStatus(ExamScoreEntryStatusEnum.ENTERED.getValue());
+            }
+
+            if (!hasRoad) {
+                examRecordsDO.setRoadInputStatus(ExamScoreEntryStatusEnum.ENTERED.getValue());
+            }
+
+            examRecordsDO.setExamResultStatus(ExamResultStatusEnum.NOT_ENTERED.getValue());
         }
+
+        // 插入记录
         baseMapper.insert(examRecordsDO);
     }
 
@@ -293,18 +314,21 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         ValidationUtils.throwIfNull(scoresType, "成绩类型不能为空");
         ValidationUtils.throwIfNull(scores, "成绩不能为空");
 
-        // 判断是否已生成了证书
+        // 查询考试记录
         List<ExamRecordsDO> examRecordsDOS = baseMapper.selectByIds(recordIds);
         ValidationUtils.throwIfEmpty(examRecordsDOS, "所选的考试记录不存在");
-        List<Long> candidateIds = examRecordsDOS.stream().filter(item -> {
-            return ExamRecprdsHasCertofocateEnum.YES.getValue().equals(item.getIsCertificateGenerated());
-        }).map(ExamRecordsDO::getCandidateId).toList();
-        if (!ObjectUtils.isEmpty(candidateIds)) {
-            List<UserDO> userDOS = userMapper.selectByIds(candidateIds);
-            List<String> nikenameList = userDOS.stream().map(UserDO::getNickname).toList();
-            ValidationUtils.throwIfNotEmpty(nikenameList,
-                    String.join("、", nikenameList) + " 已生成证书信息，无法再次录入成绩"
-            );
+
+        // 检查是否已生成证书
+        List<Long> candidateIds = examRecordsDOS.stream()
+                .filter(record -> ExamRecprdsHasCertofocateEnum.YES.getValue().equals(record.getIsCertificateGenerated()))
+                .map(ExamRecordsDO::getCandidateId)
+                .toList();
+
+        if (!candidateIds.isEmpty()) {
+            List<UserDO> users = userMapper.selectByIds(candidateIds);
+            List<String> nicknames = users.stream().map(UserDO::getNickname).toList();
+            ValidationUtils.throwIfNotEmpty(nicknames,
+                    String.join("、", nicknames) + " 已生成证书信息，无法再次录入成绩");
         }
 
         // 去重计划id
@@ -314,55 +338,59 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
                 .toList();
 
         // 查询计划支持的考试类型
-        List<CheckPlanHasExamTypeDTO> planExamTypes =
-                baseMapper.checkPlanHasExamType(new ArrayList<>(distinctPlanIds), roadExamTypeId);
+        List<CheckPlanHasExamTypeDTO> planExamTypes = baseMapper.checkPlanHasExamType(distinctPlanIds, roadExamTypeId);
 
-        LambdaUpdateWrapper<ExamRecordsDO> updateWrapper = new LambdaUpdateWrapper<>();
+        // 提前构建 planId -> CheckPlanHasExamTypeDTO 映射，提高查找效率
+        Map<Long, CheckPlanHasExamTypeDTO> planTypeMap = planExamTypes.stream()
+                .collect(Collectors.toMap(CheckPlanHasExamTypeDTO::getPlanId, dto -> dto));
 
-        if (ExamScoreInputTypeEnum.OPER.getValue().equals(scoresType)) {
+        // 检查计划是否支持当前录入类型
+        List<String> invalidPlans = planExamTypes.stream()
+                .filter(dto -> (ExamScoreInputTypeEnum.OPER.getValue().equals(scoresType) && ProjectHasExamTypeEnum.NO.getValue().equals(dto.getIsOperation()))
+                        || (ExamScoreInputTypeEnum.ROAD.getValue().equals(scoresType) && ProjectHasExamTypeEnum.NO.getValue().equals(dto.getIsRoad())))
+                .map(CheckPlanHasExamTypeDTO::getPlanName)
+                .distinct()
+                .toList();
 
-            List<String> noOperPlanNames = planExamTypes.stream()
-                    .filter(dto -> ProjectHasExamTypeEnum.NO.getValue().equals(dto.getIsOperation()))
-                    .map(CheckPlanHasExamTypeDTO::getPlanName)
-                    .distinct()
-                    .toList();
+        ValidationUtils.throwIfNotEmpty(invalidPlans,
+                String.join("、", invalidPlans) + " 计划不支持当前类型成绩录入");
 
-            ValidationUtils.throwIfNotEmpty(
-                    noOperPlanNames,
-                    String.join("、", noOperPlanNames) + " 计划不支持实操成绩录入"
-            );
+        // 修改计划中所有监考员状态为已完成
+        planInvigilateMapper.update(new LambdaUpdateWrapper<PlanInvigilateDO>()
+                .in(PlanInvigilateDO::getExamPlanId, distinctPlanIds)
+                .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.FINISHED.getValue()));
 
-            updateWrapper.set(ExamRecordsDO::getOperScores, scores)
-                    .set(ExamRecordsDO::getOperInputStatus, ExamScoreEntryStatusEnum.ENTERED.getValue());
+        // 遍历考试记录：设置成绩 + 计算合格状态
+        examRecordsDOS.forEach(record -> {
+            // 根据录入类型设置成绩
+            if (ExamScoreInputTypeEnum.OPER.getValue().equals(scoresType)) {
+                record.setOperScores(scores);
+                record.setOperInputStatus(ExamScoreEntryStatusEnum.ENTERED.getValue());
+            } else if (ExamScoreInputTypeEnum.ROAD.getValue().equals(scoresType)) {
+                record.setRoadScores(scores);
+                record.setRoadInputStatus(ExamScoreEntryStatusEnum.ENTERED.getValue());
+            }
 
-        } else if (ExamScoreInputTypeEnum.ROAD.getValue().equals(scoresType)) {
+            // 获取计划考试类型
+            CheckPlanHasExamTypeDTO planType = planTypeMap.get(record.getPlanId());
+            boolean isOperRequired = planType != null && ProjectHasExamTypeEnum.YES.getValue().equals(planType.getIsOperation());
+            boolean isRoadRequired = planType != null && ProjectHasExamTypeEnum.YES.getValue().equals(planType.getIsRoad());
+            System.out.println(isRoadRequired);
+            // 判断是否合格
+            boolean passed = true;
+            if (record.getExamScores() == null || record.getExamScores() < ExamRecordConstants.PASSING_SCORE) passed = false;
+            if (isOperRequired && (record.getOperScores() == null || record.getOperScores() < ExamRecordConstants.PASSING_SCORE)) passed = false;
+            if (isRoadRequired && (record.getRoadScores() == null || record.getRoadScores() < ExamRecordConstants.PASSING_SCORE)) passed = false;
 
-            List<String> noRoadPlanNames = planExamTypes.stream()
-                    .filter(dto -> ProjectHasExamTypeEnum.NO.getValue().equals(dto.getIsRoad()))
-                    .map(CheckPlanHasExamTypeDTO::getPlanName)
-                    .distinct()
-                    .toList();
+            record.setExamResultStatus(passed ? ExamResultStatusEnum.PASSED.getValue() : ExamResultStatusEnum.FAILED.getValue());
+        });
 
-            ValidationUtils.throwIfNotEmpty(
-                    noRoadPlanNames,
-                    String.join("、", noRoadPlanNames) + "计划不支持道路成绩录入"
-            );
+        // 批量更新成绩 + 合格状态
+        baseMapper.updateBatchById(examRecordsDOS);
 
-            updateWrapper.set(ExamRecordsDO::getRoadScores, scores)
-                    .set(ExamRecordsDO::getRoadInputStatus, ExamScoreEntryStatusEnum.ENTERED.getValue());
-        }
-
-
-        // 修改计划中所有监考员的状态为已完成
-        planInvigilateMapper.update( new LambdaUpdateWrapper<PlanInvigilateDO>()
-                .in(PlanInvigilateDO::getExamPlanId,distinctPlanIds)
-                .set(PlanInvigilateDO::getInvigilateStatus,InvigilateStatusEnum.FINISHED.getValue()));
-
-        // 批量修改成绩
-        updateWrapper.in(ExamRecordsDO::getId, recordIds);
-
-        return baseMapper.update(updateWrapper) > 0;
+        return Boolean.TRUE;
     }
+
 
     /**
      * 生成资格证书
@@ -465,38 +493,61 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         }else {
             // TODO 补充检验人员生成资格证
         }
-        LocalDate now = LocalDate.now();
-        // 生成证书信息
-        List<LicenseCertificateDO> insertList = examRecordCertificateDTOList.stream().map(item -> {
-            LicenseCertificateDO licenseCertificateDO = new LicenseCertificateDO();
-            licenseCertificateDO.setRecordId(item.getId());
-            licenseCertificateDO.setDatasource(LicenseCertificateConstant.DATASOURCE);
-            licenseCertificateDO.setInfoinputorg(LicenseCertificateConstant.INFO_INPUTORG);
-            licenseCertificateDO.setPsnName(item.getNickname());
-            licenseCertificateDO.setIdcardNo(item.getUsername());
-            String workUnit = item.getWorkUnit();
-            licenseCertificateDO.setOriginalComName(ObjectUtils.isEmpty(workUnit) ? LicenseCertificateConstant.WORK_UNIT : workUnit);
-            licenseCertificateDO.setComName(ObjectUtils.isEmpty(workUnit) ? LicenseCertificateConstant.WORK_UNIT : workUnit);
-            licenseCertificateDO.setFacePhoto(item.getFacePhoto());
-            licenseCertificateDO.setApplyDate(now);
-            licenseCertificateDO.setLcnsKind(item.getCategoryName());
-            // 暂时使用时间戳做证书编号
-            licenseCertificateDO.setLcnsNo(LicenseCertificateConstant.LCNS_NO_PREFIX + System.currentTimeMillis());
-            licenseCertificateDO.setCertDate(now);
-            licenseCertificateDO.setAuthDate(now);
-            licenseCertificateDO.setEndDate(now.plusYears(LicenseCertificateConstant.VALIDITY_PERIOD_YEARS));
-            licenseCertificateDO.setOriginalAuthCom(LicenseCertificateConstant.ORIGINAL_AUTH_COM);
-            licenseCertificateDO.setAuthCom(LicenseCertificateConstant.AUTH_COM);
-            licenseCertificateDO.setPsnlcnsItem(item.getProjectName());
-            licenseCertificateDO.setPsnlcnsItemCode(item.getProjectCode());
-            return licenseCertificateDO;
-        }).toList();
-        licenseCertificateMapper.insertBatch(insertList);
-        // 修改状态
-        return baseMapper.update(new LambdaUpdateWrapper<ExamRecordsDO>()
-                .in(ExamRecordsDO::getId, recordIds)
-                .set(ExamRecordsDO::getIsCertificateGenerated,ExamRecprdsHasCertofocateEnum.YES.getValue())) > 0;
+        if (ObjectUtil.isNotEmpty(examRecordCertificateDTOList)) {
+            LambdaQueryWrapper<LicenseCertificateDO> deleteWrapper = buildDeleteWrapper(examRecordCertificateDTOList);
+            licenseCertificateMapper.delete(deleteWrapper);
+
+            LocalDate now = LocalDate.now();
+            // 生成证书信息
+            List<LicenseCertificateDO> insertList = examRecordCertificateDTOList.stream().map(item -> {
+                LicenseCertificateDO licenseCertificateDO = new LicenseCertificateDO();
+                licenseCertificateDO.setRecordId(item.getId());
+                licenseCertificateDO.setDatasource(LicenseCertificateConstant.DATASOURCE);
+                licenseCertificateDO.setInfoinputorg(LicenseCertificateConstant.INFO_INPUTORG);
+                licenseCertificateDO.setPsnName(item.getNickname());
+                licenseCertificateDO.setIdcardNo(item.getUsername());
+                String workUnit = item.getWorkUnit();
+                licenseCertificateDO.setOriginalComName(ObjectUtils.isEmpty(workUnit) ? LicenseCertificateConstant.WORK_UNIT : workUnit);
+                licenseCertificateDO.setComName(ObjectUtils.isEmpty(workUnit) ? LicenseCertificateConstant.WORK_UNIT : workUnit);
+                licenseCertificateDO.setFacePhoto(item.getFacePhoto());
+                licenseCertificateDO.setApplyDate(now);
+                licenseCertificateDO.setLcnsKind(item.getCategoryName());
+                // 暂时使用时间戳做证书编号
+                licenseCertificateDO.setLcnsNo(LicenseCertificateConstant.LCNS_NO_PREFIX + System.currentTimeMillis());
+                licenseCertificateDO.setCertDate(now);
+                licenseCertificateDO.setAuthDate(now);
+                licenseCertificateDO.setEndDate(now.plusYears(LicenseCertificateConstant.VALIDITY_PERIOD_YEARS));
+                licenseCertificateDO.setOriginalAuthCom(LicenseCertificateConstant.ORIGINAL_AUTH_COM);
+                licenseCertificateDO.setAuthCom(LicenseCertificateConstant.AUTH_COM);
+                licenseCertificateDO.setPsnlcnsItem(item.getProjectName());
+                licenseCertificateDO.setPsnlcnsItemCode(item.getProjectCode());
+                licenseCertificateDO.setCandidateId(item.getCandidateId());
+                return licenseCertificateDO;
+            }).toList();
+            licenseCertificateMapper.insertBatch(insertList);
+            // 修改状态
+            baseMapper.update(new LambdaUpdateWrapper<ExamRecordsDO>()
+                    .in(ExamRecordsDO::getId, recordIds)
+                    .set(ExamRecordsDO::getIsCertificateGenerated,ExamRecprdsHasCertofocateEnum.YES.getValue()));
+        }
+
+        return Boolean.TRUE;
     }
+
+
+    private LambdaQueryWrapper<LicenseCertificateDO> buildDeleteWrapper(List<ExamRecordCertificateDTO> dtoList) {
+        final List<ExamRecordCertificateDTO> finalList = dtoList;
+        LambdaQueryWrapper<LicenseCertificateDO> deleteWrapper = new LambdaQueryWrapper<>();
+        deleteWrapper.and(w -> {
+            for (ExamRecordCertificateDTO item : finalList) {
+                w.or()
+                        .eq(LicenseCertificateDO::getCandidateId, item.getCandidateId())
+                        .eq(LicenseCertificateDO::getPsnlcnsItemCode, item.getProjectCode());
+            }
+        });
+        return deleteWrapper;
+    }
+
 
     /**
      * 下载资格证书

@@ -2,8 +2,12 @@ package top.continew.admin.exam.service.impl;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.tika.utils.StringUtils;
 import org.springframework.stereotype.Service;
 
+import top.continew.admin.common.util.AESWithHMAC;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.exam.mapper.LicenseCertificateMapper;
 import top.continew.admin.exam.model.entity.LicenseCertificateDO;
@@ -13,6 +17,9 @@ import top.continew.admin.exam.model.resp.LicenseCertificateDetailResp;
 import top.continew.admin.exam.model.resp.LicenseCertificateResp;
 import top.continew.admin.exam.service.LicenseCertificateService;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * 人员及许可证书信息业务实现
  *
@@ -21,4 +28,23 @@ import top.continew.admin.exam.service.LicenseCertificateService;
  */
 @Service
 @RequiredArgsConstructor
-public class LicenseCertificateServiceImpl extends BaseServiceImpl<LicenseCertificateMapper, LicenseCertificateDO, LicenseCertificateResp, LicenseCertificateDetailResp, LicenseCertificateQuery, LicenseCertificateReq> implements LicenseCertificateService {}
+public class LicenseCertificateServiceImpl extends BaseServiceImpl<LicenseCertificateMapper, LicenseCertificateDO, LicenseCertificateResp, LicenseCertificateDetailResp, LicenseCertificateQuery, LicenseCertificateReq> implements LicenseCertificateService {
+
+
+    private final AESWithHMAC aesWithHMAC;
+
+    @Override
+    public PageResp<LicenseCertificateResp> page(LicenseCertificateQuery query, PageQuery pageQuery) {
+        String idcardNo = query.getIdcardNo();
+        if (!StringUtils.isBlank(idcardNo)) {
+            query.setIdcardNo(aesWithHMAC.encryptAndSign(idcardNo));
+        }
+        PageResp<LicenseCertificateResp> page = super.page(query, pageQuery);
+        List<LicenseCertificateResp> decryptedList = page.getList().stream()
+                .peek(item -> item.setIdcardNo(aesWithHMAC.verifyAndDecrypt(item.getIdcardNo())))
+                .collect(Collectors.toList());
+        page.setList(decryptedList);
+        return page;
+    }
+
+}

@@ -140,6 +140,14 @@ public class ExamRecordsResp extends BaseResp {
     @ExcelProperty(value = " 证书是否已生成（0：未生成，1：已生成）")
     private Integer isCertificateGenerated;
 
+
+    /**
+     * 考试结果（0不及格，1及格,2未录入）
+     */
+    @Schema(description = " 考试结果（0不及格，1及格,2未录入）")
+    @ExcelProperty(value = " 考试结果（0不及格，1及格,2未录入）")
+    private Integer examResultStatus;
+
     /**
      * 考生身份证
      */

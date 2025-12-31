@@ -28,6 +28,11 @@ public class LicenseCertificateDO extends BaseDO {
     private Long recordId;
 
     /**
+     * 考生id
+     */
+    private Long candidateId;
+
+    /**
      * 数据来源
      */
     private String datasource;

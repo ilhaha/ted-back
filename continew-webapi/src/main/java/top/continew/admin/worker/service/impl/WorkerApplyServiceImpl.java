@@ -325,6 +325,15 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
             // 6. 批量插入新用户
             if (CollUtil.isNotEmpty(newUsers)) {
+                newUsers = new ArrayList<>(
+                        newUsers.stream()
+                                .collect(Collectors.toMap(
+                                        UserDO::getUsername,
+                                        Function.identity(),
+                                        (u1, u2) -> u1
+                                ))
+                                .values()
+                );
                 userMapper.insertBatch(newUsers);
                 newUsers.forEach(u -> userMap.put(u.getUsername(), u));
 

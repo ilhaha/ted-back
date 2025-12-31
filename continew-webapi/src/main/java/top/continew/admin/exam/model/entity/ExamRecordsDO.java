@@ -102,6 +102,11 @@ public class ExamRecordsDO extends BaseDO {
     private Integer attemptType;
 
     /**
+     * 考试结果（0不及格，1及格,2未录入）
+     */
+    private Integer examResultStatus;
+
+    /**
      * 计划名称（后加）
      */
     @TableField(exist = false)

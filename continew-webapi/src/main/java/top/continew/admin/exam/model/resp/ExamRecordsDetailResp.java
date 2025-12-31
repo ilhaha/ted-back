@@ -125,6 +125,13 @@ public class ExamRecordsDetailResp extends BaseDetailResp {
     private Integer isCertificateGenerated;
 
     /**
+     * 考试结果（0不及格，1及格,2未录入）
+     */
+    @Schema(description = " 考试结果（0不及格，1及格,2未录入）")
+    @ExcelProperty(value = " 考试结果（0不及格，1及格,2未录入）")
+    private Integer examResultStatus;
+
+    /**
      * 是否删除，0:未删除，1:已删除
      */
     @Schema(description = "是否删除，0:未删除，1:已删除")

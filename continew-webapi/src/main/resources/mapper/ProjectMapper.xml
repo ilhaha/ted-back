@@ -114,7 +114,7 @@
         where tp.id = #{projectId}
     </select>
     <select id="selectOptions" resultType="top.continew.admin.exam.model.vo.ProjectVo">
-        SELECT ted.ted_project.id AS `value`, ted_project.project_name AS label
+        SELECT ted_project.id AS `value`, ted_project.project_name AS label
         FROM ted_project
         WHERE project_status = 2;
     </select>
