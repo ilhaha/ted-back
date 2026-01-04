@@ -405,15 +405,17 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
                 throw new BusinessException("许可证书更新失败");
             }
 
-        } else if (Objects.equals(auditStatus, 2)) {
-            // 审核不通过
-            // ===============================
-            update.setAuditStatus(2);
-
-            // 一般不通过不修改证书
-            // 如需记录，可在复审表中存 remark
-
-        } else {
+        }
+//        else if (Objects.equals(auditStatus, 2)) {
+//            // 审核不通过
+//            // ===============================
+//            update.setAuditStatus(2);
+//
+//            // 一般不通过不修改证书
+//            // 如需记录，可在复审表中存 remark
+//
+//        }
+        else {
             throw new BusinessException("非法的审核状态");
         }
 
