@@ -16,7 +16,6 @@
 
 package top.continew.admin.auth.model.resp;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;

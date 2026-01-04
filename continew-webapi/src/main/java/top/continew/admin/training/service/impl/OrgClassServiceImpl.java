@@ -262,22 +262,23 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
     /**
      * 根据项目类型和班级类型获取班级选择器
      * orgQueryFlag 1 机构查询 0 后台查询
+     * 
      * @param projectId
      * @param classType
      * @return
      */
     @Override
-    public List<SelectClassVO> getSelectClassByProject(Long projectId, Integer classType,Integer orgQueryFlag) {
+    public List<SelectClassVO> getSelectClassByProject(Long projectId, Integer classType, Integer orgQueryFlag) {
         // 查询当前用户属于哪个机构
         Long orgId = null;
         if (SelectClassConstants.ORG_QUERY.equals(orgQueryFlag)) {
             UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
             TedOrgUser tedOrgUser = orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>()
-                    .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
-                    .select(TedOrgUser::getOrgId, TedOrgUser::getId)
-                    .last("limit 1"));
+                .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
+                .select(TedOrgUser::getOrgId, TedOrgUser::getId)
+                .last("limit 1"));
             orgId = tedOrgUser.getOrgId();
         }
-        return baseMapper.getSelectClassByProject(projectId, classType,orgId);
+        return baseMapper.getSelectClassByProject(projectId, classType, orgId);
     }
 }

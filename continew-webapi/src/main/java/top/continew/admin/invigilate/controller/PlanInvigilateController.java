@@ -21,9 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
-import top.continew.admin.exam.model.query.ExamPlanQuery;
-import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
-import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.invigilate.model.req.ExamScoreSubmitReq;
 import top.continew.admin.invigilate.model.resp.*;
 
@@ -35,8 +32,6 @@ import top.continew.admin.common.controller.BaseController;
 import top.continew.admin.invigilate.model.query.PlanInvigilateQuery;
 import top.continew.admin.invigilate.model.req.PlanInvigilateReq;
 import top.continew.admin.invigilate.service.PlanInvigilateService;
-import top.continew.starter.extension.crud.model.query.PageQuery;
-import top.continew.starter.extension.crud.model.resp.PageResp;
 
 import java.util.List;
 
@@ -84,7 +79,6 @@ public class PlanInvigilateController extends BaseController<PlanInvigilateServi
     public List<InvigilatorAssignResp> getListByPlanId(@PathVariable("planId") Long planId) {
         return baseService.getListByPlanId(planId);
     }
-
 
     /**
      * 侧边详情栏信息

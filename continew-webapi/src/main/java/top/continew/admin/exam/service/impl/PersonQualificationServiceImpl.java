@@ -1,11 +1,27 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.exam.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.annotation.Resource;
-import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.*;
@@ -14,11 +30,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-import top.continew.admin.common.model.entity.IdCardDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.exam.mapper.LicenseCertificateMapper;
-import top.continew.admin.exam.model.dto.ExamPlanExcelRowDTO;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.PersonQualificationAuditReq;
 import top.continew.starter.core.exception.BusinessException;
@@ -37,9 +51,6 @@ import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.ResolverStyle;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -69,18 +80,17 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
         if (query.getName() != null) {
             queryWrapper.like("name", query.getName());
         }
-        if (query.getIdCard() != null) {
-            queryWrapper.eq("id_card", query.getIdCard());
+        String idCard = query.getIdCard();
+        if (StrUtil.isNotBlank(idCard)) {
+            queryWrapper.eq("id_card", aesWithHMAC.encryptAndSign(idCard));
         }
         IPage<PersonQualificationDO> pageResult = baseMapper.selectPage(page, queryWrapper);
 
-        List<PersonQualificationResp> respList = pageResult.getRecords().stream()
-                .map(doObj -> {
-                    PersonQualificationResp resp = BeanUtil.copyProperties(doObj, PersonQualificationResp.class);
-                    resp.setIdCard(aesWithHMAC.verifyAndDecrypt(doObj.getIdCard()));
-                    return resp;
-                })
-                .collect(Collectors.toList());
+        List<PersonQualificationResp> respList = pageResult.getRecords().stream().map(doObj -> {
+            PersonQualificationResp resp = BeanUtil.copyProperties(doObj, PersonQualificationResp.class);
+            resp.setIdCard(aesWithHMAC.verifyAndDecrypt(doObj.getIdCard()));
+            return resp;
+        }).collect(Collectors.toList());
         return new PageResp<>(respList, pageResult.getTotal());
     }
 
@@ -89,14 +99,13 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
         //解密身份证号码
         String IdCard = SecureUtils.decryptByRsaPrivateKey(req.getIdCard());
         //查询许可证书
-        LicenseCertificateDO licenseCertificateDO =
-                LicenseCertificateMapper.selectOne(
-                        new LambdaQueryWrapper<LicenseCertificateDO>()
-                                .eq(LicenseCertificateDO::getIdcardNo, aesWithHMAC.encryptAndSign(IdCard))
-                                .eq(LicenseCertificateDO::getPsnName, req.getName())
-                                .eq(LicenseCertificateDO::getPsnlcnsItemCode, req.getQualificationCategoryCode())
+        LicenseCertificateDO licenseCertificateDO = LicenseCertificateMapper
+            .selectOne(new LambdaQueryWrapper<LicenseCertificateDO>().eq(LicenseCertificateDO::getIdcardNo, aesWithHMAC
+                .encryptAndSign(IdCard))
+                .eq(LicenseCertificateDO::getPsnName, req.getName())
+                .eq(LicenseCertificateDO::getPsnlcnsItemCode, req.getQualificationCategoryCode())
 
-                );
+            );
 
         if (licenseCertificateDO == null) {
             throw new BusinessException("未查询到可复审信息");
@@ -131,18 +140,15 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
         personQualificationDO.setIdCard(aesWithHMAC.encryptAndSign(IdCard));
         personQualificationDO.setEducation(req.getEducation());
         personQualificationDO.setPhone(req.getPhone());
-        personQualificationDO.setEmployer(
-                StringUtils.hasText(req.getEmployer())
-                        ? req.getEmployer()
-                        : licenseCertificateDO.getAuthCom()
-        );
+        personQualificationDO.setEmployer(StringUtils.hasText(req.getEmployer())
+            ? req.getEmployer()
+            : licenseCertificateDO.getAuthCom());
         personQualificationDO.setQualificationCategoryCode(req.getQualificationCategoryCode());
         personQualificationDO.setAuditStatus(0); // 待审核
         baseMapper.insert(personQualificationDO);
 
         return personQualificationDO.getId();
     }
-
 
     @Override
     public PersonQualificationDetailResp get(Long id) {
@@ -151,7 +157,8 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
         if (personQualificationDO == null) {
             throw new BusinessException("复审记录不存在");
         }
-        PersonQualificationDetailResp resp = BeanUtil.copyProperties(personQualificationDO, PersonQualificationDetailResp.class);
+        PersonQualificationDetailResp resp = BeanUtil
+            .copyProperties(personQualificationDO, PersonQualificationDetailResp.class);
         resp.setIdCard(aesWithHMAC.verifyAndDecrypt(personQualificationDO.getIdCard()));
         return resp;
     }
@@ -215,27 +222,19 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
             }
 
             // 表头校验（表头错误直接终止）
-            String[] expectedHeaders = {
-                    "姓名",
-                    "身份证号",
-                    "文化程度",
-                    "联系电话",
-                    "聘用单位",
-                    "资格项目代码"
-            };
+            String[] expectedHeaders = {"姓名", "身份证号", "文化程度", "联系电话", "聘用单位", "资格项目代码"};
             for (int i = 0; i < expectedHeaders.length; i++) {
                 String actual = getCellString(headerRow.getCell(i));
                 if (!expectedHeaders[i].equals(actual)) {
-                    throw new BusinessException(
-                            "模板错误：第" + (i + 1) + "列应为【" + expectedHeaders[i] + "】，实际为【" + actual + "】"
-                    );
+                    throw new BusinessException("模板错误：第" + (i + 1) + "列应为【" + expectedHeaders[i] + "】，实际为【" + actual + "】");
                 }
             }
 
             // 读取数据行
             for (int i = headerRowIndex + 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
-                if (row == null) continue;
+                if (row == null)
+                    continue;
 
                 int rowIndex = i + 1;
                 try {
@@ -247,7 +246,8 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
                     String qualificationCode = getCellString(row.getCell(5));
 
                     // 空行跳过
-                    if (!StringUtils.hasText(name) && !StringUtils.hasText(idCard)) continue;
+                    if (!StringUtils.hasText(name) && !StringUtils.hasText(idCard))
+                        continue;
 
                     // 非空校验
                     if (!StringUtils.hasText(name)) {
@@ -263,10 +263,8 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
                     // Excel 内组合唯一性校验
                     String uniqueKey = name + "|" + idCard + "|" + qualificationCode;
                     if (uniqueKeyRowMap.containsKey(uniqueKey)) {
-                        throw new BusinessException(
-                                "姓名+身份证号+资格项目代码在 Excel 内重复（首次出现在第"
-                                        + uniqueKeyRowMap.get(uniqueKey) + "行）"
-                        );
+                        throw new BusinessException("姓名+身份证号+资格项目代码在 Excel 内重复（首次出现在第" + uniqueKeyRowMap
+                            .get(uniqueKey) + "行）");
                     }
                     uniqueKeyRowMap.put(uniqueKey, rowIndex);
 
@@ -274,12 +272,11 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
                     String encryptedIdCard = aesWithHMAC.encryptAndSign(idCard);
 
                     // 查询许可证书
-                    LicenseCertificateDO licenseCertificateDO = LicenseCertificateMapper.selectOne(
-                            new LambdaQueryWrapper<LicenseCertificateDO>()
-                                    .eq(LicenseCertificateDO::getIdcardNo, encryptedIdCard)
-                                    .eq(LicenseCertificateDO::getPsnName, name)
-                                    .eq(LicenseCertificateDO::getPsnlcnsItemCode, qualificationCode)
-                    );
+                    LicenseCertificateDO licenseCertificateDO = LicenseCertificateMapper
+                        .selectOne(new LambdaQueryWrapper<LicenseCertificateDO>()
+                            .eq(LicenseCertificateDO::getIdcardNo, encryptedIdCard)
+                            .eq(LicenseCertificateDO::getPsnName, name)
+                            .eq(LicenseCertificateDO::getPsnlcnsItemCode, qualificationCode));
                     if (licenseCertificateDO == null) {
                         throw new BusinessException("未查询到可复审的证书信息");
                     }
@@ -302,13 +299,11 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
                     }
 
                     // 数据库组合唯一性校验
-                    boolean exists = baseMapper.exists(
-                            new LambdaQueryWrapper<PersonQualificationDO>()
-                                    .eq(PersonQualificationDO::getIdCard, encryptedIdCard)
-                                    .eq(PersonQualificationDO::getName, name)
-                                    .eq(PersonQualificationDO::getQualificationCategoryCode, qualificationCode)
-                                    .eq(PersonQualificationDO::getIsDeleted, 0)
-                    );
+                    boolean exists = baseMapper.exists(new LambdaQueryWrapper<PersonQualificationDO>()
+                        .eq(PersonQualificationDO::getIdCard, encryptedIdCard)
+                        .eq(PersonQualificationDO::getName, name)
+                        .eq(PersonQualificationDO::getQualificationCategoryCode, qualificationCode)
+                        .eq(PersonQualificationDO::getIsDeleted, 0));
                     if (exists) {
                         throw new BusinessException("姓名+身份证号+资格项目代码在系统中已存在");
                     }
@@ -374,13 +369,11 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
             //审核通过 → 修改许可证书
             update.setAuditStatus(1);
             // 查询许可证书
-            LicenseCertificateDO certificate =
-                    LicenseCertificateMapper.selectOne(
-                            new LambdaQueryWrapper<LicenseCertificateDO>()
-                                    .eq(LicenseCertificateDO::getIdcardNo, entity.getIdCard())
-                                    .eq(LicenseCertificateDO::getPsnName, entity.getName())
-                                    .eq(LicenseCertificateDO::getPsnlcnsItemCode, entity.getQualificationCategoryCode())
-                    );
+            LicenseCertificateDO certificate = LicenseCertificateMapper
+                .selectOne(new LambdaQueryWrapper<LicenseCertificateDO>().eq(LicenseCertificateDO::getIdcardNo, entity
+                    .getIdCard())
+                    .eq(LicenseCertificateDO::getPsnName, entity.getName())
+                    .eq(LicenseCertificateDO::getPsnlcnsItemCode, entity.getQualificationCategoryCode()));
             if (certificate == null) {
                 throw new BusinessException("未找到对应的许可证书，无法完成复审");
             }
@@ -406,15 +399,15 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
             }
 
         }
-//        else if (Objects.equals(auditStatus, 2)) {
-//            // 审核不通过
-//            // ===============================
-//            update.setAuditStatus(2);
-//
-//            // 一般不通过不修改证书
-//            // 如需记录，可在复审表中存 remark
-//
-//        }
+        //        else if (Objects.equals(auditStatus, 2)) {
+        //            // 审核不通过
+        //            // ===============================
+        //            update.setAuditStatus(2);
+        //
+        //            // 一般不通过不修改证书
+        //            // 如需记录，可在复审表中存 remark
+        //
+        //        }
         else {
             throw new BusinessException("非法的审核状态");
         }
@@ -431,7 +424,8 @@ public class PersonQualificationServiceImpl extends BaseServiceImpl<PersonQualif
      * 安全读取单元格内容（统一转String）
      */
     private String getCellString(Cell cell) {
-        if (cell == null) return "";
+        if (cell == null)
+            return "";
         cell.setCellType(CellType.STRING);
         return cell.getStringCellValue().trim();
     }

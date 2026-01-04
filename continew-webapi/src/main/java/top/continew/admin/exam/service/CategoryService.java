@@ -17,7 +17,6 @@
 package top.continew.admin.exam.service;
 
 import org.springframework.web.multipart.MultipartFile;
-import top.continew.admin.exam.model.ExcelParseResult;
 import top.continew.admin.exam.model.resp.AllPathVo;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.starter.extension.crud.service.BaseService;

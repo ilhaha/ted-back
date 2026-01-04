@@ -1287,62 +1287,54 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         ProjectDO projectDO = projectMapper.selectById(examPlanDO.getExamProjectId());
 
         // 已合格但未生成证书 或 成绩未录入的考生
-        List<Long> passedButUncertifiedCandidateIds =
-                baseMapper.getPassedButUncertifiedCandidateIds(projectDO.getId());
+        List<Long> passedButUncertifiedCandidateIds = baseMapper.getPassedButUncertifiedCandidateIds(projectDO.getId());
 
         // 取交集
         List<Long> conflictCandidateIds = CollectionUtil.emptyIfNull(passedButUncertifiedCandidateIds)
-                .stream()
-                .filter(allCandidateIds::contains)
-                .toList();
+            .stream()
+            .filter(allCandidateIds::contains)
+            .toList();
         // 只要有冲突，直接抛异常
         if (ObjectUtil.isNotEmpty(conflictCandidateIds)) {
             List<String> names = conflictCandidateIds.stream()
-                    .map(userMap::get)
-                    .filter(ObjectUtil::isNotEmpty)
-                    .toList();
+                .map(userMap::get)
+                .filter(ObjectUtil::isNotEmpty)
+                .toList();
 
-            String msg = "以下考生已参加相同项目考试，但成绩未录入或证书尚未生成，暂不可报名："
-                    + String.join("、", names);
+            String msg = "以下考生已参加相同项目考试，但成绩未录入或证书尚未生成，暂不可报名：" + String.join("、", names);
 
             throw new BusinessException(msg);
         }
 
         // 证书未过期无法报名
         String projectCode = projectDO.getProjectCode();
-        List<LicenseCertificateDO> licenseCertificateDOS =
-                licenseCertificateMapper.selectList(new LambdaQueryWrapper<LicenseCertificateDO>()
-                        .in(LicenseCertificateDO::getCandidateId, allCandidateIds)
-                        .eq(LicenseCertificateDO::getPsnlcnsItemCode, projectCode)
-                );
+        List<LicenseCertificateDO> licenseCertificateDOS = licenseCertificateMapper
+            .selectList(new LambdaQueryWrapper<LicenseCertificateDO>()
+                .in(LicenseCertificateDO::getCandidateId, allCandidateIds)
+                .eq(LicenseCertificateDO::getPsnlcnsItemCode, projectCode));
         if (CollUtil.isNotEmpty(licenseCertificateDOS)) {
             YearMonth currentMonth = YearMonth.now();
 
-            List<Long> blockedCandidateIds = licenseCertificateDOS.stream()
-                    .filter(item -> {
-                        LocalDate endDate = item.getEndDate();
-                        if (endDate == null) {
-                            return false;
-                        }
-                        YearMonth endMonth = YearMonth.from(endDate);
-                        // endMonth >= currentMonth → 证书未过期
-                        return !endMonth.isBefore(currentMonth);
-                    })
-                    .map(LicenseCertificateDO::getCandidateId)
-                    .distinct()
-                    .toList();
+            List<Long> blockedCandidateIds = licenseCertificateDOS.stream().filter(item -> {
+                LocalDate endDate = item.getEndDate();
+                if (endDate == null) {
+                    return false;
+                }
+                YearMonth endMonth = YearMonth.from(endDate);
+                // endMonth >= currentMonth → 证书未过期
+                return !endMonth.isBefore(currentMonth);
+            }).map(LicenseCertificateDO::getCandidateId).distinct().toList();
 
             if (CollUtil.isNotEmpty(blockedCandidateIds)) {
                 String existedNames = userMapper.selectByIds(blockedCandidateIds)
-                        .stream()
-                        .map(UserDO::getNickname)
-                        .filter(StrUtil::isNotBlank)
-                        .collect(Collectors.joining("、"));
+                    .stream()
+                    .map(UserDO::getNickname)
+                    .filter(StrUtil::isNotBlank)
+                    .collect(Collectors.joining("、"));
 
                 throw new BusinessException("以下考生证书仍在有效期内，暂不可报名考试：" + existedNames);
             }
         }
-
 
         // 插入报名表
         List<EnrollDO> insertEnrollList = projectClassCandidateList.stream().map(item -> {

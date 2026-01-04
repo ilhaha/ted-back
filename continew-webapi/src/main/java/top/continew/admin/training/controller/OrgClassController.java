@@ -48,6 +48,7 @@ public class OrgClassController extends BaseController<OrgClassService, OrgClass
     /**
      * 根据项目类型和班级类型获取班级选择器
      * orgQueryFlag 1 机构查询 0 后台查询
+     * 
      * @param projectId
      * @param classType
      * @return
@@ -56,6 +57,6 @@ public class OrgClassController extends BaseController<OrgClassService, OrgClass
     public List<SelectClassVO> getSelectClassByProject(@PathVariable("projectId") Long projectId,
                                                        @PathVariable("classType") Integer classType,
                                                        @PathVariable("orgQueryFlag") Integer orgQueryFlag) {
-        return baseService.getSelectClassByProject(projectId, classType,orgQueryFlag);
+        return baseService.getSelectClassByProject(projectId, classType, orgQueryFlag);
     }
 }

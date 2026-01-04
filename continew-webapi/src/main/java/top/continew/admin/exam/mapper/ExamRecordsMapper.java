@@ -44,13 +44,16 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
 
     /**
      * 判断考试计划是否有某种考试
+     * 
      * @param planIds
      * @return
      */
-    List<CheckPlanHasExamTypeDTO> checkPlanHasExamType(@Param("planIds") List<Long> planIds,@Param("roadExamTypeId") Long roadExamTypeId);
+    List<CheckPlanHasExamTypeDTO> checkPlanHasExamType(@Param("planIds") List<Long> planIds,
+                                                       @Param("roadExamTypeId") Long roadExamTypeId);
 
     /**
      * 获取证书信息
+     * 
      * @param recordIds
      * @return
      */
@@ -58,11 +61,10 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
 
     /**
      * 根据考生id和计划id获取所在班级
+     * 
      * @param pairs
      * @return
      */
-    List<EnrollWithClassDTO> selectEnrollWithClass(
-            @Param("pairs") List<UserPlanPairDTO> pairs
-    );
+    List<EnrollWithClassDTO> selectEnrollWithClass(@Param("pairs") List<UserPlanPairDTO> pairs);
 
 }

@@ -70,27 +70,27 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     @Resource
     private ExamPlanService examPlanService;
 
-
     /**
      * 根据计划考试人员类型获取项目-考试计划级联选择器
+     * 
      * @param planType
      * @return
      */
     @GetMapping("/project/cascader/{planType}/{isOrgQuery}")
-    public  List<CascaderPlanResp> getCascaderProjectPlan(@PathVariable("planType") Integer planType,
-                                                          @PathVariable("isOrgQuery") Boolean isOrgQuery) {
-        return baseService.getCascaderProjectPlan(planType,isOrgQuery);
+    public List<CascaderPlanResp> getCascaderProjectPlan(@PathVariable("planType") Integer planType,
+                                                         @PathVariable("isOrgQuery") Boolean isOrgQuery) {
+        return baseService.getCascaderProjectPlan(planType, isOrgQuery);
     }
-
 
     /**
      * 根据考生身份证获取考生的所有考试准考证号
+     * 
      * @param username
      * @return
      */
     @SaIgnore
     @GetMapping("/examNumbers")
-    public  List<CascaderOptionResp> getExamNumbersByUsername(@RequestParam String username) {
+    public List<CascaderOptionResp> getExamNumbersByUsername(@RequestParam String username) {
         return baseService.getExamNumbersByUsername(username);
     }
 
@@ -102,7 +102,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
      * @return
      */
     @PostMapping("/start")
-    public ExamCandidateInfoVO startExam(@Validated @RequestBody ExamPlanStartReq req){
+    public ExamCandidateInfoVO startExam(@Validated @RequestBody ExamPlanStartReq req) {
         return baseService.startExam(req);
     }
 
@@ -176,7 +176,8 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
      * @return 分页结果
      */
     @GetMapping({"/invigilate/page"})
-    public PageResp<InvigilateExamPlanVO> invigilateGetPlanList(ExamPlanQuery examPlanQuery, @Validated PageQuery pageQuery) {
+    public PageResp<InvigilateExamPlanVO> invigilateGetPlanList(ExamPlanQuery examPlanQuery,
+                                                                @Validated PageQuery pageQuery) {
         return examPlanService.invigilateGetPlanList(examPlanQuery, pageQuery);
     }
 

@@ -60,7 +60,7 @@ public class EnrollQuery implements Serializable {
 
     /**
      * 是否是机构查询
-     * true 是  false 后台查询
+     * true 是 false 后台查询
      */
     @QueryIgnore
     private Boolean isOrgQuery;

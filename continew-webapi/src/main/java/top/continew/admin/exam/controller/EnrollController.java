@@ -52,9 +52,9 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
     @Resource
     private EnrollService enrollService;
 
-
     /**
      * 监考员设置考生补考
+     * 
      * @param req
      * @return
      */
@@ -62,7 +62,6 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
     public Boolean makeUpExam(@Validated @RequestBody MakeUpExamReq req) {
         return enrollService.makeUpExam(req);
     }
-
 
     /**
      * 下载某个班级的准考证

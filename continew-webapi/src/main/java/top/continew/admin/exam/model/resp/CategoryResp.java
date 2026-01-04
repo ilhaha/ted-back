@@ -16,7 +16,6 @@
 
 package top.continew.admin.exam.model.resp;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;

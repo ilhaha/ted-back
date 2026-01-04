@@ -32,7 +32,6 @@ import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.ImportQuestionConstant;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.exam.mapper.ProjectMapper;
-import top.continew.admin.exam.model.ExcelParseResult;
 import top.continew.admin.exam.model.dto.ProjectInfoDTO;
 import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.exam.model.resp.AllPathVo;
@@ -98,8 +97,8 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         } else {
             List<ProjectVo> selectOptions = baseMapper.getSelectOptions();
             stringRedisTemplate.opsForValue()
-                    .set(RedisConstant.EXAM_CATEGORY_SELECT, JSON.toJSONString(selectOptions), RedisConstant
-                            .randomTTL(), TimeUnit.MILLISECONDS);
+                .set(RedisConstant.EXAM_CATEGORY_SELECT, JSON.toJSONString(selectOptions), RedisConstant
+                    .randomTTL(), TimeUnit.MILLISECONDS);
             return selectOptions;
         }
     }
@@ -160,7 +159,6 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
             ValidationUtils.throwIfEmpty(questions, "题目不能为空");
 
-
             // 8. 校验数据库中是否已有相同题目（去重）
             List<QuestionBankDO> filteredQuestions = validateAndPrepareQuestions(questions);
 
@@ -194,21 +192,19 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
         /* ================== 1. 校验项目是否存在 ================== */
         Set<String> projectCodes = questions.stream()
-                .map(QuestionDTO::getProjectCode)
-                .filter(code -> code != null && !code.trim().isEmpty())
-                .map(String::trim)
-                .collect(Collectors.toSet());
+            .map(QuestionDTO::getProjectCode)
+            .filter(code -> code != null && !code.trim().isEmpty())
+            .map(String::trim)
+            .collect(Collectors.toSet());
 
         if (projectCodes.isEmpty()) {
             throw new BusinessException("Excel中未填写项目代码");
         }
 
         // 查询项目，拿到 projectId 和 categoryId
-        List<ProjectDO> projectList = projectMapper.selectList(
-                new LambdaQueryWrapper<ProjectDO>()
-                        .in(ProjectDO::getProjectCode, projectCodes)
-                        .select(ProjectDO::getId, ProjectDO::getProjectCode, ProjectDO::getCategoryId)
-        );
+        List<ProjectDO> projectList = projectMapper.selectList(new LambdaQueryWrapper<ProjectDO>()
+            .in(ProjectDO::getProjectCode, projectCodes)
+            .select(ProjectDO::getId, ProjectDO::getProjectCode, ProjectDO::getCategoryId));
 
         if (projectList.isEmpty()) {
             throw new BusinessException("Excel中的项目代码均不存在");
@@ -216,15 +212,13 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
         // Map<projectCode, ProjectInfo>
         Map<String, ProjectInfoDTO> projectCodeInfoMap = projectList.stream()
-                .collect(Collectors.toMap(
-                        ProjectDO::getProjectCode,
-                        p -> new ProjectInfoDTO(p.getId(), p.getCategoryId())
-                ));
+            .collect(Collectors.toMap(ProjectDO::getProjectCode, p -> new ProjectInfoDTO(p.getId(), p
+                .getCategoryId())));
 
         // 不存在的项目代码
         List<String> notExistProjects = projectCodes.stream()
-                .filter(code -> !projectCodeInfoMap.containsKey(code))
-                .collect(Collectors.toList());
+            .filter(code -> !projectCodeInfoMap.containsKey(code))
+            .collect(Collectors.toList());
 
         if (!notExistProjects.isEmpty()) {
             throw new BusinessException("以下项目代码不存在：" + String.join("、", notExistProjects));
@@ -232,47 +226,45 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
         /* ================== 2. 校验知识类型是否存在 ================== */
         Set<String> excelProjectKnowledgeKeys = questions.stream()
-                .filter(q -> q.getKnowledgeName() != null && !q.getKnowledgeName().trim().isEmpty())
-                .map(q -> {
-                    Long projectId = projectCodeInfoMap.get(q.getProjectCode().trim()).getProjectId();
-                    return projectId + "_" + q.getKnowledgeName().trim();
-                })
-                .collect(Collectors.toSet());
+            .filter(q -> q.getKnowledgeName() != null && !q.getKnowledgeName().trim().isEmpty())
+            .map(q -> {
+                Long projectId = projectCodeInfoMap.get(q.getProjectCode().trim()).getProjectId();
+                return projectId + "_" + q.getKnowledgeName().trim();
+            })
+            .collect(Collectors.toSet());
 
         if (excelProjectKnowledgeKeys.isEmpty()) {
             throw new BusinessException("Excel中未填写知识类型名称");
         }
 
-        List<KnowledgeTypeDO> knowledgeList = knowledgeTypeMapper.selectList(
-                new LambdaQueryWrapper<KnowledgeTypeDO>()
-                        .in(KnowledgeTypeDO::getProjectId, projectCodeInfoMap.values().stream()
-                                .map(ProjectInfoDTO::getProjectId).collect(Collectors.toSet()))
-                        .select(KnowledgeTypeDO::getId, KnowledgeTypeDO::getProjectId, KnowledgeTypeDO::getName)
-        );
+        List<KnowledgeTypeDO> knowledgeList = knowledgeTypeMapper.selectList(new LambdaQueryWrapper<KnowledgeTypeDO>()
+            .in(KnowledgeTypeDO::getProjectId, projectCodeInfoMap.values()
+                .stream()
+                .map(ProjectInfoDTO::getProjectId)
+                .collect(Collectors.toSet()))
+            .select(KnowledgeTypeDO::getId, KnowledgeTypeDO::getProjectId, KnowledgeTypeDO::getName));
 
         // Map<"projectId_knowledgeName", knowledgeTypeId>
         Map<String, Long> knowledgeNameIdMap = knowledgeList.stream()
-                .collect(Collectors.toMap(
-                        k -> k.getProjectId() + "_" + k.getName().trim(),
-                        KnowledgeTypeDO::getId
-                ));
+            .collect(Collectors.toMap(k -> k.getProjectId() + "_" + k.getName().trim(), KnowledgeTypeDO::getId));
 
         List<String> notExistKnowledge = excelProjectKnowledgeKeys.stream()
-                .filter(key -> !knowledgeNameIdMap.containsKey(key))
-                .map(key -> {
-                    String[] arr = key.split("_", 2);
-                    Long projectId = Long.valueOf(arr[0]);
-                    String knowledgeName = arr[1];
+            .filter(key -> !knowledgeNameIdMap.containsKey(key))
+            .map(key -> {
+                String[] arr = key.split("_", 2);
+                Long projectId = Long.valueOf(arr[0]);
+                String knowledgeName = arr[1];
 
-                    String projectCode = projectCodeInfoMap.entrySet().stream()
-                            .filter(e -> e.getValue().getProjectId().equals(projectId))
-                            .map(Map.Entry::getKey)
-                            .findFirst()
-                            .orElse("未知项目");
+                String projectCode = projectCodeInfoMap.entrySet()
+                    .stream()
+                    .filter(e -> e.getValue().getProjectId().equals(projectId))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse("未知项目");
 
-                    return "项目【" + projectCode + "】的知识类型【" + knowledgeName + "】";
-                })
-                .collect(Collectors.toList());
+                return "项目【" + projectCode + "】的知识类型【" + knowledgeName + "】";
+            })
+            .collect(Collectors.toList());
 
         if (!notExistKnowledge.isEmpty()) {
             throw new BusinessException("以下知识类型不存在：" + String.join("、", notExistKnowledge));
@@ -307,34 +299,31 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
                                                       Map<String, ProjectInfoDTO> projectCodeInfoMap,
                                                       Map<String, Long> knowledgeNameIdMap) {
         List<String> questionTexts = questions.stream()
-                .map(QuestionDTO::getTitle)
-                .filter(Objects::nonNull)
-                .map(q -> q.trim().replaceAll("\\s+", ""))
-                .distinct()
-                .collect(Collectors.toList());
+            .map(QuestionDTO::getTitle)
+            .filter(Objects::nonNull)
+            .map(q -> q.trim().replaceAll("\\s+", ""))
+            .distinct()
+            .collect(Collectors.toList());
 
         Set<Long> projectIds = questions.stream()
-                .map(q -> projectCodeInfoMap.get(q.getProjectCode().trim()).getProjectId())
-                .collect(Collectors.toSet());
+            .map(q -> projectCodeInfoMap.get(q.getProjectCode().trim()).getProjectId())
+            .collect(Collectors.toSet());
 
         Set<Long> knowledgeTypeIds = questions.stream()
-                .map(q -> knowledgeNameIdMap.get(
-                        projectCodeInfoMap.get(q.getProjectCode().trim()).getProjectId() + "_" + q.getKnowledgeName().trim()
-                ))
-                .collect(Collectors.toSet());
+            .map(q -> knowledgeNameIdMap.get(projectCodeInfoMap.get(q.getProjectCode().trim()).getProjectId() + "_" + q
+                .getKnowledgeName()
+                .trim()))
+            .collect(Collectors.toSet());
 
-        List<Map<String, Object>> existingList = questionBankMapper.selectExistingQuestionsByProjectAndKnowledge(
-                questionTexts, projectIds, knowledgeTypeIds
-        );
+        List<Map<String, Object>> existingList = questionBankMapper
+            .selectExistingQuestionsByProjectAndKnowledge(questionTexts, projectIds, knowledgeTypeIds);
 
         final Map<String, List<String>> existingMap = existingList.stream()
-                .collect(Collectors.groupingBy(
-                        m -> ((String) m.get("question")).trim().replaceAll("\\s+", ""),
-                        Collectors.mapping(m -> {
-                            String ans = (String) m.get("allOptions");
-                            return ans == null ? "" : ans.trim().replaceAll("\\s+", "");
-                        }, Collectors.toList())
-                ));
+            .collect(Collectors.groupingBy(m -> ((String)m.get("question")).trim().replaceAll("\\s+", ""), Collectors
+                .mapping(m -> {
+                    String ans = (String)m.get("allOptions");
+                    return ans == null ? "" : ans.trim().replaceAll("\\s+", "");
+                }, Collectors.toList())));
 
         List<QuestionDTO> newQuestions = questions.stream().filter(q -> {
             String qTitle = q.getTitle() == null ? "" : q.getTitle().trim().replaceAll("\\s+", "");
@@ -356,7 +345,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             }
 
             boolean duplicate = existingOptionsList.stream()
-                    .anyMatch(dbOptions -> compareOptionSets(dbOptions, qOptions));
+                .anyMatch(dbOptions -> compareOptionSets(dbOptions, qOptions));
             return !duplicate;
         }).collect(Collectors.toList());
 
@@ -377,14 +366,14 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             return false;
 
         Set<String> dbSet = Arrays.stream(dbOptions.split("[、,，;；]"))
-                .map(s -> s.trim().toUpperCase())
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toSet());
+            .map(s -> s.trim().toUpperCase())
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toSet());
 
         Set<String> excelSet = Arrays.stream(excelOptions.split("[、,，;；]"))
-                .map(s -> s.trim().toUpperCase())
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toSet());
+            .map(s -> s.trim().toUpperCase())
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toSet());
 
         return dbSet.equals(excelSet);
     }
@@ -426,7 +415,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             String cellValue = getCellValue(headerRow.getCell(i));
             if (!ImportQuestionConstant.HEADERS[i].equals(cellValue)) {
                 throw new BusinessException(String
-                        .format("第 %d 列表头不正确，应为「%s」，实际为「%s」", i + 1, ImportQuestionConstant.HEADERS[i], cellValue));
+                    .format("第 %d 列表头不正确，应为「%s」，实际为「%s」", i + 1, ImportQuestionConstant.HEADERS[i], cellValue));
             }
         }
     }
@@ -471,7 +460,6 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         }
         return questions;
     }
-
 
     private void parseDynamicOptions(Row row, QuestionDTO question, int rowIdx) {
         List<OptionDTO> options = new ArrayList<>();
@@ -523,9 +511,9 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
 
     private Set<String> parseAnswerLetters(String answerRaw, int rowIdx) {
         Set<String> set = Arrays.stream(answerRaw.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toSet());
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toSet());
         // 校验答案必须是 A/B/C/D
         for (String s : set) {
             if (!s.matches("^[A-D]$")) {
@@ -560,9 +548,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             case "检验人员":
                 return 2;
             default:
-                throw new BusinessException(
-                        String.format("第%d行：考试人员类型必须填写作业人员、或检验人员", rowIdx + 1)
-                );
+                throw new BusinessException(String.format("第%d行：考试人员类型必须填写作业人员、或检验人员", rowIdx + 1));
         }
     }
 
@@ -639,7 +625,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
                 if (DateUtil.isCellDateFormatted(cell)) {
                     return new SimpleDateFormat("yyyy-MM-dd").format(cell.getDateCellValue());
                 }
-                return String.valueOf((int) cell.getNumericCellValue());
+                return String.valueOf((int)cell.getNumericCellValue());
             case BOOLEAN:
                 return String.valueOf(cell.getBooleanCellValue());
             default:
@@ -695,9 +681,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
             case "多选题":
                 return 2;
             default:
-                throw new BusinessException(
-                        String.format("第%d行：题型必须填写单选题、判断题或多选题", rowIdx + 1)
-                );
+                throw new BusinessException(String.format("第%d行：题型必须填写单选题、判断题或多选题", rowIdx + 1));
         }
     }
 

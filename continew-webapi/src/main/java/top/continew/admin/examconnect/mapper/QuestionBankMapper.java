@@ -28,7 +28,6 @@ import top.continew.admin.examconnect.model.entity.QuestionBankDO;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 题库，存储各类题目及其分类信息 Mapper
@@ -53,8 +52,7 @@ public interface QuestionBankMapper extends BaseMapper<QuestionBankDO> {
                                                       @Param("projectId") Long projectId,
                                                       @Param("knowledgeTypeId") Long knowledgeTypeId);
 
-    List<Map<String, Object>> selectExistingQuestionsByProjectAndKnowledge(
-            @Param("questionList") List<String> questionList,
-            @Param("projectIds") Collection<Long> projectIds,
-            @Param("knowledgeTypeIds") Collection<Long> knowledgeTypeIds
-    );}
+    List<Map<String, Object>> selectExistingQuestionsByProjectAndKnowledge(@Param("questionList") List<String> questionList,
+                                                                           @Param("projectIds") Collection<Long> projectIds,
+                                                                           @Param("knowledgeTypeIds") Collection<Long> knowledgeTypeIds);
+}

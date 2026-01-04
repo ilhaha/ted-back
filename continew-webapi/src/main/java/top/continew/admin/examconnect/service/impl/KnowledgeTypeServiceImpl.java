@@ -76,7 +76,6 @@ public class KnowledgeTypeServiceImpl extends BaseServiceImpl<KnowledgeTypeMappe
         return super.add(req);
     }
 
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(KnowledgeTypeReq req, Long id) {
@@ -85,7 +84,6 @@ public class KnowledgeTypeServiceImpl extends BaseServiceImpl<KnowledgeTypeMappe
         super.update(req, id);
     }
 
-
     /**
      * 校验知识类型名称在所属八大类和项目下的唯一性（新增、修改通用）
      */
@@ -93,8 +91,8 @@ public class KnowledgeTypeServiceImpl extends BaseServiceImpl<KnowledgeTypeMappe
         LambdaQueryWrapper<KnowledgeTypeDO> qw = Wrappers.lambdaQuery();
 
         qw.eq(KnowledgeTypeDO::getName, req.getName())
-                .eq(KnowledgeTypeDO::getProjectId, req.getProjectId())
-                .eq(KnowledgeTypeDO::getIsDeleted, 0);
+            .eq(KnowledgeTypeDO::getProjectId, req.getProjectId())
+            .eq(KnowledgeTypeDO::getIsDeleted, 0);
         // 修改时排除自身
         if (excludeId != null) {
             qw.ne(KnowledgeTypeDO::getId, excludeId);
@@ -104,7 +102,6 @@ public class KnowledgeTypeServiceImpl extends BaseServiceImpl<KnowledgeTypeMappe
             throw new BusinessException("该知识类型在所属八大类和项目下已存在，请勿重复添加");
         }
     }
-
 
     /**
      * 校验某项目所有知识类型的占比总和是否超过 100%（新增、修改通用）

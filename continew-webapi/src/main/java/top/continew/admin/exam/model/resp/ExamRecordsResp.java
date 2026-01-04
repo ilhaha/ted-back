@@ -132,14 +132,12 @@ public class ExamRecordsResp extends BaseResp {
     @ExcelProperty(value = "道路成绩录入状态（0未录入，1已录入）")
     private Integer roadInputStatus;
 
-
     /**
      * 证书是否已生成（0：未生成，1：已生成）
      */
     @Schema(description = " 证书是否已生成（0：未生成，1：已生成）")
     @ExcelProperty(value = " 证书是否已生成（0：未生成，1：已生成）")
     private Integer isCertificateGenerated;
-
 
     /**
      * 考试结果（0不及格，1及格,2未录入）

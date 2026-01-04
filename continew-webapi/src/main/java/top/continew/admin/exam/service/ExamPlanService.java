@@ -170,6 +170,7 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 根据考生身份证获取考生的所有考试准考证号
+     * 
      * @param username
      * @return
      */
@@ -177,9 +178,10 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 根据计划考试人员类型获取项目-考试计划级联选择器
+     * 
      * @param planType
      * @return
      */
-    List<CascaderPlanResp> getCascaderProjectPlan(Integer planType,Boolean isOrgQuery);
+    List<CascaderPlanResp> getCascaderProjectPlan(Integer planType, Boolean isOrgQuery);
 
 }

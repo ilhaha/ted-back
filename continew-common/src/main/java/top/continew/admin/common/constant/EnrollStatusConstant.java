@@ -62,7 +62,6 @@ public class EnrollStatusConstant {
      */
     public static final Integer SUBMITTED = 2;
 
-
     /**
      * 考试状态：缺考
      */

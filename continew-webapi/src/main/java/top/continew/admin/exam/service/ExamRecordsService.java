@@ -54,6 +54,7 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
 
     /**
      * 录入实操、导入成绩
+     * 
      * @param inputScoresReq
      * @return
      */
@@ -61,6 +62,7 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
 
     /**
      * 生成资格证书
+     * 
      * @param generateReq
      * @return
      */
@@ -68,9 +70,10 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
 
     /**
      * 下载资格证书
+     * 
      * @param recordIds
      * @return
      */
-    ResponseEntity<byte[]> downloadQualificationCertificate(List<Long> recordIds,Integer planType);
+    ResponseEntity<byte[]> downloadQualificationCertificate(List<Long> recordIds, Integer planType);
 
 }

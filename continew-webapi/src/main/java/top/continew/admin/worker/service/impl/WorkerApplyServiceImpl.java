@@ -325,15 +325,9 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
             // 6. 批量插入新用户
             if (CollUtil.isNotEmpty(newUsers)) {
-                newUsers = new ArrayList<>(
-                        newUsers.stream()
-                                .collect(Collectors.toMap(
-                                        UserDO::getUsername,
-                                        Function.identity(),
-                                        (u1, u2) -> u1
-                                ))
-                                .values()
-                );
+                newUsers = new ArrayList<>(newUsers.stream()
+                    .collect(Collectors.toMap(UserDO::getUsername, Function.identity(), (u1, u2) -> u1))
+                    .values());
                 userMapper.insertBatch(newUsers);
                 newUsers.forEach(u -> userMap.put(u.getUsername(), u));
 
@@ -930,8 +924,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Override
     public PageResp<WorkerApplyResp> page(WorkerApplyQuery query, PageQuery pageQuery) {
         QueryWrapper<WorkerApplyDO> queryWrapper = this.buildQueryWrapper(query);
-        queryWrapper.eq("twa.is_deleted", 0)
-                .orderByDesc("twa.id");
+        queryWrapper.eq("twa.is_deleted", 0).orderByDesc("twa.id");
         Boolean isOrgQuery = query.getIsOrgQuery();
         if (!isOrgQuery) {
             queryWrapper.ne("twa.status", WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue())

@@ -69,6 +69,6 @@ public class CategoryController extends BaseController<CategoryService, Category
 
     @PostMapping("/verifyExcel")
     public Boolean verifyExcel(@RequestPart("file") MultipartFile file) {
-        return  baseService.verifyExcel(file);
+        return baseService.verifyExcel(file);
     }
 }

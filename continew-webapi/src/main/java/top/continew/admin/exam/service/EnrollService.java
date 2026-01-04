@@ -153,9 +153,9 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      */
     ResponseEntity<byte[]> downloadClassTicket(Long classId, Long planId);
 
-
     /**
      * 监考员设置考生补考
+     * 
      * @param req
      * @return
      */

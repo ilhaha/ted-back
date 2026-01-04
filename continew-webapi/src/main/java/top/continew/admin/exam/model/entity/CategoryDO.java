@@ -56,7 +56,6 @@ public class CategoryDO extends BaseDO {
      */
     private Boolean isDeleted;
 
-
     /**
      * 是否开启电子监考违规行为提醒功能（1开启，0未开启）
      */

@@ -75,7 +75,6 @@ public class ExamRecordsDO extends BaseDO {
      */
     private Integer roadScores;
 
-
     /**
      * 道路成绩录入状态（0未录入，1已录入）
      */

@@ -16,16 +16,11 @@
 
 package top.continew.admin.invigilate.service;
 
-import org.springframework.validation.annotation.Validated;
-import top.continew.admin.exam.model.query.ExamPlanQuery;
-import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.invigilate.model.entity.Grades;
 import top.continew.admin.invigilate.model.entity.TedExamRecords;
 import top.continew.admin.invigilate.model.req.ExamScoreSubmitReq;
 import top.continew.admin.invigilate.model.req.UpdateReviewReq;
 import top.continew.admin.invigilate.model.resp.*;
-import top.continew.starter.extension.crud.model.query.PageQuery;
-import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.invigilate.model.query.PlanInvigilateQuery;
 import top.continew.admin.invigilate.model.req.PlanInvigilateReq;
@@ -39,7 +34,6 @@ import java.util.List;
  * @since 2025/04/24 10:57
  */
 public interface PlanInvigilateService extends BaseService<PlanInvigilateResp, PlanInvigilateDetailResp, PlanInvigilateQuery, PlanInvigilateReq> {
-
 
     /**
      * 获取监考的考试详情

@@ -203,7 +203,7 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         // 修改考生的考试状态为已签到(如果是补考不修改)
         if (!EnrollStatusConstant.RETAKE.equals(candidatesExamPlanVo.getExamStatus())) {
             userService.updateExamStatus(user.getId(), examNumberEncrypt, candidatesExamPlanVo
-                    .getPlanId(), EnrollExamStatusEnum.SIGNED.getValue());
+                .getPlanId(), EnrollExamStatusEnum.SIGNED.getValue());
         }
         return LoginResp.builder()
             .token(token)
@@ -263,8 +263,6 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
             .examCandidateInfoVO(examCandidateInfoVO)
             .build();
     }
-
-
 
     @Override
     public void preLogin(AccountLoginReq req, ClientResp client, HttpServletRequest request) {

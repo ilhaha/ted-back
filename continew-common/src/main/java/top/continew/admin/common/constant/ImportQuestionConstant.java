@@ -22,8 +22,6 @@ package top.continew.admin.common.constant;
  */
 public class ImportQuestionConstant {
 
-    public static final String[] HEADERS = {"项目代码", "知识类型名称","问题", "选项A", "选项B", "选项C",
-            "选项D", "答案\n" +
-            "（多选用英文逗号分隔如：A,B）","题型",
-            "考试人员类型"};
+    public static final String[] HEADERS = {"项目代码", "知识类型名称", "问题", "选项A", "选项B", "选项C", "选项D",
+        "答案\n" + "（多选用英文逗号分隔如：A,B）", "题型", "考试人员类型"};
 }

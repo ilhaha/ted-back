@@ -35,9 +35,10 @@ public interface OrgClassService extends BaseService<OrgClassResp, OrgClassDetai
     /**
      * 根据项目类型和班级类型获取班级选择器
      * orgQueryFlag 1 机构查询 0 后台查询
+     * 
      * @param projectId
      * @param classType
      * @return
      */
-    List<SelectClassVO> getSelectClassByProject(Long projectId, Integer classType,Integer orgQueryFlag);
+    List<SelectClassVO> getSelectClassByProject(Long projectId, Integer classType, Integer orgQueryFlag);
 }

@@ -73,7 +73,7 @@ public class ExamRecordsQuery implements Serializable {
      * 考生姓名
      */
     @Schema(description = "考生姓名")
-    @Query(type = QueryType.LIKE,columns = "su.nickname")
+    @Query(type = QueryType.LIKE, columns = "su.nickname")
     private String candidateName;
 
     /**
@@ -87,6 +87,5 @@ public class ExamRecordsQuery implements Serializable {
      */
     @QueryIgnore
     private Boolean isOrgQuery;
-
 
 }

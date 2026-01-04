@@ -57,12 +57,12 @@ public class ExcelUtilReactive {
         // 先查缓存
         byte[] cached = templateCache.get(templateUrl);
         if (cached != null) {
-//            log.info("模板缓存命中，URL={}，大小={}KB", templateUrl, cached.length / 1024);
+            //            log.info("模板缓存命中，URL={}，大小={}KB", templateUrl, cached.length / 1024);
             return cached;
         }
 
         // 同步下载远程模板
-//        log.info("开始同步下载模板 URL={}", templateUrl);
+        //        log.info("开始同步下载模板 URL={}", templateUrl);
         try {
             // 方式1：用RestTemplate（简单）
             byte[] templateBytes = restTemplate.getForObject(templateUrl, byte[].class);
@@ -94,10 +94,10 @@ public class ExcelUtilReactive {
             */
 
             templateCache.put(templateUrl, templateBytes);
-//            log.info("模板下载完成，URL={}，大小={}KB", templateUrl, templateBytes.length / 1024);
+            //            log.info("模板下载完成，URL={}，大小={}KB", templateUrl, templateBytes.length / 1024);
             return templateBytes;
         } catch (Exception e) {
-//            log.error("同步下载模板失败：URL={}", templateUrl, e);
+            //            log.error("同步下载模板失败：URL={}", templateUrl, e);
             throw new RuntimeException("模板下载失败：" + e.getMessage(), e);
         }
     }
@@ -111,11 +111,11 @@ public class ExcelUtilReactive {
                 List<Map<String, Object>> dataList = Collections.singletonList(dataMap);
                 EasyExcel.write(excelOut).withTemplate(templateIs).sheet().doFill(dataList);
                 byte[] excelBytes = excelOut.toByteArray();
-//                log.info("填充Excel模板完成，大小={}KB", excelBytes.length / 1024);
+                //                log.info("填充Excel模板完成，大小={}KB", excelBytes.length / 1024);
                 return excelBytes;
             }
         } catch (Exception e) {
-//            log.error("填充Excel模板失败", e);
+            //            log.error("填充Excel模板失败", e);
             throw new RuntimeException("Excel填充失败：" + e.getMessage(), e);
         }
     }
@@ -139,7 +139,7 @@ public class ExcelUtilReactive {
                                               int endRow) {
         try {
             if (photoBytes == null || photoBytes.length == 0) {
-//                log.info("没有有效照片，直接返回Excel原始字节");
+                //                log.info("没有有效照片，直接返回Excel原始字节");
                 return excelBytes;
             }
 
@@ -157,7 +157,7 @@ public class ExcelUtilReactive {
                     if (range.isInRange(startRow, startCol)) {
                         endCol = range.getLastColumn();
                         endRow = range.getLastRow();
-//                        log.info("检测到合并单元格，调整插入范围：col[{}->{}], row[{}->{}]", startCol, endCol, startRow, endRow);
+                        //                        log.info("检测到合并单元格，调整插入范围：col[{}->{}], row[{}->{}]", startCol, endCol, startRow, endRow);
                         break;
                     }
                 }
@@ -178,11 +178,11 @@ public class ExcelUtilReactive {
 
                 workbook.write(out);
                 byte[] result = out.toByteArray();
-//                log.info("Excel插入图片完成，大小={}KB", result.length / 1024);
+                //                log.info("Excel插入图片完成，大小={}KB", result.length / 1024);
                 return result;
             }
         } catch (Exception e) {
-//            log.error("插入照片到Excel失败", e);
+            //            log.error("插入照片到Excel失败", e);
             throw new RuntimeException("图片插入失败：" + e.getMessage(), e);
         }
     }
@@ -190,10 +190,10 @@ public class ExcelUtilReactive {
     // Excel转PDF（同步 + 裁剪）
     public byte[] convertExcelBytesToPdfBytesSync(byte[] excelBytes) {
         try {
-//            log.info("开始Excel转PDF，输入大小={}KB", excelBytes.length / 1024);
+            //            log.info("开始Excel转PDF，输入大小={}KB", excelBytes.length / 1024);
 
             try (ByteArrayInputStream in = new ByteArrayInputStream(excelBytes);
-                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
                 // Excel -> PDF
                 com.aspose.cells.Workbook workbook = new com.aspose.cells.Workbook(in);
@@ -205,31 +205,25 @@ public class ExcelUtilReactive {
                 workbook.save(out, options);
 
                 byte[] pdfBytes = out.toByteArray();
-//                log.info("Excel转PDF完成，大小={}KB", pdfBytes.length / 1024);
+                //                log.info("Excel转PDF完成，大小={}KB", pdfBytes.length / 1024);
 
                 // 裁掉顶部，按你实际水印高度调
                 return cropPdfTopWithPdfBox(pdfBytes, 15);
             }
         } catch (Exception e) {
-//            log.error("Excel转PDF失败", e);
+            //            log.error("Excel转PDF失败", e);
             throw new RuntimeException("PDF转换失败：" + e.getMessage(), e);
         }
     }
+
     //切割pdf
     public byte[] cropPdfTopWithPdfBox(byte[] pdfBytes, float cropTopHeight) {
-        try (
-                PDDocument document = PDDocument.load(pdfBytes);
-                ByteArrayOutputStream out = new ByteArrayOutputStream()
-        ) {
+        try (PDDocument document = PDDocument.load(pdfBytes); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             for (PDPage page : document.getPages()) {
                 PDRectangle mediaBox = page.getMediaBox();
 
-                PDRectangle newBox = new PDRectangle(
-                        mediaBox.getLowerLeftX(),
-                        mediaBox.getLowerLeftY(),
-                        mediaBox.getWidth(),
-                        mediaBox.getHeight() - cropTopHeight
-                );
+                PDRectangle newBox = new PDRectangle(mediaBox.getLowerLeftX(), mediaBox.getLowerLeftY(), mediaBox
+                    .getWidth(), mediaBox.getHeight() - cropTopHeight);
 
                 page.setMediaBox(newBox);
                 page.setCropBox(newBox);
@@ -260,12 +254,12 @@ public class ExcelUtilReactive {
                                                                 String templateUrl,
                                                                 byte[] photoBytes,
                                                                 String fileName) {
-//        log.info("开始生成PDF响应：模板URL={}, 数据项数={}, 照片大小={}KB", templateUrl, dataMap.size(), photoBytes.length / 1024);
+        //        log.info("开始生成PDF响应：模板URL={}, 数据项数={}, 照片大小={}KB", templateUrl, dataMap.size(), photoBytes.length / 1024);
 
         try {
             byte[] pdfBytes = generatePdfBytesSync(dataMap, templateUrl, photoBytes, 3, 3, 1, 5);
             String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
-//            log.info("生成PDF响应完成，文件名={}，大小={}KB", encodedName, pdfBytes.length / 1024);
+            //            log.info("生成PDF响应完成，文件名={}，大小={}KB", encodedName, pdfBytes.length / 1024);
 
             return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"")
@@ -275,7 +269,7 @@ public class ExcelUtilReactive {
                 .contentLength(pdfBytes.length)
                 .body(pdfBytes);
         } catch (Exception e) {
-//            log.error("生成PDF响应失败", e);
+            //            log.error("生成PDF响应失败", e);
             String errorMsg = "生成准考证失败：" + e.getMessage();
             return ResponseEntity.internalServerError()
                 .contentType(MediaType.TEXT_PLAIN)

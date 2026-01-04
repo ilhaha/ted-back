@@ -110,20 +110,13 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     public Long add(ProjectReq req) {
 
         // ① 校验项目编码唯一
-        ValidationUtils.throwIf(
-                baseMapper.selectCount(
-                        new QueryWrapper<ProjectDO>()
-                                .eq("project_code", req.getProjectCode())
-                                .eq("is_deleted", 0)
-                ) > 0,
-                "项目编码已存在"
-        );
+        ValidationUtils.throwIf(baseMapper.selectCount(new QueryWrapper<ProjectDO>().eq("project_code", req
+            .getProjectCode()).eq("is_deleted", 0)) > 0, "项目编码已存在");
 
         // ② 校验项目名称 + 八大类唯一（你原来的逻辑）
-        QueryWrapper<ProjectDO> queryWrapper = new QueryWrapper<ProjectDO>()
-                .eq("project_name", req.getProjectName())
-                .eq("category_id", req.getCategoryId())
-                .eq("is_deleted", 0);
+        QueryWrapper<ProjectDO> queryWrapper = new QueryWrapper<ProjectDO>().eq("project_name", req.getProjectName())
+            .eq("category_id", req.getCategoryId())
+            .eq("is_deleted", 0);
 
         ProjectDO projectDO = baseMapper.selectOne(queryWrapper);
         ValidationUtils.throwIfNotNull(projectDO, "项目名称已存在");
@@ -487,23 +480,19 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             deptId = userInfo.getDeptId();
         }
 
-        List<ProjectCategoryProjectFlatVo> flats =
-                baseMapper.getDeptProjectTree(deptId, planType);
+        List<ProjectCategoryProjectFlatVo> flats = baseMapper.getDeptProjectTree(deptId, planType);
 
         Map<Long, ProjectCategoryTreeVo> categoryMap = new LinkedHashMap<>();
 
         for (ProjectCategoryProjectFlatVo flat : flats) {
 
-            ProjectCategoryTreeVo categoryVo = categoryMap.computeIfAbsent(
-                    flat.getCategoryId(),
-                    id -> {
-                        ProjectCategoryTreeVo vo = new ProjectCategoryTreeVo();
-                        vo.setValue(flat.getCategoryId());
-                        vo.setLabel(flat.getCategoryName());
-                        vo.setChildren(new ArrayList<>());
-                        return vo;
-                    }
-            );
+            ProjectCategoryTreeVo categoryVo = categoryMap.computeIfAbsent(flat.getCategoryId(), id -> {
+                ProjectCategoryTreeVo vo = new ProjectCategoryTreeVo();
+                vo.setValue(flat.getCategoryId());
+                vo.setLabel(flat.getCategoryName());
+                vo.setChildren(new ArrayList<>());
+                return vo;
+            });
 
             // 判断项目是否存在
             if (flat.getProjectId() != null) {
@@ -527,25 +516,17 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
         ValidationUtils.throwIfNull(oldProject, "项目不存在");
 
         // 2. 校验 projectCode 唯一（排除自身）
-        ValidationUtils.throwIf(
-                lambdaQuery()
-                        .eq(ProjectDO::getProjectCode, req.getProjectCode())
-                        .eq(ProjectDO::getIsDeleted, 0)
-                        .ne(ProjectDO::getId, id)
-                        .exists(),
-                "项目编码已存在"
-        );
+        ValidationUtils.throwIf(lambdaQuery().eq(ProjectDO::getProjectCode, req.getProjectCode())
+            .eq(ProjectDO::getIsDeleted, 0)
+            .ne(ProjectDO::getId, id)
+            .exists(), "项目编码已存在");
 
         // 3. 校验 名称 + 分类 唯一（排除自身）
-        ValidationUtils.throwIf(
-                lambdaQuery()
-                        .eq(ProjectDO::getProjectName, req.getProjectName())
-                        .eq(ProjectDO::getCategoryId, req.getCategoryId())
-                        .eq(ProjectDO::getIsDeleted, 0)
-                        .ne(ProjectDO::getId, id)
-                        .exists(),
-                "项目名称已存在"
-        );
+        ValidationUtils.throwIf(lambdaQuery().eq(ProjectDO::getProjectName, req.getProjectName())
+            .eq(ProjectDO::getCategoryId, req.getCategoryId())
+            .eq(ProjectDO::getIsDeleted, 0)
+            .ne(ProjectDO::getId, id)
+            .exists(), "项目名称已存在");
 
         // 4. 项目状态变更权限校验
         if (!Objects.equals(req.getProjectStatus(), oldProject.getProjectStatus())) {

@@ -59,27 +59,30 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
 
     /**
      * 下载资格证书
+     * 
      * @param recordIds
      * @return
      */
     @PostMapping("/download/{planType}")
     public ResponseEntity<byte[]> downloadQualificationCertificate(@RequestBody List<Long> recordIds,
                                                                    @PathVariable("planType") Integer planType) {
-        return baseService.downloadQualificationCertificate(recordIds,planType);
+        return baseService.downloadQualificationCertificate(recordIds, planType);
     }
 
     /**
      * 生成资格证书
+     * 
      * @param generateReq
      * @return
      */
     @PostMapping("/generate")
-    public Boolean generateQualificationCertificate(@RequestBody @Validated GenerateReq generateReq){
+    public Boolean generateQualificationCertificate(@RequestBody @Validated GenerateReq generateReq) {
         return baseService.generateQualificationCertificate(generateReq);
     }
 
     /**
      * 录入实操、导入成绩
+     * 
      * @param inputScoresReq
      * @return
      */

@@ -71,7 +71,6 @@ public class InvigilateExamPlanVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm", timezone = "GMT+8")
     private LocalDateTime startTime;
 
-
     /**
      * 考试人员类型
      */
@@ -81,7 +80,6 @@ public class InvigilateExamPlanVO {
      * 监考状态
      */
     private Integer invigilateStatus;
-
 
     /**
      * 监考考场名称
@@ -112,7 +110,5 @@ public class InvigilateExamPlanVO {
      * 详细地址
      */
     private String detailedAddress;
-
-
 
 }

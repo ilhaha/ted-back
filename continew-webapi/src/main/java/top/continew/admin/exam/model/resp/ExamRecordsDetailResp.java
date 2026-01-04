@@ -116,7 +116,6 @@ public class ExamRecordsDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "道路成绩录入状态（0未录入，1已录入）")
     private Integer roadInputStatus;
 
-
     /**
      * 证书是否已生成（0：未生成，1：已生成）
      */

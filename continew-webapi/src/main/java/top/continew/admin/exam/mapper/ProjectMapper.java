@@ -54,10 +54,8 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
      * @param deptId
      * @return
      */
-    List<ProjectCategoryProjectFlatVo> getDeptProjectTree(
-            @Param("deptId") Long deptId,
-            @Param("planType") Integer planType
-    );
+    List<ProjectCategoryProjectFlatVo> getDeptProjectTree(@Param("deptId") Long deptId,
+                                                          @Param("planType") Integer planType);
 
     /**
      * 查询已经绑定了的地址id集合

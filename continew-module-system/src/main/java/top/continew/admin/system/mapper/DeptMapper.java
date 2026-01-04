@@ -25,5 +25,5 @@ import top.continew.starter.data.mp.base.BaseMapper;
  * @author Charles7c
  * @since 2023/1/22 17:56
  */
-public interface  DeptMapper extends BaseMapper<DeptDO> {
+public interface DeptMapper extends BaseMapper<DeptDO> {
 }

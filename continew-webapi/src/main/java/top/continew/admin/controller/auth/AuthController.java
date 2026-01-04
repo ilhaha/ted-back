@@ -79,7 +79,6 @@ public class AuthController {
         return authService.login(req, request);
     }
 
-
     @SaIgnore
     @Operation(summary = "监考员考试端登录(监考密码)", description = "开考密码登录")
     @PostMapping("/invigilator/login")

@@ -273,9 +273,10 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         }
         // 修改考试的考试状态
         enrollMapper.update(new LambdaUpdateWrapper<EnrollDO>()
-                .set(EnrollDO::getExamStatus,EnrollStatusConstant.SIGNED_IN.equals(enrollDO.getExamStatus()) ?
-                        EnrollStatusConstant.IN_PROGRESS : EnrollStatusConstant.RETAKE_IN_PROGRESS)
-                .eq(EnrollDO::getId,enrollDO.getId()));
+            .set(EnrollDO::getExamStatus, EnrollStatusConstant.SIGNED_IN.equals(enrollDO.getExamStatus())
+                ? EnrollStatusConstant.IN_PROGRESS
+                : EnrollStatusConstant.RETAKE_IN_PROGRESS)
+            .eq(EnrollDO::getId, enrollDO.getId()));
         return examPaperVO;
     }
 
@@ -295,10 +296,8 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             .eq(EnrollDO::getExamPlanId, restPaperReq.getPlanId());
         EnrollDO enrollDO = enrollMapper.selectOne(enrollDOLambdaQueryWrapper);
         ValidationUtils.throwIfNull(enrollDO, "未查询到该考生报名信息");
-        ValidationUtils.throwIf(
-                !EnrollStatusConstant.SIGNED_IN.equals(enrollDO.getExamStatus()) && !restPaperReq.getIsMakeUp(),
-                "当前考生考试状态不允许重置试卷，仅【已签到、补考】状态可重置"
-        );
+        ValidationUtils.throwIf(!EnrollStatusConstant.SIGNED_IN.equals(enrollDO.getExamStatus()) && !restPaperReq
+            .getIsMakeUp(), "当前考生考试状态不允许重置试卷，仅【已签到、补考】状态可重置");
         // 删除之前的试卷
         Long enrollId = enrollDO.getId();
         candidateExamPaperMapper.delete(new LambdaQueryWrapper<CandidateExamPaperDO>()
@@ -447,45 +446,29 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         long topicNumber = categoryDB.getTopicNumber();
 
         // 2. 查询题库
-        List<QuestionBankDO> questionBankDBList = questionBankMapper.selectList(
-                new LambdaQueryWrapper<QuestionBankDO>()
-                        .eq(QuestionBankDO::getCategoryId, projectDB.getCategoryId())
-                        .eq(QuestionBankDO::getSubCategoryId, projectDB.getId())
-                        .eq(QuestionBankDO::getExamType, examPlanDB.getPlanType() + 1)
-        );
+        List<QuestionBankDO> questionBankDBList = questionBankMapper.selectList(new LambdaQueryWrapper<QuestionBankDO>()
+            .eq(QuestionBankDO::getCategoryId, projectDB.getCategoryId())
+            .eq(QuestionBankDO::getSubCategoryId, projectDB.getId())
+            .eq(QuestionBankDO::getExamType, examPlanDB.getPlanType() + 1));
 
-        ValidationUtils.throwIf(
-                topicNumber > questionBankDBList.size(),
-                "当前分类下的题目数量不足，无法满足出题要求"
-        );
+        ValidationUtils.throwIf(topicNumber > questionBankDBList.size(), "当前分类下的题目数量不足，无法满足出题要求");
 
         // 3. 查询知识点
-        List<KnowledgeTypeDO> knowledgeTypeDBList = knowledgeTypeMapper.selectList(
-                new LambdaQueryWrapper<KnowledgeTypeDO>()
-                        .eq(KnowledgeTypeDO::getProjectId, projectDB.getId())
-        );
-        ValidationUtils.throwIf(
-                CollectionUtils.isEmpty(knowledgeTypeDBList),
-                "当前项目未配置知识点，无法生成试卷"
-        );
+        List<KnowledgeTypeDO> knowledgeTypeDBList = knowledgeTypeMapper
+            .selectList(new LambdaQueryWrapper<KnowledgeTypeDO>().eq(KnowledgeTypeDO::getProjectId, projectDB.getId()));
+        ValidationUtils.throwIf(CollectionUtils.isEmpty(knowledgeTypeDBList), "当前项目未配置知识点，无法生成试卷");
 
         int totalProportion = knowledgeTypeDBList.stream()
-                .map(KnowledgeTypeDO::getProportion)
-                .filter(Objects::nonNull)
-                .mapToInt(Integer::intValue)
-                .sum();
+            .map(KnowledgeTypeDO::getProportion)
+            .filter(Objects::nonNull)
+            .mapToInt(Integer::intValue)
+            .sum();
 
-        ValidationUtils.throwIf(
-                totalProportion != 100,
-                "知识点占比配置错误，当前占比总和为 " + totalProportion + "%，请调整至 100%"
-        );
-
-
+        ValidationUtils.throwIf(totalProportion != 100, "知识点占比配置错误，当前占比总和为 " + totalProportion + "%，请调整至 100%");
 
         // 4. 按知识点分组题库
-        Map<Long, List<QuestionBankDO>> questionMap =
-                questionBankDBList.stream()
-                        .collect(Collectors.groupingBy(QuestionBankDO::getKnowledgeTypeId));
+        Map<Long, List<QuestionBankDO>> questionMap = questionBankDBList.stream()
+            .collect(Collectors.groupingBy(QuestionBankDO::getKnowledgeTypeId));
 
         List<QuestionBankWithOptionVO> singleList = new ArrayList<>();
         List<QuestionBankWithOptionVO> multipleList = new ArrayList<>();
@@ -504,13 +487,9 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
                 allocated += count;
             }
 
-            List<QuestionBankDO> source =
-                    questionMap.getOrDefault(knowledgeType.getId(), Collections.emptyList());
+            List<QuestionBankDO> source = questionMap.getOrDefault(knowledgeType.getId(), Collections.emptyList());
 
-            ValidationUtils.throwIf(
-                    count > source.size(),
-                    "知识点【" + knowledgeType.getName() + "】下可用题目数量不足，请补充题库"
-            );
+            ValidationUtils.throwIf(count > source.size(), "知识点【" + knowledgeType.getName() + "】下可用题目数量不足，请补充题库");
 
             Collections.shuffle(source);
             List<QuestionBankDO> selected = source.stream().limit(count).toList();
@@ -524,17 +503,15 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
                 questionVO.setKnowledgeTypeTopicNumber(count);
 
                 // 查询选项
-                List<OptionVO> options = stepMapper.selectList(
-                        new LambdaQueryWrapper<StepDO>()
-                                .eq(StepDO::getQuestionBankId, question.getId())
-                ).stream().map(step -> {
-                    OptionVO option = new OptionVO();
-                    option.setId(step.getId());
-                    option.setQuestion(step.getQuestion());
-                    option.setQuestionBankId(step.getQuestionBankId());
-                    option.setIsCorrectAnswer(step.getIsCorrectAnswer());
-                    return option;
-                }).collect(Collectors.toList());
+                List<OptionVO> options = stepMapper.selectList(new LambdaQueryWrapper<StepDO>()
+                    .eq(StepDO::getQuestionBankId, question.getId())).stream().map(step -> {
+                        OptionVO option = new OptionVO();
+                        option.setId(step.getId());
+                        option.setQuestion(step.getQuestion());
+                        option.setQuestionBankId(step.getQuestionBankId());
+                        option.setIsCorrectAnswer(step.getIsCorrectAnswer());
+                        return option;
+                    }).collect(Collectors.toList());
 
                 Collections.shuffle(options);
                 questionVO.setOptions(options);
@@ -560,7 +537,6 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
         return examPaperVO;
     }
-
 
     /**
      * 将试卷存到redis

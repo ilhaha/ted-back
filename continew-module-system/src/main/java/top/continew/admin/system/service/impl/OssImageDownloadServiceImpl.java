@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.system.service.impl;
 
 import com.aliyun.oss.OSS;
@@ -12,10 +28,8 @@ import top.continew.admin.system.service.OssImageDownloadService;
 import top.continew.admin.util.AliyunTokenUtil;
 import top.continew.admin.util.OssClientFactory;
 
-
 import java.io.File;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Properties;
 
 @Slf4j
@@ -37,11 +51,7 @@ public class OssImageDownloadServiceImpl implements OssImageDownloadService {
         String accessKeySecret = AliyunTokenUtil.getKeySecret(tokenProps);
 
         //  创建 OSS 客户端
-        OSS ossClient = OssClientFactory.build(
-                aliyunProperties.getOss().getEndpoint(),
-                accessKeyId,
-                accessKeySecret
-        );
+        OSS ossClient = OssClientFactory.build(aliyunProperties.getOss().getEndpoint(), accessKeyId, accessKeySecret);
 
         // 本地保存根目录
         File baseDir = new File(aliyunProperties.getOss().getLocalBasePath());
@@ -50,10 +60,7 @@ public class OssImageDownloadServiceImpl implements OssImageDownloadService {
         }
 
         LocalDate today = LocalDate.now().minusDays(1);//前一天
-        String todayPrefix =
-                today.getYear() + "/" +
-                        today.getMonthValue() + "/" +
-                        today.getDayOfMonth() + "/";
+        String todayPrefix = today.getYear() + "/" + today.getMonthValue() + "/" + today.getDayOfMonth() + "/";
 
         log.info("开始下载 OSS 文件，prefix={}", todayPrefix);
 
@@ -85,13 +92,7 @@ public class OssImageDownloadServiceImpl implements OssImageDownloadService {
                     continue;
                 }
 
-                ossClient.getObject(
-                        new GetObjectRequest(
-                                aliyunProperties.getOss().getBucketName(),
-                                key
-                        ),
-                        localFile
-                );
+                ossClient.getObject(new GetObjectRequest(aliyunProperties.getOss().getBucketName(), key), localFile);
 
                 log.info("下载成功：{}", key);
             }

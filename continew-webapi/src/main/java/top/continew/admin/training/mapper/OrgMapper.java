@@ -120,6 +120,7 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
 
     /**
      * 根据项目id查询出考试及格或考试未录入成绩的考试名单
+     * 
      * @param projectId
      * @return
      */
