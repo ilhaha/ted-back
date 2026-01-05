@@ -17,12 +17,16 @@
 package top.continew.admin.exam.service;
 
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.model.resp.ImportResultVO;
+import top.continew.admin.exam.model.entity.PersonQualificationDO;
 import top.continew.admin.exam.model.req.PersonQualificationAuditReq;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.PersonQualificationQuery;
 import top.continew.admin.exam.model.req.PersonQualificationReq;
 import top.continew.admin.exam.model.resp.PersonQualificationDetailResp;
 import top.continew.admin.exam.model.resp.PersonQualificationResp;
+
+import java.util.List;
 
 /**
  * 人员复审信息表业务接口
@@ -43,4 +47,24 @@ public interface PersonQualificationService extends BaseService<PersonQualificat
      * 审核人员复审信息
      */
     void audit(PersonQualificationAuditReq req);
+
+    /**
+     * 批量审核
+     * @param ids
+     */
+    Boolean batchAudit(List<Long> ids);
+
+    /**
+     * 解析Excel
+     * @param file
+     * @return
+     */
+    ImportResultVO<PersonQualificationDO> analysisExcel(MultipartFile file);
+
+    /**
+     * 批量添加
+     * @param reqs
+     */
+    Boolean batchAdd(List<PersonQualificationReq> reqs);
+
 }

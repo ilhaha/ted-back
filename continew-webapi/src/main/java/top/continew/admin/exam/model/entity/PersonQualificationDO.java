@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.model.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -76,4 +77,10 @@ public class PersonQualificationDO extends BaseDO {
      * 是否删除（0-未删除，1-已删除）
      */
     private Boolean isDeleted;
+
+    /**
+     * 是否使用Excel导入
+     */
+    @TableField(exist = false)
+    private Boolean isUpload;
 }
