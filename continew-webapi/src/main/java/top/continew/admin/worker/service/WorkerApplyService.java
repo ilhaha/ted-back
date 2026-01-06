@@ -20,6 +20,8 @@ import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.worker.model.req.*;
 import top.continew.admin.worker.model.resp.UploadResulResp;
 import top.continew.admin.worker.model.resp.WorkerApplyVO;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.worker.model.query.WorkerApplyQuery;
 import top.continew.admin.worker.model.resp.WorkerApplyDetailResp;
@@ -119,4 +121,11 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      */
     Boolean submitDoc(Long classId);
 
+    /**
+     * 机构获取班级人员列表
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    PageResp<WorkerApplyResp> orgPage(WorkerApplyQuery query, PageQuery pageQuery);
 }

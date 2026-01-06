@@ -627,7 +627,6 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         Map<Long, String> requiredDocs = workerNeedUploadDoc.getProjectNeedUploadDocs()
             .stream()
             .collect(Collectors.toMap(ProjectNeedUploadDocVO::getId, ProjectNeedUploadDocVO::getTypeName));
-
         // 文件按身份证分组
         Map<String, UploadGroupDTO> grouped = groupFilesByIdCard(idCardFiles, applyForms, projectDocs, requiredDocs);
 
@@ -711,8 +710,8 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 // 更新
                 WorkerApplyDO update = new WorkerApplyDO();
                 update.setId(workerApplyDO.getId());
-                update.setIdCardPhotoFront(frontResp.getIdCardPhotoFront());
-                update.setIdCardPhotoBack(backResp.getIdCardPhotoBack());
+                update.setIdCardPhotoFront(frontResp.getUrl());
+                update.setIdCardPhotoBack(backResp.getUrl());
                 update.setFacePhoto(faceResp.getFacePhoto());
                 update.setQualificationPath(applyResp.getUrl());
                 update.setQualificationName(group.getApplyForm().getOriginalFilename());
@@ -809,6 +808,17 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         return true;
     }
 
+    /**
+     * 机构获取班级人员列表
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @Override
+    public PageResp<WorkerApplyResp> orgPage(WorkerApplyQuery query, PageQuery pageQuery) {
+        return page(query,pageQuery);
+    }
+
     private Map<String, UploadGroupDTO> groupFilesByIdCard(List<MultipartFile> idCardFiles,
                                                            List<MultipartFile> applyForms,
                                                            List<MultipartFile> projectDocs,
@@ -878,7 +888,6 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                                                     String position) {
         try {
             IdCardFileInfoResp resp = uploadService.uploadIdCard(file, type);
-            System.out.println(resp);
             if (type == 1 && !resp.getIdCardNumber().equals(idCard)) {
                 result.getFailedList().add(new FailedUploadResp(idCard, "上传的身份证" + position + "与身份证号不一致"));
                 return null;
@@ -894,7 +903,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         if (filename == null || filename.length() < 18) {
             return null;
         }
-        return filename.substring(0, 18);
+        return filename.substring(0, 18).toUpperCase();
     }
 
     private boolean isIdCardFront(String name) {
@@ -1010,7 +1019,8 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 // 匹配到了
                 if (apply.getClassId().equals(classId)) {
                     ValidationUtils.throwIf(WorkerApplyTypeEnum.ORG_IMPORT.getValue()
-                        .equals(apply.getApplyType()), "您的信息已被机构批量导入，二维码报名功能不可使用");                    // 当前班级已报名
+                            // 当前班级已报名
+                        .equals(apply.getApplyType()), "您的信息已被机构批量导入，二维码报名功能不可使用");
                     return new WorkerApplyCheckDTO(WorkerApplyCheckConstants.CURRENT, decryptedIdCard);
                 } else {
                     // 其他班级已报名

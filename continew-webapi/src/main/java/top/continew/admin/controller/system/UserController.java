@@ -244,6 +244,7 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     /**
      * 分页查询考务人员
      */
+    @SaCheckPermission("examAffair:invigilation:list")
     @GetMapping("/examStaff/page")
     public PageResp<UserResp> pageExamStaff(UserQuery query, PageQuery pageQuery) {
         return userService.pageExamStaff(query, pageQuery);

@@ -161,9 +161,6 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
             this.fill(doc);
         });
 
-        // ------------------------------
-        // ⭐⭐⭐ 关键：按 candidateId 聚合成一条记录 ⭐⭐⭐
-        // ------------------------------
         Map<Long, CandidateDocumentResp> map = new LinkedHashMap<>();
 
         for (DocumentResp doc : temp.getList()) {

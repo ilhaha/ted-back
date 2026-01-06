@@ -111,7 +111,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
 
         // ① 校验项目编码唯一
         ValidationUtils.throwIf(baseMapper.selectCount(new QueryWrapper<ProjectDO>().eq("project_code", req
-            .getProjectCode()).eq("is_deleted", 0)) > 0, "项目编码已存在");
+            .getProjectCode()).eq("is_deleted", 0)) > 0, "项目代码已存在");
 
         // ② 校验项目名称 + 八大类唯一（你原来的逻辑）
         QueryWrapper<ProjectDO> queryWrapper = new QueryWrapper<ProjectDO>().eq("project_name", req.getProjectName())

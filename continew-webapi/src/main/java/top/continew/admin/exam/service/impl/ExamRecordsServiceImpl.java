@@ -117,7 +117,7 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
     private final OrgUserMapper orgUserMapper;
 
     @Override
-    public PageResp<ExamRecordsResp> examRecordsPage(ExamRecordsQuery query, PageQuery pageQuery) {
+    public PageResp<ExamRecordsResp> page(ExamRecordsQuery query, PageQuery pageQuery) {
         //根据mapper查出考生名+证件名
         //封装返回结果
         QueryWrapper<ExamRecordsDO> queryWrapper = this.buildQueryWrapper(query);
@@ -133,14 +133,14 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
             // 查询当前用户属于哪个机构
             UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
             TedOrgUser tedOrgUser = orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>()
-                .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
-                .select(TedOrgUser::getOrgId, TedOrgUser::getId)
-                .last("limit 1"));
+                    .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
+                    .select(TedOrgUser::getOrgId, TedOrgUser::getId)
+                    .last("limit 1"));
             queryWrapper.eq("toc.org_id", tedOrgUser.getOrgId());
         }
         // 查询
         IPage<ExamRecordDTO> page = baseMapper.getexamRecords(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper, roadExamTypeId);
+                .getSize()), queryWrapper, roadExamTypeId);
         ;
         // 将查询结果转换成 PageResp 对象
         PageResp<ExamRecordsResp> pageResp = PageResp.build(page, super.getListClass());
@@ -155,6 +155,11 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         pageResp.getList().forEach(this::fill);
 
         return pageResp;
+    }
+
+    @Override
+    public PageResp<ExamRecordsResp> examRecordsPage(ExamRecordsQuery query, PageQuery pageQuery) {
+       return page(query,pageQuery);
     }
 
     /**

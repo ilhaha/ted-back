@@ -19,6 +19,7 @@ package top.continew.admin.worker.controller;
 import cn.dev33.satoken.annotation.SaIgnore;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.document.model.resp.CandidateDocumentResp;
 import top.continew.admin.worker.model.req.*;
 import top.continew.admin.worker.model.resp.UploadResulResp;
 import top.continew.admin.worker.model.resp.WorkerApplyVO;
@@ -34,6 +35,8 @@ import top.continew.admin.worker.model.query.WorkerApplyQuery;
 import top.continew.admin.worker.model.resp.WorkerApplyDetailResp;
 import top.continew.admin.worker.model.resp.WorkerApplyResp;
 import top.continew.admin.worker.service.WorkerApplyService;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 
 import java.util.List;
 
@@ -48,6 +51,18 @@ import java.util.List;
 @CrudRequestMapping(value = "/worker/workerApply", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
     Api.EXPORT})
 public class WorkerApplyController extends BaseController<WorkerApplyService, WorkerApplyResp, WorkerApplyDetailResp, WorkerApplyQuery, WorkerApplyReq> {
+
+
+    /**
+     * 机构获取班级人员列表
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @GetMapping("/org/page")
+    public PageResp<WorkerApplyResp> orgPage(WorkerApplyQuery query, PageQuery pageQuery){
+        return baseService.orgPage(query,pageQuery);
+    }
 
     /**
      * 机构提交作业人员资料进行审核

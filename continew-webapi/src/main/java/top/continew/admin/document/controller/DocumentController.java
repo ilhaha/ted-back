@@ -16,6 +16,7 @@
 
 package top.continew.admin.document.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
@@ -111,6 +112,7 @@ public class DocumentController extends BaseController<DocumentService, Document
      * @return 考生资料分页结果
      */
     @GetMapping("/pageByCandidate")
+    @SaCheckPermission("document:document:list")
     public PageResp<CandidateDocumentResp> pageByCandidate(DocumentQuery query, PageQuery pageQuery) {
         return documentService.pageByCandidate(query, pageQuery);
     }

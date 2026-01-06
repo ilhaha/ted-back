@@ -28,7 +28,6 @@ public enum ReviewStatusEnum implements BaseEnum<Integer> {
 
     APPROVED(1, "审核通过");
 
-
     private final Integer value;
     private final String description;
 

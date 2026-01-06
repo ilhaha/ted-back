@@ -50,12 +50,14 @@ public interface PersonQualificationService extends BaseService<PersonQualificat
 
     /**
      * 批量审核
+     * 
      * @param ids
      */
     Boolean batchAudit(List<Long> ids);
 
     /**
      * 解析Excel
+     * 
      * @param file
      * @return
      */
@@ -63,6 +65,7 @@ public interface PersonQualificationService extends BaseService<PersonQualificat
 
     /**
      * 批量添加
+     * 
      * @param reqs
      */
     Boolean batchAdd(List<PersonQualificationReq> reqs);

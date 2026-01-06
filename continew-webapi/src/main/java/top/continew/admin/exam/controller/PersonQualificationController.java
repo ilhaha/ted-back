@@ -49,9 +49,9 @@ import java.util.List;
     Api.EXPORT})
 public class PersonQualificationController extends BaseController<PersonQualificationService, PersonQualificationResp, PersonQualificationDetailResp, PersonQualificationQuery, PersonQualificationReq> {
 
-
     /**
      * 批量添加
+     * 
      * @param reqs
      */
     @PostMapping("/batch/add")
@@ -61,23 +61,24 @@ public class PersonQualificationController extends BaseController<PersonQualific
 
     /**
      * 解析Excel
+     * 
      * @param file
      * @return
      */
     @PostMapping("/analysis/excel")
-    public ImportResultVO<PersonQualificationDO> analysisExcel(@RequestPart("file") MultipartFile file){
+    public ImportResultVO<PersonQualificationDO> analysisExcel(@RequestPart("file") MultipartFile file) {
         return baseService.analysisExcel(file);
     }
 
     /**
      * 批量审核
+     * 
      * @param ids
      */
     @PostMapping("/batch/audit")
     public Boolean batchAudit(@RequestBody List<Long> ids) {
         return baseService.batchAudit(ids);
     }
-
 
     @Operation(summary = "批量导入复审人员信息")
     @PostMapping("/import/excel")
@@ -90,6 +91,5 @@ public class PersonQualificationController extends BaseController<PersonQualific
     public void audit(@RequestBody PersonQualificationAuditReq req) {
         baseService.audit(req);
     }
-
 
 }
