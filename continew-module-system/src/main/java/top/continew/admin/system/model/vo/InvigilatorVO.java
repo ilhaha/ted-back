@@ -33,5 +33,4 @@ public class InvigilatorVO {
     private boolean invigilatorState;// 监考状态
 
     private List<InvigilatorTimeVO> invigilateTime;// 监考计划名称与时间
-
 }

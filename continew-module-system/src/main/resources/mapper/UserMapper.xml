@@ -33,8 +33,8 @@
         UPDATE ted_enroll
         SET exam_status = #{examStatus}
         WHERE user_id = #{candidateId}
-        AND exam_plan_id = #{planId}
-        AND exam_number = #{examNumberEncrypt}
+          AND exam_plan_id = #{planId}
+          AND exam_number = #{examNumberEncrypt}
     </update>
     <delete id="deleteOrgUser">
         DELETE FROM ted_org_user
@@ -74,26 +74,25 @@
                  LEFT JOIN sys_dept AS t2 ON t2.id = t1.dept_id
                  LEFT JOIN sys_user_role AS t3
                            ON t1.id = t3.user_id
-        ${ew.customSqlSegment}
+            ${ew.customSqlSegment}
     </select>
 
     <select id="selectExamStaffPage" resultType="top.continew.admin.system.model.resp.user.UserDetailResp">
-        SELECT
-            t1.id,
-            t1.username,
-            t1.nickname,
-            t1.phone,
-            t1.email,
-            t1.status,
-            t1.gender,
-            t1.dept_id,
-            t1.create_time,
-            t1.description,
-            t1.is_system
+        SELECT t1.id,
+               t1.username,
+               t1.nickname,
+               t1.phone,
+               t1.email,
+               t1.status,
+               t1.gender,
+               t1.dept_id,
+               t1.create_time,
+               t1.description,
+               t1.is_system
         FROM sys_user t1
-        LEFT JOIN sys_user_role ur ON t1.id = ur.user_id
-        LEFT JOIN sys_role r ON ur.role_id = r.id
-        ${ew.customSqlSegment}
+                 LEFT JOIN sys_user_role ur ON t1.id = ur.user_id
+                 LEFT JOIN sys_role r ON ur.role_id = r.id
+            ${ew.customSqlSegment}
     </select>
 
 
@@ -304,28 +303,27 @@
           AND tep.is_deleted = 0
     </select>
     <select id="getEnrollPreInfo" resultType="top.continew.admin.system.model.vo.EnrollPreInfoVO">
-        SELECT tepu.qualification_file_url, tepu.`status`,tepu.id,tepu.remark
+        SELECT tepu.qualification_file_url, tepu.`status`, tepu.id, tepu.remark
         FROM ted_enroll_pre_upload tepu
         WHERE tepu.is_deleted = 0
           AND tepu.candidates_id = #{candidateId}
           AND tepu.plan_id = #{planId}
     </select>
-<!--    <select id="getUploadedDocumentTypes"-->
-<!--            resultType="top.continew.admin.system.model.vo.UploadedDocumentTypeVO">-->
-<!--        SELECT tdp.type_id AS id,tdt.type_name,tdp.doc_path-->
-<!--        FROM ted_document_pre tdp-->
-<!--                 LEFT JOIN ted_document_type tdt-->
-<!--                           ON tdp.type_id = tdt.id AND tdt.is_deleted = 0-->
-<!--        WHERE tdp.is_deleted = 0-->
-<!--        AND enroll_pre_upload_id = #{uploadPreId}-->
-<!--    </select>-->
+    <!--    <select id="getUploadedDocumentTypes"-->
+    <!--            resultType="top.continew.admin.system.model.vo.UploadedDocumentTypeVO">-->
+    <!--        SELECT tdp.type_id AS id,tdt.type_name,tdp.doc_path-->
+    <!--        FROM ted_document_pre tdp-->
+    <!--                 LEFT JOIN ted_document_type tdt-->
+    <!--                           ON tdp.type_id = tdt.id AND tdt.is_deleted = 0-->
+    <!--        WHERE tdp.is_deleted = 0-->
+    <!--        AND enroll_pre_upload_id = #{uploadPreId}-->
+    <!--    </select>-->
 
     <select id="getUploadedDocumentTypes"
             resultType="top.continew.admin.system.model.vo.UploadedDocumentTypeVO">
-        SELECT
-            tdp.type_id AS id,
-            tdt.type_name,
-            GROUP_CONCAT(tdp.doc_path) AS doc_path
+        SELECT tdp.type_id                AS id,
+               tdt.type_name,
+               GROUP_CONCAT(tdp.doc_path) AS doc_path
         FROM ted_document_pre tdp
                  LEFT JOIN ted_document_type tdt
                            ON tdp.type_id = tdt.id AND tdt.is_deleted = 0
@@ -338,8 +336,8 @@
         SELECT COUNT(id)
         FROM ted_candidate_type
         WHERE candidate_id = #{id}
-        AND type = 0
-        AND is_deleted = 0
+          AND type = 0
+          AND is_deleted = 0
     </select>
     <select id="listInvigilatorsByPlanId" resultType="top.continew.admin.system.model.vo.InvigilatorVO">
         select u.id,
@@ -362,27 +360,51 @@
     </insert>
 
     <select id="selectUserDetailById" resultType="top.continew.admin.system.model.dto.UserDetailDTO">
-        SELECT
-            u.id,
-            u.username,
-            u.nickname,
-            u.gender,
-            u.email,
-            u.phone,
-            u.company_name       AS companyName,
-            u.contact_address    AS contactAddress,
-            u.landline,
-            u.region,
-            u.postal_code        AS postalCode,
-            u.graduation_school  AS graduationSchool,
-            u.related_major      AS relatedMajor,
-            u.major_type         AS majorType,
-            u.related_education  AS relatedEducation,
-            u.job_qualification  AS jobQualification,
-            u.related_work_years AS relatedWorkYears,
-            u.description
+        SELECT u.id,
+               u.username,
+               u.nickname,
+               u.gender,
+               u.email,
+               u.phone,
+               u.company_name       AS companyName,
+               u.contact_address    AS contactAddress,
+               u.landline,
+               u.region,
+               u.postal_code        AS postalCode,
+               u.graduation_school  AS graduationSchool,
+               u.related_major      AS relatedMajor,
+               u.major_type         AS majorType,
+               u.related_education  AS relatedEducation,
+               u.job_qualification  AS jobQualification,
+               u.related_work_years AS relatedWorkYears,
+               u.description
         FROM sys_user u
         WHERE u.id = #{id}
     </select>
-
+    <select id="selectExamStaffFeeByUserId"
+            resultType="top.continew.admin.system.model.vo.ExamStaffFeeExportVO">
+        SELECT
+            pi.exam_plan_id,
+            pi.invigilator_id,
+            u.nickname AS nickname,
+            ep.exam_plan_name AS examPlanName,
+            ep.start_time AS startTime,
+            c.classroom_name AS classroomName,
+            pi.practical_fee,
+            pi.theory_fee,
+            (IFNULL(pi.practical_fee, 0) + IFNULL(pi.theory_fee, 0)) AS totalFee,
+            pi.invigilate_status,
+            pi.create_time
+        FROM ted_plan_invigilate pi
+                 LEFT JOIN sys_user u
+                           ON pi.invigilator_id = u.id
+                 LEFT JOIN ted_exam_plan ep
+                           ON pi.exam_plan_id = ep.id
+                 LEFT JOIN ted_classroom c
+                           ON pi.classroom_id = c.id
+        WHERE pi.invigilator_id = #{userId}
+          AND pi.invigilate_status = 3
+          AND pi.is_deleted = 0
+        ORDER BY pi.create_time DESC
+    </select>
 </mapper>

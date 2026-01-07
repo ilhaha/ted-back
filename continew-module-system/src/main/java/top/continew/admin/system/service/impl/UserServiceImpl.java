@@ -29,6 +29,7 @@ import cn.hutool.extra.validation.ValidationUtil;
 import cn.hutool.http.ContentType;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.write.style.column.LongestMatchColumnWidthStyleStrategy;
 import com.alicp.jetcache.anno.CacheInvalidate;
 import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.CacheUpdate;
@@ -99,6 +100,9 @@ import top.continew.starter.web.util.FileUploadUtils;
 import top.continew.starter.core.util.SpringUtils;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -1190,4 +1194,55 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         user.setRelatedWorkYears(req.getRelatedWorkYears());//工作年限
         userMapper.updateById(user);
     }
+
+
+
+// 劳务费导出
+    public void exportExamStaffFee(Long userId, HttpServletResponse response) {
+
+        // 查询每条记录
+        List<ExamStaffFeeExportVO> list = userMapper.selectExamStaffFeeByUserId(userId);
+
+        if (CollUtil.isEmpty(list)) {
+            throw new RuntimeException("暂无可导出的劳务费数据");
+        }
+        // 计算总和
+        BigDecimal totalPracticalFee = BigDecimal.ZERO;
+        BigDecimal totalTheoryFee = BigDecimal.ZERO;
+
+        for (ExamStaffFeeExportVO vo : list) {
+            if (vo.getPracticalFee() != null) {
+                totalPracticalFee = totalPracticalFee.add(vo.getPracticalFee());
+            }
+            if (vo.getTheoryFee() != null) {
+                totalTheoryFee = totalTheoryFee.add(vo.getTheoryFee());
+            }
+        }
+        BigDecimal totalAllFee = totalPracticalFee.add(totalTheoryFee);
+        // 构造总计行
+        ExamStaffFeeExportVO totalVo = new ExamStaffFeeExportVO();
+        totalVo.setNickname("总计");
+        totalVo.setPracticalFee(totalPracticalFee);
+        totalVo.setTheoryFee(totalTheoryFee);
+        totalVo.setTotalFee(totalAllFee);
+        // 把总计行加到 list 尾部
+        list.add(totalVo);
+        try {
+            String fileName = URLEncoder.encode(
+                    list.get(0).getNickname() + "-监考劳务费.xlsx",
+                    StandardCharsets.UTF_8
+            );
+            response.setContentType("application/octet-stream");
+            response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+
+            EasyExcel.write(response.getOutputStream(), ExamStaffFeeExportVO.class)
+                    .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy()) // 自动拉宽列
+                    .sheet("监考劳务费")
+                    .doWrite(list);
+
+        } catch (Exception e) {
+            throw new RuntimeException("导出监考劳务费失败", e);
+        }
+    }
+
 }

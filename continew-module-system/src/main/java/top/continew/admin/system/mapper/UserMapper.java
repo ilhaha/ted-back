@@ -267,4 +267,7 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
      * 根据ID查询用户详细信息
      */
     UserDetailDTO selectUserDetailById(@Param("id") Long id);
+
+
+    List<ExamStaffFeeExportVO> selectExamStaffFeeByUserId(@Param("userId") Long userId);
 }

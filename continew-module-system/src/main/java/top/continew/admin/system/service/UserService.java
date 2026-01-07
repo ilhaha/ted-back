@@ -359,4 +359,7 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
     void updateUserDetail(UserDetailDTO req);
 
     void deleteOrgUser(List<Long> list);
+
+    void exportExamStaffFee(Long userId, HttpServletResponse response);
+
 }

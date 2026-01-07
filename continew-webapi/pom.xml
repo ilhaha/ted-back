@@ -121,14 +121,6 @@
             <version>3.43.0</version>
             <scope>compile</scope>
         </dependency>
-        <!-- 移除所有 POI 相关依赖 -->
-        <!-- 添加 EasyExcel 依赖（轻量级，自带兼容的 POI 核心类） -->
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>easyexcel</artifactId>
-            <version>3.3.0</version>
-        </dependency>
-
         <!-- 保留 PDF 依赖 -->
         <dependency>
             <groupId>com.itextpdf</groupId>
