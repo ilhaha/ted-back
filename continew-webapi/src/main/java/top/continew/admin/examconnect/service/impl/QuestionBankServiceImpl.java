@@ -316,6 +316,31 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         return candidateExamPaperMapper.insert(candidateExamPaperDO) > 0;
     }
 
+    /**
+     * 根据项目id删除题目
+     * @param projectIds
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean deleteByProjectIds(List<Long> projectIds) {
+        ValidationUtils.throwIfEmpty(projectIds,"未选择考试项目");
+        // 先查出来对应的题目
+        LambdaQueryWrapper<QuestionBankDO> queryWrapper = new LambdaQueryWrapper<QuestionBankDO>()
+                .in(QuestionBankDO::getSubCategoryId, projectIds);
+        List<QuestionBankDO> questionBankDOS = baseMapper.selectList(queryWrapper);
+        if (ObjectUtil.isEmpty(questionBankDOS)) {
+            return Boolean.TRUE;
+        }
+        List<Long> questionBankIds = questionBankDOS.stream().map(QuestionBankDO::getId).toList();
+        // 先删除题目选项
+        stepMapper.delete(new LambdaQueryWrapper<StepDO>()
+                .in(StepDO::getQuestionBankId, questionBankIds));
+        // 在删除题目
+        baseMapper.deleteByIds(questionBankIds);
+        return Boolean.TRUE;
+    }
+
     @Override
     public QuestionBankDetailResp get(Long id) {
         QuestionBankDetailResp questionBankDetailResp = super.get(id);
@@ -562,21 +587,27 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         return null;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void update(QuestionBankReq req, Long id) {
         // 获取当前用户
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         Long userId = userTokenDo.getUserId();
-
+        // 根据知识类型查出项目
+        List<Long> categoryIds = req.getCategoryId();
+        KnowledgeTypeDO knowledgeTypeDO = knowledgeTypeMapper.selectById(categoryIds.get(0));
+        ValidationUtils.throwIfNull(knowledgeTypeDO,"知识类型不存在");
+        ProjectDO projectDO = projectMapper.selectById(knowledgeTypeDO.getProjectId());
+        ValidationUtils.throwIfNull(projectDO,"项目不存在");
+        CategoryDO categoryDO = categoryMapper.selectById(projectDO.getCategoryId());
+        ValidationUtils.throwIfNull(categoryDO,"八大类不存在");
         QuestionBankDO questionBankDO = new QuestionBankDO();
         questionBankDO.setId(id);
         questionBankDO.setQuestion(req.getQuestion());
         questionBankDO.setQuestionType(req.getQuestionType());
-        List<Long> categoryIds = req.getCategoryId();
-        questionBankDO.setCategoryId(categoryIds.get(0));
-        questionBankDO.setSubCategoryId(categoryIds.get(1));
-        questionBankDO.setKnowledgeTypeId(categoryIds.get(2));
+        questionBankDO.setCategoryId(categoryDO.getId());
+        questionBankDO.setSubCategoryId(projectDO.getId());
+        questionBankDO.setKnowledgeTypeId(knowledgeTypeDO.getId());
         questionBankDO.setExamType(req.getExamType());
         questionBankDO.setAttachment(req.getImageUrl());
         questionBankDO.setCreateUser(userId);
@@ -619,11 +650,16 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         questionBankDO.setQuestion(req.getQuestion());
         questionBankDO.setQuestionType(req.getQuestionType());
         List<Long> categoryIds = req.getCategoryId();
-        ValidationUtils.throwIf(categoryIds.size() != 3, "请选择正确的分类");
+        KnowledgeTypeDO knowledgeTypeDO = knowledgeTypeMapper.selectById(categoryIds.get(0));
+        ValidationUtils.throwIfNull(knowledgeTypeDO,"知识类型不存在");
+        ProjectDO projectDO = projectMapper.selectById(knowledgeTypeDO.getProjectId());
+        ValidationUtils.throwIfNull(projectDO,"项目不存在");
+        CategoryDO categoryDO = categoryMapper.selectById(projectDO.getCategoryId());
+        ValidationUtils.throwIfNull(categoryDO,"八大类不存在");
         questionBankDO.setExamType(req.getExamType());
-        questionBankDO.setCategoryId(categoryIds.get(0));
-        questionBankDO.setSubCategoryId(categoryIds.get(1));
-        questionBankDO.setKnowledgeTypeId(categoryIds.get(2));
+        questionBankDO.setCategoryId(categoryDO.getId());
+        questionBankDO.setSubCategoryId(projectDO.getId());
+        questionBankDO.setKnowledgeTypeId(knowledgeTypeDO.getId());
         questionBankDO.setAttachment(req.getImageUrl());
         questionBankDO.setCreateUser(userId);
         questionBankDO.setCreateTime(LocalDateTime.now());

@@ -53,6 +53,12 @@ import java.util.List;
     Api.EXPORT})
 public class QuestionBankController extends BaseController<QuestionBankService, QuestionBankResp, QuestionBankDetailResp, QuestionBankQuery, QuestionBankReq> {
 
+    @Operation(summary = "根据项目id删除题目")
+    @PostMapping("/projects/delete")
+    public Boolean deleteByProjectIds(@RequestBody List<Long> projectIds) {
+        return baseService.deleteByProjectIds(projectIds);
+    }
+
     @Operation(summary = "监考员重新生成考试试卷")
     @PostMapping("/rest/paper")
     public Boolean restPaper(@Validated @RequestBody RestPaperReq restPaperReq) {

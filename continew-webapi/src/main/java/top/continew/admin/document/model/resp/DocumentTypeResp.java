@@ -16,6 +16,7 @@
 
 package top.continew.admin.document.model.resp;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -43,6 +44,13 @@ public class DocumentTypeResp extends BaseResp {
      */
     @Schema(description = "类型名称(如身份证/学历证书)")
     private String typeName;
+
+    /**
+     * 必须上传人员（0全部都需要上传，1京籍上传、2非京籍上传）
+     */
+    @Schema(description = "必须上传人员（0全部都需要上传，1京籍上传、2非京籍上传）")
+    private Integer needUploadPerson;
+
 
     /**
      * 更新人ID

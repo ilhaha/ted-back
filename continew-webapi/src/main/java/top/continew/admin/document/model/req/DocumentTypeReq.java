@@ -18,6 +18,7 @@ package top.continew.admin.document.model.req;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
@@ -46,8 +47,15 @@ public class DocumentTypeReq implements Serializable {
     private String typeName;
 
     /**
+     * 必须上传人员（0全部都需要上传，1京籍上传、2非京籍上传）
+     */
+    @NotNull(message = "资料上传适用人员")
+    private Integer needUploadPerson;
+
+    /**
      * 创建人ID
      */
+    
     @Schema(description = "创建人ID")
     //    @NotNull(message = "创建人ID不能为空")
     private Long createUser;

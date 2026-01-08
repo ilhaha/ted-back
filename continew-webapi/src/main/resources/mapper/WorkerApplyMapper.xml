@@ -4,7 +4,7 @@
 
     <select id="selectProjectNeedUploadDoc"
             resultType="top.continew.admin.worker.model.resp.ProjectNeedUploadDocVO">
-        SELECT tdt.id, tdt.type_name
+        SELECT tdt.id, tdt.type_name,tdt.need_upload_person
         FROM ted_org_class toc
                  LEFT JOIN ted_project tp
                            ON toc.project_id = tp.id AND tp.is_deleted = 0
@@ -29,6 +29,7 @@
                twa.qualification_path,
                twa.qualification_name,
                twa.id_card_number,
+               twa.id_card_address,
                twa.id_card_photo_front,
                twa.id_card_photo_back,
                twa.face_photo,

@@ -75,4 +75,10 @@ public interface QuestionBankService extends BaseService<QuestionBankResp, Quest
      */
     Boolean restPaper(RestPaperReq restPaperReq);
 
+    /**
+     * 根据项目id删除题目
+     * @param projectIds
+     * @return
+     */
+    Boolean deleteByProjectIds(List<Long> projectIds);
 }

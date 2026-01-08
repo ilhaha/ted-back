@@ -46,6 +46,17 @@ import java.util.List;
 public class OrgClassController extends BaseController<OrgClassService, OrgClassResp, OrgClassDetailResp, OrgClassQuery, OrgClassReq> {
 
     /**
+     * 班级结束报名
+     * @param req
+     * @param id
+     * @return
+     */
+    @PutMapping("/end/apply/{id}")
+    public Boolean endApply(@RequestBody OrgClassReq req, @PathVariable("id") Long id) {
+        return baseService.endApply(req,id);
+    }
+
+    /**
      * 根据项目类型和班级类型获取班级选择器
      * orgQueryFlag 1 机构查询 0 后台查询
      * 

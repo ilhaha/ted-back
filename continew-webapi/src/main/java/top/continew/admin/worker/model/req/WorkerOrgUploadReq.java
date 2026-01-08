@@ -16,9 +16,11 @@
 
 package top.continew.admin.worker.model.req;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.hibernate.validator.constraints.Length;
 import top.continew.admin.document.model.dto.DocFileDTO;
 
 import java.util.List;
@@ -60,6 +62,12 @@ public class WorkerOrgUploadReq {
      */
     @NotBlank(message = "身份证未上传")
     private String idCardNumber;
+
+    /**
+     * 身份证住址
+     */
+    @NotBlank(message = "身份证未上传")
+    private String idCardAddress;
 
     /**
      * 作业人员身份证正面地址

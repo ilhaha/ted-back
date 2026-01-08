@@ -21,8 +21,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.document.model.resp.CandidateDocumentResp;
 import top.continew.admin.worker.model.req.*;
-import top.continew.admin.worker.model.resp.UploadResulResp;
-import top.continew.admin.worker.model.resp.WorkerApplyVO;
+import top.continew.admin.worker.model.resp.*;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,8 +31,6 @@ import org.springframework.web.bind.annotation.*;
 import top.continew.starter.extension.crud.annotation.CrudRequestMapping;
 import top.continew.admin.common.controller.BaseController;
 import top.continew.admin.worker.model.query.WorkerApplyQuery;
-import top.continew.admin.worker.model.resp.WorkerApplyDetailResp;
-import top.continew.admin.worker.model.resp.WorkerApplyResp;
 import top.continew.admin.worker.service.WorkerApplyService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -52,6 +49,27 @@ import java.util.List;
     Api.EXPORT})
 public class WorkerApplyController extends BaseController<WorkerApplyService, WorkerApplyResp, WorkerApplyDetailResp, WorkerApplyQuery, WorkerApplyReq> {
 
+
+    /**
+     * 撤销申请
+     * @param id
+     * @return
+     */
+    @PostMapping("/revoke/apply/{id}")
+    public Boolean revokeApply(@PathVariable("id") Integer id) {
+        return baseService.revokeApply(id);
+    }
+
+
+    /**
+     * 获取作业人员的上传资料
+     * @param workerId
+     * @return
+     */
+    @GetMapping("/docDetail/{workerId}")
+    public DocDetailResp getDocDetailByWorkerId(@PathVariable("workerId") Long workerId){
+        return baseService.getDocDetailByWorkerId(workerId);
+    }
 
     /**
      * 机构获取班级人员列表

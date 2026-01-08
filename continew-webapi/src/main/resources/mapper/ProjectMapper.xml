@@ -7,7 +7,7 @@
                tc.name as category_name,
                sd.name as dept_name
         FROM ted_project AS tp
-                 LEFT JOIN ted_category as tc ON tp.category_id = tc.id
+                 LEFT JOIN ted_category as tc ON tp.category_id = tc.id AND tc.is_deleted = 0
                  LEFT JOIN sys_dept as sd ON sd.id = tp.dept_id
     </sql>
 
@@ -182,11 +182,10 @@
                            ON td.id = tp.dept_id
                  LEFT JOIN ted_org_category_relation tocr
                            ON tp.category_id = tocr.category_id
-                           AND tocr.is_deleted = 0
+                               AND tocr.is_deleted = 0
                  LEFT JOIN ted_org_user tou
                            ON tocr.org_id = tou.org_id
-                           AND tou.is_deleted = 0
-            ${ew.customSqlSegment}
+                               AND tou.is_deleted = 0 ${ew.customSqlSegment}
         AND tou.user_id = #{userId}
     </select>
     <select id="getSelectCategoryProject" resultType="top.continew.admin.training.model.vo.ProjectCategoryVO">
@@ -199,16 +198,17 @@
         <foreach collection="parentIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
+        AND project_type = 0
         AND is_deleted = 0
     </select>
 
     <select id="getLocationClassroomList" resultType="top.continew.admin.exam.model.resp.LocationClassroomVO">
         SELECT *
-        FROM  ted_classroom tc
-                  LEFT JOIN ted_location_classroom tlc
-                            ON tc.id = tlc.classroom_id AND tlc.is_deleted = 0
-                  LEFT JOIN ted_exam_location tel
-                            ON tlc.location_id = tel.id AND tel.is_deleted = 0
+        FROM ted_classroom tc
+                 LEFT JOIN ted_location_classroom tlc
+                           ON tc.id = tlc.classroom_id AND tlc.is_deleted = 0
+                 LEFT JOIN ted_exam_location tel
+                           ON tlc.location_id = tel.id AND tel.is_deleted = 0
         WHERE tc.is_deleted = 0
           AND tc.classroom_type = #{examType}
           AND tc.exam_type = #{isOperation}

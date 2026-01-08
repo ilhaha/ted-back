@@ -17,6 +17,7 @@
 package top.continew.admin.worker.model.resp;
 
 import com.alibaba.excel.annotation.ExcelProperty;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -57,6 +58,12 @@ public class WorkerApplyResp extends BaseResp {
      */
     @Schema(description = "作业人员性别")
     private String gender;
+
+    /**
+     * 身份证住址
+     */
+    @Schema(description = "身份证住址")
+    private String idCardAddress;
 
     /**
      * 作业人员手机号

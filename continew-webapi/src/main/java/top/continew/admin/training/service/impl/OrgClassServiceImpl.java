@@ -201,11 +201,8 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
             throw new BusinessException("项目不存在");
 
         // 统计今年同类型同项目班级数量
-        LocalDateTime startOfYear = Year.now().atDay(1).atStartOfDay();
-        LocalDateTime endOfYear = Year.now().atMonth(12).atEndOfMonth().atTime(23, 59, 59);
-
         Long count = baseMapper.selectCount(new LambdaQueryWrapper<OrgClassDO>().eq(OrgClassDO::getClassType, req
-            .getClassType()).ge(OrgClassDO::getCreateTime, startOfYear).le(OrgClassDO::getCreateTime, endOfYear));
+            .getClassType()).eq(OrgClassDO::getProjectId, projectDO.getId()));
 
         Long sequence = count + 1;
         String sequenceStr = String.format("%03d", sequence);
@@ -280,5 +277,18 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
             orgId = tedOrgUser.getOrgId();
         }
         return baseMapper.getSelectClassByProject(projectId, classType, orgId);
+    }
+
+    /**
+     * 班级结束报名
+     * @param req
+     * @param id
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean endApply(OrgClassReq req, Long id) {
+        update(req,id);
+        return Boolean.TRUE;
     }
 }

@@ -27,8 +27,8 @@ import lombok.Data;
 @Data
 public class VerifyReq {
 
-    @NotBlank(message = "身份证后六位未填写")
-    private String idLast6;
+    @NotBlank(message = "身份证未填写")
+    private String idCard;
 
     @NotNull(message = "二维码错误")
     private String classId;

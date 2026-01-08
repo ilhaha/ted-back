@@ -72,6 +72,13 @@ public class WorkerApplyDetailResp extends BaseDetailResp {
     private String phone;
 
     /**
+     * 身份证住址
+     */
+    @ExcelProperty(value = "身份证住址")
+    @Schema(description = "身份证住址")
+    private String idCardAddress;
+
+    /**
      * 报名资格申请表路径
      */
     @Schema(description = "报名资格申请表路径")

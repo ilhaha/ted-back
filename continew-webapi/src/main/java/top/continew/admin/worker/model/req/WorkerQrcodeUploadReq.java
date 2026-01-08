@@ -81,6 +81,12 @@ public class WorkerQrcodeUploadReq {
     private String idCardNumber;
 
     /**
+     * 身份证住址
+     */
+    @NotBlank(message = "身份证住址")
+    private String idCardAddress;
+
+    /**
      * 作业人员身份证正面地址
      */
     @NotBlank(message = "身份证未上传")

@@ -73,6 +73,11 @@ public class WorkerApplyDO extends BaseDO {
     private String idCardNumber;
 
     /**
+     * 身份证住址
+     */
+    private String idCardAddress;
+
+    /**
      * 身份证正面存储地址
      */
     private String idCardPhotoFront;
@@ -113,7 +118,7 @@ public class WorkerApplyDO extends BaseDO {
     private String workUnit;
 
     /**
-     * 通讯地址
+     * 工作区域
      */
     private String address;
 

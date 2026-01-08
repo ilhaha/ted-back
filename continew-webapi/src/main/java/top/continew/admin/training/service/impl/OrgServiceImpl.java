@@ -2365,10 +2365,23 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 throw new BusinessException(String.format("第 %d 行【%s】不能为空", rowIndex + 1, expectedHeaders.get(4)));
             }
 
-            // ===== 6. 通讯地址 =====
+            // ===== 6. 工作区域 =====
             String address = getCellString(row, 5);
             if (StrUtil.isBlank(address)) {
                 throw new BusinessException(String.format("第 %d 行【%s】不能为空", rowIndex + 1, expectedHeaders.get(5)));
+            }
+
+            // 去空格，防止 Excel 里有空白
+            address = address.trim();
+
+            // 校验是否为指定北京区
+            if (!ImportWorkerTemplateConstant.BEIJING_DISTRICTS.contains(address)) {
+                throw new BusinessException(String.format(
+                        "第 %d 行【%s】只能填写以下区之一：%s",
+                        rowIndex + 1,
+                        expectedHeaders.get(5),
+                        String.join("、", ImportWorkerTemplateConstant.BEIJING_DISTRICTS)
+                ));
             }
 
             // ===== 7. 政治面貌 =====

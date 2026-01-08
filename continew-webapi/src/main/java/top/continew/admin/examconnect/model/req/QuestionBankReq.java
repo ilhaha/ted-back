@@ -45,7 +45,6 @@ public class QuestionBankReq implements Serializable {
      * 长度固定为3
      */
     @NotEmpty(message = "请选择八大类知识类型")
-    @Size(min = 3, max = 3, message = "请选择八大类知识格式不正确")
     @Schema(description = "所属八大类知识类型")
     private List<Long> categoryId;
 

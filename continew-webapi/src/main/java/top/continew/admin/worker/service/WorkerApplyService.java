@@ -18,14 +18,11 @@ package top.continew.admin.worker.service;
 
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.worker.model.req.*;
-import top.continew.admin.worker.model.resp.UploadResulResp;
-import top.continew.admin.worker.model.resp.WorkerApplyVO;
+import top.continew.admin.worker.model.resp.*;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.worker.model.query.WorkerApplyQuery;
-import top.continew.admin.worker.model.resp.WorkerApplyDetailResp;
-import top.continew.admin.worker.model.resp.WorkerApplyResp;
 
 import java.util.List;
 
@@ -128,4 +125,18 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      * @return
      */
     PageResp<WorkerApplyResp> orgPage(WorkerApplyQuery query, PageQuery pageQuery);
+
+    /**
+     * 获取作业人员的上传资料
+     * @param workerId
+     * @return
+     */
+    DocDetailResp getDocDetailByWorkerId(Long workerId);
+
+    /**
+     * 撤销申请
+     * @param id
+     * @return
+     */
+    Boolean revokeApply(Integer id);
 }

@@ -17,7 +17,7 @@
 package top.continew.admin.common.constant;
 
 /**
- * 报名状态检查结果常量
+ * 报名检查结果常量
  */
 public final class WorkerApplyCheckConstants {
 
@@ -32,4 +32,7 @@ public final class WorkerApplyCheckConstants {
 
     /** 未报名 */
     public static final String NONE = null;
+
+    /** 未报名 */
+    public static final String BEIJING_RESIDENT = "北京市";
 }

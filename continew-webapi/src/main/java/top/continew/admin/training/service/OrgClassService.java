@@ -41,4 +41,12 @@ public interface OrgClassService extends BaseService<OrgClassResp, OrgClassDetai
      * @return
      */
     List<SelectClassVO> getSelectClassByProject(Long projectId, Integer classType, Integer orgQueryFlag);
+
+    /**
+     * 班级结束报名
+     * @param req
+     * @param id
+     * @return
+     */
+    Boolean endApply(OrgClassReq req, Long id);
 }

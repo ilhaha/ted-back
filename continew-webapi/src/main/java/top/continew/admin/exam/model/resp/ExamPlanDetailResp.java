@@ -222,7 +222,7 @@ public class ExamPlanDetailResp extends BaseDetailResp {
      */
     @Schema(description = "开考密码")
     @ExcelProperty(value = "开考密码")
-    private Integer examPassword;
+    private String examPassword;
 
     //    /**
     //     * 描述

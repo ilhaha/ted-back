@@ -16,6 +16,7 @@
 
 package top.continew.admin.document.model.resp;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -23,6 +24,11 @@ import lombok.Data;
 public class DocumentTypeAddResp {
     @Schema(description = "资料类型ID")
     private Long id;
+    /**
+     * 必须上传人员（0全部都需要上传，1京籍上传、2非京籍上传）
+     */
+    @Schema(description = "必须上传人员（0全部都需要上传，1京籍上传、2非京籍上传）")
+    private Integer needUploadPerson;
     @Schema(description = "资料类型名称")
     private String typeName;
 }

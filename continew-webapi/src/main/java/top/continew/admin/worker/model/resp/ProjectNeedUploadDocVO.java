@@ -40,4 +40,9 @@ public class ProjectNeedUploadDocVO {
      */
     private String docPath;
 
+    /**
+     * 上传人员
+     */
+    private Integer needUploadPerson;
+
 }

@@ -21,7 +21,7 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import top.continew.admin.common.constant.DocumentStatus;
+import top.continew.admin.common.constant.DocumentConstant;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.document.mapper.DocumentMapper;
 import top.continew.admin.document.mapper.ExamineeDocumentMapper;
@@ -81,14 +81,14 @@ public class ExamineeDocumentServiceImpl extends BaseServiceImpl<ExamineeDocumen
             documentDOLambdaQueryWrapper.eq(DocumentDO::getCreateUser, TokenLocalThreadUtil.get().getUserId());
         }
         documentDOLambdaQueryWrapper.eq(DocumentDO::getTypeId, studentUploadDocumentsReq.getTypeId())
-            .ne(DocumentDO::getStatus, DocumentStatus.REJECTED);
+            .ne(DocumentDO::getStatus, DocumentConstant.REJECTED);
         List<DocumentDO> documentDOS = documentMapper.selectList(documentDOLambdaQueryWrapper);
         ValidationUtils.throwIfNotEmpty(documentDOS, "该类型资料已存在，请勿重复上传");
 
         // 删除该类型资料(不显示出来)
         LambdaQueryWrapper<DocumentDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DocumentDO::getTypeId, studentUploadDocumentsReq.getTypeId())
-            .eq(DocumentDO::getStatus, DocumentStatus.REJECTED)
+            .eq(DocumentDO::getStatus, DocumentConstant.REJECTED)
             .eq(DocumentDO::getCreateUser, certificateId);
         documentMapper.delete(wrapper);
 
@@ -105,7 +105,7 @@ public class ExamineeDocumentServiceImpl extends BaseServiceImpl<ExamineeDocumen
         documentDO.setTypeId(studentUploadDocumentsReq.getTypeId());
         documentDO.setCreateUser(certificateId);
         documentDO.setUpdateUser(certificateId);
-        documentDO.setStatus(DocumentStatus.PENDING_REVIEW);
+        documentDO.setStatus(DocumentConstant.PENDING_REVIEW);
         documentMapper.insert(documentDO);
         // 关联考生和资料表
         ExamineeDocumentDO examineeDocumentDO = new ExamineeDocumentDO();
@@ -155,7 +155,7 @@ public class ExamineeDocumentServiceImpl extends BaseServiceImpl<ExamineeDocumen
             }
             oldDoc.setStatus(status);
         } else {
-            oldDoc.setStatus(DocumentStatus.PENDING_REVIEW);
+            oldDoc.setStatus(DocumentConstant.PENDING_REVIEW);
         }
         // 更新资料路径与状态
         oldDoc.setDocPath(studentUploadDocumentsReq.getDocPath());

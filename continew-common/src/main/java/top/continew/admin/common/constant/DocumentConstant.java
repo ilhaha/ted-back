@@ -21,7 +21,7 @@ package top.continew.admin.common.constant;
  * @Create 2025/3/13 16:56
  * @Version 1.0
  */
-public class DocumentStatus {
+public class DocumentConstant {
 
     /**
      * 待审批
@@ -37,5 +37,16 @@ public class DocumentStatus {
      * 已拒绝
      */
     public final static Integer REJECTED = 2;
+
+    /** 全部人员都需要上传 */
+    public static final int ALL = 0;
+
+    /** 仅京籍人员需要上传 */
+    public static final int BEIJING_ONLY = 1;
+
+    /** 仅非京籍人员需要上传 */
+    public static final int NON_BEIJING_ONLY = 2;
+
+
 
 }
