@@ -28,6 +28,7 @@ import top.continew.admin.exam.model.req.ExamineePaymentAuditReq;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditDetailResp;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -108,4 +109,21 @@ public interface ExamineePaymentAuditService extends BaseService<ExamineePayment
      * @return
      */
     Boolean paymentAuditConfirm(PaymentAuditConfirmReq paymentAuditConfirmReq);
+
+    /**
+     * 生成作业人员班级缴费通知单
+     *
+     * @param classId
+     */
+    void generatePaymentAuditByClassId(Long classId );
+
+    byte[] generateWorkerPaymentNoticeExcel(
+            String applyClassName,
+            String projectName,
+            String orgName,
+            long personCount,
+            BigDecimal paymentAmount,
+            BigDecimal paymentAmounts,
+            String noticeNo
+    );
 }

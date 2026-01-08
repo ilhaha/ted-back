@@ -53,6 +53,7 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
     @Insert("INSERT INTO ted_org_candidate (candidate_id, org_id) " + "VALUES (#{candidateId}, #{orgId})")
     Long linkCandidateWithOrg(@Param("candidateUserId") Long candidateUserId, @Param("orgId") Long orgId);
 
+
     OrgDTO getOrgId(@Param("userId") Long userId);
 
     public IPage<OrgCandidatesResp> getCandidatesList(@Param("page") Page<OrgDO> page,

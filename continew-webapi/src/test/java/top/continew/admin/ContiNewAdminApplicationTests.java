@@ -30,6 +30,10 @@ class ContiNewAdminApplicationTests {
     @Resource
     private IdCardRecognition idCardRecognition;
 
+
+    @Resource
+    private top.continew.admin.exam.service.ExamineePaymentAuditService ExamineePaymentAuditService;
+
     /**
      * 身份证正面识别
      * 
@@ -57,5 +61,15 @@ class ContiNewAdminApplicationTests {
         idCardRecognition.uploadIdCard(inputStream1, false, idCardDo);
         System.out.println(idCardDo);
     }
+
+
+//    @Test
+//    void se_generatePaymentAuditByClassId() {
+//        Long classId = 74L;
+//
+//        ExamineePaymentAuditService.generatePaymentAuditByClassId(classId);
+//
+//        System.out.println("生成缴费通知单完成，classId = " + classId);
+//    }
 
 }

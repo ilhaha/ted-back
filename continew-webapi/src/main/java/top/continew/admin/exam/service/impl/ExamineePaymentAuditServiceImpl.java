@@ -57,8 +57,12 @@ import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.FileService;
 import top.continew.admin.system.service.UploadService;
+import top.continew.admin.training.mapper.OrgClassCandidateMapper;
 import top.continew.admin.training.mapper.OrgClassMapper;
+import top.continew.admin.training.mapper.OrgMapper;
+import top.continew.admin.training.model.entity.OrgClassCandidateDO;
 import top.continew.admin.training.model.entity.OrgClassDO;
+import top.continew.admin.training.model.entity.OrgDO;
 import top.continew.admin.util.ExcelUtilReactive;
 import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.starter.core.exception.BusinessException;
@@ -75,6 +79,9 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -104,6 +111,13 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
     private final FileService fileService;
 
     @Resource
+    private OrgClassCandidateMapper orgClassCandidateMapper;
+
+
+    @Resource
+    private OrgMapper orgMapper;
+
+    @Resource
     private OrgClassMapper orgClassMapper;
 
     @Value("${excel.template.examination-payment-notice.inspector.url}")
@@ -111,6 +125,13 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
 
     @Value("${excel.template.examination-payment-notice.worker.url}")
     private String workerExamNoticeTemplateUrl;
+
+    @Value("${excel.template.examination-payment-notice.examOrg.url}")
+    private String examOrgPaymentNoticeTemplate;
+
+    @Value("${excel.template.examination-payment-notice.examOrg.dirPath}")
+    private String dirPath;
+
 
     @Value("${qrcode.worker.upload.payment-voucher.url}")
     private String qrcodeUrl;
@@ -166,11 +187,11 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         if (query.getIsWorker()) {
             queryWrapper.isNotNull("tepa.class_id").isNotNull("tepa.qrcode_upload_url");
             page = baseMapper.getWorkerExamineePaymentAudits(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+                    .getSize()), queryWrapper);
         } else {
             queryWrapper.isNull("tepa.class_id").isNull("tepa.qrcode_upload_url");
             page = baseMapper.getExamineePaymentAudits(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+                    .getSize()), queryWrapper);
         }
         super.sort(queryWrapper, pageQuery);
         PageResp<ExamineePaymentAuditResp> pageResp = PageResp.build(page, super.getListClass());
@@ -189,11 +210,11 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         }
         // 查找当前记录
         ExamineePaymentAuditDO record = examineePaymentAuditMapper
-            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>().eq(ExamineePaymentAuditDO::getExamPlanId, req
-                .getExamPlanId())
-                .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
-                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                .last("LIMIT 1"));
+                .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>().eq(ExamineePaymentAuditDO::getExamPlanId, req
+                                .getExamPlanId())
+                        .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                        .last("LIMIT 1"));
         if (record == null || record.getAuditNoticeUrl() == null) {
             throw new BusinessException("未找到缴费通知记录，不能上传凭证！");
         }
@@ -246,14 +267,14 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
 
         // 1. 批量查询所有记录
         List<ExamineePaymentAuditDO> records = examineePaymentAuditMapper
-            .selectList(new LambdaQueryWrapper<ExamineePaymentAuditDO>().in(ExamineePaymentAuditDO::getId, req
-                .getReviewIds()).eq(ExamineePaymentAuditDO::getIsDeleted, false));
+                .selectList(new LambdaQueryWrapper<ExamineePaymentAuditDO>().in(ExamineePaymentAuditDO::getId, req
+                        .getReviewIds()).eq(ExamineePaymentAuditDO::getIsDeleted, false));
 
         ValidationUtils.throwIfEmpty(records, "未找到任何需要审核的记录！");
 
         Integer newStatus = req.getAuditStatus();
         ValidationUtils.throwIf(newStatus == null || (!PaymentAuditStatusEnum.APPROVED.getValue()
-            .equals(newStatus) && !PaymentAuditStatusEnum.REJECTED.getValue().equals(newStatus)), "非法的审核状态！");
+                .equals(newStatus) && !PaymentAuditStatusEnum.REJECTED.getValue().equals(newStatus)), "非法的审核状态！");
 
         Long auditorId = TokenLocalThreadUtil.get().getUserId();
         LocalDateTime now = LocalDateTime.now();
@@ -338,8 +359,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
 
         List<Long> classIds = enrollDOList.stream().map(EnrollDO::getClassId).distinct().toList();
         Map<Long, OrgClassDO> classMap = orgClassMapper.selectBatchIds(classIds)
-            .stream()
-            .collect(Collectors.toMap(OrgClassDO::getId, Function.identity()));
+                .stream()
+                .collect(Collectors.toMap(OrgClassDO::getId, Function.identity()));
 
         // 构建缴费审核记录并入库
         List<ExamineePaymentAuditDO> insertList = enrollDOList.stream().map(item -> {
@@ -366,8 +387,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
                 paymentAuditDO.setQrcodeUploadUrl(qrUrl);
                 byte[] photoBytes = loadPhotoSync(qrUrl);
                 paymentAuditDO
-                    .setAuditNoticeUrl(generateAuditNotice(planId, candidateId, paymentInfoDTO, noticeNo, orgClass
-                        .getClassName(), photoBytes));
+                        .setAuditNoticeUrl(generateAuditNotice(planId, candidateId, paymentInfoDTO, noticeNo, orgClass
+                                .getClassName(), photoBytes));
             } catch (Exception e) {
                 throw new RuntimeException("生成或上传二维码失败");
             }
@@ -376,6 +397,76 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
 
         examineePaymentAuditMapper.insertBatch(insertList);
     }
+
+
+    /**
+     * 生成作业人员班级缴费通知单
+     *
+     * @param classId 班级ID
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void generatePaymentAuditByClassId(Long classId) {
+        ValidationUtils.throwIfNull(classId, "班级ID不能为空");
+
+        // 查询班级信息
+        OrgClassDO orgClass = orgClassMapper.selectById(classId);
+        ValidationUtils.throwIfNull(orgClass, "班级信息不存在");
+
+        String className = orgClass.getClassName();
+        ValidationUtils.throwIfBlank(className, "班级名称不能为空");
+
+        Long projectId = orgClass.getProjectId();
+        ValidationUtils.throwIfNull(projectId, "班级未关联项目ID");
+
+        Long orgId = orgClass.getOrgId();
+        ValidationUtils.throwIfNull(orgId, "班级未关联机构ID");
+
+        // 查询项目信息
+        ProjectDO project = examProjectMapper.selectById(projectId);
+        ValidationUtils.throwIfNull(project, "未找到项目信息");
+
+        String projectName = project.getProjectName();
+        ValidationUtils.throwIfBlank(projectName, "项目名称不能为空");
+
+        BigDecimal examFee = BigDecimal.valueOf(project.getExamFee());
+        ValidationUtils.throwIfNull(examFee, "项目收费信息不能为空");
+
+        // 查询机构信息
+        OrgDO org = orgMapper.selectById(orgId);
+        ValidationUtils.throwIfNull(org, "机构信息不存在");
+
+        String orgName = org.getName();
+        ValidationUtils.throwIfBlank(orgName, "机构名称不能为空");
+
+        // 统计班级考生人数
+        Long personCount = orgClassCandidateMapper.selectCount(
+                new LambdaQueryWrapper<OrgClassCandidateDO>()
+                        .eq(OrgClassCandidateDO::getClassId, classId)
+                        .eq(OrgClassCandidateDO::getStatus, 0)
+                        .eq(OrgClassCandidateDO::getIsDeleted, false)
+        );
+        if (personCount == null || personCount <= 0) {
+            throw new BusinessException("该班级下无考生信息");
+        }
+        // 计算总金额
+        BigDecimal personCounts = examFee.multiply(BigDecimal.valueOf(personCount));
+
+        // 生成通知单编号
+        String noticeNo = excelUtilReactive.generateUniqueNoticeNo(project.getProjectCode());
+
+        // 生成缴费通知单
+        generateWorkerPaymentNoticePdf(
+                className,
+                projectName,
+                orgName,
+                personCount,
+                examFee,
+                personCounts,
+                noticeNo
+        );
+    }
+
 
     /**
      * 扫码查询作业人员缴费信息
@@ -393,7 +484,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
 
         // 参数完整性校验
         ValidationUtils.throwIf(ObjectUtil.isNull(planIdAes) || ObjectUtil.isNull(candidateIdAes) || ObjectUtil
-            .isNull(enrollIdAes) || ObjectUtil.isNull(classIdAes), "二维码已被篡改或参数缺失，请重新获取");
+                .isNull(enrollIdAes) || ObjectUtil.isNull(classIdAes), "二维码已被篡改或参数缺失，请重新获取");
 
         Long planId = NumberUtil.toLong(planIdAes);
         Long candidateId = NumberUtil.toLong(candidateIdAes);
@@ -406,10 +497,10 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
 
         // 查询缴费记录
         ExamineePaymentAuditDO auditDO = baseMapper.selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-            .eq(ExamineePaymentAuditDO::getExamPlanId, planId)
-            .eq(ExamineePaymentAuditDO::getExamineeId, candidateId)
-            .eq(ExamineePaymentAuditDO::getEnrollId, enrollId)
-            .eq(ExamineePaymentAuditDO::getClassId, classId));
+                .eq(ExamineePaymentAuditDO::getExamPlanId, planId)
+                .eq(ExamineePaymentAuditDO::getExamineeId, candidateId)
+                .eq(ExamineePaymentAuditDO::getEnrollId, enrollId)
+                .eq(ExamineePaymentAuditDO::getClassId, classId));
         ValidationUtils.throwIfNull(auditDO, "未找到报名信息");
 
         // 查询个人信息
@@ -435,14 +526,14 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         // 不能重复提交待审核状态
         Integer PAID_PENDING_REVIEW = PaymentAuditStatusEnum.PAID_PENDING_REVIEW.getValue();
         ValidationUtils.throwIf(PAID_PENDING_REVIEW.equals(paymentAuditConfirmReq
-            .getAuditStatus()) && PAID_PENDING_REVIEW.equals(examineePaymentAuditDO
+                .getAuditStatus()) && PAID_PENDING_REVIEW.equals(examineePaymentAuditDO
                 .getAuditStatus()), "您已提交过缴费凭证，请勿重复提交！");
         return baseMapper.update(new LambdaUpdateWrapper<ExamineePaymentAuditDO>()
-            .set(ExamineePaymentAuditDO::getAuditStatus, paymentAuditConfirmReq.getAuditStatus())
-            .set(ExamineePaymentAuditDO::getPaymentTime, LocalDateTime.now())
-            .set(ExamineePaymentAuditDO::getPaymentProofUrl, paymentAuditConfirmReq.getPaymentProofUrl())
-            .set(ExamineePaymentAuditDO::getRejectReason, null)
-            .eq(ExamineePaymentAuditDO::getId, examineePaymentAuditDO.getId())) > 0;
+                .set(ExamineePaymentAuditDO::getAuditStatus, paymentAuditConfirmReq.getAuditStatus())
+                .set(ExamineePaymentAuditDO::getPaymentTime, LocalDateTime.now())
+                .set(ExamineePaymentAuditDO::getPaymentProofUrl, paymentAuditConfirmReq.getPaymentProofUrl())
+                .set(ExamineePaymentAuditDO::getRejectReason, null)
+                .eq(ExamineePaymentAuditDO::getId, examineePaymentAuditDO.getId())) > 0;
     }
 
     /**
@@ -465,12 +556,12 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
      */
     private String buildQrContent(Long classId, Long candidateId, Long enrollId, Long planId) {
         Map<String, Long> params = Map
-            .of("classId", classId, "candidateId", candidateId, "enrollId", enrollId, "planId", planId);
+                .of("classId", classId, "candidateId", candidateId, "enrollId", enrollId, "planId", planId);
 
         String query = params.entrySet()
-            .stream()
-            .map(e -> e.getKey() + "=" + encode(aesWithHMAC.encryptAndSign(String.valueOf(e.getValue()))))
-            .collect(Collectors.joining("&"));
+                .stream()
+                .map(e -> e.getKey() + "=" + encode(aesWithHMAC.encryptAndSign(String.valueOf(e.getValue()))))
+                .collect(Collectors.joining("&"));
 
         return qrcodeUrl + "?" + query;
     }
@@ -524,11 +615,11 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
     public ExamineePaymentAuditDO getByExamPlanIdAndExamineeId(Long examPlanId, Long examineeId) {
         // 先查找当前记录
         ExamineePaymentAuditDO record = examineePaymentAuditMapper
-            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
-                .eq(ExamineePaymentAuditDO::getExamineeId, examineeId)
-                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                .last("LIMIT 1"));
+                .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
+                        .eq(ExamineePaymentAuditDO::getExamineeId, examineeId)
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                        .last("LIMIT 1"));
 
         if (record == null) {
             throw new IllegalStateException("未找到对应的缴费审核记录，请检查考试计划和考生信息。");
@@ -545,7 +636,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
             throw new IllegalStateException("未找到考试计划缴费信息: " + examPlanId);
         }
         String auditNoticeUrl = generateAuditNotice(examPlanId, examineeId, paymentInfoDTO, record
-            .getNoticeNo(), null, new byte[0]);
+                .getNoticeNo(), null, new byte[0]);
 
         // 更新当前记录
         record.setAuditNoticeUrl(auditNoticeUrl);
@@ -572,7 +663,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
                                        byte[] photoBytes) {
         // 生成 PDF
         byte[] pdfBytes = generatePaymentNotice(examPlanId, examineeId, paymentInfoDTO.getExamPlanName(), paymentInfoDTO
-            .getProjectName(), paymentInfoDTO.getPaymentAmount().longValue(), noticeNo, className, photoBytes);
+                .getProjectName(), paymentInfoDTO.getPaymentAmount().longValue(), noticeNo, className, photoBytes);
 
         // 封装为 MultipartFile
         String nickname = userMapper.selectById(examineeId).getNickname();
@@ -586,6 +677,79 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         String pdfUrl = fileInfoResp.getUrl();
         return pdfUrl;
     }
+
+
+    /**
+     * 生成缴费通知单 PDF
+     *
+     * @param applyClassName 班级名称
+     * @param projectName   项目名称
+     * @param orgName       机构名称
+     * @param personCount   人数
+     * @param paymentAmount 单人缴费金额
+     * @param paymentAmounts 总缴费金额
+     * @param noticeNo      通知单编号
+     * @return PDF 字节数组
+     */
+    private byte[] generateWorkerPaymentNoticePdf(
+            String applyClassName,
+            String projectName,
+            String orgName,
+            long personCount,
+            BigDecimal paymentAmount,
+            BigDecimal paymentAmounts,
+            String noticeNo
+    ) {
+        // 参数校验
+        ValidationUtils.throwIfBlank(applyClassName, "班级名称不能为空");
+        ValidationUtils.throwIfBlank(projectName, "项目名称不能为空");
+        ValidationUtils.throwIfBlank(orgName, "机构名称不能为空");
+        ValidationUtils.throwIfNull(paymentAmount, "单人缴费金额不能为空");
+        ValidationUtils.throwIfNull(paymentAmounts, "缴费总金额不能为空");
+        ValidationUtils.throwIfBlank(noticeNo, "通知单编号不能为空");
+
+        // 生成 PDF 内容
+        byte[] pdfBytes = generateWorkerPaymentNoticeExcel(
+                applyClassName,
+                projectName,
+                orgName,
+                personCount,
+                paymentAmount,
+                paymentAmounts,
+                noticeNo
+        );
+
+        ValidationUtils.throwIfEmpty(pdfBytes, "生成缴费通知单PDF失败");
+//        savePdfToLocal(pdfBytes, applyClassName +"_缴费通知单.pdf", dirPath);
+        return pdfBytes;
+
+    }
+//
+//
+//    /**
+//     * 将 PDF 保存到本地
+//     *
+//     * @param pdfBytes PDF 字节数组
+//     * @param fileName 文件名（不含路径）
+//     * @param dirPath  目录路径
+//     */
+//    private void savePdfToLocal(byte[] pdfBytes, String fileName, String dirPath) {
+//        ValidationUtils.throwIfEmpty(pdfBytes, "PDF 内容不能为空");
+//        ValidationUtils.throwIfBlank(fileName, "文件名不能为空");
+//        ValidationUtils.throwIfBlank(dirPath, "目录路径不能为空");
+//
+//        try {
+//            Path dir = Paths.get(dirPath);
+//            Files.createDirectories(dir);
+//
+//            Path filePath = dir.resolve(fileName);
+//            Files.write(filePath, pdfBytes);
+//
+//        } catch (IOException e) {
+//            throw new IllegalStateException("保存 PDF 文件失败", e);
+//        }
+//    }
+
 
     @Override
     public byte[] generatePaymentNotice(Long examPlanId,
@@ -619,18 +783,62 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         // 阻塞生成 PDF
         if (isWorker) {
             return excelUtilReactive
-                .generatePdfBytesSync(dataMap, workerExamNoticeTemplateUrl, photoBytes, 7, 8, 21, 22);
+                    .generatePdfBytesSync(dataMap, workerExamNoticeTemplateUrl, photoBytes, 7, 8, 21, 22);
         } else {
             return excelUtilReactive.generatePdfBytesSync(dataMap, excelTemplateUrl, photoBytes, 3, 3, 1, 5);
         }
+    }
+
+
+    @Override
+    public byte[] generateWorkerPaymentNoticeExcel(
+            String applyClassName,
+            String projectName,
+            String orgName,
+            long personCount,
+            BigDecimal paymentAmount,
+            BigDecimal paymentAmounts,
+            String noticeNo
+    ) {
+        // 参数校验（字符串用 blank，更严谨）
+        ValidationUtils.throwIfBlank(applyClassName, "班级名称不能为空");
+        ValidationUtils.throwIfBlank(projectName, "收费项目不能为空");
+        ValidationUtils.throwIfBlank(orgName, "机构名称不能为空");
+        ValidationUtils.throwIfNull(paymentAmount, "缴费金额不能为空");
+        ValidationUtils.throwIfNull(paymentAmounts, "总缴费金额不能为空");
+        ValidationUtils.throwIfBlank(noticeNo, "通知单编号不能为空");
+
+        // 构建模板数据
+        Map<String, Object> dataMap = new HashMap<>(16);
+        dataMap.put("applyClassName", excelUtilReactive.getSafeValue(applyClassName));
+        dataMap.put("projectName", excelUtilReactive.getSafeValue(projectName));
+        dataMap.put("orgName", excelUtilReactive.getSafeValue(orgName));
+        dataMap.put("personCount", excelUtilReactive.getSafeValue(String.valueOf(personCount)));
+        dataMap.put("paymentAmount", excelUtilReactive.getSafeValue(String.valueOf(paymentAmount)));
+        dataMap.put("paymentAmounts", excelUtilReactive.getSafeValue(String.valueOf(paymentAmounts)));
+        dataMap.put("noticeNo", excelUtilReactive.getSafeValue(noticeNo));
+
+        // 金额大写拆分
+        Map<String, String> upperAmountMap = excelUtilReactive.splitAmountToUpper(paymentAmounts);
+        if (upperAmountMap != null && !upperAmountMap.isEmpty()) {
+            dataMap.putAll(upperAmountMap);
+        }
+
+        // 阻塞生成 PDF
+        return excelUtilReactive.generatePdfBytesSync(
+                dataMap,
+                examOrgPaymentNoticeTemplate,
+                new byte[0],
+                4, 4, 2, 6
+        );
     }
 
     // 根据考试计划ID查询项目缴费金额
     private ExamPlanProjectPaymentDTO getExamPlanProjectPaymentInfo(Long examPlanId) {
         // 查询考试计划
         ExamPlanDO examPlanDO = examPlanMapper.selectOne(new LambdaQueryWrapper<ExamPlanDO>()
-            .eq(ExamPlanDO::getId, examPlanId)
-            .eq(ExamPlanDO::getIsDeleted, false));
+                .eq(ExamPlanDO::getId, examPlanId)
+                .eq(ExamPlanDO::getIsDeleted, false));
         ValidationUtils.throwIfNull(examPlanDO, "考试计划不存在");
 
         // 获取关联项目ID和考试计划名称
@@ -641,8 +849,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
 
         //  查询项目信息
         ProjectDO projectDO = examProjectMapper.selectOne(new LambdaQueryWrapper<ProjectDO>()
-            .eq(ProjectDO::getId, examProjectId)
-            .eq(ProjectDO::getIsDeleted, false));
+                .eq(ProjectDO::getId, examProjectId)
+                .eq(ProjectDO::getIsDeleted, false));
         ValidationUtils.throwIfNull(projectDO, "考试项目不存在");
 
         // 提取项目名称和缴费金额
