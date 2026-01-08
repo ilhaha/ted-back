@@ -720,7 +720,8 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         );
 
         ValidationUtils.throwIfEmpty(pdfBytes, "生成缴费通知单PDF失败");
-//        savePdfToLocal(pdfBytes, applyClassName +"_缴费通知单.pdf", dirPath);
+//        String LocalDateTime = java.time.LocalDateTime.now().toString().replace(":", "-").replace(" ", "_");
+//        savePdfToLocal(pdfBytes, LocalDateTime + applyClassName +"_缴费通知单.pdf", dirPath);
         return pdfBytes;
 
     }
