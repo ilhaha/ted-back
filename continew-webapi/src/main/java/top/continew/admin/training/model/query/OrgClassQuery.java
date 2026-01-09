@@ -21,6 +21,7 @@ import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import top.continew.starter.data.core.annotation.Query;
+import top.continew.starter.data.core.annotation.QueryIgnore;
 import top.continew.starter.data.core.enums.QueryType;
 
 import java.io.Serial;
@@ -55,9 +56,23 @@ public class OrgClassQuery implements Serializable {
     private String className;
 
     /**
+     * 班级id
+     */
+    @Schema(description = "班级id")
+    @Query(type = QueryType.EQ,columns = "toc.id")
+    private String classId;
+
+    /**
      * 班级类型，0作业人员班级，1检验人员班级
      */
     @Schema(description = "班级类型，0作业人员班级，1检验人员班级")
     @Query(type = QueryType.EQ)
     private Integer classType;
+
+    /**
+     * 是否是机构查询
+     */
+    @Schema(description = "是否是机构查询")
+    @QueryIgnore
+    private Boolean isOrgQuery;
 }

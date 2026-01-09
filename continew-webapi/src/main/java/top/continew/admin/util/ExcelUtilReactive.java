@@ -199,8 +199,8 @@ public class ExcelUtilReactive {
                 com.aspose.cells.Workbook workbook = new com.aspose.cells.Workbook(in);
                 PdfSaveOptions options = new PdfSaveOptions();
                 options.setCompliance(com.aspose.cells.PdfCompliance.PDF_A_1_B);
-                options.setAllColumnsInOnePagePerSheet(true);
-                options.setOnePagePerSheet(true);
+//                options.setAllColumnsInOnePagePerSheet(true);
+//                options.setOnePagePerSheet(true);
 
                 workbook.save(out, options);
 

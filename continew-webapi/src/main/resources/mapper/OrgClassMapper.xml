@@ -43,10 +43,32 @@
         SELECT id AS `value`, class_name AS `label`
         FROM ted_org_class
         WHERE project_id = #{projectId}
-          AND class_type = #{classType}
-          AND is_deleted = 0
+        AND class_type = #{classType}
+        AND is_deleted = 0
         <if test="orgId != null">
             AND org_id = #{orgId}
         </if>
+    </select>
+    <select id="adminQueryWorkerClassPage"
+            resultType="top.continew.admin.training.model.resp.OrgClassDetailResp">
+        SELECT toc.id,
+               toc.class_name,
+               toc.doc_submit_time,
+               org.`code`                                      AS org_code,
+               org.id                                          AS org_id,
+               org.`name`                                      AS org_name,
+               tp.project_name,
+               SUM(CASE WHEN twa.status = 0 THEN 1 ELSE 0 END) AS pending_review_count,
+               SUM(CASE WHEN twa.status = 1 THEN 1 ELSE 0 END) AS approved_count,
+               SUM(CASE WHEN twa.status = 2 THEN 1 ELSE 0 END) AS rejected_count
+        FROM ted_org_class toc
+                 LEFT JOIN ted_project tp
+                           ON toc.project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN ted_worker_apply twa
+                           ON toc.id = twa.class_id AND twa.is_deleted = 0
+                 LEFT JOIN ted_org org
+                           ON toc.org_id = org.id AND org.is_deleted = 0 ${ew.customSqlSegment} AND toc.doc_submit_status = 1
+        GROUP BY toc.id
+        ORDER BY toc.doc_submit_time ASC
     </select>
 </mapper>

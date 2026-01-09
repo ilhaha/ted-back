@@ -50,6 +50,20 @@ public class OrgClassDetailResp extends BaseDetailResp {
     private Long orgId;
 
     /**
+     * 机构代码
+     */
+    @Schema(description = "机构代码")
+    @ExcelProperty(value = "机构代码")
+    private String orgCode;
+
+    /**
+     * 机构名称
+     */
+    @Schema(description = "机构名称")
+    @ExcelProperty(value = "机构名称")
+    private String orgName;
+
+    /**
      * 项目id
      */
     @Schema(description = "项目id")
@@ -139,4 +153,57 @@ public class OrgClassDetailResp extends BaseDetailResp {
     @Schema(description = "作业人员已上传资料人数")
     @ExcelProperty(value = "作业人员已上传资料人数")
     private Long uploadedCount;
+
+    /**
+     * 资料提交状态
+     * 0-未提交 1-已提交
+     */
+    @Schema(description = "资料提交状态 0-未提交 1-已提交")
+    @ExcelProperty(value = "资料提交状态 0-未提交 1-已提交")
+    private Integer docSubmitStatus;
+
+    /**
+     * 资料提交时间
+     */
+    @Schema(description = "资料提交时间")
+    @ExcelProperty(value = "资料提交时间")
+    private LocalDateTime docSubmitTime;
+
+    /**
+     * 缴费状态（ 0未缴费 1待审核 2已缴费 3免缴 4审核未通过）
+     */
+    @Schema(description = "缴费状态（ 0未缴费 1待审核 2已缴费 3免缴 4审核未通过）")
+    @ExcelProperty(value = "缴费状态（ 0未缴费 1待审核 2已缴费 3免缴 4审核未通过）")
+    private Integer payStatus;
+
+    /**
+     * 缴费通知单URL
+     */
+    @Schema(description = "缴费通知单URL")
+    @ExcelProperty(value = "缴费通知单URL")
+    private String payNoticeUrl;
+
+    /**
+     * 缴费凭证URL
+     */
+    @Schema(description = "缴费凭证URL")
+    @ExcelProperty(value = "缴费凭证URL")
+    private String payProofUrl;
+
+    /**
+     * 缴费驳回原因
+     */
+    @Schema(description = "缴费驳回原因")
+    @ExcelProperty(value = "缴费驳回原因")
+    private String rejectReason;;
+
+    /**
+     * 缴费提交时间
+     */
+
+    @Schema(description = "缴费提交时间")
+    @ExcelProperty(value = "缴费提交时间")
+    private LocalDateTime paySubmitTime;
+
+
 }

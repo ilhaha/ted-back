@@ -16,6 +16,8 @@
 
 package top.continew.admin.training.service;
 
+import org.springframework.http.ResponseEntity;
+import top.continew.admin.training.model.req.OrgClassPaymentUpdateReq;
 import top.continew.admin.training.model.vo.SelectClassVO;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.training.model.query.OrgClassQuery;
@@ -49,4 +51,20 @@ public interface OrgClassService extends BaseService<OrgClassResp, OrgClassDetai
      * @return
      */
     Boolean endApply(OrgClassReq req, Long id);
+
+
+    /**
+     * 下载班级缴费通知单
+     * @param classId
+     * @return
+     */
+    ResponseEntity<byte[]> downloadPaymentNotice(Long classId);
+
+    /**
+     * 上传班级缴费凭证
+     * @param orgClassPaymentUpdateReq
+     * @return
+     */
+    Boolean uploadProof(OrgClassPaymentUpdateReq orgClassPaymentUpdateReq);
+
 }

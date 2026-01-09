@@ -37,10 +37,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.DocumentConstant;
+import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.WorkerApplyCheckConstants;
-import top.continew.admin.common.constant.enums.ClassStatusEnum;
-import top.continew.admin.common.constant.enums.WorkerApplyReviewStatusEnum;
-import top.continew.admin.common.constant.enums.WorkerApplyTypeEnum;
+import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
 import top.continew.admin.common.util.AESWithHMAC;
@@ -51,6 +50,7 @@ import top.continew.admin.exam.mapper.EnrollMapper;
 import top.continew.admin.exam.mapper.ExamineePaymentAuditMapper;
 import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
+import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.mapper.UserRoleMapper;
 import top.continew.admin.system.model.entity.UserDO;
@@ -81,7 +81,9 @@ import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.admin.worker.model.query.WorkerApplyQuery;
 import top.continew.admin.worker.service.WorkerApplyService;
 
+import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -129,8 +131,8 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Resource
     private OrgClassMapper orgClassMapper;
 
-    @Resource
-    private ExamineePaymentAuditMapper examineePaymentAuditMapper;
+
+    private final ExamineePaymentAuditService examineePaymentAuditService;
 
     @Resource
     private UserRoleMapper userRoleMapper;
@@ -159,9 +161,9 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         Long classId = Long.valueOf(decryptedClassId);
 
         // 2 查询班级并验证状态
-        OrgClassDO orgClassDO = orgClassMapper.selectById(classId);
-        ValidationUtils.throwIf(ObjectUtil.isNull(orgClassDO) || ClassStatusEnum.STOPPED.getValue()
-                .equals(orgClassDO.getStatus()), "该班级已停止报名");
+//        OrgClassDO orgClassDO = orgClassMapper.selectById(classId);
+//        ValidationUtils.throwIf(ObjectUtil.isNull(orgClassDO) || ClassStatusEnum.STOPPED.getValue()
+//                .equals(orgClassDO.getStatus()), "该班级已停止报名");
 
         // 3 初始化项目报名所需资料
         workerApplyVO.setProjectNeedUploadDocs(baseMapper.selectProjectNeedUploadDoc(classId));
@@ -267,7 +269,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         if (ObjectUtil.isNotNull(workerApplyDO)) {
             ValidationUtils.throwIf(WorkerApplyTypeEnum.ORG_IMPORT.getValue().equals(workerApplyDO.getApplyType()),
                     "您的信息已被机构批量导入，无法提交");
-            ValidationUtils.throwIf(Boolean.TRUE,"您已提交过报名，请勿重复提交！");
+            ValidationUtils.throwIf(Boolean.TRUE, "您已提交过报名，请勿重复提交！");
         }
 //        List<Long> allClassIds = orgClassMapper.selectList(new LambdaQueryWrapper<OrgClassDO>()
 //                .eq(OrgClassDO::getProjectId, orgClass.getProjectId())
@@ -411,6 +413,10 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             // 8. 批量插入用户与类型
             orgClassCandidateMapper.insertBatch(classCandidates);
             candidateTypeMapper.insertBatch(candidateTypes);
+
+            // 生成新的缴费通知单
+            Long classId = req.getClassId();
+            examineePaymentAuditService.generatePaymentAuditByClassId(classId);
         }
         // 9. 批量更新审核状态
         String remark = req.getRemark();
@@ -516,6 +522,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             BeanUtil.copyProperties(item, workerApplyDO);
             workerApplyDO.setPhone(aesWithHMAC.encryptAndSign(item.getPhone()));
             workerApplyDO.setIdCardNumber(aesWithHMAC.encryptAndSign(item.getIdCardNumber()));
+            workerApplyDO.setUpdateTime(LocalDateTime.now());
             return workerApplyDO;
         }).toList();
 
@@ -887,159 +894,6 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     }
 
 
-//    @Override
-//    @Transactional(rollbackFor = Exception.class)
-//    public UploadResulResp orgBatchUploadDoc(Long classId,
-//                                             List<MultipartFile> idCardFiles,
-//                                             List<MultipartFile> applyForms,
-//                                             List<MultipartFile> projectDocs) {
-//
-//        UploadResulResp result = new UploadResulResp();
-//        // 获取班级所需上传资料
-//        WorkerApplyVO workerNeedUploadDoc = getWorkerNeedUploadDoc(classId, Boolean.TRUE);
-//        Map<Long, String> requiredDocs = workerNeedUploadDoc.getProjectNeedUploadDocs()
-//                .stream()
-//                .collect(Collectors.toMap(ProjectNeedUploadDocVO::getId, ProjectNeedUploadDocVO::getTypeName));
-//        // 文件按身份证分组
-//        Map<String, UploadGroupDTO> grouped = groupFilesByIdCard(idCardFiles, applyForms, projectDocs, requiredDocs);
-//
-//        // 筛选出资料齐全的身份证
-//        Map<String, UploadGroupDTO> completeGroups = new HashMap<>();
-//        grouped.forEach((id, g) -> {
-//            List<String> missing = checkMissingFiles(g, requiredDocs);
-//            if (missing.isEmpty()) {
-//                completeGroups.put(id, g);
-//            } else {
-//                result.getFailedList().add(new FailedUploadResp(id, "未上传" + String.join("、 ", missing)));
-//            }
-//        });
-//
-//        if (completeGroups.isEmpty()) {
-//            return result;
-//        }
-//
-//        // 查询班级所有人员信息
-//        List<WorkerApplyDO> workerList = baseMapper.selectList(new LambdaQueryWrapper<WorkerApplyDO>()
-//                .eq(WorkerApplyDO::getClassId, classId));
-//
-//        // 生成 "身份证明文 → WorkerApplyDO" 映射
-//        Map<String, WorkerApplyDO> idCardToWorkerMap = new HashMap<>();
-//        for (WorkerApplyDO w : workerList) {
-//            String plainId = null;
-//            try {
-//                plainId = aesWithHMAC.verifyAndDecrypt(w.getIdCardNumber());
-//            } catch (Exception e) {
-//                continue;
-//            }
-//            idCardToWorkerMap.put(plainId, w);
-//        }
-//
-//        // 批量构建更新 & 插入列表
-//        List<WorkerApplyDO> updateList = new ArrayList<>();
-//        List<WorkerApplyDocumentDO> insertList = new ArrayList<>();
-//
-//        for (Map.Entry<String, UploadGroupDTO> entry : completeGroups.entrySet()) {
-//            String idCard = entry.getKey();
-//            UploadGroupDTO group = entry.getValue();
-//
-//            WorkerApplyDO workerApplyDO = idCardToWorkerMap.get(idCard);
-//            if (workerApplyDO == null) {
-//                result.getFailedList().add(new FailedUploadResp(idCard, "未查询到班级下存在该身份证信息"));
-//                continue;
-//            }
-//            if (!WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue()
-//                    .equals(workerApplyDO.getStatus()) && !WorkerApplyReviewStatusEnum.REJECTED.getValue()
-//                    .equals(workerApplyDO.getStatus()) && !WorkerApplyReviewStatusEnum.FAKE_MATERIAL.getValue()
-//                    .equals(workerApplyDO.getStatus()) && !WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue()
-//                    .equals(workerApplyDO.getStatus())) {
-//                result.getFailedList().add(new FailedUploadResp(idCard, "该作业人员资料已提交，无法重复上传"));
-//                continue;
-//            }
-//            if (WorkerApplyReviewStatusEnum.FAKE_MATERIAL.getValue().equals(workerApplyDO.getStatus())) {
-//                result.getFailedList().add(new FailedUploadResp(idCard, "该作业人员资料存在异常，已被判定为虚假材料，无法再次上传"));
-//                continue;
-//            }
-//
-//            try {
-//                // 身份证识别
-//                IdCardFileInfoResp frontResp = uploadAndCheckIdCard(group.getIdCardFront(), 1, idCard, result, "正面");
-//                if (frontResp == null)
-//                    continue;
-//
-//                IdCardFileInfoResp backResp = uploadAndCheckIdCard(group.getIdCardBack(), 0, idCard, result, "反面");
-//                if (backResp == null)
-//                    continue;
-//
-//                if (backResp.getValidEndDate() != null && backResp.getValidEndDate().isBefore(LocalDate.now())) {
-//                    result.getFailedList().add(new FailedUploadResp(idCard, "所上传的身份证已过期"));
-//                    continue;
-//                }
-//
-//                // 一寸照上传
-//                IdCardFileInfoResp faceResp = uploadService.uploadIdCard(group.getPhotoOneInch(), 2);
-//
-//                // 申请表上传
-//                FileInfoResp applyResp = uploadService.applyUpload(group.getApplyForm());
-//
-//                // 更新
-//                WorkerApplyDO update = new WorkerApplyDO();
-//                update.setId(workerApplyDO.getId());
-//                update.setIdCardPhotoFront(frontResp.getUrl());
-//                update.setIdCardAddress(frontResp.getAddress());
-//                update.setIdCardPhotoBack(backResp.getUrl());
-//                update.setFacePhoto(faceResp.getFacePhoto());
-//                update.setQualificationPath(applyResp.getUrl());
-//                update.setQualificationName(group.getApplyForm().getOriginalFilename());
-//                update.setStatus(WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue());
-//                update.setRemark("");
-//                updateList.add(update);
-//
-//                // 项目资料上传
-//                if (group.getProjectDocs() != null) {
-//                    for (Map.Entry<Long, UploadGroupDTO.ProjectDocItem> docEntry : group.getProjectDocs().entrySet()) {
-//
-//                        FileInfoResp fileInfoResp = uploadService.applyUpload(docEntry.getValue().getFile());
-//
-//                        WorkerApplyDocumentDO insert = new WorkerApplyDocumentDO();
-//                        insert.setWorkerApplyId(workerApplyDO.getId());
-//                        insert.setTypeId(docEntry.getKey());
-//                        insert.setDocPath(fileInfoResp.getUrl());
-//                        insertList.add(insert);
-//                    }
-//                }
-//
-//                result.getSuccessIdCards().add(idCard);
-//
-//            } catch (Exception e) {
-//                String msg = Optional.ofNullable(e.getMessage())
-//                        .map(m -> m.contains(":") ? m.substring(m.indexOf(":") + 1).trim() : m)
-//                        .orElse("上传失败");
-//                result.getFailedList().add(new FailedUploadResp(idCard, msg));
-//            }
-//        }
-//
-//        // 执行批量数据库操作
-//        if (!updateList.isEmpty())
-//            baseMapper.updateBatchById(updateList);
-//        if (!insertList.isEmpty()) {
-//
-//            // 取出所有 workerApplyId
-//            List<Long> workerApplyIds = insertList.stream()
-//                    .map(WorkerApplyDocumentDO::getWorkerApplyId)
-//                    .distinct()
-//                    .collect(Collectors.toList());
-//
-//            // 先删除之前的资料
-//            workerApplyDocumentMapper.delete(new LambdaQueryWrapper<WorkerApplyDocumentDO>()
-//                    .in(WorkerApplyDocumentDO::getWorkerApplyId, workerApplyIds));
-//
-//            // 再插入新的资料
-//            workerApplyDocumentMapper.insertBatch(insertList);
-//        }
-//
-//        return result;
-//    }
-
     /**
      * 机构提交作业人员资料进行审核
      *
@@ -1059,7 +913,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         // 查询班级所有人员
         List<WorkerApplyDO> workerApplyDOS = baseMapper.selectList(new LambdaQueryWrapper<WorkerApplyDO>()
                 .eq(WorkerApplyDO::getClassId, classId));
-        ValidationUtils.throwIfEmpty(workerApplyDOS, "班级未查询到任何报名信息");
+        ValidationUtils.throwIfEmpty(workerApplyDOS, "班级未查询到任何人员信息");
 
         // 检查是否存在未上传或审核不通过（不能提交）
 //        long invalidCount = workerApplyDOS.stream()
@@ -1075,12 +929,20 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
         ValidationUtils.throwIf(uploadedCount == 0, "班级中没有任何人员上传资料，无法提交审核");
 
+        OrgClassDO update = new OrgClassDO();
+        update.setId(orgClassDO.getId());
+        update.setDocSubmitTime(LocalDateTime.now());
+        update.setDocSubmitStatus(OrgClassDocSubmitStatusEnum.SUBMITTED.getCode());
+        orgClassMapper.updateById(update);
+
         // 更新
         baseMapper.update(new LambdaUpdateWrapper<WorkerApplyDO>().eq(WorkerApplyDO::getClassId, classId)
                 .eq(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue())
-                .set(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.PENDING_REVIEW.getValue()));
+                .set(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.PENDING_REVIEW.getValue())
+                .set(WorkerApplyDO::getUpdateTime, LocalDateTime.now())
+                .set(WorkerApplyDO::getRemark, null));
 
-        return true;
+        return Boolean.TRUE;
     }
 
     /**
@@ -1275,7 +1137,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Override
     public PageResp<WorkerApplyResp> page(WorkerApplyQuery query, PageQuery pageQuery) {
         QueryWrapper<WorkerApplyDO> queryWrapper = this.buildQueryWrapper(query);
-        queryWrapper.eq("twa.is_deleted", 0).orderByDesc("twa.id");
+        queryWrapper.eq("twa.is_deleted", 0).orderByAsc("twa.update_time");
         Boolean isOrgQuery = query.getIsOrgQuery();
         if (!isOrgQuery) {
             queryWrapper.ne("twa.status", WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue())
@@ -1383,57 +1245,54 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(List<Long> ids) {
+        ValidationUtils.throwIfEmpty(ids, "未选择删除的数据");
+        ValidationUtils.throwIf(ids.size() != 1, "仅支持单条删除");
 
-        // 1 查主表数据
-        List<WorkerApplyDO> workerApplyList = baseMapper.selectByIds(ids);
-        if (CollUtil.isEmpty(workerApplyList)) {
+        Long id = ids.get(0);
+
+        WorkerApplyDO workerApplyDO = baseMapper.selectById(id);
+        if (workerApplyDO == null) {
             return;
         }
 
-        // 所有身份证号（加密）
-        List<String> encryptedIdCards = workerApplyList.stream()
-                .map(WorkerApplyDO::getIdCardNumber)
-                .distinct()
-                .toList();
+        OrgClassDO orgClassDO = orgClassMapper.selectById(workerApplyDO.getClassId());
+        ValidationUtils.throwIfNull(orgClassDO, "关联班级不存在，无法删除");
+        Long classId = orgClassDO.getId();
 
-        // 所有班级 ID
-        List<Long> classIds = workerApplyList.stream().map(WorkerApplyDO::getClassId).distinct().toList();
 
-        // 2 一次查所有身份证号 → userId 的映射
-        Map<String, Long> idCardToUserId = userMapper.selectList(new LambdaQueryWrapper<UserDO>()
-                        .in(UserDO::getUsername, encryptedIdCards))
-                .stream()
-                .collect(Collectors.toMap(UserDO::getUsername, UserDO::getId));
+        UserDO userDO = userMapper.selectByUsername(workerApplyDO.getIdCardNumber());
+        if (userDO != null) {
+            Long enrollCount = enrollMapper.selectCount(
+                    new LambdaQueryWrapper<EnrollDO>()
+                            .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
+                            .eq(EnrollDO::getUserId, userDO.getId())
+                            .eq(EnrollDO::getClassId, classId)
+            );
+            ValidationUtils.throwIf(enrollCount > 0, "考生参加了考试计划，无法删除");
 
-        // 过滤出系统中有效的 candidateId
-        List<Long> candidateIds = encryptedIdCards.stream().map(idCardToUserId::get).filter(Objects::nonNull).toList();
+            orgClassCandidateMapper.delete(
+                    new LambdaQueryWrapper<OrgClassCandidateDO>()
+                            .eq(OrgClassCandidateDO::getClassId, classId)
+                            .eq(OrgClassCandidateDO::getCandidateId, userDO.getId())
+            );
 
-        // 如果没有有效 candidate，则后续删除只需要删资料和主表
-        // 但不 return —— 主表仍需删除
-        boolean hasCandidate = CollUtil.isNotEmpty(candidateIds);
-
-        // 3 删除关联资料（一次性）
-        workerApplyDocumentMapper.delete(new LambdaQueryWrapper<WorkerApplyDocumentDO>()
-                .in(WorkerApplyDocumentDO::getWorkerApplyId, ids));
-
-        if (hasCandidate) {
-            // 4 删除班级候选人关联（按班级精确删除，只执行一次 SQL）
-            orgClassCandidateMapper.delete(new LambdaQueryWrapper<OrgClassCandidateDO>()
-                    .in(OrgClassCandidateDO::getClassId, classIds)
-                    .in(OrgClassCandidateDO::getCandidateId, candidateIds));
-
-            // 5 删除报名记录 enroll
-            enrollMapper.delete(new LambdaQueryWrapper<EnrollDO>().in(EnrollDO::getClassId, classIds)
-                    .in(EnrollDO::getUserId, candidateIds));
-
-            // 6 删除缴费审核记录
-            examineePaymentAuditMapper.delete(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                    .in(ExamineePaymentAuditDO::getClassId, classIds)
-                    .in(ExamineePaymentAuditDO::getExamineeId, candidateIds));
         }
 
-        // 7 删除主表数据（最后执行）
-        super.delete(ids);
+        // 如果班级还没缴费成功那就需要先更新缴费通知表
+        if (!OrgClassPayStatusEnum.FREE.getCode().equals(orgClassDO.getPayStatus()) &&
+                !OrgClassPayStatusEnum.PAID.getCode().equals(orgClassDO.getPayStatus())) {
+            examineePaymentAuditService.generatePaymentAuditByClassId(classId);
+        }
+
+        // 先删子表
+        workerApplyDocumentMapper.delete(
+                new LambdaQueryWrapper<WorkerApplyDocumentDO>()
+                        .eq(WorkerApplyDocumentDO::getWorkerApplyId, id)
+        );
+
+        // 最后删主表
+        baseMapper.deleteById(id);
     }
+
 
 }

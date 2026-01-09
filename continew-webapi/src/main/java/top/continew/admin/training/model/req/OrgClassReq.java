@@ -69,6 +69,13 @@ public class OrgClassReq implements Serializable {
     /**
      * 状态，0招生找，1停止招生
      */
-    @Schema(description = "状态，0招生找，1停止招生")
+    @Schema(description = "状态，0招生中，1停止招生")
     private Integer status;
+
+    /**
+     * 缴费状态
+     * 0-未缴费 1-已缴费 2-免费 3-审核未通过
+     */
+    @Schema(description = "缴费状态，0-未缴费 1-已缴费 2-免费 3-审核未通过")
+    private Integer payStatus;
 }

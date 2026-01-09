@@ -36,4 +36,9 @@ public class WorkerApplyReviewReq {
 
     @NotEmpty(message = "审核列表不能为空")
     private List<Long> reviewIds;
+
+    /**
+     * 班级id
+     */
+    private Long classId;
 }

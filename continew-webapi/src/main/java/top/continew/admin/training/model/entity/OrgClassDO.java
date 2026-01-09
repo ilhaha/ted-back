@@ -23,6 +23,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import top.continew.admin.common.model.entity.BaseDO;
 
 import java.io.Serial;
+import java.time.LocalDateTime;
 
 /**
  * 培训机构班级实体
@@ -66,6 +67,42 @@ public class OrgClassDO extends BaseDO {
      * 状态，0招生找，1停止招生
      */
     private Integer status;
+
+    /**
+     * 资料提交状态
+     * 0-未提交 1-已提交
+     */
+    private Integer docSubmitStatus;
+
+    /**
+     * 资料提交时间
+     */
+    private LocalDateTime docSubmitTime;
+
+    /**
+     * 缴费状态（ 0未缴费 1待审核 2已缴费 3免缴 4审核未通过）
+     */
+    private Integer payStatus;
+
+    /**
+     * 缴费提交时间
+     */
+    private LocalDateTime paySubmitTime;
+
+    /**
+     * 缴费通知单URL
+     */
+    private String payNoticeUrl;
+
+    /**
+     * 缴费凭证URL
+     */
+    private String payProofUrl;
+
+    /**
+     * 缴费驳回原因
+     */
+    private String rejectReason;
 
     /**
      * 是否删除 0-未删除 1-已删除
