@@ -17,6 +17,7 @@
 package top.continew.admin.training.controller;
 
 import org.springframework.http.ResponseEntity;
+import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.training.model.req.OrgClassPaymentUpdateReq;
 import top.continew.admin.training.model.vo.SelectClassVO;
 import top.continew.starter.extension.crud.enums.Api;
@@ -46,6 +47,17 @@ import java.util.List;
 @CrudRequestMapping(value = "/training/orgClass", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
     Api.EXPORT})
 public class OrgClassController extends BaseController<OrgClassService, OrgClassResp, OrgClassDetailResp, OrgClassQuery, OrgClassReq> {
+
+    /**
+     * 审核班级缴费凭证
+     * @param reviewPaymentReq
+     * @return
+     */
+    @PostMapping("/review/pay/proof")
+    public Boolean reviewUploadProof(@RequestBody ReviewPaymentReq reviewPaymentReq) {
+        return baseService.reviewUploadProof(reviewPaymentReq);
+    }
+
 
     /**
      * 上传班级缴费凭证

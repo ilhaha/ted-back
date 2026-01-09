@@ -189,4 +189,22 @@ public class OrgClassResp extends BaseResp {
      */
     @Schema(description = "缴费提交时间")
     private LocalDateTime paySubmitTime;
+
+    /**
+     * 考试单价
+     */
+    @Schema(description = "考试单价")
+    private Long examFee;
+
+    /**
+     * 班级总缴费
+     */
+    @Schema(description = "班级总缴费")
+    private Long totalPayAmount;
+
+    /**
+     * 班级考试人数
+     */
+    @Schema(description = "班级考试人数")
+    private Long candidateCount;
 }

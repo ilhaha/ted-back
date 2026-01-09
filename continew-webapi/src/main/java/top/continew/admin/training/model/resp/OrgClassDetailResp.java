@@ -205,5 +205,25 @@ public class OrgClassDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "缴费提交时间")
     private LocalDateTime paySubmitTime;
 
+    /**
+     * 考试单价
+     */
+    @Schema(description = "考试单价")
+    @ExcelProperty(value = "考试单价")
+    private Long examFee;
+
+    /**
+     * 班级总缴费
+     */
+    @Schema(description = "班级总缴费")
+    @ExcelProperty(value = "班级总缴费")
+    private Long totalPayAmount;
+
+    /**
+     * 班级考试人数
+     */
+    @Schema(description = "班级考试人数")
+    @ExcelProperty(value = "班级考试人数")
+    private Long candidateCount;
 
 }

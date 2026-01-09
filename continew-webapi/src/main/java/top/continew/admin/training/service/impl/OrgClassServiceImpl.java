@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.OrgClassType;
 import top.continew.admin.common.constant.SelectClassConstants;
+import top.continew.admin.common.constant.enums.AuditQueryFlagEnum;
 import top.continew.admin.common.constant.enums.OrgClassPayStatusEnum;
 import top.continew.admin.common.constant.enums.WorkerApplyReviewStatusEnum;
 import top.continew.admin.common.model.entity.UserTokenDo;
@@ -45,6 +46,7 @@ import top.continew.admin.common.util.DownloadOSSFileUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ProjectMapper;
 import top.continew.admin.exam.model.entity.ProjectDO;
+import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
@@ -133,7 +135,6 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
             OrgDO orgDO = orgUserMapper.selectOrgByUserId(userTokenDo.getUserId());
             queryWrapper.eq("toc.org_id", orgDO.getId());
             super.sort(queryWrapper, pageQuery);
-
             if (OrgClassType.INSPECTORS_TYPE.getClassType().equals(query.getClassType())) {
                 page = baseMapper.page(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
             } else {
@@ -141,7 +142,13 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
             }
             // 后台查询
         } else {
-            page = baseMapper.adminQueryWorkerClassPage(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+            Integer flag = query.getFlag();
+            if (AuditQueryFlagEnum.APPLY_AUDIT.getCode().equals(flag)) {
+                page = baseMapper.adminQueryWorkerClassPage(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+
+            }else {
+                page = baseMapper.adminQueryPayAuditPage(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+            }
         }
         PageResp<OrgClassResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
@@ -374,7 +381,43 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         update.setId(orgClassDO.getId());
         update.setPayStatus(orgClassPaymentUpdateReq.getPayStatus());
         update.setPayProofUrl(orgClassPaymentUpdateReq.getPayProofUrl());
+        update.setPaySubmitTime(LocalDateTime.now());
+        update.setRejectReason("");
         baseMapper.updateById(update);
         return Boolean.TRUE;
     }
+
+    /**
+     * 审核班级缴费凭证
+     * @param reviewPaymentReq
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean reviewUploadProof(ReviewPaymentReq reviewPaymentReq) {
+        List<Long> reviewIds = reviewPaymentReq.getReviewIds();
+        ValidationUtils.throwIfEmpty(reviewIds, "没有选择任何班级进行缴费审核");
+
+        List<OrgClassDO> orgClassDOS = baseMapper.selectByIds(reviewIds);
+        ValidationUtils.throwIfEmpty(orgClassDOS, "未找到需要审核的班级缴费信息");
+
+        Integer auditStatus = reviewPaymentReq.getAuditStatus();
+
+        List<OrgClassDO> updateList = orgClassDOS.stream().map(item -> {
+            OrgClassDO update = new OrgClassDO();
+            update.setId(item.getId());
+            update.setPayStatus(auditStatus);
+
+            if (OrgClassPayStatusEnum.AUDIT_REJECTED.getCode().equals(auditStatus)) {
+                update.setRejectReason(reviewPaymentReq.getRejectReason());
+            }
+            return update;
+        }).toList();
+
+        // 批量更新
+        baseMapper.updateBatchById(updateList);
+
+        return Boolean.TRUE;
+    }
+
 }

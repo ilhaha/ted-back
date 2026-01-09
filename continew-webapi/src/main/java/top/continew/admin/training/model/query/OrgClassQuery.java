@@ -75,4 +75,11 @@ public class OrgClassQuery implements Serializable {
     @Schema(description = "是否是机构查询")
     @QueryIgnore
     private Boolean isOrgQuery;
+
+    /**
+     * 查询标志 1-报名资料审核 2-缴费审核
+     */
+    @Schema(description = "查询标志")
+    @QueryIgnore
+    private Integer flag;
 }

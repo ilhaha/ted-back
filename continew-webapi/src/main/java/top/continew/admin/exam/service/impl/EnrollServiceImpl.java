@@ -41,6 +41,7 @@ import top.continew.admin.common.constant.ExamRecordConstants;
 import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
 import top.continew.admin.common.constant.enums.ExamPlanTypeEnum;
 import top.continew.admin.common.constant.enums.ExamRecordAttemptEnum;
+import top.continew.admin.common.constant.enums.PlanFinalConfirmedStatus;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -790,6 +791,18 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         // 3️ 批量查询考试计划信息
         List<ExamPlanDO> examPlanList = examPlanMapper.selectBatchIds(planIds);
+        ValidationUtils.throwIf(
+                examPlanList.stream()
+                        .anyMatch(plan ->
+                                Objects.equals(
+                                        plan.getIsFinalConfirmed(),
+                                        PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue()
+                                )
+                        ),
+                "计划已确认，无法取消考试"
+        );
+
+
         Map<Long, ExamPlanDO> planMap = examPlanList.stream()
             .collect(Collectors.toMap(ExamPlanDO::getId, Function.identity()));
 
