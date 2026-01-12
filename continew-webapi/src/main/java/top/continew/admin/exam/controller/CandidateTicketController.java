@@ -15,18 +15,17 @@
  */
 
 package top.continew.admin.exam.controller;
-
+import cn.dev33.satoken.annotation.SaIgnore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 import top.continew.admin.exam.service.CandidateTicketService;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -47,8 +46,34 @@ public class CandidateTicketController {
         } catch (Exception e) {
             String errorMsg = "请求参数错误：" + e.getMessage();
             return ResponseEntity.badRequest()
-                .contentType(MediaType.TEXT_PLAIN)
-                .body(errorMsg.getBytes(StandardCharsets.UTF_8));
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(errorMsg.getBytes(StandardCharsets.UTF_8));
         }
+    }
+
+    /**
+     * 身份证号 + 手机号查询准考证信息
+     */
+    @SaIgnore
+    @PostMapping("/worker/download")
+    @ResponseBody
+    public List<Map<String, Object>> downloadWorkerTicket(@RequestBody Map<String, String> params) {
+        String username = params.get("username");
+        String phone = params.get("phone");
+        if (username == null || username.isEmpty() || phone == null || phone.isEmpty()) {
+            throw new IllegalArgumentException("身份证号和手机号不能为空");
+        }
+        // 调用服务层方法查询多条准考证记录
+        List<Map<String, Object>> tickets = candidateTicketService.queryByIdCardAndPhone(username, phone);
+        return tickets;
+    }
+    /**
+     * 通过报名id查询准考证信息
+     */
+    @SaIgnore
+    @GetMapping("/worker/downloadByApplyId")
+    public ResponseEntity<byte[]> downloadByApplyId(@RequestParam("enrollId") Long enrollId ) {
+            // 调用同步方法，直接返回结果
+            return candidateTicketService.generateByEnrollId(enrollId);
     }
 }

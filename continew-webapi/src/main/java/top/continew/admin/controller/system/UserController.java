@@ -272,11 +272,7 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
 
     /**
      * 修改用户详细信息
-     * 
-     * @param id 用户ID
-     */
-    /**
-     * 修改用户详细信息
+     *
      */
     @PutMapping("/detail")
     public void updateUserDetail(@Validated @RequestBody UserDetailDTO userDetailDTO) {

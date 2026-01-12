@@ -1171,6 +1171,10 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         if (userDetailDTO.getUsername() != null) {
             userDetailDTO.setUsername(aesWithHMAC.verifyAndDecrypt(userDetailDTO.getUsername()));
         }
+        //解码手机号
+        if (userDetailDTO.getPhone() != null) {
+            userDetailDTO.setPhone(aesWithHMAC.verifyAndDecrypt(userDetailDTO.getPhone()));
+        }
         // 填充其他信息
         this.fill(userDetailDTO);
         return userDetailDTO;

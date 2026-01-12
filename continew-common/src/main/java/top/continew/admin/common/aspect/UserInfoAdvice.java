@@ -41,7 +41,7 @@ public class UserInfoAdvice {
     private RedisTemplate<String, Object> redisTemplate;
 
     private String[] PREFIX_FILTER_URI = {"/auth/", "/code/generator/", "/system/message/", "/common/",
-        "/training/trainingCheckin/do"};
+        "/training/trainingCheckin/do", "/api/exam/ticket/worker/download"};
 
     @ModelAttribute
     public void logRequest(HttpServletRequest request) {

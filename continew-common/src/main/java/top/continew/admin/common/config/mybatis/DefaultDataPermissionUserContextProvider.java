@@ -37,7 +37,7 @@ public class DefaultDataPermissionUserContextProvider implements DataPermissionU
         if (attrs != null) {
             HttpServletRequest request = attrs.getRequest();
             String uri = request.getRequestURI();
-            if (uri.startsWith("/training/trainingCheckin/do")) {
+            if (uri.startsWith("/training/trainingCheckin/do") || uri.startsWith("/api/exam/ticket/worker/download")) {
                 return false;
             }
         }

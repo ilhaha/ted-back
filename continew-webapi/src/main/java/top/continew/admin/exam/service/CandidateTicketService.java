@@ -18,6 +18,9 @@ package top.continew.admin.exam.service;
 
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * 准考证生成业务接口
  */
@@ -26,4 +29,8 @@ public interface CandidateTicketService {
     ResponseEntity<byte[]> generateTicket(Long userId, String examNumber);
 
     String generateWorkerTicket(Long userId, String idCard, String examNumber, Long classId, String className);
+    List<Map<String, Object>> queryByIdCardAndPhone(String username, String phone);
+
+    ResponseEntity<byte[]> generateByEnrollId(Long enrollId);
+
 }

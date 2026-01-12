@@ -131,6 +131,7 @@ public class AuthController {
         userInfoResp.setPermissions(userContext.getPermissions());
         userInfoResp.setRoles(userContext.getRoleCodes());
         userInfoResp.setPwdExpired(userContext.isPasswordExpired());
+        userInfoResp.setPhone(aesWithHMAC.verifyAndDecrypt(userInfoResp.getPhone()));
         return userInfoResp;
     }
 
