@@ -57,6 +57,8 @@ import top.continew.admin.examconnect.service.QuestionBankService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.training.mapper.OrgUserMapper;
 import top.continew.admin.training.model.entity.TedOrgUser;
+import top.continew.admin.training.model.query.OrgClassQuery;
+import top.continew.admin.training.model.resp.OrgClassResp;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
@@ -661,9 +663,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         LambdaQueryWrapper<WorkerExamTicketDO> workerExamTicketDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
         workerExamTicketDOLambdaQueryWrapper.eq(WorkerExamTicketDO::getEnrollId, enrollId);
         WorkerExamTicketDO workerExamTicketDO = workerExamTicketMapper.selectOne(workerExamTicketDOLambdaQueryWrapper);
-        ValidationUtils.throwIfNull(workerExamTicketDO, "还未生成准考证");
+        ValidationUtils.throwIfNull(workerExamTicketDO, "考试待确认，暂无准考证信息");
         String ticketUrl = workerExamTicketDO.getTicketUrl();
-        ValidationUtils.throwIfNull(ticketUrl, "还未生成准考证");
+        ValidationUtils.throwIfNull(ticketUrl, "考试待确认，暂无准考证信息");
         try {
             // 使用 RestTemplate 下载远程文件
             byte[] pdfBytes = restTemplate.getForObject(new URI(ticketUrl), byte[].class);
@@ -775,6 +777,17 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     }
 
     /**
+     * 后台查询考试计划报考人员
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @Override
+    public PageResp<EnrollResp> adminQueryPayAuditPage(EnrollQuery query, PageQuery pageQuery) {
+        return page(query,pageQuery);
+    }
+
+    /**
      * 重写删除
      *
      * @param ids
@@ -826,7 +839,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         super.delete(ids);
     }
 
-    //重写后台管理端分页
+    //重写分页
     @Override
     public PageResp<EnrollResp> page(EnrollQuery query, PageQuery pageQuery) {
         QueryWrapper<EnrollDO> queryWrapper = this.buildQueryWrapper(query);

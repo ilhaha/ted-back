@@ -89,5 +89,16 @@
           AND toc.is_deleted = 0
     </select>
 
+    <select id="selectOrgIdByReviewIds" resultType="map">
+        SELECT w.id AS review_id, c.org_id
+        FROM ted_worker_apply w
+        JOIN ted_org_class c ON w.class_id = c.id
+        WHERE w.id IN
+        <foreach collection="reviewIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+
 
 </mapper>

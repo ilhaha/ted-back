@@ -67,6 +67,12 @@ public class EnrollResp extends BaseResp {
      */
     @Schema(description = "考试结束时间")
     private LocalDateTime examEndTime;
+
+    /**
+     * 正脸照
+     */
+    @Schema(description = "正脸照")
+    private String facePhoto;
     /**
      * 报名截止时间
      */
@@ -104,6 +110,12 @@ public class EnrollResp extends BaseResp {
      */
     @Schema(description = "报考班级名称")
     private String className;
+
+    /**
+     * 机构名称
+     */
+    @Schema(description = "机构名称")
+    private String orgName;
 
     /**
      * 缴费时间

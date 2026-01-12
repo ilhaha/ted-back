@@ -420,4 +420,20 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         return Boolean.TRUE;
     }
 
+    /**
+     * 后台根据作业人员班级查询报名信息
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @Override
+    public PageResp<OrgClassResp> adminQueryWorkerClassPage(OrgClassQuery query, PageQuery pageQuery) {
+        return page(query,pageQuery);
+    }
+
+    @Override
+    public PageResp<OrgClassResp> adminQueryPayAuditPage(OrgClassQuery query, PageQuery pageQuery) {
+        return page(query,pageQuery);
+    }
+
 }

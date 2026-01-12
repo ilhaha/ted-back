@@ -61,9 +61,11 @@ import top.continew.admin.system.service.UploadService;
 import top.continew.admin.training.mapper.CandidateTypeMapper;
 import top.continew.admin.training.mapper.OrgClassCandidateMapper;
 import top.continew.admin.training.mapper.OrgClassMapper;
+import top.continew.admin.training.mapper.OrgMapper;
 import top.continew.admin.training.model.entity.CandidateTypeDO;
 import top.continew.admin.training.model.entity.OrgClassCandidateDO;
 import top.continew.admin.training.model.entity.OrgClassDO;
+import top.continew.admin.training.model.entity.OrgDO;
 import top.continew.admin.worker.mapper.WorkerApplyDocumentMapper;
 import top.continew.admin.worker.model.dto.UploadGroupDTO;
 import top.continew.admin.worker.model.dto.WorkerApplyCheckDTO;
@@ -139,6 +141,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
     private final UploadService uploadService;
 
+    private final OrgMapper orgMapper;
 
     /**
      * 根据身份证后六位、和班级id查询当前身份证报名信息
@@ -420,10 +423,50 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         }
         // 9. 批量更新审核状态
         String remark = req.getRemark();
-        baseMapper.update(new LambdaUpdateWrapper<WorkerApplyDO>().set(!ObjectUtils
+        int updateRow = baseMapper.update(new LambdaUpdateWrapper<WorkerApplyDO>().set(!ObjectUtils
                         .isEmpty(remark), WorkerApplyDO::getRemark, remark)
                 .set(WorkerApplyDO::getStatus, req.getStatus())
                 .in(WorkerApplyDO::getId, req.getReviewIds()));
+
+        // 如果审核状态是虚假材料，那么给机构扣分
+        if (updateRow > 0 && WorkerApplyReviewStatusEnum.FAKE_MATERIAL.getValue().equals(status)) {
+
+            List<Long> reviewIds = req.getReviewIds();
+            if (CollUtil.isEmpty(reviewIds)) {
+                return true;
+            }
+
+            // 1. 查询 review 对应班级和机构
+            List<Map<String, Object>> orgInfoList = baseMapper.selectOrgIdByReviewIds(reviewIds);
+            // 每条 Map 包含：review_id、org_id、credit_score
+
+            if (CollUtil.isEmpty(orgInfoList)) {
+                return true;
+            }
+
+            // 2. 统计每个机构的扣分次数
+            Map<Long, Long> orgIdToDeductCount = orgInfoList.stream()
+                    .collect(Collectors.groupingBy(
+                            m -> (Long) m.get("org_id"),
+                            Collectors.counting()
+                    ));
+
+            // 3. 构建 OrgDO 批量更新
+            List<OrgDO> updateOrgs = orgIdToDeductCount.entrySet().stream()
+                    .map(entry -> {
+                        Long orgId = entry.getKey();
+                        Long count = entry.getValue();
+                        OrgDO orgDO = new OrgDO();
+                        orgDO.setId(orgId);
+                        orgDO.setCreditScore(orgMapper.selectById(orgId).getCreditScore() - count.intValue());
+                        return orgDO;
+                    })
+                    .toList();
+
+            // 4. 批量更新
+            orgMapper.updateBatchById(updateOrgs);
+        }
+
 
         return true;
     }
@@ -1140,8 +1183,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         queryWrapper.eq("twa.is_deleted", 0).orderByAsc("twa.update_time");
         Boolean isOrgQuery = query.getIsOrgQuery();
         if (!isOrgQuery) {
-            queryWrapper.ne("twa.status", WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue())
-                    .ne("twa.status", WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue());
+            queryWrapper.eq("twa.status", WorkerApplyReviewStatusEnum.PENDING_REVIEW.getValue());
         }
         IPage<WorkerApplyDetailResp> page = baseMapper.page(new Page<>(pageQuery.getPage(), pageQuery
                 .getSize()), queryWrapper);

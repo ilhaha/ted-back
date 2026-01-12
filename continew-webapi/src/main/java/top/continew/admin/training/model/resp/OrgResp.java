@@ -99,6 +99,12 @@ public class OrgResp extends BaseResp {
     private String legalPerson;
 
     /**
+     * 信誉分
+     */
+    @Schema(description = "信誉分")
+    private Integer creditScore;
+
+    /**
      * 公司规模大小
      */
     @Schema(description = "公司规模大小")

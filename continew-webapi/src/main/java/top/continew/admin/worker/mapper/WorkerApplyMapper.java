@@ -21,6 +21,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
+import top.continew.admin.training.model.entity.OrgDO;
 import top.continew.admin.worker.model.resp.ProjectInfoVO;
 import top.continew.admin.worker.model.resp.ProjectNeedUploadDocVO;
 import top.continew.admin.worker.model.resp.WorkerApplyDetailResp;
@@ -29,6 +30,7 @@ import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 作业人员报名 Mapper
@@ -46,4 +48,6 @@ public interface WorkerApplyMapper extends BaseMapper<WorkerApplyDO> {
     WorkerUploadedDocsVO selectWorkerUploadedDocs(@Param("classId") Long classId, @Param("idCard") String idCard);
 
     ProjectInfoVO getProjectInfoByClassId(Long classId);
+
+    List<Map<String, Object>> selectOrgIdByReviewIds(@Param("reviewIds") List<Long> reviewIds);
 }

@@ -20,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.training.model.req.OrgClassPaymentUpdateReq;
 import top.continew.admin.training.model.vo.SelectClassVO;
+import top.continew.admin.worker.model.query.WorkerApplyQuery;
+import top.continew.admin.worker.model.resp.WorkerApplyResp;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,6 +35,8 @@ import top.continew.admin.training.model.req.OrgClassReq;
 import top.continew.admin.training.model.resp.OrgClassDetailResp;
 import top.continew.admin.training.model.resp.OrgClassResp;
 import top.continew.admin.training.service.OrgClassService;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 
 import java.util.List;
 
@@ -47,6 +51,28 @@ import java.util.List;
 @CrudRequestMapping(value = "/training/orgClass", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
     Api.EXPORT})
 public class OrgClassController extends BaseController<OrgClassService, OrgClassResp, OrgClassDetailResp, OrgClassQuery, OrgClassReq> {
+
+    /**
+     * 后台根据作业人员班级查询班级缴费信息
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @GetMapping("/pay/audit/page")
+    public PageResp<OrgClassResp> adminQueryPayAuditPage(OrgClassQuery query, PageQuery pageQuery){
+        return baseService.adminQueryPayAuditPage(query,pageQuery);
+    }
+
+    /**
+     * 后台根据作业人员班级查询报名信息
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @GetMapping("/worker/page")
+    public PageResp<OrgClassResp> adminQueryWorkerClassPage(OrgClassQuery query, PageQuery pageQuery){
+        return baseService.adminQueryWorkerClassPage(query,pageQuery);
+    }
 
     /**
      * 审核班级缴费凭证

@@ -20,6 +20,9 @@ import org.springframework.http.ResponseEntity;
 import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.training.model.req.OrgClassPaymentUpdateReq;
 import top.continew.admin.training.model.vo.SelectClassVO;
+import top.continew.admin.worker.model.resp.WorkerApplyResp;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.training.model.query.OrgClassQuery;
 import top.continew.admin.training.model.req.OrgClassReq;
@@ -76,4 +79,19 @@ public interface OrgClassService extends BaseService<OrgClassResp, OrgClassDetai
      */
     Boolean reviewUploadProof(ReviewPaymentReq reviewPaymentReq);
 
+    /**
+     * 后台根据作业人员班级查询报名信息
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    PageResp<OrgClassResp> adminQueryWorkerClassPage(OrgClassQuery query, PageQuery pageQuery);
+
+    /**
+     * 后台根据作业人员班级查询班级缴费信息
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    PageResp<OrgClassResp> adminQueryPayAuditPage(OrgClassQuery query, PageQuery pageQuery);
 }

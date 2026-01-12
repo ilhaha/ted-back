@@ -73,6 +73,11 @@ public class OrgDO extends BaseDO {
     private String businessLicense;
 
     /**
+     * 信誉分
+     */
+    private Integer creditScore;
+
+    /**
      * 是否删除（0-未删除，1-已删除）
      */
     private Boolean isDeleted;

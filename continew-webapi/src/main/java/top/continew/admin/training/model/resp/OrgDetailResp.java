@@ -131,4 +131,11 @@ public class OrgDetailResp extends BaseDetailResp {
     //    @FieldEncrypt
     @Schema(description = "机构用户电话")
     private String phone;
+
+    /**
+     * 信誉分
+     */
+    @Schema(description = "信誉分")
+    private Integer creditScore;
+
 }

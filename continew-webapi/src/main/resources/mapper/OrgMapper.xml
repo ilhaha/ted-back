@@ -193,6 +193,7 @@
                           AND c.org_id = #{orgId}
                           AND c.project_id = #{projectId}
                           AND c.class_type = #{planType}
+                          AND (c.pay_status = 2 OR c.pay_status = 3)
                  JOIN ted_project p
                       ON c.project_id = p.id
                           AND p.is_deleted = 0

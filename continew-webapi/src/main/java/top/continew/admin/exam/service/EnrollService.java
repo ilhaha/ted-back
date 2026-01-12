@@ -21,6 +21,8 @@ import top.continew.admin.exam.model.req.MakeUpExamReq;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
+import top.continew.admin.training.model.query.OrgClassQuery;
+import top.continew.admin.training.model.resp.OrgClassResp;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
@@ -160,4 +162,12 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      * @return
      */
     Boolean makeUpExam(MakeUpExamReq req);
+
+    /**
+     * 后台查询考试计划报考人员
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    PageResp<EnrollResp> adminQueryPayAuditPage(EnrollQuery query, PageQuery pageQuery);
 }

@@ -108,4 +108,6 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
 
     List<Long> selectOrgBindProjectId(@Param("userId") Long userId);
 
+    ExamPlanDO selectByIdForUpdate(@Param("id") Long id);
+
 }

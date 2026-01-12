@@ -255,6 +255,12 @@
                       ON tocr.category_id = tp.category_id AND tp.is_deleted = 0 AND tp.project_status = 2
         WHERE su.id = #{userId}
     </select>
+    <select id="selectByIdForUpdate" resultType="top.continew.admin.exam.model.entity.ExamPlanDO">
+        SELECT *
+        FROM ted_exam_plan
+        WHERE id = #{id}
+            FOR UPDATE
+    </select>
 
 
     <update id="batchUpdatePlanMaxCandidates">
