@@ -74,6 +74,20 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     private ExamPlanService examPlanService;
 
     /**
+     * 机构根据班级列表获取每个班级在考试计划下的报名人数、考试人数、及格人数、成绩录入情况
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @GetMapping("/org/class-stats")
+    @SaCheckPermission("exam:record:query")
+    public PageResp<ExamPlanResp> getClassExamStatsPageForOrg(ExamPlanQuery query,
+                                                              PageQuery pageQuery) {
+        return baseService.getClassExamStatsPageForOrg(query, pageQuery);
+    }
+
+    /**
      * 根据班级列表获取每个班级在考试计划下的报名人数、考试人数、及格人数、成绩录入情况和证书生成情况
      *
      * @param query
@@ -83,13 +97,13 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     @GetMapping("/class-stats")
     @SaCheckPermission("exam:examRecords:list")
     public PageResp<ExamPlanResp> getClassExamStatsPage(ExamPlanQuery query,
-                                                                  PageQuery pageQuery) {
-        return baseService.getClassExamStatsPage(query,pageQuery);
+                                                        PageQuery pageQuery) {
+        return baseService.getClassExamStatsPage(query, pageQuery);
     }
 
     /**
      * 根据计划考试人员类型获取项目-考试计划级联选择器
-     * 
+     *
      * @param planType
      * @return
      */
@@ -101,7 +115,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     /**
      * 根据考生身份证获取考生的所有考试准考证号
-     * 
+     *
      * @param username
      * @return
      */
@@ -125,7 +139,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     /**
      * 调整考试/报名时间
-     * 
+     *
      * @param req
      * @param planId
      * @return
@@ -137,7 +151,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     /**
      * 中心主任确认考试
-     * 
+     *
      * @param planId
      * @param isFinalConfirmed
      * @return
@@ -150,7 +164,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     /**
      * 获取可用监考员
-     * 
+     *
      * @param planId
      * @return
      */
@@ -162,7 +176,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     /**
      * 重新随机分配考试计划的监考员
-     * 
+     *
      * @param planId
      * @param invigilatorNum
      * @return

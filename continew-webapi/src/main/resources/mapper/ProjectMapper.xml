@@ -199,6 +199,7 @@
             #{id}
         </foreach>
         AND project_type = 0
+        AND project_status = 2
         AND is_deleted = 0
     </select>
 

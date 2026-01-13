@@ -76,6 +76,7 @@ import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.service.UserService;
 import top.continew.admin.training.mapper.OrgClassMapper;
+import top.continew.admin.training.mapper.OrgMapper;
 import top.continew.admin.training.model.entity.OrgClassDO;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
@@ -157,6 +158,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     private final LaborFeeMapper laborFeeMapper;
 
     private UserService userService;
+
+    private final OrgMapper orgMapper;
 
     @Value("${certificate.road-exam-type-id}")
     private Long roadExamTypeId;
@@ -1337,6 +1340,32 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery.getPage(), pageQuery
                 .getSize()), queryWrapper,roadExamTypeId);
 
+
+        PageResp<ExamPlanResp> build = PageResp.build(page, super.getListClass());
+        build.getList().forEach(this::fill);
+        return build;
+    }
+
+    /**
+     * 机构根据班级列表获取每个班级在考试计划下的报名人数、考试人数、及格人数、成绩录入情况
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @Override
+    public PageResp<ExamPlanResp> getClassExamStatsPageForOrg(ExamPlanQuery query, PageQuery pageQuery) {
+        QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(query);
+        queryWrapper.eq("tep.is_deleted", 0);
+        queryWrapper.eq("tep.status",ExamPlanStatusEnum.STARTED.getValue());
+        // 查询当前机构信息
+        Long orgId = orgMapper.getOrgId(TokenLocalThreadUtil.get().getUserId()).getId();
+        queryWrapper.eq("org.id",orgId);
+
+        super.sort(queryWrapper, pageQuery);
+
+        IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery.getPage(), pageQuery
+                .getSize()), queryWrapper,roadExamTypeId);
 
         PageResp<ExamPlanResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);

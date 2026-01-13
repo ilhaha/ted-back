@@ -194,4 +194,13 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @return
      */
     PageResp<ExamPlanResp> getClassExamStatsPage(ExamPlanQuery query, PageQuery pageQuery);
+
+    /**
+     * 机构根据班级列表获取每个班级在考试计划下的报名人数、考试人数、及格人数、成绩录入情况
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    PageResp<ExamPlanResp> getClassExamStatsPageForOrg(ExamPlanQuery query, PageQuery pageQuery);
 }
