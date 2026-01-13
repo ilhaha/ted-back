@@ -48,10 +48,12 @@ import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.DateUtil;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.document.model.resp.ExamPlanClassStatsResp;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.dto.ExamPlanExcelRowDTO;
 import top.continew.admin.exam.model.entity.*;
+import top.continew.admin.exam.model.query.ExamRecordsQuery;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
@@ -155,6 +157,9 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     private final LaborFeeMapper laborFeeMapper;
 
     private UserService userService;
+
+    @Value("${certificate.road-exam-type-id}")
+    private Long roadExamTypeId;
 
     @Override
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
@@ -425,12 +430,17 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             .select(EnrollDO::getId, EnrollDO::getExamStatus);
         List<EnrollDO> enrollList = enrollMapper.selectList(wrapper);
 
-        // 2. 检查是否有正在考试的考生（SIGNED_IN）
-        List<Long> signedInList = enrollList.stream()
-            .filter(e -> EnrollStatusConstant.SIGNED_IN.equals(e.getExamStatus()))
-            .map(EnrollDO::getId)
-            .toList();
+        // 2. 检查是否有正在考试的考生
+        Set<Integer> validStatuses = Set.of(
+                EnrollStatusConstant.SIGNED_IN,
+                EnrollStatusConstant.IN_PROGRESS,
+                EnrollStatusConstant.RETAKE_IN_PROGRESS
+        );
 
+        List<Long> signedInList = enrollList.stream()
+                .filter(e -> validStatuses.contains(e.getExamStatus()))
+                .map(EnrollDO::getId)
+                .toList();
         ValidationUtils.throwIfNotEmpty(signedInList, "仍有考生正在考试，无法结束考试，请稍后再试");
 
         // 3. 找出未签到 → 改成缺勤（ABSENT）
@@ -1308,6 +1318,29 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         }
 
         return result;
+    }
+
+    /**
+     * 根据班级列表获取每个班级在考试计划下的报名人数、考试人数、及格人数、成绩录入情况和证书生成情况
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @Override
+    public PageResp<ExamPlanResp> getClassExamStatsPage(ExamPlanQuery query, PageQuery pageQuery) {
+        QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(query);
+        queryWrapper.eq("tep.is_deleted", 0);
+        queryWrapper.eq("tep.status",ExamPlanStatusEnum.STARTED.getValue());
+        super.sort(queryWrapper, pageQuery);
+
+        IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery.getPage(), pageQuery
+                .getSize()), queryWrapper,roadExamTypeId);
+
+
+        PageResp<ExamPlanResp> build = PageResp.build(page, super.getListClass());
+        build.getList().forEach(this::fill);
+        return build;
     }
 
     /**

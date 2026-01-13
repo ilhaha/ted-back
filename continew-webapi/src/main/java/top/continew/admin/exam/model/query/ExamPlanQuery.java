@@ -64,6 +64,13 @@ public class ExamPlanQuery implements Serializable {
     private String planYear;
 
     /**
+     * 计划id
+     */
+    @Query(type = QueryType.EQ, columns = "tep.id")
+    private Integer planId;
+
+
+    /**
      * 审批人
      */
     @Query(type = QueryType.LIKE, columns = "su.nickname")
@@ -86,5 +93,12 @@ public class ExamPlanQuery implements Serializable {
      */
     @Query(type = QueryType.EQ, columns = "tpi.invigilate_status")
     private Integer invigilateStatus;
+
+    /**
+     * 班级名称
+     */
+    @Query(type = QueryType.LIKE, columns = "toc.class_name")
+    private String className;
+
 
 }

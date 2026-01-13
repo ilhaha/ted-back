@@ -49,6 +49,13 @@ public class ExamRecordsQuery implements Serializable {
     private Long planId;
 
     /**
+     * 班级id
+     */
+    @Schema(description = "班级id")
+    @Query(type = QueryType.EQ,columns = "toc.id")
+    private Long classId;
+
+    /**
      * 报名进度;0:待考试;1:考试中;2:等待成绩;3:已完成;4:未上传指定资料;
      */
     @Schema(description = "报名进度;0:待考试;1:考试中;2:等待成绩;3:已完成;4:未上传指定资料;")

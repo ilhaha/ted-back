@@ -16,10 +16,12 @@
 
 package top.continew.admin.exam.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaIgnore;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import top.continew.admin.document.model.resp.ExamPlanClassStatsResp;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
@@ -51,15 +53,16 @@ import java.util.List;
 @Tag(name = "考试记录管理 API")
 @RestController
 @CrudRequestMapping(value = "/exam/examRecords", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
-    Api.EXPORT})
+        Api.EXPORT})
 public class ExamRecordsController extends BaseController<ExamRecordsService, ExamRecordsResp, ExamRecordsDetailResp, ExamRecordsQuery, ExamRecordsReq> {
 
     @Resource
     private ExamRecordsService baseService;
 
+
     /**
      * 下载资格证书
-     * 
+     *
      * @param recordIds
      * @return
      */
@@ -71,7 +74,7 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
 
     /**
      * 生成资格证书
-     * 
+     *
      * @param generateReq
      * @return
      */
@@ -81,11 +84,12 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
     }
 
     /**
-     * 录入实操、导入成绩
-     * 
+     * 录入实操、道路成绩
+     *
      * @param inputScoresReq
      * @return
      */
+    @SaCheckPermission("exam:record:input")
     @PostMapping("/input")
     public Boolean inputScores(@RequestBody @Validated InputScoresReq inputScoresReq) {
         return baseService.inputScores(inputScoresReq);
@@ -93,7 +97,7 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
 
     /**
      * 考生交卷
-     * 
+     *
      * @param examRecordsDO
      * @return
      */
@@ -105,7 +109,7 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
 
     /**
      * 根据身份证号获取考生所有的考场
-     * 
+     *
      * @param username
      * @return
      */

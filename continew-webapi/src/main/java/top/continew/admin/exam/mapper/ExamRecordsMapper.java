@@ -34,7 +34,7 @@ import java.util.List;
  * @since 2025/03/17 09:13
  */
 public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
-    IPage<ExamRecordDTO> getexamRecords(@Param("page") Page<ExamRecordsDO> page,
+    IPage<ExamRecordDTO> getExamRecords(@Param("page") Page<ExamRecordsDO> page,
                                         @Param(Constants.WRAPPER) QueryWrapper<ExamRecordsDO> queryWrapper,
                                         @Param("roadExamTypeId") Long roadExamTypeId);
 

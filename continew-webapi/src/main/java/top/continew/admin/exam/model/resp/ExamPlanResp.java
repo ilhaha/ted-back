@@ -202,4 +202,44 @@ ExamPlanResp extends BaseResp {
      */
     @Schema(description = "开考密码")
     private String examPassword;
+
+    /** 机构名称 */
+    @Schema(description = "机构名称")
+    private String orgName;
+
+    @Schema(description = "班级ID")
+    private Long classId;
+
+    @Schema(description = "班级名称")
+    private String className;
+
+    @Schema(description = "实际参加考试人数")
+    private Integer examCount;
+
+    @Schema(description = "及格人数")
+    private Integer passedCount;
+
+    @Schema(description = "不及格人数")
+    private Integer failedCount;
+
+    @Schema(description = "未录入成绩人数")
+    private Integer notEnteredCount;
+
+    @Schema(description = "已生成证书人数")
+    private Integer certificateGeneratedCount;
+
+    @Schema(description = "未生成证书人数")
+    private Integer certificateNotGeneratedCount;
+
+    /**
+     * 实操考试（1有，0没有）
+     */
+    @Schema(description = "实操考试（1有，0没有）")
+    private Integer hasOper;
+
+    /**
+     * 道路考试（1有，0没有）
+     */
+    @Schema(description = "道路考试（1有，0没有）")
+    private Integer hasRoad;
 }

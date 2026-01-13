@@ -110,4 +110,7 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
 
     ExamPlanDO selectByIdForUpdate(@Param("id") Long id);
 
+    IPage<ExamPlanDetailResp> selectExamPlanPagegetClassExamStatsPage(@Param("page") Page<Object> objectPage,
+                                                                      @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper,
+                                                                      @Param("roadExamTypeId") Long roadExamTypeId);
 }

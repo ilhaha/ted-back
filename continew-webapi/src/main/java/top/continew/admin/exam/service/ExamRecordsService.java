@@ -17,6 +17,7 @@
 package top.continew.admin.exam.service;
 
 import org.springframework.http.ResponseEntity;
+import top.continew.admin.document.model.resp.ExamPlanClassStatsResp;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
@@ -53,7 +54,7 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
     void candidatesAdd(ExamRecordsDO examRecordsDO);
 
     /**
-     * 录入实操、导入成绩
+     * 录入实操、道路成绩
      * 
      * @param inputScoresReq
      * @return

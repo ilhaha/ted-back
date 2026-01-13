@@ -136,9 +136,6 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
     @Value("${excel.template.examination-payment-notice.examOrg.url}")
     private String examOrgPaymentNoticeTemplate;
 
-    @Value("${excel.template.examination-payment-notice.examOrg.dirPath}")
-    private String dirPath;
-
 
     @Value("${qrcode.worker.upload.payment-voucher.url}")
     private String qrcodeUrl;

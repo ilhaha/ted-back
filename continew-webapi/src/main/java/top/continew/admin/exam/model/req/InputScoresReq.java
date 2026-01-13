@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.model.req;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
@@ -32,18 +33,10 @@ import java.util.List;
 public class InputScoresReq {
 
     /**
-     * 考试记录id
+     * 成绩列表
      */
-    @NotEmpty(message = "未选择考试记录")
-    private List<Long> recordIds;
-
-    /**
-     * 分数
-     */
-    @NotNull(message = "分数不能为空")
-    @Min(value = 0, message = "分数不能小于 0")
-    @Max(value = 100, message = "分数不能大于 100")
-    private Integer scores;
+    @NotEmpty(message = "成绩列表不能为空")
+    private List<ScoreItemReq> scoresList;
 
     /**
      * 录入成绩类型：1 实操成绩 2 道路成绩

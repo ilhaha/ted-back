@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
@@ -23,7 +24,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
+import top.continew.admin.document.model.resp.ExamPlanClassStatsResp;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.query.ExamRecordsQuery;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
@@ -69,6 +72,20 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     @Resource
     private ExamPlanService examPlanService;
+
+    /**
+     * 根据班级列表获取每个班级在考试计划下的报名人数、考试人数、及格人数、成绩录入情况和证书生成情况
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @GetMapping("/class-stats")
+    @SaCheckPermission("exam:examRecords:list")
+    public PageResp<ExamPlanResp> getClassExamStatsPage(ExamPlanQuery query,
+                                                                  PageQuery pageQuery) {
+        return baseService.getClassExamStatsPage(query,pageQuery);
+    }
 
     /**
      * 根据计划考试人员类型获取项目-考试计划级联选择器

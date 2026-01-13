@@ -363,7 +363,6 @@ excel:
         url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/11/11/worker_exam_fee_notice_template.xlsx
       examOrg:
         url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2026/1/8/org_class_worker_exam_fee_notice_template.xlsx
-        dirPath: D:\存储
     training-payment-notice:
       # 检查人员培训通知的模板
       inspector:

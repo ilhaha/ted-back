@@ -237,4 +237,45 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     //    @Schema(description = "删除标记")
     //    @ExcelProperty(value = "删除标记")
     //    private Boolean isDeleted;
+
+    /** 机构名称 */
+    private String orgName;
+
+    /** 班级ID */
+    private Long classId;
+
+    /** 班级名称 */
+    private String className;
+
+    /** 报名人数 */
+    private Integer enrollCount;
+
+    /** 实际参加考试人数 */
+    private Integer examCount;
+
+    /** 及格人数 */
+    private Integer passedCount;
+
+    /** 不及格人数 */
+    private Integer failedCount;
+
+    /** 未录入成绩人数 */
+    private Integer notEnteredCount;
+
+    /** 已生成证书人数 */
+    private Integer certificateGeneratedCount;
+
+    /** 未生成证书人数 */
+    private Integer certificateNotGeneratedCount;
+
+    /**
+     * 实操考试（1有，0没有）
+     */
+    private Integer hasOper;
+
+    /**
+     * 道路考试（1有，0没有）
+     */
+    private Integer hasRoad;
+
 }
