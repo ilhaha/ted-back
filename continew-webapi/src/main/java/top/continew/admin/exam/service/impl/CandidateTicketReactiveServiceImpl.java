@@ -48,8 +48,10 @@ import top.continew.admin.system.service.FileService;
 import top.continew.admin.util.ExcelUtilReactive;
 import top.continew.admin.common.util.InMemoryMultipartFile;
 import top.continew.admin.worker.mapper.WorkerApplyMapper;
+import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
 
 import java.nio.charset.StandardCharsets;
@@ -78,6 +80,9 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
 
     @Resource
     private EnrollMapper enrollMapper;
+
+    @Resource
+    private WorkerExamTicketMapper workerExamTicketMapper;
 
     private final QuestionBankService questionBankService;
 
@@ -123,53 +128,41 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
 
     @Override
     public List<Map<String, Object>> queryByIdCardAndPhone(String username, String phone) {
-            // 身份证解密再加密
-            String encryptedIdCard = aesWithHMAC.encryptAndSign(SecureUtils.decryptByRsaPrivateKey(username));
-            // 电话号码解密再加密
-            String encryptedPhone = aesWithHMAC.encryptAndSign(SecureUtils.decryptByRsaPrivateKey(phone));
-            // 查询用户ID
-            UserDO user = userMapper.selectOne(new LambdaQueryWrapper<UserDO>()
-                    .eq(UserDO::getUsername, encryptedIdCard)
-                    .eq(UserDO::getPhone, encryptedPhone)
-                    .select(UserDO::getId));
+        // 身份证解密再加密
+        String encryptedIdCard = aesWithHMAC.encryptAndSign(
+                SecureUtils.decryptByRsaPrivateKey(username)
+        );
+        // 电话号码解密再加密
+        String encryptedPhone = aesWithHMAC.encryptAndSign(
+                SecureUtils.decryptByRsaPrivateKey(phone)
+        );
 
-            if (user == null || user.getId() == null) {
-                throw new BusinessException("用户信息不存在或身份证和电话号码不匹配");
-            }
+        // 查询用户ID
+        UserDO user = userMapper.selectOne(new LambdaQueryWrapper<UserDO>()
+                .eq(UserDO::getUsername, encryptedIdCard)
+                .eq(UserDO::getPhone, encryptedPhone)
+                .select(UserDO::getId));
 
-            Long userId = user.getId();
+        if (user == null || user.getId() == null) {
+            throw new BusinessException("用户信息不存在或身份证和电话号码不匹配");
+        }
 
-            // 查询报名记录id、classId、examPlanId
-            List<EnrollDO> enrollList = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
-                    .eq(EnrollDO::getUserId, userId)
-                    .eq(EnrollDO::getEnrollStatus, 1)
-                    .select(EnrollDO::getId, EnrollDO::getClassId, EnrollDO::getExamPlanId));
+        Long userId = user.getId();
+        // 查询报名记录
+        List<Long> enrollIds = enrollMapper.selectList(
+                        new LambdaQueryWrapper<EnrollDO>()
+                                .eq(EnrollDO::getUserId, userId)
+                                .eq(EnrollDO::getEnrollStatus, 1)
+                                .select(EnrollDO::getId)
+                )
+                .stream()
+                .map(EnrollDO::getId)
+                .toList();
 
-            if (enrollList.isEmpty()) {
-                throw new BusinessException("未找到该用户报名记录");
-            }
-
-            // 分组：有值为作业人员准考证，无值为检验人员准考证
-            List<Long> workerEnrollIds = enrollList.stream()
-                    .filter(e -> e.getClassId() != null)
-                    .map(EnrollDO::getId)
-                    .toList();
-
-            List<Long> inspectorEnrollIds = enrollList.stream()
-                    .filter(e -> e.getClassId() == null)
-                    .map(EnrollDO::getId)
-                    .toList();
-
-            // 查询作业人员准考证
-            List<Map<String, Object>> result = new ArrayList<>();
-            if (!workerEnrollIds.isEmpty()) {
-                result.addAll(examTicketMapper.findWorkerTicketsByEnrollIds(workerEnrollIds));
-            }
-            // 查询检验人员准考证
-            if (!inspectorEnrollIds.isEmpty()) {
-                result.addAll(examTicketMapper.findInspectorTicketsByEnrollIds(inspectorEnrollIds));
-            }
-            return result;
+        if (enrollIds.isEmpty()) {
+            throw new BusinessException("未找到该用户报名记录");
+        }
+        return examTicketMapper.findTicketsByEnrollIds(enrollIds);
     }
 
     @Override
@@ -183,10 +176,39 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
         if (encryptedExamNumber == null || encryptedExamNumber.isEmpty()) {
             throw new BusinessException("准考证号为空，无法生成准考证");
         }
-        Long userId = enrollDO.getUserId();
-        String examNumber = aesWithHMAC.verifyAndDecrypt(enrollDO.getExamNumber());
-        // 调用同步方法，直接返回结果
-        return generateTicket(userId, examNumber);
+        //判断是作业人员还是检验人员
+        if (enrollDO.getClassId() == null) {
+            //检验人员
+            Long userId = enrollDO.getUserId();
+            String examNumber = aesWithHMAC.verifyAndDecrypt(enrollDO.getExamNumber());
+            // 调用同步方法，直接返回结果
+            return generateTicket(userId, examNumber);
+        }else {
+            //查询作业人员准考证表
+            WorkerExamTicketDO workerExamTicketDO = workerExamTicketMapper.selectOne(new LambdaQueryWrapper<WorkerExamTicketDO>()
+                    .eq(WorkerExamTicketDO::getEnrollId, enrollId)
+                    .select(WorkerExamTicketDO::getTicketUrl));
+            if (workerExamTicketDO == null) {
+                throw new BusinessException("未找到该作业人员准考证记录");
+            }
+            //获取准考证url
+            String ticketUrl = workerExamTicketDO.getTicketUrl();
+            //下载准考证转换成字节流
+            try {
+                byte[] pdfBytes = restTemplate.getForObject(ticketUrl, byte[].class);
+                if (pdfBytes == null || pdfBytes.length == 0) {
+                    throw new BusinessException("下载准考证失败，文件为空");
+                }
+                String examNumber = aesWithHMAC.verifyAndDecrypt(enrollDO.getExamNumber());
+                String fileName = "准考证_" + examNumber + ".pdf";
+                return ResponseEntity.ok()
+                        .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                        .body(pdfBytes);
+            } catch (Exception e) {
+                throw new BusinessException("下载准考证失败：" + e.getMessage());
+            }
+        }
     }
 
     // 完全同步执行，适配MVC

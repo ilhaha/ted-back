@@ -225,6 +225,8 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         EnrollInfoResp enrollInfoResp = enrollMapper.getEnrollInfo(userTokenDo.getUserId());
         enrollInfoResp.setDocumentList(enrollMapper.getStudentDocumentList(userTokenDo.getUserId()));
+        //解码手机号
+        enrollInfoResp.setPhoneNumber(aesWithHMAC.verifyAndDecrypt(enrollInfoResp.getPhoneNumber()));
         return enrollInfoResp;
     }
 

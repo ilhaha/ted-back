@@ -35,16 +35,10 @@ public interface ExamTicketMapper extends BaseMapper<CandidateTicketDTO> {
 
 
     /**
-     * 根据报名ID列表查询作业人员准考证及考试计划名称
+     * 根据报名ID列表查询人员准考证及考试计划名称
      * @param enrollIds 报名ID列表
      */
-    List<Map<String, Object>> findWorkerTicketsByEnrollIds(@Param("enrollIds") List<Long> enrollIds);
-
-    /**
-     * 根据报名ID列表查询检验人员准考证及考试计划名称
-     * @param enrollIds 报名ID列表
-     */
-    List<Map<String, Object>> findInspectorTicketsByEnrollIds(@Param("enrollIds") List<Long> enrollIds);
+    List<Map<String, Object>> findTicketsByEnrollIds(@Param("enrollIds") List<Long> enrollIds);
 
 
 }

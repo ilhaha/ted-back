@@ -44,25 +44,10 @@
             LIMIT 1
     </select>
 
-    <!-- 根据报名ID列表查询作业人员准考证地址 -->
-    <select id="findWorkerTicketsByEnrollIds" resultType="map">
+    <!-- 根据报名ID列表查询准考证信息（不再返回 ticket_url） -->
+    <select id="findTicketsByEnrollIds" resultType="map">
         SELECT
-        t.ticket_url,
-        t.enroll_id,
-        p.exam_plan_name AS exam_plan_name
-        FROM ted_worker_exam_ticket t
-        LEFT JOIN ted_enroll e ON t.enroll_id = e.id
-        LEFT JOIN ted_exam_plan p ON e.exam_plan_id = p.id
-        WHERE t.enroll_id IN
-        <foreach collection="list" item="id" open="(" separator="," close=")">
-            #{id}
-        </foreach>
-        AND t.is_deleted = 0
-    </select>
-
-    <!-- 根据报名ID列表查询作业人员准考证地址 -->
-    <select id="findInspectorTicketsByEnrollIds" resultType="map">
-        SELECT e.id AS enroll_id,
+        e.id AS enroll_id,
         p.exam_plan_name AS exam_plan_name
         FROM ted_enroll e
         LEFT JOIN ted_exam_plan p ON e.exam_plan_id = p.id
@@ -72,5 +57,4 @@
         </foreach>
         AND e.is_deleted = 0
     </select>
-
 </mapper>
