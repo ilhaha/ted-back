@@ -285,10 +285,7 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @Operation(summary = "导出监考人员劳务费")
     @SaCheckPermission("examAffair:invigilation:exportFee")
     @GetMapping(value = "/examStaff/exportFee", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public void exportExamStaffFee(
-            @RequestParam("userId") Long userId,
-            HttpServletResponse response
-    ) {
+    public void exportExamStaffFee(@RequestParam("userId") Long userId, HttpServletResponse response) {
         userService.exportExamStaffFee(userId, response);
     }
 }

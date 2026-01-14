@@ -77,6 +77,7 @@ public interface QuestionBankService extends BaseService<QuestionBankResp, Quest
 
     /**
      * 根据项目id删除题目
+     * 
      * @param projectIds
      * @return
      */

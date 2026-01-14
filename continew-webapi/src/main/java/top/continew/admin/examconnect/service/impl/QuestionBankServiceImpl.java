@@ -318,24 +318,24 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
     /**
      * 根据项目id删除题目
+     * 
      * @param projectIds
      * @return
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean deleteByProjectIds(List<Long> projectIds) {
-        ValidationUtils.throwIfEmpty(projectIds,"未选择考试项目");
+        ValidationUtils.throwIfEmpty(projectIds, "未选择考试项目");
         // 先查出来对应的题目
         LambdaQueryWrapper<QuestionBankDO> queryWrapper = new LambdaQueryWrapper<QuestionBankDO>()
-                .in(QuestionBankDO::getSubCategoryId, projectIds);
+            .in(QuestionBankDO::getSubCategoryId, projectIds);
         List<QuestionBankDO> questionBankDOS = baseMapper.selectList(queryWrapper);
         if (ObjectUtil.isEmpty(questionBankDOS)) {
             return Boolean.TRUE;
         }
         List<Long> questionBankIds = questionBankDOS.stream().map(QuestionBankDO::getId).toList();
         // 先删除题目选项
-        stepMapper.delete(new LambdaQueryWrapper<StepDO>()
-                .in(StepDO::getQuestionBankId, questionBankIds));
+        stepMapper.delete(new LambdaQueryWrapper<StepDO>().in(StepDO::getQuestionBankId, questionBankIds));
         // 在删除题目
         baseMapper.deleteByIds(questionBankIds);
         return Boolean.TRUE;
@@ -596,11 +596,11 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         // 根据知识类型查出项目
         List<Long> categoryIds = req.getCategoryId();
         KnowledgeTypeDO knowledgeTypeDO = knowledgeTypeMapper.selectById(categoryIds.get(0));
-        ValidationUtils.throwIfNull(knowledgeTypeDO,"知识类型不存在");
+        ValidationUtils.throwIfNull(knowledgeTypeDO, "知识类型不存在");
         ProjectDO projectDO = projectMapper.selectById(knowledgeTypeDO.getProjectId());
-        ValidationUtils.throwIfNull(projectDO,"项目不存在");
+        ValidationUtils.throwIfNull(projectDO, "项目不存在");
         CategoryDO categoryDO = categoryMapper.selectById(projectDO.getCategoryId());
-        ValidationUtils.throwIfNull(categoryDO,"八大类不存在");
+        ValidationUtils.throwIfNull(categoryDO, "八大类不存在");
         QuestionBankDO questionBankDO = new QuestionBankDO();
         questionBankDO.setId(id);
         questionBankDO.setQuestion(req.getQuestion());
@@ -651,11 +651,11 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         questionBankDO.setQuestionType(req.getQuestionType());
         List<Long> categoryIds = req.getCategoryId();
         KnowledgeTypeDO knowledgeTypeDO = knowledgeTypeMapper.selectById(categoryIds.get(0));
-        ValidationUtils.throwIfNull(knowledgeTypeDO,"知识类型不存在");
+        ValidationUtils.throwIfNull(knowledgeTypeDO, "知识类型不存在");
         ProjectDO projectDO = projectMapper.selectById(knowledgeTypeDO.getProjectId());
-        ValidationUtils.throwIfNull(projectDO,"项目不存在");
+        ValidationUtils.throwIfNull(projectDO, "项目不存在");
         CategoryDO categoryDO = categoryMapper.selectById(projectDO.getCategoryId());
-        ValidationUtils.throwIfNull(categoryDO,"八大类不存在");
+        ValidationUtils.throwIfNull(categoryDO, "八大类不存在");
         questionBankDO.setExamType(req.getExamType());
         questionBankDO.setCategoryId(categoryDO.getId());
         questionBankDO.setSubCategoryId(projectDO.getId());

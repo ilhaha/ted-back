@@ -442,8 +442,8 @@ public class CaptchaController {
         String rawPhone = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(phone));
         String captchaKey = CacheConstants.WORKER_QRCODE_APPLY_CAPTCHA_KEY_PREFIX + rawPhone;
         String captchaRedis = RedisUtils.get(captchaKey);
-//        ValidationUtils.throwIfNull(captchaRedis, "验证码已过期");
-//        return captchaRedis.equals(captcha);
+        //        ValidationUtils.throwIfNull(captchaRedis, "验证码已过期");
+        //        return captchaRedis.equals(captcha);
         return true;
     }
 

@@ -20,8 +20,6 @@ import org.springframework.http.ResponseEntity;
 import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.training.model.req.OrgClassPaymentUpdateReq;
 import top.continew.admin.training.model.vo.SelectClassVO;
-import top.continew.admin.worker.model.query.WorkerApplyQuery;
-import top.continew.admin.worker.model.resp.WorkerApplyResp;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -54,28 +52,31 @@ public class OrgClassController extends BaseController<OrgClassService, OrgClass
 
     /**
      * 后台根据作业人员班级查询班级缴费信息
+     * 
      * @param query
      * @param pageQuery
      * @return
      */
     @GetMapping("/pay/audit/page")
-    public PageResp<OrgClassResp> adminQueryPayAuditPage(OrgClassQuery query, PageQuery pageQuery){
-        return baseService.adminQueryPayAuditPage(query,pageQuery);
+    public PageResp<OrgClassResp> adminQueryPayAuditPage(OrgClassQuery query, PageQuery pageQuery) {
+        return baseService.adminQueryPayAuditPage(query, pageQuery);
     }
 
     /**
      * 后台根据作业人员班级查询报名信息
+     * 
      * @param query
      * @param pageQuery
      * @return
      */
     @GetMapping("/worker/page")
-    public PageResp<OrgClassResp> adminQueryWorkerClassPage(OrgClassQuery query, PageQuery pageQuery){
-        return baseService.adminQueryWorkerClassPage(query,pageQuery);
+    public PageResp<OrgClassResp> adminQueryWorkerClassPage(OrgClassQuery query, PageQuery pageQuery) {
+        return baseService.adminQueryWorkerClassPage(query, pageQuery);
     }
 
     /**
      * 审核班级缴费凭证
+     * 
      * @param reviewPaymentReq
      * @return
      */
@@ -84,9 +85,9 @@ public class OrgClassController extends BaseController<OrgClassService, OrgClass
         return baseService.reviewUploadProof(reviewPaymentReq);
     }
 
-
     /**
      * 上传班级缴费凭证
+     * 
      * @param orgClassPaymentUpdateReq
      * @return
      */
@@ -97,6 +98,7 @@ public class OrgClassController extends BaseController<OrgClassService, OrgClass
 
     /**
      * 下载班级缴费通知单
+     * 
      * @param classId
      * @return
      */
@@ -107,13 +109,14 @@ public class OrgClassController extends BaseController<OrgClassService, OrgClass
 
     /**
      * 班级结束报名
+     * 
      * @param req
      * @param id
      * @return
      */
     @PutMapping("/end/apply/{id}")
     public Boolean endApply(@RequestBody OrgClassReq req, @PathVariable("id") Long id) {
-        return baseService.endApply(req,id);
+        return baseService.endApply(req, id);
     }
 
     /**

@@ -17,7 +17,6 @@
 package top.continew.admin.exam.service;
 
 import org.springframework.http.ResponseEntity;
-import top.continew.admin.document.model.resp.ExamPlanClassStatsResp;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;

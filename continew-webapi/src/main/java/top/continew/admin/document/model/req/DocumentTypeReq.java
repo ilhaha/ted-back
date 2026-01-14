@@ -55,7 +55,7 @@ public class DocumentTypeReq implements Serializable {
     /**
      * 创建人ID
      */
-    
+
     @Schema(description = "创建人ID")
     //    @NotNull(message = "创建人ID不能为空")
     private Long createUser;

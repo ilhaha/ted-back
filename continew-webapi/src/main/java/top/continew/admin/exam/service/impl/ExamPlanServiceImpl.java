@@ -33,7 +33,9 @@ import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.*;
 
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -42,18 +44,17 @@ import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.PlanConstant;
+import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.DateUtil;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
-import top.continew.admin.document.model.resp.ExamPlanClassStatsResp;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.dto.ExamPlanExcelRowDTO;
 import top.continew.admin.exam.model.entity.*;
-import top.continew.admin.exam.model.query.ExamRecordsQuery;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
@@ -160,6 +161,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     private UserService userService;
 
     private final OrgMapper orgMapper;
+
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Value("${certificate.road-exam-type-id}")
     private Long roadExamTypeId;
@@ -434,16 +437,13 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         List<EnrollDO> enrollList = enrollMapper.selectList(wrapper);
 
         // 2. 检查是否有正在考试的考生
-        Set<Integer> validStatuses = Set.of(
-                EnrollStatusConstant.SIGNED_IN,
-                EnrollStatusConstant.IN_PROGRESS,
-                EnrollStatusConstant.RETAKE_IN_PROGRESS
-        );
+        Set<Integer> validStatuses = Set
+            .of(EnrollStatusConstant.SIGNED_IN, EnrollStatusConstant.IN_PROGRESS, EnrollStatusConstant.RETAKE_IN_PROGRESS);
 
         List<Long> signedInList = enrollList.stream()
-                .filter(e -> validStatuses.contains(e.getExamStatus()))
-                .map(EnrollDO::getId)
-                .toList();
+            .filter(e -> validStatuses.contains(e.getExamStatus()))
+            .map(EnrollDO::getId)
+            .toList();
         ValidationUtils.throwIfNotEmpty(signedInList, "仍有考生正在考试，无法结束考试，请稍后再试");
 
         // 3. 找出未签到 → 改成缺勤（ABSENT）
@@ -963,14 +963,15 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ExamPlanDO examPlanDO = baseMapper.selectById(planId);
         ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划信息");
 
-        // 1. 查询该计划所有理论考场
+        // 查询理论考场
         List<Long> classroomIds = examPlanMapper.getPlanExamTheoryClassroom(planId);
         ValidationUtils.throwIfEmpty(classroomIds, "考试计划未分配理论考场");
 
-        // 2. 查询报名记录
+        // 查询报名记录
         boolean isConfirmed = PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue().equals(isFinalConfirmed);
-        List<EnrollDO> enrollList = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
-            .eq(EnrollDO::getExamPlanId, planId));
+        List<EnrollDO> enrollList = enrollMapper.selectList(
+                new LambdaQueryWrapper<EnrollDO>().eq(EnrollDO::getExamPlanId, planId)
+        );
         ValidationUtils.throwIf(ObjectUtil.isEmpty(enrollList) && isConfirmed, "未查询到考生报名信息");
 
         // 查询监考员列表
@@ -980,127 +981,129 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         // 查询项目信息
         ProjectDO projectDO = projectMapper.selectById(examPlanDO.getExamProjectId());
 
-        // 更新构造器
+        // 更新计划状态
         LambdaUpdateWrapper<ExamPlanDO> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(ExamPlanDO::getId, planId).set(ExamPlanDO::getIsFinalConfirmed, isFinalConfirmed);
 
-        // 情况 1：主任驳回
+        // 主任驳回
         if (PlanFinalConfirmedStatus.DIRECTOR_REJECTED.getValue().equals(isFinalConfirmed)) {
-
             updateWrapper.set(ExamPlanDO::getAssignType, null);
-
-            // 删除监考员绑定
             planInvigilateMapper.delete(new LambdaQueryWrapper<PlanInvigilateDO>()
-                .eq(PlanInvigilateDO::getExamPlanId, planId));
-
-            // 删除考场
+                    .eq(PlanInvigilateDO::getExamPlanId, planId));
             planClassroomMapper.delete(new LambdaQueryWrapper<PlancalssroomDO>()
-                .eq(PlancalssroomDO::getPlanId, planId));
+                    .eq(PlancalssroomDO::getPlanId, planId));
         }
 
-        // 执行更新
         boolean success = baseMapper.update(updateWrapper) > 0;
 
-        // 生成开考密码
-        // 相同考场监考员开考密码相同
+        // 生成开考密码（每个考场统一）
         Map<Long, List<InvigilatorAssignResp>> groupByClassroom = invigilatorList.stream()
-            .collect(Collectors.groupingBy(InvigilatorAssignResp::getClassroomId));
-
+                .collect(Collectors.groupingBy(InvigilatorAssignResp::getClassroomId));
         List<PlanInvigilateDO> updateList = new ArrayList<>();
-
         for (Map.Entry<Long, List<InvigilatorAssignResp>> entry : groupByClassroom.entrySet()) {
-            List<InvigilatorAssignResp> list = entry.getValue();
-
-            // 为该教室生成统一密码
             String examPassword = generateExamPassword();
-
-            // 更新每个监考员记录
-            for (InvigilatorAssignResp item : list) {
+            for (InvigilatorAssignResp item : entry.getValue()) {
                 PlanInvigilateDO planInvigilateDO = new PlanInvigilateDO();
                 planInvigilateDO.setId(item.getId());
                 planInvigilateDO.setExamPassword(examPassword);
                 updateList.add(planInvigilateDO);
             }
         }
-        // 批量更新监考员密码
         if (!updateList.isEmpty()) {
             planInvigilateMapper.updateBatchById(updateList);
         }
 
-        // 情况 2：主任确认，且是作业人员考试
+        // 主任确认 && 作业人员考试
         if (success && isConfirmed && ExamPlanTypeEnum.WORKER.getValue().equals(examPlanDO.getPlanType())) {
             ThreadLocalRandom random = ThreadLocalRandom.current();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMdd");
             Collections.shuffle(classroomIds, random);
-            List<WorkerExamTicketDO> ticketSaveList = new ArrayList<>();
-            List<CandidateExamPaperDO> candidateExamPaperDOList = new ArrayList<>();
-            long serialNumber = 0;
-            // 按报名记录逐个生成准考证
-            ObjectMapper objectMapper = new ObjectMapper();
+
+            // 查询用户信息
+            List<Long> userIds = enrollList.stream().map(EnrollDO::getUserId).distinct().toList();
+            Map<Long, UserDO> userMap = userMapper.selectBatchIds(userIds)
+                    .stream().collect(Collectors.toMap(UserDO::getId, u -> u));
 
             // 查询班级信息
-            List<Long> workerClassIds = enrollList.stream().map(EnrollDO::getClassId).distinct().toList();
-            List<OrgClassDO> orgClassDOS = orgClassMapper.selectByIds(workerClassIds);
+            List<Long> classIds = enrollList.stream().map(EnrollDO::getClassId).distinct().toList();
+            Map<Long, String> classNameMap = orgClassMapper.selectByIds(classIds)
+                    .stream().collect(Collectors.toMap(OrgClassDO::getId, c -> Optional.ofNullable(c.getClassName()).orElse("")));
 
-            Map<Long, String> orgClassNameMap = orgClassDOS.stream()
-                .collect(Collectors.toMap(OrgClassDO::getId, x -> Optional.ofNullable(x.getClassName()).orElse(""), (k1,
-                                                                                                                     k2) -> k1));
+            // ======= 1. 先批量生成报名表里的准考证号 =======
+            List<EnrollDO> enrollUpdateList = new ArrayList<>();
             for (EnrollDO enroll : enrollList) {
-                ++serialNumber;
                 Long classroomId = classroomIds.get(random.nextInt(classroomIds.size()));
-                // 最终准考证号
-                String serialStr = String.format("%04d", serialNumber);
                 String examDate = examPlanDO.getStartTime().format(formatter);
-                String examNumber = projectDO.getProjectCode() + "B" + examDate + serialStr;
-                // 更新报名表
-                EnrollDO upd = new EnrollDO();
-                upd.setId(enroll.getId());
-                upd.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
-                upd.setSeatId(serialNumber);
-                upd.setClassroomId(classroomId);
-                enrollMapper.updateById(upd);
+                String projectCode = projectDO.getProjectCode();
+                String redisKey = RedisConstant.EXAM_NUMBER_KEY + projectCode + ":" + examDate;
 
-                // 查询用户
-                UserDO user = userMapper.selectById(enroll.getUserId());
-                if (user == null) {
-                    continue;
+                // Redis 原子自增
+                Long seq = redisTemplate.opsForValue().increment(redisKey);
+                if (seq == 1) {
+                    redisTemplate.expire(redisKey, Duration.ofDays(RedisConstant.EXAM_NUMBER_KEY_EXPIRE_DAYS));
                 }
+                String examNumber = projectCode + "B" + examDate + String.format("%04d", seq);
 
-                // 调用确实耗时的方法：生成 PDF
-                String ticketUrl = safeGenerateWorkerTicket(enroll.getUserId(), user.getUsername(), user
-                    .getNickname(), upd.getExamNumber(), enroll.getClassId(), orgClassNameMap.get(enroll.getClassId()));
-
-                // 保存准考证表
-                WorkerExamTicketDO ticket = new WorkerExamTicketDO();
-                ticket.setCandidateName(user.getNickname());
-                ticket.setEnrollId(enroll.getId());
-                ticket.setTicketUrl(ticketUrl);
-
-                ticketSaveList.add(ticket);
-
-                ExamPaperVO examPaperVO = questionBankService.generateExamQuestionBank(planId);
-                CandidateExamPaperDO candidateExamPaperDO = new CandidateExamPaperDO();
-                try {
-                    candidateExamPaperDO.setPaperJson(objectMapper.writeValueAsString(examPaperVO));
-                } catch (JsonProcessingException e) {
-                    throw new BusinessException("系统错误");
-                }
-                candidateExamPaperDO.setEnrollId(enroll.getId());
-                candidateExamPaperDOList.add(candidateExamPaperDO);
+                enroll.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
+                enroll.setSeatId(seq);
+                enroll.setClassroomId(classroomId);
+                enrollUpdateList.add(enroll);
             }
 
+            // 批量更新报名表
+            if (!enrollUpdateList.isEmpty()) {
+                enrollMapper.updateBatchById(enrollUpdateList);
+            }
+
+            // ======= 2. 再生成准考证和试卷 =======
+            List<WorkerExamTicketDO> ticketSaveList = new ArrayList<>();
+            List<CandidateExamPaperDO> candidateExamPaperDOList = new ArrayList<>();
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            for (EnrollDO enroll : enrollUpdateList) {
+                UserDO user = userMap.get(enroll.getUserId());
+                if (user == null) continue;
+
+                // 生成准考证 PDF
+                String ticketUrl = safeGenerateWorkerTicket(
+                        user.getId(), user.getUsername(), user.getNickname(),
+                        enroll.getExamNumber(),
+                        enroll.getClassId(), classNameMap.get(enroll.getClassId())
+                );
+
+                WorkerExamTicketDO ticket = new WorkerExamTicketDO();
+                ticket.setEnrollId(enroll.getId());
+                ticket.setCandidateName(user.getNickname());
+                ticket.setTicketUrl(ticketUrl);
+                ticketSaveList.add(ticket);
+
+                // 生成试卷
+                ExamPaperVO examPaperVO = questionBankService.generateExamQuestionBank(planId);
+                CandidateExamPaperDO paper = new CandidateExamPaperDO();
+                try {
+                    paper.setPaperJson(objectMapper.writeValueAsString(examPaperVO));
+                } catch (Exception e) {
+                    throw new BusinessException("生成试卷失败");
+                }
+                paper.setEnrollId(enroll.getId());
+                candidateExamPaperDOList.add(paper);
+            }
+
+            // 批量插入准考证
             if (!ticketSaveList.isEmpty()) {
                 workerExamTicketMapper.insertBatch(ticketSaveList);
             }
 
+            // 批量插入试卷
             if (!candidateExamPaperDOList.isEmpty()) {
                 candidateExamPaperMapper.insertBatch(candidateExamPaperDOList);
             }
-
         }
 
         return success;
     }
+
+
 
     /**
      * 调整考试/报名时间
@@ -1334,12 +1337,11 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     public PageResp<ExamPlanResp> getClassExamStatsPage(ExamPlanQuery query, PageQuery pageQuery) {
         QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tep.is_deleted", 0);
-        queryWrapper.eq("tep.status",ExamPlanStatusEnum.STARTED.getValue());
+        queryWrapper.eq("tep.status", ExamPlanStatusEnum.STARTED.getValue());
         super.sort(queryWrapper, pageQuery);
 
-        IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper,roadExamTypeId);
-
+        IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery
+            .getPage(), pageQuery.getSize()), queryWrapper, roadExamTypeId);
 
         PageResp<ExamPlanResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
@@ -1357,15 +1359,15 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     public PageResp<ExamPlanResp> getClassExamStatsPageForOrg(ExamPlanQuery query, PageQuery pageQuery) {
         QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tep.is_deleted", 0);
-        queryWrapper.eq("tep.status",ExamPlanStatusEnum.STARTED.getValue());
+        queryWrapper.eq("tep.status", ExamPlanStatusEnum.STARTED.getValue());
         // 查询当前机构信息
         Long orgId = orgMapper.getOrgId(TokenLocalThreadUtil.get().getUserId()).getId();
-        queryWrapper.eq("org.id",orgId);
+        queryWrapper.eq("org.id", orgId);
 
         super.sort(queryWrapper, pageQuery);
 
-        IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper,roadExamTypeId);
+        IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery
+            .getPage(), pageQuery.getSize()), queryWrapper, roadExamTypeId);
 
         PageResp<ExamPlanResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);

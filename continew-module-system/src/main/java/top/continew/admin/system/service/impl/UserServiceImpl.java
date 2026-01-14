@@ -1199,9 +1199,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         userMapper.updateById(user);
     }
 
-
-
-// 劳务费导出
+    // 劳务费导出
     public void exportExamStaffFee(Long userId, HttpServletResponse response) {
 
         // 查询每条记录
@@ -1232,17 +1230,14 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         // 把总计行加到 list 尾部
         list.add(totalVo);
         try {
-            String fileName = URLEncoder.encode(
-                    list.get(0).getNickname() + "-监考劳务费.xlsx",
-                    StandardCharsets.UTF_8
-            );
+            String fileName = URLEncoder.encode(list.get(0).getNickname() + "-监考劳务费.xlsx", StandardCharsets.UTF_8);
             response.setContentType("application/octet-stream");
             response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
 
             EasyExcel.write(response.getOutputStream(), ExamStaffFeeExportVO.class)
-                    .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy()) // 自动拉宽列
-                    .sheet("监考劳务费")
-                    .doWrite(list);
+                .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy()) // 自动拉宽列
+                .sheet("监考劳务费")
+                .doWrite(list);
 
         } catch (Exception e) {
             throw new RuntimeException("导出监考劳务费失败", e);

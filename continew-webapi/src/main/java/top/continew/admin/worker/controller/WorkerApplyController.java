@@ -19,7 +19,6 @@ package top.continew.admin.worker.controller;
 import cn.dev33.satoken.annotation.SaIgnore;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
-import top.continew.admin.document.model.resp.CandidateDocumentResp;
 import top.continew.admin.worker.model.req.*;
 import top.continew.admin.worker.model.resp.*;
 import top.continew.starter.extension.crud.enums.Api;
@@ -49,9 +48,9 @@ import java.util.List;
     Api.EXPORT})
 public class WorkerApplyController extends BaseController<WorkerApplyService, WorkerApplyResp, WorkerApplyDetailResp, WorkerApplyQuery, WorkerApplyReq> {
 
-
     /**
      * 撤销申请
+     * 
      * @param id
      * @return
      */
@@ -60,26 +59,27 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
         return baseService.revokeApply(id);
     }
 
-
     /**
      * 获取作业人员的上传资料
+     * 
      * @param workerId
      * @return
      */
     @GetMapping("/docDetail/{workerId}")
-    public DocDetailResp getDocDetailByWorkerId(@PathVariable("workerId") Long workerId){
+    public DocDetailResp getDocDetailByWorkerId(@PathVariable("workerId") Long workerId) {
         return baseService.getDocDetailByWorkerId(workerId);
     }
 
     /**
      * 机构获取班级人员列表
+     * 
      * @param query
      * @param pageQuery
      * @return
      */
     @GetMapping("/org/page")
-    public PageResp<WorkerApplyResp> orgPage(WorkerApplyQuery query, PageQuery pageQuery){
-        return baseService.orgPage(query,pageQuery);
+    public PageResp<WorkerApplyResp> orgPage(WorkerApplyQuery query, PageQuery pageQuery) {
+        return baseService.orgPage(query, pageQuery);
     }
 
     /**

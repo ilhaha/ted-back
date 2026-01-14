@@ -29,6 +29,7 @@ public interface CandidateTicketService {
     ResponseEntity<byte[]> generateTicket(Long userId, String examNumber);
 
     String generateWorkerTicket(Long userId, String idCard, String examNumber, Long classId, String className);
+
     List<Map<String, Object>> queryByIdCardAndPhone(String username, String phone);
 
     ResponseEntity<byte[]> generateByEnrollId(Long enrollId);

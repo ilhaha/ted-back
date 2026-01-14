@@ -115,15 +115,13 @@ public interface ExamineePaymentAuditService extends BaseService<ExamineePayment
      *
      * @param classId
      */
-    void generatePaymentAuditByClassId(Long classId );
+    void generatePaymentAuditByClassId(Long classId);
 
-    byte[] generateWorkerPaymentNoticeExcel(
-            String applyClassName,
-            String projectName,
-            String orgName,
-            long personCount,
-            BigDecimal paymentAmount,
-            BigDecimal paymentAmounts,
-            String noticeNo
-    );
+    byte[] generateWorkerPaymentNoticeExcel(String applyClassName,
+                                            String projectName,
+                                            String orgName,
+                                            long personCount,
+                                            BigDecimal paymentAmount,
+                                            BigDecimal paymentAmounts,
+                                            String noticeNo);
 }

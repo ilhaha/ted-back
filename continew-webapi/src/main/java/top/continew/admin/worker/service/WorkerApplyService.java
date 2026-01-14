@@ -120,6 +120,7 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
 
     /**
      * 机构获取班级人员列表
+     * 
      * @param query
      * @param pageQuery
      * @return
@@ -128,6 +129,7 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
 
     /**
      * 获取作业人员的上传资料
+     * 
      * @param workerId
      * @return
      */
@@ -135,6 +137,7 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
 
     /**
      * 撤销申请
+     * 
      * @param id
      * @return
      */

@@ -18,10 +18,8 @@ package top.continew.admin.exam.service;
 
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
-import top.continew.admin.document.model.resp.ExamPlanClassStatsResp;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
-import top.continew.admin.exam.model.query.ExamRecordsQuery;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;

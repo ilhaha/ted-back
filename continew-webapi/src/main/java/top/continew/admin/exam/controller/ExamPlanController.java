@@ -24,9 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
-import top.continew.admin.document.model.resp.ExamPlanClassStatsResp;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
-import top.continew.admin.exam.model.query.ExamRecordsQuery;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
@@ -82,8 +80,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
      */
     @GetMapping("/org/class-stats")
     @SaCheckPermission("exam:record:query")
-    public PageResp<ExamPlanResp> getClassExamStatsPageForOrg(ExamPlanQuery query,
-                                                              PageQuery pageQuery) {
+    public PageResp<ExamPlanResp> getClassExamStatsPageForOrg(ExamPlanQuery query, PageQuery pageQuery) {
         return baseService.getClassExamStatsPageForOrg(query, pageQuery);
     }
 
@@ -96,8 +93,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
      */
     @GetMapping("/class-stats")
     @SaCheckPermission("exam:examRecords:list")
-    public PageResp<ExamPlanResp> getClassExamStatsPage(ExamPlanQuery query,
-                                                        PageQuery pageQuery) {
+    public PageResp<ExamPlanResp> getClassExamStatsPage(ExamPlanQuery query, PageQuery pageQuery) {
         return baseService.getClassExamStatsPage(query, pageQuery);
     }
 

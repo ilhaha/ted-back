@@ -58,11 +58,8 @@ public class ImportWorkerTemplateConstant {
     /**
      * 工作区域
      */
-    public static final Set<String> BEIJING_DISTRICTS = Set.of(
-            "东城区", "西城区", "朝阳区", "丰台区", "石景山区", "海淀区",
-            "顺义区", "通州区", "大兴区", "房山区", "门头沟区", "昌平区",
-            "平谷区", "密云区", "怀柔区", "延庆区"
-    );
+    public static final Set<String> BEIJING_DISTRICTS = Set
+        .of("东城区", "西城区", "朝阳区", "丰台区", "石景山区", "海淀区", "顺义区", "通州区", "大兴区", "房山区", "门头沟区", "昌平区", "平谷区", "密云区", "怀柔区", "延庆区");
 
     /**
      * 学历

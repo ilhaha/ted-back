@@ -30,7 +30,6 @@ class ContiNewAdminApplicationTests {
     @Resource
     private IdCardRecognition idCardRecognition;
 
-
     @Resource
     private top.continew.admin.exam.service.ExamineePaymentAuditService ExamineePaymentAuditService;
 
@@ -62,14 +61,13 @@ class ContiNewAdminApplicationTests {
         System.out.println(idCardDo);
     }
 
-
-//    @Test
-//    void se_generatePaymentAuditByClassId() {
-//        Long classId = 74L;
-//
-//        ExamineePaymentAuditService.generatePaymentAuditByClassId(classId);
-//
-//        System.out.println("生成缴费通知单完成，classId = " + classId);
-//    }
+    //    @Test
+    //    void se_generatePaymentAuditByClassId() {
+    //        Long classId = 74L;
+    //
+    //        ExamineePaymentAuditService.generatePaymentAuditByClassId(classId);
+    //
+    //        System.out.println("生成缴费通知单完成，classId = " + classId);
+    //    }
 
 }

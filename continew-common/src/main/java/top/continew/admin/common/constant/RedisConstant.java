@@ -28,6 +28,16 @@ public class RedisConstant {
     public static final Long MAXIMUM_NUMBER_OF_DAYS = 15L;
 
     /**
+     * 生成准考证号序列号
+     */
+    public static final String EXAM_NUMBER_KEY = "exam:number:";
+
+    /**
+     * 准考证号 Redis Key 过期时间（单位：天）
+     */
+    public static final long EXAM_NUMBER_KEY_EXPIRE_DAYS = 2L;
+
+    /**
      * 考试试卷
      */
     public static final String EXAM_PAPER_KEY = "exam:paper:";

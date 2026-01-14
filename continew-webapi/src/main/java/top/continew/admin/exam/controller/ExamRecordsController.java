@@ -21,7 +21,6 @@ import cn.dev33.satoken.annotation.SaIgnore;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import top.continew.admin.document.model.resp.ExamPlanClassStatsResp;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
@@ -53,12 +52,11 @@ import java.util.List;
 @Tag(name = "考试记录管理 API")
 @RestController
 @CrudRequestMapping(value = "/exam/examRecords", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
-        Api.EXPORT})
+    Api.EXPORT})
 public class ExamRecordsController extends BaseController<ExamRecordsService, ExamRecordsResp, ExamRecordsDetailResp, ExamRecordsQuery, ExamRecordsReq> {
 
     @Resource
     private ExamRecordsService baseService;
-
 
     /**
      * 下载资格证书

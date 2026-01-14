@@ -43,7 +43,6 @@ public class DocumentTypeDO extends BaseDO {
      */
     private String typeName;
 
-
     /**
      * 必须上传人员（0全部都需要上传，1京籍上传、2非京籍上传）
      */

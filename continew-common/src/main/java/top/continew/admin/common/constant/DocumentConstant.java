@@ -47,6 +47,4 @@ public class DocumentConstant {
     /** 仅非京籍人员需要上传 */
     public static final int NON_BEIJING_ONLY = 2;
 
-
-
 }

@@ -52,7 +52,7 @@ public class ExamRecordsQuery implements Serializable {
      * 班级id
      */
     @Schema(description = "班级id")
-    @Query(type = QueryType.EQ,columns = "toc.id")
+    @Query(type = QueryType.EQ, columns = "toc.id")
     private Long classId;
 
     /**

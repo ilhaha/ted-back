@@ -47,7 +47,6 @@ import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ProjectMapper;
 import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.exam.model.req.ReviewPaymentReq;
-import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
 import top.continew.admin.system.service.UploadService;
@@ -78,14 +77,11 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -144,10 +140,12 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         } else {
             Integer flag = query.getFlag();
             if (AuditQueryFlagEnum.APPLY_AUDIT.getCode().equals(flag)) {
-                page = baseMapper.adminQueryWorkerClassPage(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+                page = baseMapper.adminQueryWorkerClassPage(new Page<>(pageQuery.getPage(), pageQuery
+                    .getSize()), queryWrapper);
 
-            }else {
-                page = baseMapper.adminQueryPayAuditPage(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+            } else {
+                page = baseMapper.adminQueryPayAuditPage(new Page<>(pageQuery.getPage(), pageQuery
+                    .getSize()), queryWrapper);
             }
         }
         PageResp<OrgClassResp> build = PageResp.build(page, super.getListClass());
@@ -173,8 +171,9 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         // 查出项目考试价格
         ProjectDO projectDO = projectMapper.selectById(req.getProjectId());
         ValidationUtils.throwIfNull(projectDO, "未查询到考试项目信息");
-        req.setPayStatus(projectDO.getExamFee() == 0L ? OrgClassPayStatusEnum.FREE.getCode()
-                : OrgClassPayStatusEnum.UNPAID.getCode());
+        req.setPayStatus(projectDO.getExamFee() == 0L
+            ? OrgClassPayStatusEnum.FREE.getCode()
+            : OrgClassPayStatusEnum.UNPAID.getCode());
 
         // 设置机构ID
         req.setOrgId(orgDO.getId());
@@ -210,7 +209,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
                 // 更新二维码地址
                 baseMapper.update(new LambdaUpdateWrapper<OrgClassDO>().eq(OrgClassDO::getId, classId)
-                        .set(OrgClassDO::getQrcodeApplyUrl, qrUrl));
+                    .set(OrgClassDO::getQrcodeApplyUrl, qrUrl));
             } catch (Exception e) {
                 throw new BusinessException("二维码生成失败，请稍后重试");
             }
@@ -241,7 +240,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
         // 统计今年同类型同项目班级数量
         Long count = baseMapper.selectCount(new LambdaQueryWrapper<OrgClassDO>().eq(OrgClassDO::getClassType, req
-                .getClassType()).eq(OrgClassDO::getProjectId, projectDO.getId()));
+            .getClassType()).eq(OrgClassDO::getProjectId, projectDO.getId()));
 
         Long sequence = count + 1;
         String sequenceStr = String.format("%03d", sequence);
@@ -272,7 +271,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
      */
     private String buildQrContent(Long classId) throws UnsupportedEncodingException {
         String encryptedClassId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String
-                .valueOf(classId)), StandardCharsets.UTF_8);
+            .valueOf(classId)), StandardCharsets.UTF_8);
         return qrcodeUrl + "?classId=" + encryptedClassId;
     }
 
@@ -310,9 +309,9 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         if (SelectClassConstants.ORG_QUERY.equals(orgQueryFlag)) {
             UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
             TedOrgUser tedOrgUser = orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>()
-                    .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
-                    .select(TedOrgUser::getOrgId, TedOrgUser::getId)
-                    .last("limit 1"));
+                .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
+                .select(TedOrgUser::getOrgId, TedOrgUser::getId)
+                .last("limit 1"));
             orgId = tedOrgUser.getOrgId();
         }
         return baseMapper.getSelectClassByProject(projectId, classType, orgId);
@@ -331,7 +330,6 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         update(req, id);
         return Boolean.TRUE;
     }
-
 
     /**
      * 下载班级缴费通知单
@@ -365,16 +363,13 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
         // 先判断该班级下是否有考试的报名资料未通过的考生
         Long noPassCount = workerApplyMapper.selectCount(new LambdaQueryWrapper<WorkerApplyDO>()
-                .eq(WorkerApplyDO::getClassId, classId)
-                .ne(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.APPROVED.getValue()));
-        ValidationUtils.throwIf(noPassCount > 0,
-                "班级下存在 " + noPassCount + " 名考生报考资料未通过，请先处理");
+            .eq(WorkerApplyDO::getClassId, classId)
+            .ne(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.APPROVED.getValue()));
+        ValidationUtils.throwIf(noPassCount > 0, "班级下存在 " + noPassCount + " 名考生报考资料未通过，请先处理");
 
         // 统计班级考生人数
-        Long personCount = orgClassCandidateMapper.selectCount(
-                new LambdaQueryWrapper<OrgClassCandidateDO>()
-                        .eq(OrgClassCandidateDO::getClassId, classId)
-        );
+        Long personCount = orgClassCandidateMapper.selectCount(new LambdaQueryWrapper<OrgClassCandidateDO>()
+            .eq(OrgClassCandidateDO::getClassId, classId));
         ValidationUtils.throwIf(personCount <= 0, "该班级下无考生信息");
 
         OrgClassDO update = new OrgClassDO();
@@ -389,6 +384,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
     /**
      * 审核班级缴费凭证
+     * 
      * @param reviewPaymentReq
      * @return
      */
@@ -422,18 +418,19 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
     /**
      * 后台根据作业人员班级查询报名信息
+     * 
      * @param query
      * @param pageQuery
      * @return
      */
     @Override
     public PageResp<OrgClassResp> adminQueryWorkerClassPage(OrgClassQuery query, PageQuery pageQuery) {
-        return page(query,pageQuery);
+        return page(query, pageQuery);
     }
 
     @Override
     public PageResp<OrgClassResp> adminQueryPayAuditPage(OrgClassQuery query, PageQuery pageQuery) {
-        return page(query,pageQuery);
+        return page(query, pageQuery);
     }
 
 }

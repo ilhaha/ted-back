@@ -24,8 +24,6 @@ import top.continew.admin.exam.model.req.MakeUpExamReq;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
-import top.continew.admin.training.model.query.OrgClassQuery;
-import top.continew.admin.training.model.resp.OrgClassResp;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,14 +55,15 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 后台查询考试计划报考人员
+     * 
      * @param query
      * @param pageQuery
      * @return
      */
     @SaCheckPermission("exam:enroll:adminList")
     @GetMapping("/admin/page")
-    public PageResp<EnrollResp> adminQueryPayAuditPage(EnrollQuery query, PageQuery pageQuery){
-        return baseService.adminQueryPayAuditPage(query,pageQuery);
+    public PageResp<EnrollResp> adminQueryPayAuditPage(EnrollQuery query, PageQuery pageQuery) {
+        return baseService.adminQueryPayAuditPage(query, pageQuery);
     }
 
     /**

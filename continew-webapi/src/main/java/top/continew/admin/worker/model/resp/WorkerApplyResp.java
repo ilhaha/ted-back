@@ -17,7 +17,6 @@
 package top.continew.admin.worker.model.resp;
 
 import com.alibaba.excel.annotation.ExcelProperty;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;

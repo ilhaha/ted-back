@@ -46,7 +46,9 @@ public interface OrgClassMapper extends BaseMapper<OrgClassDO> {
     IPage<OrgClassDetailResp> workerClassPage(@Param("page") Page page,
                                               @Param("ew") QueryWrapper<OrgClassDO> queryWrapper);
 
-    IPage<OrgClassDetailResp> adminQueryWorkerClassPage(@Param("page") Page page, @Param("ew") QueryWrapper<OrgClassDO> queryWrapper);
+    IPage<OrgClassDetailResp> adminQueryWorkerClassPage(@Param("page") Page page,
+                                                        @Param("ew") QueryWrapper<OrgClassDO> queryWrapper);
 
-    IPage<OrgClassDetailResp> adminQueryPayAuditPage(@Param("page") Page page, @Param("ew") QueryWrapper<OrgClassDO> queryWrapper);
+    IPage<OrgClassDetailResp> adminQueryPayAuditPage(@Param("page") Page page,
+                                                     @Param("ew") QueryWrapper<OrgClassDO> queryWrapper);
 }

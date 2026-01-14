@@ -57,8 +57,6 @@ import top.continew.admin.examconnect.service.QuestionBankService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.training.mapper.OrgUserMapper;
 import top.continew.admin.training.model.entity.TedOrgUser;
-import top.continew.admin.training.model.query.OrgClassQuery;
-import top.continew.admin.training.model.resp.OrgClassResp;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
@@ -780,13 +778,14 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     /**
      * 后台查询考试计划报考人员
+     * 
      * @param query
      * @param pageQuery
      * @return
      */
     @Override
     public PageResp<EnrollResp> adminQueryPayAuditPage(EnrollQuery query, PageQuery pageQuery) {
-        return page(query,pageQuery);
+        return page(query, pageQuery);
     }
 
     /**
@@ -806,17 +805,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         // 3️ 批量查询考试计划信息
         List<ExamPlanDO> examPlanList = examPlanMapper.selectBatchIds(planIds);
-        ValidationUtils.throwIf(
-                examPlanList.stream()
-                        .anyMatch(plan ->
-                                Objects.equals(
-                                        plan.getIsFinalConfirmed(),
-                                        PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue()
-                                )
-                        ),
-                "计划已确认，无法取消考试"
-        );
-
+        ValidationUtils.throwIf(examPlanList.stream()
+            .anyMatch(plan -> Objects.equals(plan.getIsFinalConfirmed(), PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED
+                .getValue())), "计划已确认，无法取消考试");
 
         Map<Long, ExamPlanDO> planMap = examPlanList.stream()
             .collect(Collectors.toMap(ExamPlanDO::getId, Function.identity()));
