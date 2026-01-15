@@ -25,6 +25,8 @@ import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
+import top.continew.admin.training.model.query.OrgClassQuery;
+import top.continew.admin.training.model.resp.OrgClassResp;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,6 +59,19 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
 
     @Resource
     private ExamRecordsService baseService;
+
+    /**
+     * 获取某个考试的所有考试计划列表
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @SaCheckPermission("select:exam:history")
+    @GetMapping("/candidate")
+    public PageResp<ExamRecordsResp> getCandidateExamRecordPage(ExamRecordsQuery query, PageQuery pageQuery) {
+        return baseService.getCandidateExamRecordPage(query, pageQuery);
+    }
 
     /**
      * 下载资格证书

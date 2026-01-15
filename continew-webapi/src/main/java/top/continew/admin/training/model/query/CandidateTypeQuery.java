@@ -5,6 +5,7 @@ import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import top.continew.starter.data.core.annotation.Query;
+import top.continew.starter.data.core.annotation.QueryIgnore;
 import top.continew.starter.data.core.enums.QueryType;
 
 import java.io.Serial;
@@ -30,4 +31,18 @@ public class CandidateTypeQuery implements Serializable {
     @Schema(description = "考生id")
     @Query(type = QueryType.EQ)
     private Long candidateId;
+
+    /**
+     * 考生姓名
+     */
+    @Schema(description = "考生姓名")
+    @QueryIgnore
+    private String candidateName;
+
+    /**
+     * 考生身份证
+     */
+    @Schema(description = "考生身份证")
+    @QueryIgnore
+    private String idNumber;
 }

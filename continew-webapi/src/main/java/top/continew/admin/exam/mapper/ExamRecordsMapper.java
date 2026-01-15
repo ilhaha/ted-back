@@ -67,4 +67,7 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
      */
     List<EnrollWithClassDTO> selectEnrollWithClass(@Param("pairs") List<UserPlanPairDTO> pairs);
 
+    IPage<ExamRecordDTO> getCandidateExamRecordPage(@Param("page") Page<ExamRecordsDO> page,
+                                                    @Param(Constants.WRAPPER) QueryWrapper<ExamRecordsDO> queryWrapper,
+                                                    @Param("roadExamTypeId") Long roadExamTypeId);
 }

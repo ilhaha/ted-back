@@ -25,10 +25,20 @@ public class CandidateTypeReq implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    private Long id;
+
     /**
-     * 考生id
+     * 是否黑名单 0-否 1-是
      */
-    @Schema(description = "考生id")
-    @NotNull(message = "考生id不能为空")
-    private Long candidateId;
+    private Boolean isBlacklist;
+
+    /**
+     * 加入黑名单原因
+     */
+    private String blacklistReason;
+
+    /**
+     * 黑名单时长类型 0-无 1-1天 2-1个月 3-3个月 4-6个月 5-1年 6-无期限
+     */
+    private Integer blacklistDurationType;
 }

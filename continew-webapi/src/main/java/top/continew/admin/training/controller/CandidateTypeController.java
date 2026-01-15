@@ -23,4 +23,15 @@ import top.continew.admin.training.service.CandidateTypeService;
 @Tag(name = "考生类型管理 API")
 @RestController
 @CrudRequestMapping(value = "/training/candidateType", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE, Api.EXPORT})
-public class CandidateTypeController extends BaseController<CandidateTypeService, CandidateTypeResp, CandidateTypeDetailResp, CandidateTypeQuery, CandidateTypeReq> {}
+public class CandidateTypeController extends BaseController<CandidateTypeService, CandidateTypeResp, CandidateTypeDetailResp, CandidateTypeQuery, CandidateTypeReq> {
+
+    /**
+     * 切换黑名单状态
+     * @param req
+     * @return
+     */
+    @PostMapping("/blacklist/switch")
+    public Boolean blacklistSwitch(@RequestBody CandidateTypeReq req) {
+        return baseService.blacklistSwitch(req);
+    }
+}

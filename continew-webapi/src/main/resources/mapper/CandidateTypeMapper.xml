@@ -23,16 +23,14 @@
                COUNT(ter.id)                                          AS exam_total_count,
                COUNT(CASE WHEN ter.exam_result_status = 1 THEN 1 END) AS pass_count,
 
-               COUNT(CASE WHEN ter.exam_result_status = 0 THEN 1 END) AS fail_count,
-
-               COUNT(CASE WHEN ter.exam_result_status = 2 THEN 1 END) AS unrecorded_count
+               COUNT(CASE WHEN ter.exam_result_status = 0 THEN 1 END) AS fail_count
         FROM ted_candidate_type tct
                  JOIN sys_user su
                       ON tct.candidate_id = su.id
                  LEFT JOIN ted_exam_records ter
                            ON su.id = ter.candidate_id
                                AND ter.is_deleted = 0
-            ${ew.customSqlSegment}
+            ${ew.customSqlSegment} AND ter.exam_result_status != 2
         GROUP BY
             tct.id,
             tct.is_blacklist,

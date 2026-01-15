@@ -76,4 +76,12 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
      */
     ResponseEntity<byte[]> downloadQualificationCertificate(List<Long> recordIds, Integer planType);
 
+    /**
+     * 获取某个考试的所有考试计划列表
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    PageResp<ExamRecordsResp> getCandidateExamRecordPage(ExamRecordsQuery query, PageQuery pageQuery);
 }

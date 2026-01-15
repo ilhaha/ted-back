@@ -12,4 +12,12 @@ import top.continew.admin.training.model.resp.CandidateTypeResp;
  * @author ilhaha
  * @since 2026/01/14 11:16
  */
-public interface CandidateTypeService extends BaseService<CandidateTypeResp, CandidateTypeDetailResp, CandidateTypeQuery, CandidateTypeReq> {}
+public interface CandidateTypeService extends BaseService<CandidateTypeResp, CandidateTypeDetailResp, CandidateTypeQuery, CandidateTypeReq> {
+
+    /**
+     * 切换黑名单状态
+     * @param req
+     * @return
+     */
+    Boolean blacklistSwitch(CandidateTypeReq req);
+}

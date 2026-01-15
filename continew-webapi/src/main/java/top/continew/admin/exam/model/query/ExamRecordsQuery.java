@@ -49,6 +49,20 @@ public class ExamRecordsQuery implements Serializable {
     private Long planId;
 
     /**
+     * 计划名称
+     */
+    @Schema(description = "计划名称")
+    @Query(type = QueryType.LIKE,columns = "tep.exam_plan_name")
+    private String planName;
+
+    /**
+     * 考试项目
+     */
+    @Schema(description = "考试项目")
+    @Query(type = QueryType.LIKE,columns = "tp.project_name")
+    private String projectName ;
+
+    /**
      * 班级id
      */
     @Schema(description = "班级id")
@@ -83,6 +97,14 @@ public class ExamRecordsQuery implements Serializable {
     @Query(type = QueryType.LIKE, columns = "su.nickname")
     private String candidateName;
 
+
+    /**
+     * 考生id
+     */
+    @Schema(description = "考生id")
+    @Query(type = QueryType.EQ, columns = "ter.candidate_id")
+    private Long candidateId;
+
     /**
      * 考生身份证
      */
@@ -94,5 +116,6 @@ public class ExamRecordsQuery implements Serializable {
      */
     @QueryIgnore
     private Boolean isOrgQuery;
+
 
 }

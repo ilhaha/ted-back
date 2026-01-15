@@ -143,7 +143,27 @@
             AND te.exam_plan_id = #{item.examPlanId})
         </foreach>
     </select>
-
+    <select id="getCandidateExamRecordPage" resultType="top.continew.admin.exam.model.dto.ExamRecordDTO">
+        SELECT ter.exam_scores,
+               ter.oper_scores,
+               ter.road_scores,
+               ter.exam_paper,
+               ter.exam_result_status,
+               tep.exam_plan_name AS plan_name,
+               tp.project_name,
+               CASE
+                   WHEN tp.category_id = #{roadExamTypeId} THEN 1
+                   ELSE 0
+                   END AS is_road
+        FROM ted_exam_records ter
+                 JOIN ted_exam_plan tep
+                      ON ter.plan_id = tep.id AND tep.is_deleted = 0
+                 JOIN ted_project tp
+                      ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                 JOIN ted_category tc
+                      ON tp.category_id = tc.id AND tc.is_deleted = 0 ${ew.getCustomSqlSegment}
+          ORDER BY ter.id DESC
+    </select>
 
 
 </mapper>

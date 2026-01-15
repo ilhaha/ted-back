@@ -667,6 +667,33 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
     }
 
+    /**
+     * 获取某个考试的所有考试计划列表
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @Override
+    public PageResp<ExamRecordsResp> getCandidateExamRecordPage(ExamRecordsQuery query, PageQuery pageQuery) {
+        //根据mapper查出考生名+证件名
+        //封装返回结果
+        QueryWrapper<ExamRecordsDO> queryWrapper = this.buildQueryWrapper(query);
+        queryWrapper.eq("ter.is_deleted", 0);
+        queryWrapper.ne("ter.exam_result_status",2);
+
+        // 查询
+        IPage<ExamRecordDTO> page = baseMapper.getCandidateExamRecordPage(new Page<>(pageQuery.getPage(), pageQuery
+                .getSize()), queryWrapper, roadExamTypeId);
+        // 将查询结果转换成 PageResp 对象
+        PageResp<ExamRecordsResp> pageResp = PageResp.build(page, super.getListClass());
+
+        // 遍历查询结果列表，调用 fill 方法填充额外字段或处理数据
+        pageResp.getList().forEach(this::fill);
+
+        return pageResp;
+    }
+
     private String generateClassXml(List<LicenseCertificateDO> certList) {
         StringBuilder sb = new StringBuilder();
         sb.append(LicenseCertificateConstant.XML_HEAD);
