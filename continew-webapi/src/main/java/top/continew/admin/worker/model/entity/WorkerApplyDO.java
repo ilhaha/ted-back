@@ -98,7 +98,7 @@ public class WorkerApplyDO extends BaseDO {
     private Integer applyType;
 
     /**
-     * 审核状态:0待审核,1已生效,2未通过,3虚假材料，4待上传资料,5资料已上传
+     * 审核状态:0待审核,1已生效,2未通过,3虚假材料,4待上传资料,5资料已上传,6资料待补全
      */
     private Integer status;
 

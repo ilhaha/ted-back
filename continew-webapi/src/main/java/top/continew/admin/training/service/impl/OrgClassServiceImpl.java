@@ -83,6 +83,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -327,6 +328,12 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean endApply(OrgClassReq req, Long id) {
+        // 先查有没有待审的资料
+        Long count = workerApplyMapper.selectCount(new LambdaQueryWrapper<WorkerApplyDO>()
+                .eq(WorkerApplyDO::getClassId, id)
+                .in(WorkerApplyDO::getStatus, Arrays.asList(WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue(),
+                        WorkerApplyReviewStatusEnum.REJECTED.getValue(), WorkerApplyReviewStatusEnum.DOC_COMPLETE.getValue())));
+        ValidationUtils.throwIf(count > 0,"当前班级仍有人员未完成资料上传，暂无法结束报名");
         update(req, id);
         return Boolean.TRUE;
     }

@@ -650,7 +650,8 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         Integer status = workerApply.getStatus();
         ValidationUtils.throwIf(!WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue()
             .equals(status) && !WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue()
-                .equals(status) && !WorkerApplyReviewStatusEnum.REJECTED.getValue().equals(status), "资料已提交或已审核，无法继续上传");
+                .equals(status) && !WorkerApplyReviewStatusEnum.REJECTED.getValue().equals(status)
+                && !WorkerApplyReviewStatusEnum.DOC_COMPLETE.getValue().equals(status), "资料已提交或已审核，无法继续上传");
 
         // 2. 校验身份证号是否一致（数据库中是加密存储）
         String encryptedReqIdCard = aesWithHMAC.encryptAndSign(req.getIdCardNumber());
@@ -765,11 +766,15 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             }
             // 状态校验
 
-            if (!WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue()
-                .equals(workerApplyDO.getStatus()) && !WorkerApplyReviewStatusEnum.REJECTED.getValue()
-                    .equals(workerApplyDO.getStatus()) && !WorkerApplyReviewStatusEnum.FAKE_MATERIAL.getValue()
-                        .equals(workerApplyDO.getStatus()) && !WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue()
-                            .equals(workerApplyDO.getStatus())) {
+            Set<Integer> allowedStatuses = Set.of(
+                    WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue(),
+                    WorkerApplyReviewStatusEnum.REJECTED.getValue(),
+                    WorkerApplyReviewStatusEnum.FAKE_MATERIAL.getValue(),
+                    WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue(),
+                    WorkerApplyReviewStatusEnum.DOC_COMPLETE.getValue()
+            );
+
+            if (!allowedStatuses.contains(workerApplyDO.getStatus())) {
                 result.getFailedList().add(new FailedUploadResp(idCard, "该作业人员资料已提交，无法重复上传"));
                 continue;
             }
@@ -805,16 +810,23 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 // 9 校验资料是否齐全
                 List<String> missingDocs = checkMissingProjectDocs(group, mustUploadDocs);
 
-                if (!missingDocs.isEmpty()) {
-                    result.getFailedList().add(new FailedUploadResp(idCard, "未上传" + String.join("、", missingDocs)));
-                    continue;
-                }
+                boolean isIncomplete = !missingDocs.isEmpty();
 
                 // 10 一寸照上传
-                IdCardFileInfoResp faceResp = uploadService.uploadIdCard(group.getPhotoOneInch(), 2);
+                MultipartFile photoOneInch = group.getPhotoOneInch();
+                if (ObjectUtil.isNull(photoOneInch)) {
+                    result.getFailedList().add(new FailedUploadResp(idCard, "未上传一寸照"));
+                    continue;
+                }
+                IdCardFileInfoResp faceResp = uploadService.uploadIdCard(photoOneInch, 2);
 
                 // 申请表上传
-                FileInfoResp applyResp = uploadService.applyUpload(group.getApplyForm());
+                MultipartFile applyForm = group.getApplyForm();
+                if (ObjectUtil.isNull(applyForm)) {
+                    result.getFailedList().add(new FailedUploadResp(idCard, "未上传资格申请表"));
+                    continue;
+                }
+                FileInfoResp applyResp = uploadService.applyUpload(applyForm);
 
                 // 更新主表
                 WorkerApplyDO update = new WorkerApplyDO();
@@ -825,7 +837,9 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 update.setFacePhoto(faceResp.getFacePhoto());
                 update.setQualificationPath(applyResp.getUrl());
                 update.setQualificationName(group.getApplyForm().getOriginalFilename());
-                update.setStatus(WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue());
+                update.setStatus(isIncomplete
+                        ? WorkerApplyReviewStatusEnum.DOC_COMPLETE.getValue()
+                        : WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue());
                 update.setRemark("");
                 updateList.add(update);
 
@@ -846,6 +860,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 result.getSuccessIdCards().add(idCard);
 
             } catch (Exception e) {
+                e.printStackTrace();
                 String msg = Optional.ofNullable(e.getMessage())
                     .map(m -> m.contains(":") ? m.substring(m.indexOf(":") + 1).trim() : m)
                     .orElse("上传失败");
@@ -856,17 +871,13 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         // 1 批量数据库操作
         if (!updateList.isEmpty()) {
             baseMapper.updateBatchById(updateList);
+            List<Long> workerApplyIds = updateList.stream().map(WorkerApplyDO::getId).toList();
+            workerApplyDocumentMapper.delete(new LambdaQueryWrapper<WorkerApplyDocumentDO>()
+                    .in(WorkerApplyDocumentDO::getWorkerApplyId, workerApplyIds));
         }
 
+
         if (!insertList.isEmpty()) {
-            List<Long> workerApplyIds = insertList.stream()
-                .map(WorkerApplyDocumentDO::getWorkerApplyId)
-                .distinct()
-                .collect(Collectors.toList());
-
-            workerApplyDocumentMapper.delete(new LambdaQueryWrapper<WorkerApplyDocumentDO>()
-                .in(WorkerApplyDocumentDO::getWorkerApplyId, workerApplyIds));
-
             workerApplyDocumentMapper.insertBatch(insertList);
         }
 
@@ -1091,6 +1102,10 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                                                     String idCard,
                                                     UploadResulResp result,
                                                     String position) {
+        if (ObjectUtil.isNull(file)) {
+            result.getFailedList().add(new FailedUploadResp(idCard, "未上传的身份证" + position));
+            return null;
+        }
         try {
             IdCardFileInfoResp resp = uploadService.uploadIdCard(file, type);
             if (type == 1 && !resp.getIdCardNumber().equals(idCard)) {

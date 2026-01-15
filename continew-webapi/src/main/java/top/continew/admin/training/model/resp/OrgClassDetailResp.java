@@ -148,6 +148,13 @@ public class OrgClassDetailResp extends BaseDetailResp {
     private Long waitUploadCount;
 
     /**
+     * 作业人员资料待补全人数
+     */
+    @Schema(description = "作业人员资料待补全人数")
+    @ExcelProperty(value = "作业人员资料待补全人数")
+    private Long waitCompleteCount;
+
+    /**
      * 作业人员已上传资料人数
      */
     @Schema(description = "作业人员已上传资料人数")

@@ -17,7 +17,8 @@
                SUM(CASE WHEN twa.status = 1 THEN 1 ELSE 0 END) AS approved_count,
                SUM(CASE WHEN twa.status = 2 THEN 1 ELSE 0 END) AS rejected_count,
                SUM(CASE WHEN twa.status = 4 THEN 1 ELSE 0 END) AS wait_upload_count,
-               SUM(CASE WHEN twa.status = 5 THEN 1 ELSE 0 END) AS uploaded_count
+               SUM(CASE WHEN twa.status = 5 THEN 1 ELSE 0 END) AS uploaded_count,
+               SUM(CASE WHEN twa.status = 6 THEN 1 ELSE 0 END) AS wait_complete_count
         FROM ted_org_class toc
                  LEFT JOIN ted_project tp
                            ON toc.project_id = tp.id AND tp.is_deleted = 0
