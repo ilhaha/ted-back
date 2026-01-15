@@ -1,5 +1,6 @@
 package top.continew.admin.training.model.req;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import jakarta.validation.constraints.*;
 
 import lombok.Data;
@@ -41,4 +42,29 @@ public class CandidateTypeReq implements Serializable {
      * 黑名单时长类型 0-无 1-1天 2-1个月 3-3个月 4-6个月 5-1年 6-无期限
      */
     private Integer blacklistDurationType;
+
+    /**
+     * 考生id
+     */
+    private Long candidateId;
+
+    /**
+     * 姓名
+     */
+    private String nickname;
+
+    /**
+     * 身份证号
+     */
+    private String username;
+
+    /**
+     * 手机号
+     */
+    private String phone;
+
+    /**
+     * 一寸照
+     */
+    private String avatar;
 }

@@ -366,6 +366,7 @@
                u.gender,
                u.email,
                u.phone,
+               u.avatar,
                u.company_name       AS companyName,
                u.contact_address    AS contactAddress,
                u.landline,

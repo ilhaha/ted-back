@@ -1,6 +1,7 @@
 package top.continew.admin.training.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.CryptoException;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -8,15 +9,21 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 
 import net.dreamlu.mica.core.utils.StringUtil;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 import top.continew.admin.common.constant.BlacklistConstants;
 import top.continew.admin.common.util.AESWithHMAC;
+import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
 import top.continew.admin.exam.model.resp.ExamPlanResp;
+import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.dto.UserDetailDTO;
+import top.continew.admin.system.model.entity.UserDO;
+import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -45,9 +52,14 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
 
     private final AESWithHMAC aesWithHMAC;
 
+    private final top.continew.admin.system.service.UserService userService;
+
+    private final UserMapper userMapper;
+
 
     /**
      * 重写page  查询作业人员信息
+     *
      * @param query
      * @param pageQuery
      * @return
@@ -81,6 +93,7 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
 
     /**
      * 切换黑名单状态
+     *
      * @param req
      * @return
      */
@@ -148,5 +161,87 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         }
     }
 
+
+    @Override
+    public CandidateTypeDetailResp get(Long id) {
+        // 查询详情
+        CandidateTypeDetailResp originalDetailResp = super.get(id);
+        if (ObjectUtils.isEmpty(originalDetailResp)) {
+            throw new BusinessException("该作业人员");
+        }
+        // 创建一个新的 CandidateTypeDetailResp 对象
+        CandidateTypeDetailResp newDetailResp = new CandidateTypeDetailResp();
+        // 查询用户、解密、赋值操作
+        UserDetailDTO userDetailDTO = userService.getUserDetail(originalDetailResp.getCandidateId());
+        if (!ObjectUtils.isEmpty(userDetailDTO)) {
+            try {
+                newDetailResp.setUsername(userDetailDTO.getUsername());
+                newDetailResp.setPhone(userDetailDTO.getPhone());
+                newDetailResp.setNickname(userDetailDTO.getNickname());
+                newDetailResp.setAvatar(userDetailDTO.getAvatar());
+                newDetailResp.setCandidateId(originalDetailResp.getCandidateId());
+            } catch (Exception e) {
+                throw new BusinessException("查询失败", e);
+            }
+        }
+        return newDetailResp;
+    }
+
+
+    @Override
+    public void update(CandidateTypeReq req, Long id) {
+        //查询用户
+        UserDO userDO = userService.getById(req.getCandidateId());
+        if (userDO == null) {
+            throw new BusinessException("该作业人员不存在");
+        }
+
+        try {
+            //身份证解密 → 加密
+            String rawIdCard = SecureUtils.decryptByRsaPrivateKey(req.getUsername());
+            if (rawIdCard == null || rawIdCard.isBlank()) {
+                throw new BusinessException("身份证信息解密失败");
+            }
+            String encryptedIdCard = aesWithHMAC.encryptAndSign(rawIdCard);
+
+            //校验身份证是否重复（排除自己）
+            QueryWrapper<UserDO> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("username", encryptedIdCard);
+            queryWrapper.ne("id", userDO.getId());
+            boolean exists = userMapper.selectCount(queryWrapper) > 0;
+            if (exists) {
+                throw new BusinessException("该身份证已存在，请重新输入");
+            }
+            userDO.setUsername(encryptedIdCard);
+
+            //电话号码解密 → 加密
+            String rawPhone = SecureUtils.decryptByRsaPrivateKey(req.getPhone());
+            if (rawPhone == null || rawPhone.isBlank()) {
+                throw new BusinessException("电话号码解密失败");
+            }
+            String encryptedPhone = aesWithHMAC.encryptAndSign(rawPhone);
+            userDO.setPhone(encryptedPhone);
+
+        } catch (CryptoException e) {
+            throw new BusinessException("敏感信息加解密失败", e);
+        }
+
+        if (req.getNickname() != null) {
+            userDO.setNickname(req.getNickname());
+        }
+        if (req.getAvatar() != null) {
+            userDO.setAvatar(req.getAvatar());
+        }
+
+        // 更新数据库
+        try {
+            userService.updateById(userDO);
+        } catch (DuplicateKeyException e) {
+            // 数据库唯一索引冲突（身份证重复）
+            throw new BusinessException("该身份证已存在，请重新输入", e);
+        } catch (Exception e) {
+            throw new BusinessException("更新用户信息失败", e);
+        }
+    }
 
 }

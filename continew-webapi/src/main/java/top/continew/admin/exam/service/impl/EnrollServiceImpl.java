@@ -492,10 +492,6 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             enrollReq.setExamPlanId(examPlanId);
             Boolean signUpResult = enrollService.signUpdate(enrollReq, userId, applicantDO.getStatus());
             ValidationUtils.throwIf(!signUpResult, "报名失败，无法生成准考证信息");
-
-            // 再次查询准考证
-            identityCardExamInfoVO = enrollMapper.viewIdentityCardInfo(examPlanId, userId);
-            ValidationUtils.throwIfNull(identityCardExamInfoVO, "准考证信息生成失败，请稍后重试");
         }
 
         // 补全返回信息
