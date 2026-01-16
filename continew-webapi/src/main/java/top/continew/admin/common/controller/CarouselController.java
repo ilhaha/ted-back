@@ -47,9 +47,9 @@ public class CarouselController extends BaseController<CarouselService, Carousel
     /**
      * 考生首页获取轮播图
      */
-    @GetMapping("/index")
-    public List<CarouselIndexResp> index() {
-        return baseService.index();
-    }
+//    @GetMapping("/index")
+//    public List<CarouselIndexResp> index() {
+//        return baseService.index();
+//    }
 
 }

@@ -214,5 +214,13 @@
           AND tc.classroom_type = #{examType}
           AND tc.exam_type = #{isOperation}
     </select>
+    <select id="selectProjectCodesByCodes" resultType="java.lang.String">
+        SELECT project_code
+        FROM ted_project
+        WHERE project_code IN
+        <foreach collection="codeSet" item="code" open="(" separator="," close=")">
+            #{code}
+        </foreach>
+    </select>
 
 </mapper>

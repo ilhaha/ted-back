@@ -51,9 +51,9 @@ public class CategoryController extends BaseController<CategoryService, Category
      * 获取下拉框
      */
     @Operation(summary = "获取八大类下拉框")
-    @GetMapping("/selectOptions")
-    public List<ProjectVo> getSelectOptions() {
-        return baseService.getSelectOptions();
+    @GetMapping("/selectOptions/{isSelectWeldingCategory}")
+    public List<ProjectVo> getSelectOptions(@PathVariable("isSelectWeldingCategory") Integer isSelectWeldingCategory) {
+        return baseService.getSelectOptions(isSelectWeldingCategory);
     }
 
     /**

@@ -33,8 +33,20 @@ import java.util.List;
  */
 @Mapper
 public interface CategoryMapper extends BaseMapper<CategoryDO> {
-    @Select("SELECT `name` AS label, `id` AS `value` FROM ted_category WHERE is_deleted = 0")
-    List<ProjectVo> getSelectOptions();
+    @Select("""
+                <script>
+                SELECT `name` AS label, `id` AS `value`
+                FROM ted_category
+                WHERE is_deleted = 0
+                <if test="isSelectWeldingCategory == 0">
+                  AND id NOT IN (#{metalId}, #{nonmetalId})
+                </if>
+                </script>
+            """)
+    List<ProjectVo> getSelectOptions(@Param("isSelectWeldingCategory") Integer isSelectWeldingCategory,
+                                     @Param("metalId") Long metalId,
+                                     @Param("nonmetalId") Long nonmetalId);
+
 
     @Select("SELECT COUNT(*) FROM ted_knowledge_type tkt " + "inner join ted_project tp on tkt.project_id = tp.id " + "inner join ted_category tc on tp.category_id = tc.id " + "where tc.name = #{categoryName} and tc.code = #{categoryCode} and tp.project_code = #{projectCode} and tp.project_name = #{projectName} and tkt.name = #{knowledgeTypeName} ")
     Long verifySheet(String categoryName,

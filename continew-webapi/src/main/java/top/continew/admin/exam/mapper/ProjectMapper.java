@@ -36,6 +36,7 @@ import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ProjectDO;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 项目 Mapper
@@ -110,4 +111,24 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
 
     List<LocationClassroomVO> getLocationClassroomList(@Param("examType") Integer examType,
                                                        @Param("isOperation") Integer isOperation);
+
+    Set<String> selectProjectCodesByCodes(@Param("codeSet") Set<String> codeSet);
+
+    /**
+     * 根据项目编码集合查询项目列表
+     * @param projectCodes 项目编码集合
+     * @return 已存在的项目列表
+     */
+    @Select({
+            "<script>",
+            "SELECT id, project_code, project_name, category_id, project_status, project_type",
+            "FROM ted_project",
+            "WHERE project_code IN",
+            "<foreach collection='projectCodes' item='code' open='(' separator=',' close=')'>",
+            "#{code}",
+            "</foreach>",
+            "</script>"
+    })
+    List<ProjectDO> selectByCodes(@Param("projectCodes") Set<String> projectCodes);
+
 }

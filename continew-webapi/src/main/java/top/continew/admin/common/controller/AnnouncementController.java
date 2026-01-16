@@ -73,17 +73,17 @@ public class AnnouncementController extends BaseController<AnnouncementService, 
     /**
      * 考生端首页展示
      */
-    @Operation(summary = "考生端首页公告展示API", description = "考生端首页公告展示API")
-    @GetMapping("/index")
-    public List<AnnouncementIndexResp> index() {
-        return announcementService.index();
-    }
+//    @Operation(summary = "考生端首页公告展示API", description = "考生端首页公告展示API")
+//    @GetMapping("/index")
+//    public List<AnnouncementIndexResp> index() {
+//        return announcementService.index();
+//    }
 
-    @Operation(summary = "考生端登录后公告展示API", description = "考生端登录后公告展示API")
-    @GetMapping("/home")
-    public List<AnnouncementIndexResp> home() {
-        return announcementService.home();
-    }
+//    @Operation(summary = "考生端登录后公告展示API", description = "考生端登录后公告展示API")
+//    @GetMapping("/home")
+//    public List<AnnouncementIndexResp> home() {
+//        return announcementService.home();
+//    }
 
     /**
      * 考生端首页展示

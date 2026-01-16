@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.exam.mapper.WeldingExamApplicationMapper">
+
+    <select id="orgAndAdminPage"
+            resultType="top.continew.admin.exam.model.resp.WeldingExamApplicationDetailResp">
+        SELECT twea.id,
+               twea.org_id,
+               twea.welding_type,
+               twea.project_code,
+               twea.application_reason,
+               twea.status,
+               twea.review_comment,
+               twea.submitted_at,
+               twea.reviewed_at,
+               org.name AS org_name
+        FROM ted_welding_exam_application twea
+                 JOIN ted_org org
+                      ON twea.org_id = org.id AND org.is_deleted = 0
+            ${ew.customSqlSegment}
+    </select>
+</mapper>

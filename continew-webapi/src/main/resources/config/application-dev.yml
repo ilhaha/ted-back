@@ -340,6 +340,11 @@ examine:
 certificate:
   road-exam-type-id: 21
 
+# 焊接分类id
+welding-category:
+  metal-id: 27
+  nonmetal-id: 28
+
 aes:
   key: 4F7g9H2kLm0qXz1B
   hmac-key: k28Fh6sJ8Pq5Lt9N7rXsD3Mb0WdFz2Qv
