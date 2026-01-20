@@ -341,9 +341,11 @@ certificate:
   road-exam-type-id: 21
 
 # 焊接分类id
-welding-category:
-  metal-id: 27
-  nonmetal-id: 28
+welding:
+  category-id: 27
+  metal-project-id: 110
+  nonmetal-project-id: 111
+
 
 aes:
   key: 4F7g9H2kLm0qXz1B

@@ -58,10 +58,7 @@ import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
-import top.continew.admin.exam.model.entity.EnrollDO;
-import top.continew.admin.exam.model.entity.ExamPlanDO;
-import top.continew.admin.exam.model.entity.LicenseCertificateDO;
-import top.continew.admin.exam.model.entity.ProjectDO;
+import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
@@ -198,6 +195,15 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     private static final long EXPIRE_TIME = 7;  // 过期时间（天）
 
     private final CandidateTypeMapper candidateTypeMapper;
+
+    private final WeldingExamApplicationMapper weldingExamApplicationMapper;
+
+    @Value("${welding.metal-project-id}")
+    private Long metalProjectId;
+
+    @Value("${welding.nonmetal-project-id}")
+    private Long nonmetalProjectId;
+
 
     @Override
     public PageResp<OrgResp> page(OrgQuery query, PageQuery pageQuery) {
@@ -1700,6 +1706,20 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      */
     @Override
     public ExcelParseResultVO parsedWorkerExcel(MultipartFile file, Long classId) {
+        // 先查出班级属于是否属于焊接项目
+        OrgClassDO orgClassDO = orgClassMapper.selectById(classId);
+        ValidationUtils.throwIfNull(orgClassDO, "所选班级信息不存在");
+        Long projectId = orgClassDO.getProjectId();
+        // 属于焊接项目
+        Boolean isWelding = metalProjectId.equals(projectId) || nonmetalProjectId.equals(projectId);
+        // 判断焊接类型
+        Integer weldingType = null;
+        if (Objects.equals(projectId, metalProjectId)) {
+            weldingType = WeldingTypeEnum.METAL.getValue();
+        } else if (Objects.equals(projectId, nonmetalProjectId)) {
+            weldingType = WeldingTypeEnum.NON_METAL.getValue();
+        }
+
         if (file.isEmpty()) {
             throw new BusinessException("文件不能为空");
         }
@@ -1716,13 +1736,15 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             }
 
             // ============ 阶段1：模板与表头校验 ============
-            validateTemplate(sheet, ImportWorkerTemplateConstant.DEFAULT_HEAD_OLD);
+            List<String> validateHeaders = isWelding ? ImportWorkerTemplateConstant.DEFAULT_HEAD_OLD_WELDING
+                    : ImportWorkerTemplateConstant.DEFAULT_HEAD_OLD;
+            validateTemplate(sheet, validateHeaders);
 
             // ============ 阶段2：行级校验（仅检查存在性） ============
-            validateRows(sheet, ImportWorkerTemplateConstant.DEFAULT_HEAD_OLD);
+            validateRows(sheet, validateHeaders, isWelding, weldingType, orgClassDO.getOrgId());
 
             // ============ 阶段3：上传校验============
-            ExcelParseResultVO excelParseResultVO = parsedExcel(sheet, classId);
+            ExcelParseResultVO excelParseResultVO = parsedExcel(sheet, classId, isWelding);
 
             List<ExcelRowSuccessVO> successList = excelParseResultVO.getSuccessList();
             List<ExcelRowErrorVO> failedList = excelParseResultVO.getFailedList();
@@ -1753,7 +1775,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @param classId
      * @return
      */
-    private ExcelParseResultVO parsedExcel(XSSFSheet sheet, Long classId) {
+    private ExcelParseResultVO parsedExcel(XSSFSheet sheet, Long classId, Boolean isWelding) {
         ExcelParseResultVO result = new ExcelParseResultVO();
         List<ExcelRowSuccessVO> successList = new ArrayList<>();
         List<ExcelRowErrorVO> failedList = new ArrayList<>();
@@ -1772,6 +1794,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             String workUnit = getCellString(row, 4);
             String address = getCellString(row, 5);
             String politicalStatus = getCellString(row, 6);
+            String weldingProject = isWelding ? getCellString(row, 7) : null;
             try {
                 ExcelRowSuccessVO worker = new ExcelRowSuccessVO();
                 worker.setExcelName(candidateName);
@@ -1787,6 +1810,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 worker.setStatus(WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue());
                 worker.setClassId(classId);
                 worker.setApplyType(WorkerApplyTypeEnum.ORG_IMPORT.getValue());
+                worker.setWeldingProjectCode(weldingProject);
                 successList.add(worker);
 
             } catch (Exception e) {
@@ -2349,13 +2373,32 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      *
      * @param sheet
      */
-    private void validateRows(XSSFSheet sheet, List<String> expectedHeaders) {
+    private void validateRows(XSSFSheet sheet, List<String> expectedHeaders, Boolean isWelding, Integer weldingType, Long orgId) {
 
         int rowCount = sheet.getPhysicalNumberOfRows();
 
         // 身份证 & 手机号重复校验
         Set<String> idCardSet = new HashSet<>();
         Set<String> phoneSet = new HashSet<>();
+
+        // 如果是焊接项目先查出当前机构已申请的所有焊接资格项目
+        List<String> orgWeldingProjectCodes = Collections.emptyList();
+
+        if (isWelding) {
+            List<WeldingExamApplicationDO> weldingExamApplicationDOS =
+                    weldingExamApplicationMapper.selectList(
+                            new LambdaQueryWrapper<WeldingExamApplicationDO>()
+                                    .eq(WeldingExamApplicationDO::getOrgId, orgId)
+                                    .eq(WeldingExamApplicationDO::getStatus,
+                                            WeldingExamApplicationStatusEnum.PASS_REVIEW.getValue())
+                                    .eq(WeldingExamApplicationDO::getWeldingType, weldingType)
+                                    .select(WeldingExamApplicationDO::getProjectCode)
+                    );
+
+            orgWeldingProjectCodes = weldingExamApplicationDOS.stream()
+                    .map(WeldingExamApplicationDO::getProjectCode)
+                    .collect(Collectors.toList());
+        }
 
         for (int rowIndex = 1; rowIndex < rowCount; rowIndex++) {
 
@@ -2441,6 +2484,44 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             if (!POLITICAL_STATUS_SET.contains(politicalStatus.trim())) {
                 throw new BusinessException(String.format("第 %d 行【%s】只能为：%s", rowIndex + 1, expectedHeaders
                         .get(6), String.join(" / ", POLITICAL_STATUS_SET)));
+            }
+            // 焊接项目还需要判断焊接资格项目是否填写
+            if (isWelding) {
+                String weldingProject = getCellString(row, 7);
+                if (StrUtil.isBlank(weldingProject)) {
+                    throw new BusinessException(
+                            String.format("第 %d 行焊接资格项目不能为空", rowIndex + 1)
+                    );
+                }
+
+                if (orgWeldingProjectCodes.isEmpty()) {
+                    throw new BusinessException("当前机构暂无对应的已通过审核的焊接资格项目");
+                }
+
+                // Excel 中的焊接项目（去空格、去重）
+                final List<String> weldingProjectExcel = Arrays.stream(weldingProject.split(","))
+                        .map(String::trim)
+                        .filter(StrUtil::isNotBlank)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+                // 使用 Set
+                final Set<String> orgWeldingProjectCodeSet = new HashSet<>(orgWeldingProjectCodes);
+
+                // 查出 Excel 中“机构未申请 / 未通过审核”的项目
+                List<String> notExistProjects = weldingProjectExcel.stream()
+                        .filter(code -> !orgWeldingProjectCodeSet.contains(code))
+                        .collect(Collectors.toList());
+
+                if (!notExistProjects.isEmpty()) {
+                    throw new BusinessException(
+                            String.format(
+                                    "第 %d 行焊接资格项目【%s】未在当前机构已通过审核的焊接资格范围内或不属于该焊接类型",
+                                    rowIndex + 1,
+                                    String.join(",", notExistProjects)
+                            )
+                    );
+                }
             }
         }
     }

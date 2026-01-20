@@ -17,6 +17,7 @@
 package top.continew.admin.worker.model.resp;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.util.List;
@@ -54,6 +55,35 @@ public class WorkerUploadedDocsVO {
 
     /** 状态 */
     private Integer status;
+    /**
+     * 工作区域
+     */
+    private String address;
+
+    /**
+     * 工作单位
+     */
+    private String workUnit;
+
+    /**
+     * 学历
+     */
+    private String education;
+
+    /**
+     * 政治面貌
+     */
+    private String politicalStatus;
+    /**
+     * 焊接项目资格代码
+     */
+    private List<String> weldingProjectCode;
+
+    /**
+     * 焊接项目资格代码字符串
+     */
+    @JsonIgnore
+    private String weldingProjectCodeStr;
 
     /** 材料列表 */
     @JsonIgnore

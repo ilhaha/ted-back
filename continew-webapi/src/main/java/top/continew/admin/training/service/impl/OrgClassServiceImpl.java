@@ -37,15 +37,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.OrgClassType;
 import top.continew.admin.common.constant.SelectClassConstants;
-import top.continew.admin.common.constant.enums.AuditQueryFlagEnum;
-import top.continew.admin.common.constant.enums.OrgClassPayStatusEnum;
-import top.continew.admin.common.constant.enums.WorkerApplyReviewStatusEnum;
+import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.DownloadOSSFileUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ProjectMapper;
+import top.continew.admin.exam.mapper.WeldingExamApplicationMapper;
 import top.continew.admin.exam.model.entity.ProjectDO;
+import top.continew.admin.exam.model.entity.WeldingExamApplicationDO;
 import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
@@ -85,6 +85,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 培训机构班级业务实现
@@ -113,6 +115,14 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
     private final WorkerApplyMapper workerApplyMapper;
 
     private final OrgClassCandidateMapper orgClassCandidateMapper;
+
+    private final WeldingExamApplicationMapper weldingExamApplicationMapper;
+
+    @Value("${welding.metal-project-id}")
+    private Long metalProjectId;
+
+    @Value("${welding.nonmetal-project-id}")
+    private Long nonmetalProjectId;
 
     /**
      * 重写分页查询
@@ -170,14 +180,41 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
             throw new BusinessException("当前用户未绑定机构");
         }
         // 查出项目考试价格
-        ProjectDO projectDO = projectMapper.selectById(req.getProjectId());
+        Long projectId = req.getProjectId();
+        ProjectDO projectDO = projectMapper.selectById(projectId);
         ValidationUtils.throwIfNull(projectDO, "未查询到考试项目信息");
         req.setPayStatus(projectDO.getExamFee() == 0L
             ? OrgClassPayStatusEnum.FREE.getCode()
             : OrgClassPayStatusEnum.UNPAID.getCode());
 
         // 设置机构ID
-        req.setOrgId(orgDO.getId());
+        Long orgId = orgDO.getId();
+        req.setOrgId(orgId);
+        // 判断是否添加的是焊接项目的班级
+        boolean isWelding = Objects.equals(projectId, metalProjectId)
+                || Objects.equals(projectId, nonmetalProjectId);
+
+        if (isWelding) {
+            // 判断焊接类型
+            WeldingTypeEnum weldingTypeEnum = Objects.equals(projectId, metalProjectId)
+                    ? WeldingTypeEnum.METAL
+                    : WeldingTypeEnum.NON_METAL;
+
+            Long count = weldingExamApplicationMapper.selectCount(
+                    new LambdaQueryWrapper<WeldingExamApplicationDO>()
+                            .eq(WeldingExamApplicationDO::getOrgId, orgId)
+                            .eq(WeldingExamApplicationDO::getStatus,
+                                    WeldingExamApplicationStatusEnum.PASS_REVIEW.getValue())
+                            .eq(WeldingExamApplicationDO::getWeldingType,
+                                    weldingTypeEnum.getValue())
+            );
+
+            ValidationUtils.throwIf(
+                    count == null || count == 0,
+                    "机构下未有申报通过的" + weldingTypeEnum.getDesc() + "项目"
+            );
+        }
+
 
         // 循环重试生成班级编号并插入
         Long classId = null;
@@ -218,6 +255,9 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
         return classId;
     }
+
+
+
 
     /**
      * 生成班级编号

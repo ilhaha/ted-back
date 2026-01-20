@@ -39,7 +39,7 @@ public interface CategoryService extends BaseService<CategoryResp, CategoryDetai
      * 
      * @return
      */
-    List<ProjectVo> getSelectOptions(Integer isSelectWeldingCategory);
+    List<ProjectVo> getSelectOptions();
 
     /**
      * 根据最后一个值来查前面的值

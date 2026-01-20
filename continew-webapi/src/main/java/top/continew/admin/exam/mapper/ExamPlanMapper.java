@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import top.continew.admin.exam.model.dto.ClassroomInvigilatorDTO;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.entity.UserNamesDO;
 import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
@@ -113,4 +114,18 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
     IPage<ExamPlanDetailResp> selectExamPlanPagegetClassExamStatsPage(@Param("page") Page<Object> objectPage,
                                                                       @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper,
                                                                       @Param("roadExamTypeId") Long roadExamTypeId);
+
+    List<ClassroomInvigilatorDTO> getClassroomIdsWithExamOnDate(
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay
+    );
+
+    /**
+     * 查询指定监考员列表中，具备指定考试计划对应考试类别资质的监考员
+     */
+    List<Long> selectQualifiedInvigilators(
+            @Param("examPlanId") Long examPlanId,
+            @Param("userIds") List<Long> userIds
+    );
+
 }

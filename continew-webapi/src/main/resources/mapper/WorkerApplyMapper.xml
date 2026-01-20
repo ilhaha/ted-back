@@ -38,6 +38,7 @@
                twa.education,
                twa.work_unit,
                twa.address,
+               twa.welding_project_code,
                toc.class_name,
                tp.project_name,
                tc.`name` AS category_name
@@ -61,6 +62,11 @@
                twa.remark,
                twa.face_photo,
                twa.`status`,
+               twa.work_unit,
+               twa.address,
+               twa.welding_project_code AS welding_project_code_str,
+               twa.education,
+               twa.political_status,
                JSON_ARRAYAGG(
                        JSON_OBJECT(
                                'typeId', twad.type_id,

@@ -90,17 +90,19 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     @Resource
     private StepMapper stepMapper;
 
-    @Value("${welding-category.metal-id}")
-    private Long metalId;
-
-    @Value("${welding-category.nonmetal-id}")
-    private Long nonmetalId;
-
     @Override
-    public List<ProjectVo> getSelectOptions(Integer isSelectWeldingCategory) {
-        return baseMapper.getSelectOptions(isSelectWeldingCategory,metalId,nonmetalId);
+    public List<ProjectVo> getSelectOptions() {
+        String json = stringRedisTemplate.opsForValue().get(RedisConstant.EXAM_CATEGORY_SELECT);
+        if (StringUtils.isNotBlank(json)) {
+            return com.alibaba.fastjson2.JSON.parseArray(json, ProjectVo.class);
+        } else {
+            List<ProjectVo> selectOptions = baseMapper.getSelectOptions();
+            stringRedisTemplate.opsForValue()
+                    .set(RedisConstant.EXAM_CATEGORY_SELECT, JSON.toJSONString(selectOptions), RedisConstant
+                            .randomTTL(), TimeUnit.MILLISECONDS);
+            return selectOptions;
+        }
     }
-
     @Override
     public AllPathVo getAllPath(Long id) {
         AllPathVo allPathVo = new AllPathVo();

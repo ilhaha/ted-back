@@ -131,4 +131,9 @@ public class WorkerApplyDO extends BaseDO {
      * 删除标记(0未删,1已删)
      */
     private Integer isDeleted;
+
+    /**
+     * 焊接资格项目,非焊接项目可为空
+     */
+    private String weldingProjectCode;
 }

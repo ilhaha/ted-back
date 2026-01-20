@@ -104,4 +104,34 @@ public class WorkerQrcodeUploadReq {
     @NotBlank(message = "一寸免冠照未上传")
     private String facePhoto;
 
+    /**
+     * 工作区域
+     */
+    @NotBlank(message = "未选择工作区域")
+    private String address;
+
+    /**
+     * 工作单位
+     */
+    @NotBlank(message = "未选择工作单位")
+    private String workUnit;
+
+    /**
+     * 学历
+     */
+    @NotBlank(message = "未选择学历")
+    private String education;
+
+    /**
+     * 政治面貌
+     */
+    @NotBlank(message = "未选择政治面貌")
+    private String politicalStatus;
+    /**
+     * 焊接项目资格代码
+     */
+    private List<String> weldingProjectCode;
+
+
+
 }

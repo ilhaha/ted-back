@@ -39,6 +39,11 @@ public class DocDetailResp implements Serializable {
     private String qualificationName;
 
     /**
+     * 作业人员姓名
+     */
+    private String candidateName;
+
+    /**
      * 身份证住址
      */
     private String idCardAddress;

@@ -42,4 +42,9 @@ public class WorkerApplyVO implements Serializable {
      * 项目信息
      */
     private ProjectInfoVO projectInfo;
+
+    /**
+     * 焊接项目代码
+     */
+    private List<String> weldingProjectCodes;
 }

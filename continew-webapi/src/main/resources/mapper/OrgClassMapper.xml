@@ -54,6 +54,7 @@
             resultType="top.continew.admin.training.model.resp.OrgClassDetailResp">
         SELECT toc.id,
                toc.class_name,
+               toc.project_id,
                toc.doc_submit_time,
                org.`code`                                      AS org_code,
                org.id                                          AS org_id,

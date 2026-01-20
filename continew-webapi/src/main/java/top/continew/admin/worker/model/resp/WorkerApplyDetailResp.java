@@ -203,4 +203,12 @@ public class WorkerApplyDetailResp extends BaseDetailResp {
     @Schema(description = "政治面貌")
     @ExcelProperty(value = "政治面貌")
     private String politicalStatus;
+
+
+    /**
+     * 焊接资格项目,非焊接项目可为空
+     */
+    @Schema(description = "焊接资格项目,非焊接项目可为空")
+    @ExcelProperty(value = "焊接资格项目,非焊接项目可为空")
+    private String weldingProjectCode;
 }

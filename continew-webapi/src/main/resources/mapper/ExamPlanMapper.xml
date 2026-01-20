@@ -318,6 +318,36 @@
             toc.class_name
         ORDER BY tep.id, toc.id
     </select>
+    <select id="getClassroomIdsWithExamOnDate"
+            resultType="top.continew.admin.exam.model.dto.ClassroomInvigilatorDTO">
+        SELECT DISTINCT tpi.classroom_id, tpi.invigilator_id
+        FROM ted_exam_plan tep
+                 JOIN ted_plan_invigilate tpi
+                      ON tep.id = tpi.exam_plan_id
+                          AND tpi.is_deleted = 0
+        WHERE tep.is_final_confirmed = 1
+          AND tep.is_deleted = 0
+          AND tep.start_time &gt;= #{startOfDay}
+          AND tep.start_time &lt; #{endOfDay}
+    </select>
+    <select id="selectQualifiedInvigilators" resultType="java.lang.Long">
+        SELECT tuq.user_id
+        FROM ted_user_qualification tuq
+        JOIN ted_exam_plan tep
+        ON tep.id = #{examPlanId}
+        JOIN ted_project tp
+        ON tp.id = tep.exam_project_id
+        AND tp.is_deleted = 0
+        JOIN ted_category tc
+        ON tc.id = tp.category_id
+        AND tc.is_deleted = 0
+        WHERE tuq.user_id IN
+        <foreach collection="userIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND tuq.category_id = tc.id
+        AND tuq.is_deleted = 0
+    </select>
 
 
     <update id="batchUpdatePlanMaxCandidates">

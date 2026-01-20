@@ -123,4 +123,10 @@ public class WorkerOrgImportReq implements Serializable {
      */
     private String politicalStatus;
 
+
+    /**
+     * 焊接资格项目,非焊接项目可为空
+     */
+    private String weldingProjectCode;
+
 }

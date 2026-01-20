@@ -41,7 +41,7 @@ public class ImportWorkerTemplateConstant {
     };
 
     /**
-     * 导入作业人员模板表头（按照就系统）
+     * 导入作业人员模板表头非焊接
      */
     public static final List<String> DEFAULT_HEAD_OLD = new ArrayList<>() {
         {
@@ -52,6 +52,22 @@ public class ImportWorkerTemplateConstant {
             add("工作单位");
             add("工作区域");
             add("政治面貌");
+        }
+    };
+
+    /**
+     * 导入作业人员模板表头焊接
+     */
+    public static final List<String> DEFAULT_HEAD_OLD_WELDING = new ArrayList<>() {
+        {
+            add("姓名");
+            add("身份证号");
+            add("学历");
+            add("联系电话");
+            add("工作单位");
+            add("工作区域");
+            add("政治面貌");
+            add("焊接资格项目（支持多个，使用英文逗号,分隔）");
         }
     };
 

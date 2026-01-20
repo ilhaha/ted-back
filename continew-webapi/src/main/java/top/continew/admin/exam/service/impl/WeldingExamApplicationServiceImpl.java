@@ -61,12 +61,6 @@ public class WeldingExamApplicationServiceImpl extends BaseServiceImpl<WeldingEx
 
     private final OrgCategoryRelationMapper orgCategoryRelationMapper;
 
-    @Value("${welding-category.metal-id}")
-    private Long metalId;
-
-    @Value("${welding-category.nonmetal-id}")
-    private Long nonmetalId;
-
     /**
      * 重新修改
      *

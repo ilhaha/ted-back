@@ -85,4 +85,10 @@ public class WorkerOrgUploadReq {
     @NotBlank(message = "一寸免冠照未上传")
     private String facePhoto;
 
+    /**
+     * 考生姓名
+     */
+    @NotBlank(message = "考生姓名")
+    private String candidateName;
+
 }
