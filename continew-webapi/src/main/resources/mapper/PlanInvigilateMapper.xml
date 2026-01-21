@@ -78,5 +78,43 @@
                         AND tuq.is_deleted = 0);
     </select>
 
+    <select id="selectAvailableInvigilatorsExcludingAssigned"
+            resultType="top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp">
+        SELECT su.id, su.nickname
+        FROM sys_user su
+        JOIN sys_user_role sur
+        ON sur.user_id = su.id
+        AND sur.role_id = #{invigilatorRole}
+        JOIN ted_exam_plan cur_tep
+        ON cur_tep.id = #{planId}
+        JOIN ted_project cur_tp
+        ON cur_tp.id = cur_tep.exam_project_id
+        WHERE NOT EXISTS (
+        SELECT 1
+        FROM ted_plan_invigilate tpi
+        JOIN ted_exam_plan tep
+        ON tep.id = tpi.exam_plan_id
+        AND tep.id != #{planId}
+        AND tep.is_final_confirmed IN (1, 2)
+        AND tep.start_time = DATE(#{startTime})
+        WHERE tpi.invigilator_id = su.id
+        AND tpi.invigilate_status = 0
+        AND tpi.is_deleted = 0
+        )
+        AND EXISTS (
+        SELECT 1
+        FROM ted_user_qualification tuq
+        WHERE tuq.user_id = su.id
+        AND tuq.category_id = cur_tp.category_id
+        AND tuq.is_deleted = 0
+        )
+        <if test="excludeIds != null and !excludeIds.isEmpty()">
+            AND su.id NOT IN
+            <foreach collection="excludeIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        </if>
+    </select>
+
 
 </mapper>

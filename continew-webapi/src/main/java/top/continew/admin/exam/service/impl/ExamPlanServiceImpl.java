@@ -23,12 +23,14 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import net.dreamlu.mica.core.utils.ObjectUtil;
+import org.apache.ibatis.session.SqlSession;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.*;
 
@@ -792,17 +794,142 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         // 判断题库是否够考试
         questionBankService.generateExamQuestionBank(id);
 
-        // 9. 执行更新
-        super.update(req, id);
 
         // 10.插入考场和计划关系
         if (!CollectionUtils.isEmpty(classroomIds)) {
-            //
+            // 添加考场信息
             examPlanMapper.savePlanClassroom(examPlanDO.getId(), classroomIds);
-
-            // 11.随机分配监考人员
-            randomInvigilator(classroomIds, examPlanDO.getStartTime(), id, invigilatorCount, laborFeeDO);
         }
+
+        List<Long> alterHandClassroomIds = new ArrayList<>();
+        int alterInvigilatorCount = 0;
+        // 处理理论班级
+        if (!CollectionUtils.isEmpty(theoryIds)) {
+            List<ClassroomInvigilatorDTO> hasExamStartDateList =
+                    baseMapper.findInvigilatorsByDateAndClassrooms(examPlanDO.getStartTime(), theoryIds);
+            if (!CollectionUtils.isEmpty(hasExamStartDateList)) {
+                // 如果只有理论考试，那么把所有的监考员都安排到理论考场
+                if (CollectionUtils.isEmpty(operIds)) {
+                    List<PlanInvigilateDO> invigilateDOS = hasExamStartDateList.stream().map(item -> {
+                        PlanInvigilateDO record = new PlanInvigilateDO();
+                        record.setExamPlanId(examPlanDO.getId());
+                        record.setInvigilatorId(item.getInvigilatorId());
+                        record.setClassroomId(item.getClassroomId());
+                        record.setInvigilateStatus(InvigilateStatusEnum.NOT_START.getValue());
+                        record.setTheoryFee(laborFeeDO.getTheoryFee());
+                        record.setPracticalFee(laborFeeDO.getPracticalFee());
+                        return record;
+                    }).collect(Collectors.toList());
+
+                    if (invigilateDOS.size() > invigilatorCount) {
+                        Collections.shuffle(invigilateDOS);
+                        invigilateDOS = invigilateDOS.subList(0, invigilatorCount);
+                    }
+                    // 批量插入
+                    planInvigilateMapper.insertBatch(invigilateDOS);
+                    // 记录已处理的考场 & 数量
+                    alterHandClassroomIds.addAll(theoryIds);
+                    alterInvigilatorCount += invigilateDOS.size();
+                } else {
+                    // 先保证理论考试必须有一个监考员
+                    ClassroomInvigilatorDTO classroomInvigilatorDTO = hasExamStartDateList.get(0);
+                    PlanInvigilateDO record = new PlanInvigilateDO();
+                    // 考试计划 ID
+                    record.setExamPlanId(examPlanDO.getId());
+                    // 监考员 ID
+                    record.setInvigilatorId(classroomInvigilatorDTO.getInvigilatorId());
+                    // 考场号
+                    Long classroomId = classroomInvigilatorDTO.getClassroomId();
+                    record.setClassroomId(classroomId);
+                    // 监考状态
+                    record.setInvigilateStatus(InvigilateStatusEnum.NOT_START.getValue());
+                    record.setTheoryFee(laborFeeDO.getTheoryFee());
+                    record.setPracticalFee(laborFeeDO.getPracticalFee());
+                    planInvigilateMapper.insert(record);
+                    alterHandClassroomIds.add(classroomId);
+                    alterInvigilatorCount++;
+                }
+            } else {
+                // 如果当天没考试，随机分配理论考场一个监考老师
+                // 11.随机分配监考人员
+                randomInvigilator(theoryIds, examPlanDO.getStartTime(), id, theoryIds.size(), laborFeeDO);
+                alterHandClassroomIds.addAll(theoryIds);
+                alterInvigilatorCount += theoryIds.size();
+            }
+        }
+
+        // 处理实操考场
+        if (!CollectionUtils.isEmpty(operIds)) {
+            List<ClassroomInvigilatorDTO> hasOperExamStartDateList =
+                    baseMapper.findInvigilatorsByDateAndClassrooms(examPlanDO.getStartTime(), operIds);
+            // 今天已有考试的考场复用
+            if (!CollectionUtils.isEmpty(hasOperExamStartDateList)) {
+                // 按考场分组
+                Map<Long, List<ClassroomInvigilatorDTO>> classroomMap =
+                        hasOperExamStartDateList.stream()
+                                .collect(Collectors.groupingBy(ClassroomInvigilatorDTO::getClassroomId));
+
+                List<PlanInvigilateDO> invigilateDOS = new ArrayList<>();
+
+                // 每个考场只取 1 个监考员
+                for (Map.Entry<Long, List<ClassroomInvigilatorDTO>> entry : classroomMap.entrySet()) {
+                    ClassroomInvigilatorDTO item = entry.getValue().get(0);
+                    PlanInvigilateDO record = new PlanInvigilateDO();
+                    record.setExamPlanId(examPlanDO.getId());
+                    record.setInvigilatorId(item.getInvigilatorId());
+                    record.setClassroomId(item.getClassroomId());
+                    record.setInvigilateStatus(InvigilateStatusEnum.NOT_START.getValue());
+                    record.setTheoryFee(laborFeeDO.getTheoryFee());
+                    record.setPracticalFee(laborFeeDO.getPracticalFee());
+                    invigilateDOS.add(record);
+                    alterHandClassroomIds.add(item.getClassroomId());
+                }
+                // 批量插入
+                planInvigilateMapper.insertBatch(invigilateDOS);
+
+                alterInvigilatorCount += invigilateDOS.size();
+            } else {
+                // 今天没有考试，随机分配
+                randomInvigilator(operIds, examPlanDO.getStartTime(), id, operIds.size(), laborFeeDO);
+                alterHandClassroomIds.addAll(operIds);
+                alterInvigilatorCount += operIds.size();
+            }
+        }
+
+
+        // 判断是否所有的考场都安排了监考员
+        if (alterHandClassroomIds.size() < classroomIds.size()) {
+            // 找出没有安排监考员的考场
+            Set<Long> unAssignedClassroomSet = new HashSet<>(classroomIds);
+            unAssignedClassroomSet.removeAll(alterHandClassroomIds);
+            List<Long> unAssignedClassroomIds = new ArrayList<>(unAssignedClassroomSet);
+            // 随机安排
+            randomInvigilator(unAssignedClassroomIds, examPlanDO.getStartTime(), id, unAssignedClassroomIds.size(), laborFeeDO);
+            alterHandClassroomIds.addAll(unAssignedClassroomIds);
+            alterInvigilatorCount += unAssignedClassroomIds.size();
+        }
+        // 如果考场都安排了监考员，但已处理的考场数量小于前端传来的要求整个计划所需监考员，需要给某些考场进行再添加监考员，指导满足前端需要的监考员数量
+        if (alterInvigilatorCount < invigilatorCount) {
+            // 1. 还差多少个监考员
+            int remainInvigilatorCount = invigilatorCount - alterInvigilatorCount;
+            List<Long> needAddInvigilatorClassroomIds;
+            // 2. 如果可选考场数 <= 需要补的数量，全部返回
+            if (alterHandClassroomIds.size() <= remainInvigilatorCount) {
+                needAddInvigilatorClassroomIds = new ArrayList<>(alterHandClassroomIds);
+            } else {
+                // 3. 否则随机取 remainInvigilatorCount 个
+                List<Long> shuffledClassroomIds = new ArrayList<>(alterHandClassroomIds);
+                Collections.shuffle(shuffledClassroomIds);
+                needAddInvigilatorClassroomIds = shuffledClassroomIds.stream()
+                        .limit(remainInvigilatorCount)
+                        .collect(Collectors.toList());
+            }
+            // 随机安排
+            randomInvigilator(needAddInvigilatorClassroomIds, examPlanDO.getStartTime(), id, remainInvigilatorCount, laborFeeDO);
+        }
+
+        // 9. 执行更新
+        super.update(req, id);
     }
 
     private void randomInvigilator(List<Long> classroomIds,
@@ -810,9 +937,18 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                                    Long planId,
                                    Integer invigilatorNum,
                                    LaborFeeDO laborFeeDO) {
+        // 清除缓存，防止没查数据库
+        SqlSession sqlSession = SqlHelper.sqlSession(getEntityClass());
+        sqlSession.clearCache();
+        // 先找出当前计划已存在的监考员，同一个计划不能有相同的监考员
+        List<PlanInvigilateDO> planInvigilateDOS = planInvigilateMapper.selectList(new LambdaQueryWrapper<PlanInvigilateDO>()
+                .eq(PlanInvigilateDO::getExamPlanId, planId)
+                .eq(PlanInvigilateDO::getInvigilateStatus, InvigilateStatusEnum.NOT_START.getValue())
+                .select(PlanInvigilateDO::getInvigilatorId));
+        List<Long> planAlterExistInvigilateIds = planInvigilateDOS.stream().map(PlanInvigilateDO::getInvigilatorId).toList();
         // 获取所选时间段有空闲的监考人员并上传了对应八大类资质的
         List<AvailableInvigilatorResp> availableInvigilatorList = planInvigilateMapper
-                .selectAvailableInvigilators(startTime, planId, invigilatorId);
+                .selectAvailableInvigilatorsExcludingAssigned(startTime, planId, invigilatorId, planAlterExistInvigilateIds);
         ValidationUtils.throwIf(ObjectUtil.isEmpty(availableInvigilatorList) || availableInvigilatorList
                 .size() < invigilatorNum, "当前时间段可分配的监考员或有资质的监考员数量不足");
         Collections.shuffle(availableInvigilatorList);

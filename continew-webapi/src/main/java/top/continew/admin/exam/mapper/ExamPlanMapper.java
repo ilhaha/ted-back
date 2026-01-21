@@ -128,4 +128,5 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
             @Param("userIds") List<Long> userIds
     );
 
+    List<ClassroomInvigilatorDTO> findInvigilatorsByDateAndClassrooms(@Param("startTime") LocalDateTime startTime,@Param(("classroomIds")) List<Long> classroomIds);
 }

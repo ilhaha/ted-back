@@ -194,4 +194,9 @@ public interface PlanInvigilateMapper extends BaseMapper<PlanInvigilateDO> {
     List<AvailableInvigilatorResp> selectAvailableInvigilators(@Param("startTime") LocalDateTime startTime,
                                                                @Param("planId") Long planId,
                                                                @Param("invigilatorRole") Long invigilatorRole);
+
+    List<AvailableInvigilatorResp> selectAvailableInvigilatorsExcludingAssigned(@Param("startTime") LocalDateTime startTime,
+                                                                                @Param("planId") Long planId,
+                                                                                @Param("invigilatorRole") Long invigilatorRole,
+                                                                                @Param("excludeIds") List<Long> excludeInvigilatorIds);
 }

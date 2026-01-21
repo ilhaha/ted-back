@@ -348,6 +348,24 @@
         AND tuq.category_id = tc.id
         AND tuq.is_deleted = 0
     </select>
+    <select id="findInvigilatorsByDateAndClassrooms"
+            resultType="top.continew.admin.exam.model.dto.ClassroomInvigilatorDTO">
+        SELECT pi.classroom_id, pi.invigilator_id
+        FROM ted_plan_invigilate pi
+        WHERE pi.classroom_id IN
+        <foreach collection="classroomIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND pi.is_deleted = 0
+        AND pi.exam_plan_id = (
+        SELECT MAX(p.id)
+        FROM ted_exam_plan p
+        WHERE DATE(p.start_time) = DATE(#{startTime})
+        AND p.is_deleted = 0
+        AND p.is_final_confirmed = 1
+        )
+        ORDER BY pi.id DESC
+    </select>
 
 
     <update id="batchUpdatePlanMaxCandidates">
