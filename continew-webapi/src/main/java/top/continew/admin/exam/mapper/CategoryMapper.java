@@ -33,9 +33,23 @@ import java.util.List;
  */
 @Mapper
 public interface CategoryMapper extends BaseMapper<CategoryDO> {
-    @Select("SELECT `name` AS label, `id` AS `value` FROM ted_category WHERE is_deleted = 0")
-    List<ProjectVo> getSelectOptions();
-
+    /**
+     * 支持多个种类类型的IN查询
+     * @param categoryTypeList 种类类型列表（如[3,4]）
+     */
+    @Select("<script>" +
+            "SELECT `name` AS label, `id` AS `value` " +
+            "FROM ted_category  " +
+            "WHERE is_deleted = 0 " +
+            // 动态拼接IN条件：有参数时过滤，无参数时查全部
+            "<if test='categoryTypeList != null and categoryTypeList.size() > 0'>" +
+            "  AND category_type IN " +
+            "  <foreach collection='categoryTypeList' item='type' open='(' separator=',' close=')'>" +
+            "    #{type}" +
+            "  </foreach>" +
+            "</if>" +
+            "</script>")
+    List<ProjectVo> getSelectOptions(@Param("categoryTypeList") List<Integer> categoryTypeList);
 
     @Select("SELECT COUNT(*) FROM ted_knowledge_type tkt " + "inner join ted_project tp on tkt.project_id = tp.id " + "inner join ted_category tc on tp.category_id = tc.id " + "where tc.name = #{categoryName} and tc.code = #{categoryCode} and tp.project_code = #{projectCode} and tp.project_name = #{projectName} and tkt.name = #{knowledgeTypeName} ")
     Long verifySheet(String categoryName,

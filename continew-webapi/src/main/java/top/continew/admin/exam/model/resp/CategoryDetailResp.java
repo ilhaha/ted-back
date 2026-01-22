@@ -63,6 +63,14 @@ public class CategoryDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "类别代号")
     private String code;
 
+
+    /**
+     * 种类类型
+     */
+    @Schema(description = "种类类型")
+    @ExcelProperty(value = "种类类型")
+    private Integer categoryType;
+
     /**
      * 是否删除（0-未删除，1-已删除）
      */

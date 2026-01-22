@@ -51,6 +51,13 @@ public class CategoryResp extends BaseResp {
     private String code;
 
     /**
+     * 种类类型
+     */
+    @Schema(description = "种类类型")
+    private Integer categoryType;
+
+
+    /**
      * 更新人ID
      */
     @Schema(description = "更新人ID")

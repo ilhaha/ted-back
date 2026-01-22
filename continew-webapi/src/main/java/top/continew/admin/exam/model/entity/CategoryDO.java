@@ -60,4 +60,10 @@ public class CategoryDO extends BaseDO {
      * 是否开启电子监考违规行为提醒功能（1开启，0未开启）
      */
     private Boolean enableProctorWarning;
+
+    /**
+     * 种类类型（1=普通八大类，2=焊接，3=无损检测，4=检验人员）
+     */
+    private Integer categoryType;
+
 }

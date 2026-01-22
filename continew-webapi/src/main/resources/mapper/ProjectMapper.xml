@@ -16,7 +16,9 @@
         ${ew.customSqlSegment}
     </select>
 
+    <!-- 新增独立参数categoryTypePlan，避免planType职责混淆 -->
     <select id="getDeptProjectTree"
+            parameterType="map"
             resultType="top.continew.admin.exam.model.vo.ProjectCategoryProjectFlatVo">
         SELECT
         tc.id AS categoryId,
@@ -25,14 +27,25 @@
         tp.project_name AS projectName,
         tp.is_operation AS isOperation
         FROM ted_category tc
-        LEFT JOIN ted_project tp
+        INNER JOIN ted_project tp
         ON tc.id = tp.category_id
         AND tp.is_deleted = 0
         AND tp.project_status = 2
         <if test="planType != null and planType != 2">
             AND tp.project_type = #{planType}
         </if>
-        WHERE tc.is_deleted = 0
+        WHERE
+        tc.is_deleted = 0
+        <if test="planType != null">
+            <choose>
+                <when test="planType == 0">
+                    AND tc.category_type IN (1,2)
+                </when>
+                <when test="planType == 1">
+                    AND tc.category_type IN (3,4)
+                </when>
+            </choose>
+        </if>
         <if test="deptId != null">
             AND tp.dept_id = #{deptId}
         </if>

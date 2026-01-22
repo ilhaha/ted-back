@@ -54,6 +54,12 @@ public class CategoryReq implements Serializable {
     @Length(max = 255, message = "种类名称长度不能超过 {max} 个字符")
     private String code;
 
+    @Schema(description = "种类类型（1=普通八大类，2=焊接，3=无损检测，4=检验人员）")
+    @NotNull(message = "种类类型不能为空")
+    @Min(value = 1, message = "种类类型值必须为1-4（1=普通八大类，2=焊接，3=无损检测，4=检验人员）")
+    @Max(value = 4, message = "种类类型值必须为1-4（1=普通八大类，2=焊接，3=无损检测，4=检验人员）")
+    private Integer categoryType;
+
     private Long topicNumber;
     private String videoUrl;
 

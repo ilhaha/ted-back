@@ -473,7 +473,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     public List<ProjectCategoryTreeVo> getDeptProject(Integer planType) {
 
         UserTokenDo userInfo = TokenLocalThreadUtil.get();
-        ValidationUtils.throwIfNull(userInfo, ErrorMessageConstant.USER_AUTHENTICATION_FAILED);
+//        ValidationUtils.throwIfNull(userInfo, ErrorMessageConstant.USER_AUTHENTICATION_FAILED);
 
         Long deptId = null;
         if (!UserConstant.ADMIN_USER_ID.equals(userInfo.getUserId())) {

@@ -19,6 +19,7 @@ package top.continew.admin.exam.service.impl;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.commons.lang3.StringUtils;
@@ -49,6 +50,8 @@ import top.continew.admin.examconnect.model.entity.StepDO;
 import top.continew.admin.util.RedisUtil;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.exam.mapper.CategoryMapper;
 import top.continew.admin.exam.model.entity.CategoryDO;
@@ -91,17 +94,9 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     private StepMapper stepMapper;
 
     @Override
-    public List<ProjectVo> getSelectOptions() {
-        String json = stringRedisTemplate.opsForValue().get(RedisConstant.EXAM_CATEGORY_SELECT);
-        if (StringUtils.isNotBlank(json)) {
-            return com.alibaba.fastjson2.JSON.parseArray(json, ProjectVo.class);
-        } else {
-            List<ProjectVo> selectOptions = baseMapper.getSelectOptions();
-            stringRedisTemplate.opsForValue()
-                    .set(RedisConstant.EXAM_CATEGORY_SELECT, JSON.toJSONString(selectOptions), RedisConstant
-                            .randomTTL(), TimeUnit.MILLISECONDS);
-            return selectOptions;
-        }
+
+    public List<ProjectVo> getSelectOptions(List<Integer> categoryTypeList) {
+        return baseMapper.getSelectOptions(categoryTypeList);
     }
     @Override
     public AllPathVo getAllPath(Long id) {
@@ -686,10 +681,14 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     }
 
     @Override
-    public Long add(CategoryReq req) {
-        Long add = super.add(req);
+    public Long add(@Valid CategoryReq req) {
+        Integer categoryType = req.getCategoryType();
+        if (categoryType == null || categoryType < 1 || categoryType > 4) {
+            throw new BusinessException("种类类型无效，仅支持1(普通八大类)、2(焊接)、3(无损检测)、4(检验人员)");
+        }
+        Long addId = super.add(req);
         stringRedisTemplate.delete(RedisConstant.EXAM_CATEGORY_SELECT);
-        return add;
+        return addId;
     }
 
     @Override

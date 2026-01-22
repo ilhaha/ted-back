@@ -17,6 +17,7 @@
 package top.continew.admin.exam.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.exam.model.resp.AllPathVo;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -52,8 +53,11 @@ public class CategoryController extends BaseController<CategoryService, Category
      */
     @Operation(summary = "获取八大类下拉框")
     @GetMapping("/selectOptions")
-    public List<ProjectVo> getSelectOptions() {
-        return baseService.getSelectOptions();
+    public List<ProjectVo> getSelectOptions(
+            @Parameter(description = "种类类型（支持多个，如?categoryType=3&categoryType=4）")
+            @RequestParam(required = false) List<Integer> categoryType
+    ) {
+        return baseService.getSelectOptions(categoryType);
     }
 
     /**
