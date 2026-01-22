@@ -211,4 +211,14 @@ public class LicenseCertificateResp extends BaseResp {
      */
     @Schema(description = "是否删除（0-未删除，1-已删除）")
     private Integer isDeleted;
+
+    /**
+     * 审批类型（0=初申，1=复审等）
+     */
+    private Integer approvalType;
+
+    /**
+     * 是否已许可（0未许可，1已许可）
+     */
+    private Integer certGenerated;
 }

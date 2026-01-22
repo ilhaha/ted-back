@@ -21,11 +21,24 @@
                su.username,
                tp.is_operation,
                tp.project_name,
+               tp.id AS project_id,
                toc.class_name,
                CASE
                    WHEN tc.id = #{roadExamTypeId} THEN 1
                    ELSE 0
-                   END            AS is_road
+                   END            AS is_road,
+               CASE
+                   WHEN tp.id IN (#{metalProjectId}, #{nonmetalProjectId}) THEN
+                       JSON_ARRAYAGG(
+                               JSON_OBJECT(
+                                       'id', twos.id,
+                                       'project_code', twos.project_code,
+                                       'oper_score', twos.oper_score
+                               )
+                       )
+                   ELSE
+                       JSON_ARRAY()
+                   END            AS welding_oper_scores
         FROM ted_exam_records AS ter
                  LEFT JOIN ted_exam_plan AS tep
                            ON ter.plan_id = tep.id AND tep.is_deleted = 0
@@ -39,7 +52,36 @@
                            ON ter.plan_id = te.exam_plan_id AND te.user_id = su.id AND te.is_deleted = 0
                  LEFT JOIN ted_org_class AS toc
                            ON te.class_id = toc.id AND toc.is_deleted = 0
+                 LEFT JOIN ted_welding_oper_score AS twos
+                           ON ter.id = twos.record_id
+                               AND ter.plan_id = twos.plan_id
+                               AND ter.candidate_id = twos.candidate_id
+                               AND twos.is_deleted = 0
             ${ew.getCustomSqlSegment}
+        GROUP BY
+            ter.id,
+            ter.plan_id,
+            ter.candidate_id,
+            ter.exam_scores,
+            ter.oper_scores,
+            ter.oper_input_status,
+            ter.road_scores,
+            ter.road_input_status,
+            ter.attempt_type,
+            ter.is_certificate_generated,
+            ter.exam_paper,
+            ter.exam_result_status,
+            ter.registration_progress,
+            ter.create_time,
+            tep.exam_plan_name,
+            su.nickname,
+            su.username,
+            tp.is_operation,
+            tp.project_name,
+            toc.class_name,
+            tc.id
+        ORDER BY
+            ter.id
     </select>
     <select id="getRecordsById" resultType="top.continew.admin.exam.model.entity.ExamRecordsDO">
         SELECT ter.*, tep.exam_plan_name AS planName, su.nickname AS candidateName
@@ -99,7 +141,8 @@
         twa.face_photo,
         tc.`name` AS category_name,
         tp.project_name,
-        tp.project_code
+        tp.project_code,
+        tp.id AS project_id
         FROM ted_exam_records ter
         LEFT JOIN sys_user su
         ON ter.candidate_id = su.id
@@ -154,7 +197,7 @@
                CASE
                    WHEN tp.category_id = #{roadExamTypeId} THEN 1
                    ELSE 0
-                   END AS is_road
+                   END            AS is_road
         FROM ted_exam_records ter
                  JOIN ted_exam_plan tep
                       ON ter.plan_id = tep.id AND tep.is_deleted = 0
@@ -162,7 +205,46 @@
                       ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
                  JOIN ted_category tc
                       ON tp.category_id = tc.id AND tc.is_deleted = 0 ${ew.getCustomSqlSegment}
-          ORDER BY ter.id DESC
+        ORDER BY ter.id DESC
+    </select>
+    <select id="selectWeldingProjectCodeByRecordId"
+            parameterType="java.lang.Long"
+            resultType="java.lang.String">
+        SELECT twa.welding_project_code
+        FROM ted_exam_records ter
+                 JOIN ted_enroll te
+                      ON ter.plan_id = te.exam_plan_id
+                          AND ter.candidate_id = te.user_id
+                          AND te.is_deleted = 0
+                 JOIN sys_user su
+                      ON te.user_id = su.id
+                 JOIN ted_worker_apply twa
+                      ON te.class_id = twa.class_id
+                          AND su.username = twa.id_card_number
+                          AND twa.is_deleted = 0
+        WHERE ter.id = #{recordId}
+          AND ter.is_deleted = 0
+    </select>
+    <select id="selectWeldingProjectCodeByRecordIds" resultType="map" parameterType="java.util.List">
+        SELECT
+        er.id AS record_id,
+        GROUP_CONCAT(twa.welding_project_code) AS welding_project_codes
+        FROM ted_exam_records er
+        JOIN ted_enroll te
+        ON er.plan_id = te.exam_plan_id
+        AND er.candidate_id = te.user_id
+        AND te.is_deleted = 0
+        JOIN sys_user su
+        ON te.user_id = su.id
+        JOIN ted_worker_apply twa
+        ON te.class_id = twa.class_id
+        AND su.username = twa.id_card_number
+        AND twa.is_deleted = 0
+        WHERE er.id IN
+        <foreach collection="recordIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        GROUP BY er.id
     </select>
 
 

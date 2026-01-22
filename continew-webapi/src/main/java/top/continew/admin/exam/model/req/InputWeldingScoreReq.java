@@ -16,27 +16,34 @@
 
 package top.continew.admin.exam.model.req;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.io.Serializable;
+import java.util.List;
+
+/**
+ * @author ilhaha
+ * @Create 2025/12/25 9:07
+ */
 @Data
-public class ExamPlanStartReq {
+public class InputWeldingScoreReq implements Serializable {
 
     /**
-     * 考试计划ID
+     * 考试记录ID
      */
-    @NotNull(message = "未选择考试计划")
-    private Long examPlanId;
+    private Long recordId;
 
     /**
-     * 开考密码
+     * 焊接项目实操成绩id
      */
-    private String examPassword;
+    private Long weldingOperScoreId;
+
 
     /**
-     * 考场id
+     * 实操成绩
      */
-    @NotNull(message = "未选择监考考场")
-    private Long classroomId;
+    private Integer operScore;
+
 }

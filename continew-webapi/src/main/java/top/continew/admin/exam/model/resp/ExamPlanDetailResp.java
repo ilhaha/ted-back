@@ -269,6 +269,11 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     private Integer certificateNotGeneratedCount;
 
     /**
+     * 缺考人数
+     */
+    private Integer absentCount;
+
+    /**
      * 实操考试（1有，0没有）
      */
     private Integer hasOper;

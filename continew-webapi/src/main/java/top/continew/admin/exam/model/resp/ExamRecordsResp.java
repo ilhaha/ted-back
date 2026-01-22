@@ -17,6 +17,7 @@
 package top.continew.admin.exam.model.resp;
 
 import com.alibaba.excel.annotation.ExcelProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -25,6 +26,7 @@ import top.continew.admin.common.model.resp.BaseResp;
 
 import java.io.Serial;
 import java.time.*;
+import java.util.List;
 
 /**
  * 考试记录信息
@@ -175,4 +177,23 @@ public class ExamRecordsResp extends BaseResp {
      * 创建时间
      */
     private LocalDateTime createTime;
+
+    /**
+     * 焊接项目的实操成绩
+     */
+    private List<WeldingOperScoreVO> weldingOperScoreVoList;
+
+    /**
+     * 焊接实操成绩（JSON 数组）
+     */
+    @JsonIgnore
+    private String weldingOperScores;
+
+    /**
+     * 项目id
+     */
+    private Long projectId;
+
+
+
 }

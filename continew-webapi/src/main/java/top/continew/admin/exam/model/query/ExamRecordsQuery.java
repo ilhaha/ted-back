@@ -45,7 +45,7 @@ public class ExamRecordsQuery implements Serializable {
      * 计划ID
      */
     @Schema(description = "计划ID")
-    @Query(type = QueryType.EQ)
+    @Query(type = QueryType.EQ,columns = "ter.plan_id")
     private Long planId;
 
     /**

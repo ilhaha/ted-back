@@ -70,4 +70,9 @@ public class ExamRecordCertificateDTO {
      * 项目编码
      */
     private String projectCode;
+
+    /**
+     * 项目id
+     */
+    private Long projectId;
 }

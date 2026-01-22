@@ -266,10 +266,11 @@
         WITH dedup_records AS (SELECT plan_id,
                                       candidate_id,
                                       exam_result_status,
-                                      is_certificate_generated
+                                      is_certificate_generated,
+                                      exam_paper
                                FROM ted_exam_records
                                WHERE is_deleted = 0
-                               GROUP BY plan_id, candidate_id, exam_result_status, is_certificate_generated)
+                               GROUP BY plan_id, candidate_id, exam_result_status, is_certificate_generated, exam_paper)
         SELECT tep.id,
                tep.exam_plan_name,
                tp.project_name,
@@ -288,8 +289,10 @@
                                       THEN dr.candidate_id END)                             AS certificate_generated_count,
                COUNT(DISTINCT CASE
                                   WHEN dr.is_certificate_generated = 0
-                                      THEN dr.candidate_id END)                             AS certificate_not_generated_count
-
+                                      THEN dr.candidate_id END)                             AS certificate_not_generated_count,
+               COUNT(DISTINCT CASE
+                                  WHEN dr.exam_paper IS NULL
+                                      THEN dr.candidate_id END)                             AS absent_count
         FROM ted_exam_plan tep
                  JOIN ted_project tp
                       ON tep.exam_project_id = tp.id
@@ -316,7 +319,7 @@
             org.name,
             toc.id,
             toc.class_name
-        ORDER BY tep.id, toc.id
+        ORDER BY toc.id DESC
     </select>
     <select id="getClassroomIdsWithExamOnDate"
             resultType="top.continew.admin.exam.model.dto.ClassroomInvigilatorDTO">

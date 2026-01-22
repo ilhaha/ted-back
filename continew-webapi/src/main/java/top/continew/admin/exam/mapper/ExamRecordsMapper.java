@@ -26,6 +26,7 @@ import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 考试记录 Mapper
@@ -36,7 +37,9 @@ import java.util.List;
 public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
     IPage<ExamRecordDTO> getExamRecords(@Param("page") Page<ExamRecordsDO> page,
                                         @Param(Constants.WRAPPER) QueryWrapper<ExamRecordsDO> queryWrapper,
-                                        @Param("roadExamTypeId") Long roadExamTypeId);
+                                        @Param("roadExamTypeId") Long roadExamTypeId,
+                                        @Param("metalProjectId") Long metalProjectId,
+                                        @Param("nonmetalProjectId") Long nonmetalProjectId);
 
     ExamRecordsDO getRecordsById(Long id);
 
@@ -70,4 +73,14 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
     IPage<ExamRecordDTO> getCandidateExamRecordPage(@Param("page") Page<ExamRecordsDO> page,
                                                     @Param(Constants.WRAPPER) QueryWrapper<ExamRecordsDO> queryWrapper,
                                                     @Param("roadExamTypeId") Long roadExamTypeId);
+
+    String selectWeldingProjectCodeByRecordId(@Param("recordId") Long recordId);
+
+    /**
+     * 批量查询考试记录对应焊接项目
+     * @param recordIds 考试记录ID列表
+     * @return Map<recordId, weldingProjectCodes>
+     */
+    List<Map<String, Object>> selectWeldingProjectCodeByRecordIds(@Param("recordIds") List<Long> recordIds);
+
 }

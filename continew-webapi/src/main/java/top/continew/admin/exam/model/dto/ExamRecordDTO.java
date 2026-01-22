@@ -122,6 +122,13 @@ public class ExamRecordDTO {
      */
     private String projectName;
 
+
+    /**
+     * 项目id
+     */
+    private Long projectId;
+
+
     /**
      * 所属班级
      */
@@ -131,4 +138,10 @@ public class ExamRecordDTO {
      * 创建时间
      */
     private LocalDateTime createTime;
+
+    /**
+     * 焊接实操成绩（JSON 数组）
+     */
+    private String weldingOperScores;
+
 }

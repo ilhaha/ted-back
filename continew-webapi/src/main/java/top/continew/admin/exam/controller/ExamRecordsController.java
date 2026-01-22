@@ -24,6 +24,7 @@ import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
+import top.continew.admin.exam.model.req.InputWeldingScoreReq;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.admin.training.model.query.OrgClassQuery;
 import top.continew.admin.training.model.resp.OrgClassResp;
@@ -97,7 +98,7 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
     }
 
     /**
-     * 录入实操、道路成绩
+     * 录入普通项目实操、道路成绩
      *
      * @param inputScoresReq
      * @return
@@ -106,6 +107,19 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
     @PostMapping("/input")
     public Boolean inputScores(@RequestBody @Validated InputScoresReq inputScoresReq) {
         return baseService.inputScores(inputScoresReq);
+    }
+
+
+    /**
+     * 录入焊接项目实操
+     *
+     * @param inputWeldingScoreReqs
+     * @return
+     */
+    @SaCheckPermission("exam:record:input")
+    @PostMapping("/input/welding")
+    public Boolean inputWeldingScores(@RequestBody List<InputWeldingScoreReq> inputWeldingScoreReqs) {
+        return baseService.inputWeldingScores(inputWeldingScoreReqs);
     }
 
     /**

@@ -21,6 +21,7 @@ import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import top.continew.starter.data.core.annotation.Query;
+import top.continew.starter.data.core.annotation.QueryIgnore;
 import top.continew.starter.data.core.enums.QueryType;
 
 import java.io.Serial;
@@ -90,7 +91,8 @@ public class ExamPlanQuery implements Serializable {
     /**
      * 监考状态
      */
-    @Query(type = QueryType.EQ, columns = "tpi.invigilate_status")
+//    @Query(type = QueryType.EQ, columns = "tpi.invigilate_status")
+    @QueryIgnore
     private Integer invigilateStatus;
 
     /**

@@ -20,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
+import top.continew.admin.exam.model.req.InputWeldingScoreReq;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -84,4 +85,13 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
      * @return
      */
     PageResp<ExamRecordsResp> getCandidateExamRecordPage(ExamRecordsQuery query, PageQuery pageQuery);
+
+    /**
+     * 录入焊接项目实操
+     *
+     * @param inputWeldingScoreReqs
+     * @return
+     */
+    Boolean inputWeldingScores( List<InputWeldingScoreReq> inputWeldingScoreReqs);
+
 }
