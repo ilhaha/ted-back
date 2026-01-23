@@ -624,8 +624,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
         // 6. 查询半年内已审核通过记录
         List<WorkerApplyDO> approvedList = baseMapper.selectWorkerApplyByProjectAndIdCards(
-                classId, orgId, WorkerApplyReviewStatusEnum.APPROVED.getValue(), importIdCard, halfYearAgo);
-
+                classId, orgId, WorkerApplyReviewStatusEnum.APPROVED.getValue(),WorkerApplyReviewStatusEnum.ALTER_EXAM.getValue(), importIdCard, halfYearAgo);
         // 7. 保留每个身份证最新记录
         Map<String, WorkerApplyDO> latestApprovedMap = approvedList.stream()
                 .collect(Collectors.toMap(
@@ -653,6 +652,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         for (WorkerApplyDO item : toImport) {
             WorkerApplyDO latest = latestApprovedMap.get(item.getIdCardNumber());
             if (latest != null) {
+                System.out.println(latest.getCandidateName());
                 // 复用基本信息
                 item.setQualificationName(latest.getQualificationName());
                 item.setQualificationPath(latest.getQualificationPath());
@@ -696,13 +696,57 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 }
 
             } else {
-                // 没有复用信息，直接待审核状态
-                item.setStatus(WorkerApplyReviewStatusEnum.APPROVED.getValue());
+                // 没有复用信息，直接是待上传状态
+                item.setStatus(WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue());
             }
         }
 
         // 11. 批量更新导入记录
         baseMapper.updateBatchById(toImport);
+
+        // 12.找出直接审核通过的数据
+        List<String> approvedIdNumbers = toImport.stream()
+                .filter(item -> WorkerApplyReviewStatusEnum.APPROVED.getValue().equals(item.getStatus()))
+                .map(WorkerApplyDO::getIdCardNumber)
+                .filter(StrUtil::isNotBlank)
+                .distinct()
+                .toList();
+
+        if (CollUtil.isNotEmpty(approvedIdNumbers)) {
+            // 2. 查询用户
+            LambdaQueryWrapper<UserDO> qw = new LambdaQueryWrapper<>();
+            qw.in(UserDO::getUsername, approvedIdNumbers);
+            List<UserDO> userDOS = userMapper.selectList(qw);
+
+            if (CollUtil.isEmpty(userDOS)) {
+                return Boolean.TRUE;
+            }
+            // 3. 构建 username -> userId 映射
+            Map<String, Long> userMap = userDOS.stream()
+                    .collect(Collectors.toMap(
+                            UserDO::getUsername,
+                            UserDO::getId,
+                            (o1, o2) -> o1
+                    ));
+
+            // 4. 构建班级学员关系表数据
+            List<OrgClassCandidateDO> orgClassCandidateDOS = approvedIdNumbers.stream()
+                    .filter(userMap::containsKey)
+                    .map(idCard -> {
+                        OrgClassCandidateDO entity = new OrgClassCandidateDO();
+                        entity.setClassId(classId);
+                        entity.setCandidateId(userMap.get(idCard));
+                        entity.setStatus(OrgClassCandidateStatusEnum.IN_CLASS.getValue());
+                        return entity;
+                    })
+                    .toList();
+
+            if (CollUtil.isNotEmpty(orgClassCandidateDOS)) {
+                orgClassCandidateMapper.insertBatch(orgClassCandidateDOS);
+            }
+        }
+
+
         return Boolean.TRUE;
     }
 

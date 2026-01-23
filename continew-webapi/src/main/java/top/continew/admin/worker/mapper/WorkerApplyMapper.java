@@ -63,14 +63,16 @@ public interface WorkerApplyMapper extends BaseMapper<WorkerApplyDO> {
      * 获取机构班级同种项目同身份证半年内通过的资料信息
      * @param classId
      * @param orgId
-     * @param status
+     * @param approvedStatus
+     * @param alterExamStatus
      * @param importIdCard
      * @param halfYearAgo
      * @return
      */
     List<WorkerApplyDO> selectWorkerApplyByProjectAndIdCards(@Param("classId") Long classId,
                                                              @Param("orgId") Long orgId,
-                                                             @Param("status") Integer status,
+                                                             @Param("approvedStatus") Integer approvedStatus,
+                                                             @Param("alterExamStatus") Integer alterExamStatus,
                                                              @Param("idCardList") List<String> importIdCard,
                                                              @Param("halfYearAgo") LocalDateTime halfYearAgo);
 }

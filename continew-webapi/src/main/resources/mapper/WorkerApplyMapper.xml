@@ -152,7 +152,7 @@
         AND twa.is_deleted = 0
         WHERE toc.org_id = #{orgId}
         AND toc.is_deleted = 0
-        AND twa.status = #{status}
+        AND (twa.status = #{approvedStatus} OR twa.status = #{alterExamStatus})
         <if test="idCardList != null and idCardList.size() > 0">
             AND twa.id_card_number IN
             <foreach collection="idCardList"
