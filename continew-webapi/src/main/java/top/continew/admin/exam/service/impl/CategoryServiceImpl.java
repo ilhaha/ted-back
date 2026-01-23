@@ -199,6 +199,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
         // 查询项目，拿到 projectId 和 categoryId
         List<ProjectDO> projectList = projectMapper.selectList(new LambdaQueryWrapper<ProjectDO>()
             .in(ProjectDO::getProjectCode, projectCodes)
+            .eq(ProjectDO::getProjectStatus, 2)
             .select(ProjectDO::getId, ProjectDO::getProjectCode, ProjectDO::getCategoryId));
 
         if (projectList.isEmpty()) {

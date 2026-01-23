@@ -368,49 +368,76 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
     @Override
     public List<CascadeOptionsVo> getOptions() {
-        // 取出所有八大类 项目 知识类型
-        List<CategoryDO> categoryDOList = categoryMapper.selectList(new QueryWrapper<CategoryDO>().eq("is_deleted", 0));
-        List<ProjectDO> projectDOList = projectMapper.selectList(new QueryWrapper<ProjectDO>().eq("is_deleted", 0));
-        List<KnowledgeTypeDO> knowledgeTypeDOList = knowledgeTypeMapper.selectList(new QueryWrapper<KnowledgeTypeDO>()
-            .eq("is_deleted", 0));
+
+        List<CategoryDO> categoryDOList =
+                categoryMapper.selectList(new QueryWrapper<CategoryDO>().eq("is_deleted", 0));
+
+        List<ProjectDO> projectDOList =
+                projectMapper.selectList(new QueryWrapper<ProjectDO>().eq("is_deleted", 0).eq("project_status",2) );
+
+        List<KnowledgeTypeDO> knowledgeTypeDOList =
+                knowledgeTypeMapper.selectList(new QueryWrapper<KnowledgeTypeDO>().eq("is_deleted", 0));
 
         List<CascadeOptionsVo> vos = new ArrayList<>();
 
-        // 遍历所有的类别（Category）
+        // ===== 缓存：categoryId + level → 中间层 =====
+        Map<Long, Map<Integer, CascadeOptionsVo>> levelCache = new HashMap<>();
+
         for (CategoryDO categoryDO : categoryDOList) {
-            // 创建一个新的CascadeOptionsVo，用于存储该类别下的项目
+
             CascadeOptionsVo categoryVo = new CascadeOptionsVo();
             categoryVo.setValue(categoryDO.getId().toString());
             categoryVo.setLabel(categoryDO.getName() + "(" + categoryDO.getCode() + ")");
+            categoryVo.setChildren(new ArrayList<>());
 
-            // 获取当前类别下的项目
-            List<CascadeOptionsVo> projectVos = new ArrayList<>();
             for (ProjectDO projectDO : projectDOList) {
-                if (projectDO.getCategoryId().equals(categoryDO.getId())) {
-                    // 为项目创建一个VO，并填充项目的相关信息
-                    CascadeOptionsVo projectVo = new CascadeOptionsVo();
-                    projectVo.setValue(projectDO.getId().toString());
-                    projectVo.setLabel(projectDO.getProjectName() + "(" + projectDO.getProjectCode() + ")");
 
-                    // 获取当前项目下的知识类型
-                    List<CascadeOptionsVo> knowledgeTypeVos = new ArrayList<>();
-                    for (KnowledgeTypeDO knowledgeTypeDO : knowledgeTypeDOList) {
-                        if (knowledgeTypeDO.getProjectId().equals(projectDO.getId())) {
-                            // 为知识类型创建一个VO，并填充相关信息
-                            CascadeOptionsVo knowledgeTypeVo = new CascadeOptionsVo();
-                            knowledgeTypeVo.setValue(knowledgeTypeDO.getId().toString());
-                            knowledgeTypeVo.setLabel(knowledgeTypeDO.getName());
-                            knowledgeTypeVos.add(knowledgeTypeVo);
-                        }
-                    }
-                    // 将所有知识类型加入到当前项目的VO中
-                    projectVo.setChildren(knowledgeTypeVos);
-                    projectVos.add(projectVo);
+                if (!projectDO.getCategoryId().equals(categoryDO.getId())) {
+                    continue;
                 }
+
+                // ===== 项目节点 =====
+                CascadeOptionsVo projectVo = new CascadeOptionsVo();
+                projectVo.setValue(projectDO.getId().toString());
+                projectVo.setLabel(projectDO.getProjectName() + "(" + projectDO.getProjectCode() + ")");
+
+                // ===== 知识类型 =====
+                List<CascadeOptionsVo> knowledgeTypeVos = new ArrayList<>();
+                for (KnowledgeTypeDO knowledgeTypeDO : knowledgeTypeDOList) {
+                    if (knowledgeTypeDO.getProjectId().equals(projectDO.getId())) {
+                        CascadeOptionsVo knowledgeVo = new CascadeOptionsVo();
+                        knowledgeVo.setValue(knowledgeTypeDO.getId().toString());
+                        knowledgeVo.setLabel(knowledgeTypeDO.getName());
+                        knowledgeTypeVos.add(knowledgeVo);
+                    }
+                }
+                projectVo.setChildren(knowledgeTypeVos);
+
+                Integer level = projectDO.getProjectLevel();
+
+                // ===== level = 0 → 不分级 =====
+                if (level == null || level == 0) {
+                    categoryVo.getChildren().add(projectVo);
+                    continue;
+                }
+
+                // ===== level = 1 / 2 → 插中间层 =====
+                Map<Integer, CascadeOptionsVo> levelMap =
+                        levelCache.computeIfAbsent(categoryDO.getId(), k -> new HashMap<>());
+
+                CascadeOptionsVo levelVo =
+                        levelMap.computeIfAbsent(level, lv -> {
+                            CascadeOptionsVo vo = new CascadeOptionsVo();
+                            vo.setValue(categoryDO.getId() + "-" + lv);
+                            vo.setLabel((lv == 1 ? "一级" : "二级") + categoryDO.getName());
+                            vo.setChildren(new ArrayList<>());
+                            categoryVo.getChildren().add(vo);
+                            return vo;
+                        });
+
+                levelVo.getChildren().add(projectVo);
             }
 
-            // 将所有项目加入到该类别的VO中
-            categoryVo.setChildren(projectVos);
             vos.add(categoryVo);
         }
 
