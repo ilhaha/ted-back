@@ -32,7 +32,7 @@ import top.continew.admin.exam.model.resp.CascaderOptionResp;
 import top.continew.admin.exam.model.resp.CascaderPlanResp;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
-import top.continew.admin.exam.model.vo.ProjectTreeNodeVo;
+import top.continew.admin.exam.model.vo.ProjectTreeNodeVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.service.ProjectService;
 import top.continew.admin.invigilate.model.resp.AvailableInvigilatorResp;
@@ -240,7 +240,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
      */
     @Operation(summary = "根据部门ID获取项目列表")
     @PostMapping("/dept/projectList/{planType}")
-    public List<ProjectTreeNodeVo> getDeptProject(@PathVariable("planType") Integer planType) {
+    public List<ProjectTreeNodeVO> getDeptProject(@PathVariable("planType") Integer planType) {
         return projectService.getDeptProject(planType);
     }
 

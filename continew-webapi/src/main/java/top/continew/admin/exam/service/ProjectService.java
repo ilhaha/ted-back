@@ -19,8 +19,8 @@ package top.continew.admin.exam.service;
 import top.continew.admin.document.model.resp.DocumentTypeResp;
 import top.continew.admin.exam.model.req.ExamLocationReqStr;
 import top.continew.admin.exam.model.resp.StudentProjectDetailResp;
-import top.continew.admin.exam.model.vo.ProjectCategoryTreeVo;
-import top.continew.admin.exam.model.vo.ProjectTreeNodeVo;
+import top.continew.admin.exam.model.vo.ProjectCategoryTreeVO;
+import top.continew.admin.exam.model.vo.ProjectTreeNodeVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.model.vo.ProjectWithClassroomVO;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -58,7 +58,7 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
     //    List<ProjectVo> getClassRoomSelect(Long locationId);
     List<Map<String, Object>> getClassRoomSelect(Long locationId);
 
-    List<ProjectTreeNodeVo> getDeptProject(Integer planType);
+    List<ProjectTreeNodeVO> getDeptProject(Integer planType);
 
     public void delete(List<Long> ids);
 

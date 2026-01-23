@@ -470,7 +470,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     }
 
     @Override
-    public List<ProjectTreeNodeVo> getDeptProject(Integer planType) {
+    public List<ProjectTreeNodeVO> getDeptProject(Integer planType) {
 
         UserTokenDo userInfo = TokenLocalThreadUtil.get();
 
@@ -482,15 +482,15 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
         List<ProjectCategoryProjectFlatVo> flats =
                 baseMapper.getDeptProjectTree(deptId, planType);
 
-        Map<Long, ProjectTreeNodeVo> categoryMap = new LinkedHashMap<>();
-        Map<Long, Map<Integer, ProjectTreeNodeVo>> levelCache = new HashMap<>();
+        Map<Long, ProjectTreeNodeVO> categoryMap = new LinkedHashMap<>();
+        Map<Long, Map<Integer, ProjectTreeNodeVO>> levelCache = new HashMap<>();
 
         for (ProjectCategoryProjectFlatVo flat : flats) {
 
             // ===== 分类节点 =====
-            ProjectTreeNodeVo categoryVo =
+            ProjectTreeNodeVO categoryVo =
                     categoryMap.computeIfAbsent(flat.getCategoryId(), id -> {
-                        ProjectTreeNodeVo vo = new ProjectTreeNodeVo();
+                        ProjectTreeNodeVO vo = new ProjectTreeNodeVO();
                         vo.setValue(flat.getCategoryId());
                         vo.setLabel(flat.getCategoryName());
                         vo.setChildren(new ArrayList<>());
@@ -502,7 +502,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             }
 
             // ===== 项目节点 =====
-            ProjectTreeNodeVo projectVo = new ProjectTreeNodeVo();
+            ProjectTreeNodeVO projectVo = new ProjectTreeNodeVO();
             projectVo.setValue(flat.getProjectId());
             projectVo.setLabel(flat.getProjectName());
             projectVo.setIsOperation(flat.getIsOperation());
@@ -516,12 +516,12 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             }
 
             // ===== level = 1 / 2 → 中间层 =====
-            Map<Integer, ProjectTreeNodeVo> levelMap =
+            Map<Integer, ProjectTreeNodeVO> levelMap =
                     levelCache.computeIfAbsent(flat.getCategoryId(), k -> new HashMap<>());
 
-            ProjectTreeNodeVo levelVo =
+            ProjectTreeNodeVO levelVo =
                     levelMap.computeIfAbsent(level, lv -> {
-                        ProjectTreeNodeVo vo = new ProjectTreeNodeVo();
+                        ProjectTreeNodeVO vo = new ProjectTreeNodeVO();
                         vo.setValue(flat.getCategoryId() * 1000 + lv);
                         vo.setLabel((lv == 1 ? "一级" : "二级") + flat.getCategoryName());
                         vo.setChildren(new ArrayList<>());

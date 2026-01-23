@@ -21,13 +21,10 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class ProjectTreeNodeVo {
+public class ProjectCategoryTreeVO {
 
-    private Long value;
-    private String label;
+    private Long value;     // categoryId
+    private String label;   // categoryName
 
-    private Integer isOperation;
-    private Boolean disabled;
-
-    private List<ProjectTreeNodeVo> children;
+    private List<ProjectVo> children;
 }
