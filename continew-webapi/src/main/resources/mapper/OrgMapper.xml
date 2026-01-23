@@ -200,6 +200,7 @@
                  JOIN sys_user su
                       ON occ.candidate_id = su.id
         WHERE occ.is_deleted = 0
+          AND occ.status = 0
           AND NOT EXISTS (SELECT 1
                           FROM ted_enroll ee
                           WHERE ee.user_id = occ.candidate_id

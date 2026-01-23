@@ -4,7 +4,7 @@
 
     <select id="selectProjectNeedUploadDoc"
             resultType="top.continew.admin.worker.model.resp.ProjectNeedUploadDocVO">
-        SELECT tdt.id, tdt.type_name,tdt.need_upload_person
+        SELECT tdt.id, tdt.type_name, tdt.need_upload_person
         FROM ted_org_class toc
                  LEFT JOIN ted_project tp
                            ON toc.project_id = tp.id AND tp.is_deleted = 0
@@ -73,7 +73,7 @@
                                'typeName', tdt.type_name,
                                'docPaths', twad.doc_path
                        )
-               ) AS documents
+               )                        AS documents
         FROM ted_worker_apply twa
                  LEFT JOIN ted_worker_apply_document twad
                            ON twa.id = twad.worker_apply_id AND twad.is_deleted = 0
@@ -85,7 +85,7 @@
         GROUP BY twa.id;
     </select>
     <select id="getProjectInfoByClassId" resultType="top.continew.admin.worker.model.resp.ProjectInfoVO">
-        SELECT tc.name AS category_name, tp.project_name,toc.class_name
+        SELECT tc.name AS category_name, tp.project_name, toc.class_name
         FROM ted_org_class toc
                  LEFT JOIN ted_project tp
                            ON toc.project_id = tp.id AND tp.is_deleted = 0
@@ -104,6 +104,70 @@
             #{id}
         </foreach>
     </select>
+    <select id="selectClassBingDocIds" resultType="java.lang.Long">
+        SELECT tpdt.document_type_id
+        FROM ted_project_document_type tpdt
+                 JOIN ted_project tp
+                      ON tpdt.project_id = tp.id AND tp.is_deleted = 0
+                 JOIN ted_org_class toc
+                      ON tp.id = toc.project_id AND toc.is_deleted = 0
+        WHERE tpdt.is_deleted = 0
+          AND toc.id = #{classId}
+    </select>
+    <select id="selectWorkerApplyByProjectAndIdCards"
+            resultType="top.continew.admin.worker.model.entity.WorkerApplyDO">
+        SELECT
+        twa.id,
+        twa.class_id,
+        twa.candidate_name,
+        twa.gender,
+        twa.political_status,
+        twa.education,
+        twa.phone,
+        twa.qualification_path,
+        twa.qualification_name,
+        twa.work_unit,
+        twa.address,
+        twa.welding_project_code,
+        twa.id_card_number,
+        twa.id_card_address,
+        twa.id_card_photo_front,
+        twa.id_card_photo_back,
+        twa.remark,
+        twa.face_photo,
+        twa.apply_type,
+        twa.status,
+        twa.create_user,
+        twa.update_user,
+        twa.create_time,
+        twa.update_time,
+        twa.is_deleted
+        FROM ted_org_class toc
+        JOIN ted_org_class base_class
+        ON base_class.id = #{classId}
+        AND base_class.is_deleted = 0
+        AND toc.project_id = base_class.project_id
+        JOIN ted_worker_apply twa
+        ON toc.id = twa.class_id
+        AND twa.is_deleted = 0
+        WHERE toc.org_id = #{orgId}
+        AND toc.is_deleted = 0
+        AND twa.status = #{status}
+        <if test="idCardList != null and idCardList.size() > 0">
+            AND twa.id_card_number IN
+            <foreach collection="idCardList"
+                     item="idCard"
+                     open="("
+                     separator=","
+                     close=")">
+                #{idCard}
+            </foreach>
+        </if>
+        AND twa.create_time <![CDATA[>=]]> #{halfYearAgo}
+
+        ORDER BY twa.create_time DESC
+    </select>
+
 
 
 

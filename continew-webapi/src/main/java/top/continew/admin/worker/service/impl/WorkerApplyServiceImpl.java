@@ -31,6 +31,7 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import net.dreamlu.mica.core.utils.StringUtil;
+import net.dreamlu.mica.core.utils.ThreadLocalUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -45,6 +46,7 @@ import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
+import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.document.mapper.DocumentTypeMapper;
 import top.continew.admin.document.model.dto.DocFileDTO;
 import top.continew.admin.exam.mapper.EnrollMapper;
@@ -150,6 +152,10 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Value("${welding.nonmetal-project-id}")
     private Long nonmetalProjectId;
 
+
+    @Value("${document.id-card-id}")
+    private Long documentIdCardId;
+
     /**
      * 根据身份证后六位、和班级id查询当前身份证报名信息
      *
@@ -211,7 +217,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             WorkerUploadedDocsVO uploadedDocs = baseMapper.selectWorkerUploadedDocs(classId, encryptIdCard);
 
             if (ObjectUtil.isNotNull(uploadedDocs) && ObjectUtil.isNotEmpty(uploadedDocs.getDocuments())) {
-                if(isWelding) {
+                if (isWelding) {
                     uploadedDocs.setWeldingProjectCode(Arrays.asList(uploadedDocs.getWeldingProjectCodeStr().split(",")));
                 }
                 // 解析 JSON 数组并封装
@@ -580,83 +586,126 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean orgImport(List<WorkerOrgImportReq> workerOrgImportReqs) {
-        // 1. 校验是否选择数据
+        // 1. 校验
         ValidationUtils.throwIfEmpty(workerOrgImportReqs, "未选择导入的数据");
 
         Long classId = workerOrgImportReqs.get(0).getClassId();
 
-        // 2. 获取所有提交的身份证
-        List<String> idCards = workerOrgImportReqs.stream()
+        // 2. 获取加密身份证号
+        List<String> importIdCard = workerOrgImportReqs.stream()
                 .map(req -> aesWithHMAC.encryptAndSign(req.getIdCardNumber()))
                 .collect(Collectors.toList());
 
-        // 3. 查询数据库中已存在的身份证
+        // 3. 查询已存在的身份证
         List<WorkerApplyDO> existingWorkers = baseMapper.selectList(new LambdaQueryWrapper<WorkerApplyDO>()
                 .eq(WorkerApplyDO::getClassId, classId)
-                .in(WorkerApplyDO::getIdCardNumber, idCards));
+                .in(WorkerApplyDO::getIdCardNumber, importIdCard));
+        ValidationUtils.throwIf(!existingWorkers.isEmpty(), "以下作业人员已存在：" +
+                existingWorkers.stream().map(WorkerApplyDO::getCandidateName).collect(Collectors.joining(", ")));
 
-        // 4. 如果存在重复，直接抛出异常
-        ValidationUtils.throwIf(!existingWorkers.isEmpty(), "以下作业人员已存在：" + existingWorkers.stream()
-                .map(WorkerApplyDO::getCandidateName)
-                .collect(Collectors.joining(", ")));
-
-        // 5. 构造待导入数据
+        // 4. 构造导入数据
         List<WorkerApplyDO> toImport = workerOrgImportReqs.stream().map(item -> {
             WorkerApplyDO workerApplyDO = new WorkerApplyDO();
             BeanUtil.copyProperties(item, workerApplyDO);
             workerApplyDO.setPhone(aesWithHMAC.encryptAndSign(item.getPhone()));
-            workerApplyDO.setIdCardNumber(aesWithHMAC.encryptAndSign(item.getIdCardNumber()));
+            String encryptIdCardNo = aesWithHMAC.encryptAndSign(item.getIdCardNumber());
+            workerApplyDO.setIdCardNumber(encryptIdCardNo);
             workerApplyDO.setUpdateTime(LocalDateTime.now());
             return workerApplyDO;
         }).toList();
 
-        // 6. 批量插入
-        if (!toImport.isEmpty()) {
-            baseMapper.insertBatch(toImport);
+        if (toImport.isEmpty()) return Boolean.TRUE;
+
+        baseMapper.insertBatch(toImport);
+
+        // 5. 半年前时间
+        LocalDateTime halfYearAgo = LocalDateTime.now().minusMonths(6);
+        Long orgId = orgMapper.getOrgId(TokenLocalThreadUtil.get().getUserId()).getId();
+
+        // 6. 查询半年内已审核通过记录
+        List<WorkerApplyDO> approvedList = baseMapper.selectWorkerApplyByProjectAndIdCards(
+                classId, orgId, WorkerApplyReviewStatusEnum.APPROVED.getValue(), importIdCard, halfYearAgo);
+
+        // 7. 保留每个身份证最新记录
+        Map<String, WorkerApplyDO> latestApprovedMap = approvedList.stream()
+                .collect(Collectors.toMap(
+                        WorkerApplyDO::getIdCardNumber,
+                        Function.identity(),
+                        (oldVal, newVal) -> oldVal.getCreateTime().isAfter(newVal.getCreateTime()) ? oldVal : newVal
+                ));
+
+        if (ObjectUtil.isEmpty(latestApprovedMap)) return Boolean.TRUE;
+
+        // 8. 查询班级必填资料
+        List<Long> classBingDocIds = baseMapper.selectClassBingDocIds(classId);
+        classBingDocIds.remove(documentIdCardId);
+        Set<Long> classBingDocIdSet = new HashSet<>(classBingDocIds);
+
+        // 9. 批量查询所有复用文档（避免 N+1）
+        List<Long> approvedIds = latestApprovedMap.values().stream().map(WorkerApplyDO::getId).toList();
+        List<WorkerApplyDocumentDO> allReuseDocs = workerApplyDocumentMapper.selectList(
+                new LambdaQueryWrapper<WorkerApplyDocumentDO>().in(WorkerApplyDocumentDO::getWorkerApplyId, approvedIds)
+        );
+        Map<Long, List<WorkerApplyDocumentDO>> reuseDocsMapByApplyId = allReuseDocs.stream()
+                .collect(Collectors.groupingBy(WorkerApplyDocumentDO::getWorkerApplyId));
+
+        // 10. 更新导入记录
+        for (WorkerApplyDO item : toImport) {
+            WorkerApplyDO latest = latestApprovedMap.get(item.getIdCardNumber());
+            if (latest != null) {
+                // 复用基本信息
+                item.setQualificationName(latest.getQualificationName());
+                item.setQualificationPath(latest.getQualificationPath());
+                item.setIdCardAddress(latest.getIdCardAddress());
+                item.setIdCardPhotoFront(latest.getIdCardPhotoFront());
+                item.setIdCardPhotoBack(latest.getIdCardPhotoBack());
+                item.setFacePhoto(latest.getFacePhoto());
+                if (ObjectUtil.isEmpty(classBingDocIds)) {
+                    item.setStatus(WorkerApplyReviewStatusEnum.APPROVED.getValue());
+                }else {
+                    // 判断文档是否齐全
+                    List<WorkerApplyDocumentDO> docs = reuseDocsMapByApplyId.get(latest.getId());
+                    if (ObjectUtil.isEmpty(docs)) {
+                        if (ObjectUtil.isNull(latest.getIdCardPhotoFront())) {
+                            item.setStatus(WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue());
+                        }else {
+                            item.setStatus(WorkerApplyReviewStatusEnum.DOC_COMPLETE.getValue());
+                        }
+                    } else {
+                        Set<Long> submittedDocIds = docs.stream().map(WorkerApplyDocumentDO::getTypeId).collect(Collectors.toSet());
+                        if (submittedDocIds.containsAll(classBingDocIdSet)) {
+                            item.setStatus(WorkerApplyReviewStatusEnum.APPROVED.getValue());
+                        } else {
+                            item.setStatus(WorkerApplyReviewStatusEnum.DOC_COMPLETE.getValue());
+                        }
+                        // 复用文档
+                        List<WorkerApplyDocumentDO> reuseDocs = docs.stream()
+                                .filter(doc -> {
+                                    return classBingDocIdSet.contains(doc.getTypeId());
+                                }).map(doc -> {
+                            WorkerApplyDocumentDO copy = new WorkerApplyDocumentDO();
+                            BeanUtil.copyProperties(doc, copy);
+                            copy.setId(null);
+                            copy.setWorkerApplyId(item.getId());
+                            return copy;
+                        }).toList();
+                        if (!reuseDocs.isEmpty()) {
+                            workerApplyDocumentMapper.insertBatch(reuseDocs);
+                        }
+                    }
+                }
+
+            } else {
+                // 没有复用信息，直接待审核状态
+                item.setStatus(WorkerApplyReviewStatusEnum.APPROVED.getValue());
+            }
         }
 
-        // 7. 插入文档资料
-        //        List<WorkerApplyDocumentDO> workerApplyDocumentDOS = new ArrayList<>();
-        //        for (WorkerOrgImportReq req : workerOrgImportReqs) {
-        //            Map<String, String> docMap = req.getDocMap();
-        //            if (ObjectUtil.isEmpty(docMap))
-        //                continue;
-        //
-        //            List<String> docNames = new ArrayList<>(docMap.keySet());
-        //
-        //            // 查询数据库中对应的文档类型
-        //            List<DocumentTypeDO> documentTypeDOS = documentTypeMapper
-        //                .selectList(new LambdaQueryWrapper<DocumentTypeDO>().in(DocumentTypeDO::getTypeName, docNames)
-        //                    .select(DocumentTypeDO::getId, DocumentTypeDO::getTypeName));
-        //
-        //            // 构造 name -> id 映射，保持顺序
-        //            Map<String, Long> docNameIdMap = documentTypeDOS.stream()
-        //                .sorted(Comparator.comparingInt(d -> docNames.indexOf(d.getTypeName())))
-        //                .collect(Collectors.toMap(DocumentTypeDO::getTypeName, DocumentTypeDO::getId, (a,
-        //                                                                                               b) -> a, LinkedHashMap::new));
-        //
-        //            // 找到对应 WorkerApplyDO
-        //            WorkerApplyDO workerApplyDO = toImport.stream()
-        //                .filter(w -> w.getIdCardNumber().equals(req.getEncFieldB()))
-        //                .findFirst()
-        //                .orElseThrow(() -> new RuntimeException("未找到对应的导入记录：" + req.getEncFieldB()));
-        //
-        //            // 构造 WorkerApplyDocumentDO
-        //            docMap.forEach((docName, path) -> {
-        //                WorkerApplyDocumentDO docDO = new WorkerApplyDocumentDO();
-        //                docDO.setWorkerApplyId(workerApplyDO.getId());
-        //                docDO.setTypeId(docNameIdMap.get(docName));
-        //                docDO.setDocPath(path);
-        //                workerApplyDocumentDOS.add(docDO);
-        //            });
-        //        }
-        //
-        //        // 批量插入文档
-        //        if (!workerApplyDocumentDOS.isEmpty()) {
-        //            workerApplyDocumentMapper.insertBatch(workerApplyDocumentDOS);
-        //        }
-        return true;
+        // 11. 批量更新导入记录
+        baseMapper.updateBatchById(toImport);
+        return Boolean.TRUE;
     }
+
 
     /**
      * 机构根据作业人员报考id获取需要上传的资料信息
@@ -1226,28 +1275,28 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             // 机构报名附带资料映射
 //            if (isOrgQuery) {
 
-                List<Long> workerApplyIds = records.stream()
-                        .map(WorkerApplyDetailResp::getId)
-                        .filter(Objects::nonNull)
-                        .toList();
+            List<Long> workerApplyIds = records.stream()
+                    .map(WorkerApplyDetailResp::getId)
+                    .filter(Objects::nonNull)
+                    .toList();
 
-                if (CollUtil.isNotEmpty(workerApplyIds)) {
-                    List<WorkerApplyDocAndNameDTO> docList = workerApplyDocumentMapper.selectDocAndName(workerApplyIds);
+            if (CollUtil.isNotEmpty(workerApplyIds)) {
+                List<WorkerApplyDocAndNameDTO> docList = workerApplyDocumentMapper.selectDocAndName(workerApplyIds);
 
-                    // 报名ID → (资料名称 → URL)
-                    Map<Long, Map<String, String>> workerDocMap = docList.stream()
-                            .collect(Collectors.groupingBy(WorkerApplyDocAndNameDTO::getWorkerApplyId, // 按 worker_apply_id 分组
-                                    LinkedHashMap::new, // 保持顺序
-                                    Collectors
-                                            .toMap(WorkerApplyDocAndNameDTO::getTypeName, WorkerApplyDocAndNameDTO::getDocPath, (a,
-                                                                                                                                 b) -> a + "," + b, LinkedHashMap::new)));
+                // 报名ID → (资料名称 → URL)
+                Map<Long, Map<String, String>> workerDocMap = docList.stream()
+                        .collect(Collectors.groupingBy(WorkerApplyDocAndNameDTO::getWorkerApplyId, // 按 worker_apply_id 分组
+                                LinkedHashMap::new, // 保持顺序
+                                Collectors
+                                        .toMap(WorkerApplyDocAndNameDTO::getTypeName, WorkerApplyDocAndNameDTO::getDocPath, (a,
+                                                                                                                             b) -> a + "," + b, LinkedHashMap::new)));
 
-                    // 注入到响应对象
-                    records.forEach(item -> {
-                        Map<String, String> docMap = workerDocMap.getOrDefault(item.getId(), Collections.emptyMap());
-                        item.setDocMap(docMap);
-                    });
-                }
+                // 注入到响应对象
+                records.forEach(item -> {
+                    Map<String, String> docMap = workerDocMap.getOrDefault(item.getId(), Collections.emptyMap());
+                    item.setDocMap(docMap);
+                });
+            }
 //            }
         }
 

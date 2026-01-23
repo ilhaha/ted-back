@@ -18,6 +18,7 @@ package top.continew.admin.exam.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -44,10 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
-import top.continew.admin.common.constant.EnrollStatusConstant;
-import top.continew.admin.common.constant.ExamRecordConstants;
-import top.continew.admin.common.constant.PlanConstant;
-import top.continew.admin.common.constant.RedisConstant;
+import top.continew.admin.common.constant.*;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
@@ -81,10 +79,14 @@ import top.continew.admin.invigilate.model.resp.InvigilatorAssignResp;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.service.UserService;
+import top.continew.admin.training.mapper.OrgClassCandidateMapper;
 import top.continew.admin.training.mapper.OrgClassMapper;
 import top.continew.admin.training.mapper.OrgMapper;
+import top.continew.admin.training.model.entity.OrgClassCandidateDO;
 import top.continew.admin.training.model.entity.OrgClassDO;
+import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
+import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.util.ExceptionUtils;
@@ -173,8 +175,25 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
     private final WeldingOperScoreMapper weldingOperScoreMapper;
 
+    private final WorkerApplyMapper workerApplyMapper;
+
+    private final OrgClassCandidateMapper orgClassCandidateMapper;
+
     @Value("${certificate.road-exam-type-id}")
     private Long roadExamTypeId;
+
+    /**
+     * 特种设备相关管理分类 ID（理论考试）
+     */
+    @Value("${category.special-equipment-manage-type-id}")
+    private Long specialEquipmentManageTypeId;
+
+    @Value("${welding.metal-project-id}")
+    private Long metalProjectId;
+
+    @Value("${welding.nonmetal-project-id}")
+    private Long nonmetalProjectId;
+
 
     @Override
     public PageResp<ExamPlanResp> page(ExamPlanQuery query, PageQuery pageQuery) {
@@ -440,22 +459,26 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 1. 查询该计划所有报名信息
         LambdaQueryWrapper<EnrollDO> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(EnrollDO::getExamPlanId, planId)
-                .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.SIGNED_UP);
+        wrapper.eq(EnrollDO::getExamPlanId, planId);
         List<EnrollDO> enrollList = enrollMapper.selectList(wrapper);
+
+        List<EnrollDO> signedUpList = enrollList.stream().filter(item -> {
+            return item.getEnrollStatus().equals(EnrollStatusConstant.SIGNED_UP);
+        }).toList();
+
 
         // 2. 检查是否有正在考试的考生
         Set<Integer> validStatuses = Set
                 .of(EnrollStatusConstant.SIGNED_IN, EnrollStatusConstant.IN_PROGRESS, EnrollStatusConstant.RETAKE_IN_PROGRESS);
 
-        List<Long> signedInList = enrollList.stream()
+        List<Long> signedInList = signedUpList.stream()
                 .filter(e -> validStatuses.contains(e.getExamStatus()))
                 .map(EnrollDO::getId)
                 .toList();
         ValidationUtils.throwIfNotEmpty(signedInList, "仍有考生正在考试，无法结束考试，请稍后再试");
 
         // 3. 找出未签到 → 改成缺勤（ABSENT）
-        List<Long> notSignedInIds = enrollList.stream()
+        List<Long> notSignedInIds = signedUpList.stream()
                 .filter(e -> EnrollStatusConstant.NOT_SIGNED_IN.equals(e.getExamStatus()))
                 .map(EnrollDO::getId)
                 .toList();
@@ -473,7 +496,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             boolean hasRoad = ProjectHasExamTypeEnum.YES.getValue().equals(examPlanOperAndRoadDTO.getIsRoad());
 
             // 3. 批量生成考试记录
-            List<ExamRecordsDO> examRecordsList = enrollList.stream().map(item -> {
+            List<ExamRecordsDO> examRecordsList = signedUpList.stream().map(item -> {
                 ExamRecordsDO examRecordsDO = new ExamRecordsDO();
                 examRecordsDO.setPlanId(planId);
                 examRecordsDO.setCandidateId(item.getUserId());
@@ -489,13 +512,18 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
             examRecordsMapper.insertBatch(examRecordsList);
 
-            // 4. 批量生成焊接实操成绩
-            insertBatchWeldingOperScore(examRecordsList);
+            // 判断是否是焊接项目
+            ExamPlanDO examPlanDO = examPlanMapper.selectById(planId);
+            Long examProjectId = examPlanDO.getExamProjectId();
+            if (metalProjectId.equals(examProjectId) || nonmetalProjectId.equals(examProjectId)) {
+                // 4. 批量生成焊接实操成绩
+                insertBatchWeldingOperScore(examRecordsList);
+            }
         }
 
 
         // 4. 找出已交卷 → 改成已完成（COMPLETED）
-        List<Long> submittedIds = enrollList.stream()
+        List<Long> submittedIds = signedUpList.stream()
                 .filter(e -> EnrollStatusConstant.SUBMITTED.equals(e.getExamStatus()))
                 .map(EnrollDO::getId)
                 .toList();
@@ -517,7 +545,64 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 .set(PlanInvigilateDO::getInvigilateStatus, InvigilateStatus.COMPLETED.getCode());
         planInvigilateMapper.update(invUpdate);
 
-        return true;
+
+        //  批量查询用户信息
+        List<Long> userIds = enrollList.stream().map(EnrollDO::getUserId).distinct().toList();
+        List<UserDO> userList = userMapper.selectByIds(userIds);
+
+        Map<Long, String> userIdToUsername = userList.stream()
+                .collect(Collectors.toMap(UserDO::getId, UserDO::getUsername));
+
+        // 3. 按班级分组 enroll
+        Map<Long, List<String>> classIdToIdCards = enrollList.stream()
+                .filter(enroll -> StrUtil.isNotBlank(userIdToUsername.get(enroll.getUserId())))
+                .collect(Collectors.groupingBy(
+                        EnrollDO::getClassId,
+                        Collectors.mapping(enroll -> userIdToUsername.get(enroll.getUserId()), Collectors.toList())
+                ));
+
+        // 4. 批量更新 WorkerApplyDO
+        for (Map.Entry<Long, List<String>> entry : classIdToIdCards.entrySet()) {
+            Long classId = entry.getKey();
+            List<String> idCards = entry.getValue().stream().distinct().toList();
+
+            if (CollUtil.isNotEmpty(idCards)) {
+                LambdaUpdateWrapper<WorkerApplyDO> updateWrapper = new LambdaUpdateWrapper<>();
+                updateWrapper.eq(WorkerApplyDO::getClassId, classId)
+                        .in(WorkerApplyDO::getIdCardNumber, idCards)
+                        .set(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.ALTER_EXAM.getValue());
+                workerApplyMapper.update(null, updateWrapper);
+            }
+        }
+
+        // 4. 按班级分组 candidateId（用于更新 ted_org_class_candidate）
+        Map<Long, List<Long>> classIdToCandidateIds = enrollList.stream()
+                .collect(Collectors.groupingBy(
+                        EnrollDO::getClassId,
+                        Collectors.mapping(
+                                EnrollDO::getUserId,
+                                Collectors.toList()
+                        )
+                ));
+
+        // 5. 批量更新 ted_org_class_candidate → 已考试
+        for (Map.Entry<Long, List<Long>> entry : classIdToCandidateIds.entrySet()) {
+            Long classId = entry.getKey();
+            List<Long> candidateIds = entry.getValue().stream().distinct().toList();
+
+            if (CollUtil.isNotEmpty(candidateIds)) {
+                LambdaUpdateWrapper<OrgClassCandidateDO> updateWrapper =
+                        new LambdaUpdateWrapper<>();
+
+                updateWrapper.eq(OrgClassCandidateDO::getClassId, classId)
+                        .in(OrgClassCandidateDO::getCandidateId, candidateIds)
+                        .set(OrgClassCandidateDO::getStatus, OrgClassCandidateStatusEnum.EXAMINED.getValue());
+
+                orgClassCandidateMapper.update(null, updateWrapper);
+            }
+
+        }
+        return Boolean.TRUE;
     }
 
     /**
@@ -929,7 +1014,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             } else {
                 // 如果当天没考试，随机分配理论考场一个监考老师
                 // 11.随机分配监考人员
-                randomInvigilator(theoryIds, examPlanDO.getStartTime(), id, theoryIds.size(), laborFeeDO);
+                randomInvigilator(theoryIds, examPlanDO.getStartTime(), id, theoryIds.size(), laborFeeDO, ExamTypeEnum.THEORY.getValue());
                 alterHandClassroomIds.addAll(theoryIds);
                 alterInvigilatorCount += theoryIds.size();
             }
@@ -967,7 +1052,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 alterInvigilatorCount += invigilateDOS.size();
             } else {
                 // 今天没有考试，随机分配
-                randomInvigilator(operIds, examPlanDO.getStartTime(), id, operIds.size(), laborFeeDO);
+                randomInvigilator(operIds, examPlanDO.getStartTime(), id, operIds.size(), laborFeeDO, ExamTypeEnum.PRACTICE.getValue());
                 alterHandClassroomIds.addAll(operIds);
                 alterInvigilatorCount += operIds.size();
             }
@@ -981,7 +1066,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             unAssignedClassroomSet.removeAll(alterHandClassroomIds);
             List<Long> unAssignedClassroomIds = new ArrayList<>(unAssignedClassroomSet);
             // 随机安排
-            randomInvigilator(unAssignedClassroomIds, examPlanDO.getStartTime(), id, unAssignedClassroomIds.size(), laborFeeDO);
+            randomInvigilator(unAssignedClassroomIds, examPlanDO.getStartTime(), id, unAssignedClassroomIds.size(), laborFeeDO, ExamTypeEnum.PRACTICE.getValue());
             alterHandClassroomIds.addAll(unAssignedClassroomIds);
             alterInvigilatorCount += unAssignedClassroomIds.size();
         }
@@ -1002,7 +1087,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                         .collect(Collectors.toList());
             }
             // 随机安排
-            randomInvigilator(needAddInvigilatorClassroomIds, examPlanDO.getStartTime(), id, remainInvigilatorCount, laborFeeDO);
+            randomInvigilator(needAddInvigilatorClassroomIds, examPlanDO.getStartTime(), id, remainInvigilatorCount, laborFeeDO, ExamTypeEnum.PRACTICE.getValue());
         }
 
         // 9. 执行更新
@@ -1013,7 +1098,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                                    LocalDateTime startTime,
                                    Long planId,
                                    Integer invigilatorNum,
-                                   LaborFeeDO laborFeeDO) {
+                                   LaborFeeDO laborFeeDO,
+                                   Integer examType) {
         // 清除缓存，防止没查数据库
         SqlSession sqlSession = SqlHelper.sqlSession(getEntityClass());
         sqlSession.clearCache();
@@ -1025,7 +1111,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         List<Long> planAlterExistInvigilateIds = planInvigilateDOS.stream().map(PlanInvigilateDO::getInvigilatorId).toList();
         // 获取所选时间段有空闲的监考人员并上传了对应八大类资质的
         List<AvailableInvigilatorResp> availableInvigilatorList = planInvigilateMapper
-                .selectAvailableInvigilatorsExcludingAssigned(startTime, planId, invigilatorId, planAlterExistInvigilateIds);
+                .selectAvailableInvigilatorsExcludingAssigned(startTime, planId, invigilatorId, planAlterExistInvigilateIds, examType, specialEquipmentManageTypeId);
         ValidationUtils.throwIf(ObjectUtil.isEmpty(availableInvigilatorList) || availableInvigilatorList
                 .size() < invigilatorNum, "当前时间段可分配的监考员或有资质的监考员数量不足");
         Collections.shuffle(availableInvigilatorList);
@@ -1123,7 +1209,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 .select(PlancalssroomDO::getClassroomId)).stream().map(PlancalssroomDO::getClassroomId).toList();
 
         // 3. 随机分配监考逻辑
-        randomInvigilator(classroomIds, examPlanDO.getStartTime(), planId, invigilatorNum, laborFeeDO);
+        randomInvigilator(classroomIds, examPlanDO.getStartTime(), planId, invigilatorNum, laborFeeDO, ExamTypeEnum.PRACTICE.getValue());
         // 4.修改计划分配监考员类型
         baseMapper.update(new LambdaUpdateWrapper<ExamPlanDO>()
                 .set(ExamPlanDO::getAssignType, InvigilatorAssignTypeEnum.RANDOM_SECOND.getValue())
@@ -1366,9 +1452,18 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(examPlanQuery);
         queryWrapper.eq("tep.is_deleted", 0);
-        if (ObjectUtil.isNotNull(examPlanQuery.getInvigilateStatus())) {
-            queryWrapper.in("tpi.invigilate_status", InvigilateStatusEnum.NOT_START.getValue(),InvigilateStatusEnum.DURING_NVIGILATION.getValue());
+        Integer invigilateStatus = examPlanQuery.getInvigilateStatus();
+        if (invigilateStatus != null) {
+            if (InvigilateStatusEnum.FINISHED.getValue().equals(invigilateStatus)) {
+                queryWrapper.eq("tpi.invigilate_status",
+                        InvigilateStatusEnum.FINISHED.getValue());
+            } else {
+                queryWrapper.in("tpi.invigilate_status",
+                        InvigilateStatusEnum.NOT_START.getValue(),
+                        InvigilateStatusEnum.DURING_NVIGILATION.getValue());
+            }
         }
+
         // 执行分页查询
         IPage<InvigilateExamPlanVO> page = baseMapper.invigilateGetPlanList(new Page<>(pageQuery.getPage(), pageQuery
                 .getSize()), queryWrapper, userTokenDo.getUserId());
@@ -1397,7 +1492,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         Long classroomId = req.getClassroomId();
         // 查询计划信息
         ExamPlanDO examPlanDO = baseMapper.selectById(planId);
-        ValidationUtils.throwIfNull(examPlanDO,"考试计划信息不存在");
+        ValidationUtils.throwIfNull(examPlanDO, "考试计划信息不存在");
         ValidationUtils.throwIf(!PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue()
                 .equals(examPlanDO.getIsFinalConfirmed()), "考试计划尚未完成最终确认");
         ValidationUtils.throwIf(PlanConstant.OVER.getStatus().equals(examPlanDO.getStatus()), "考试已结束");

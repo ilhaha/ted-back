@@ -39,7 +39,11 @@ public enum WorkerApplyReviewStatusEnum {
 
     DOC_UPLOADED(5, "资料已上传"),
 
-    DOC_COMPLETE(6, "资料待补全");
+    DOC_COMPLETE(6, "资料待补全"),
+
+    ALTER_EXAM(7, "已考试");
+
+
 
     private final Integer value;
     private final String description;

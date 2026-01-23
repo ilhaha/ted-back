@@ -121,10 +121,10 @@ public class WorkerApplyDetailResp extends BaseDetailResp {
     private String facePhoto;
 
     /**
-     * 审核状态:0待审核,1已生效,2未通过,3虚假材料,4待上传资料,5资料已上传,6资料待补全
+     * 审核状态:0待审核,1资料通过待考试,2未通过,3虚假材料,4待上传资料,5资料已上传,6资料待补全,7已考试
      */
-    @Schema(description = "审核状态:0待审核,1已生效,2未通过,3虚假材料,4待上传资料,5资料已上传,6资料待补全")
-    @ExcelProperty(value = "审核状态:0待审核,1已生效,2未通过,3虚假材料,4待上传资料,5资料已上传,6资料待补全")
+    @Schema(description = "审核状态:0待审核,1资料通过待考试,2未通过,3虚假材料,4待上传资料,5资料已上传,6资料待补全,7已考试")
+    @ExcelProperty(value = "审核状态:0待审核,1资料通过待考试,2未通过,3虚假材料,4待上传资料,5资料已上传,6资料待补全,7已考试")
     private Integer status;
 
     /**

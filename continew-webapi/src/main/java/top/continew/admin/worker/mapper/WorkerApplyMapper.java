@@ -28,6 +28,8 @@ import top.continew.admin.worker.model.resp.WorkerUploadedDocsVO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,4 +51,26 @@ public interface WorkerApplyMapper extends BaseMapper<WorkerApplyDO> {
     ProjectInfoVO getProjectInfoByClassId(Long classId);
 
     List<Map<String, Object>> selectOrgIdByReviewIds(@Param("reviewIds") List<Long> reviewIds);
+
+    /**
+     * 查出当前班级所绑定的项目对应项目绑定的资料
+     * @param classId
+     * @return
+     */
+    List<Long> selectClassBingDocIds(@Param("classId") Long classId);
+
+    /**
+     * 获取机构班级同种项目同身份证半年内通过的资料信息
+     * @param classId
+     * @param orgId
+     * @param status
+     * @param importIdCard
+     * @param halfYearAgo
+     * @return
+     */
+    List<WorkerApplyDO> selectWorkerApplyByProjectAndIdCards(@Param("classId") Long classId,
+                                                             @Param("orgId") Long orgId,
+                                                             @Param("status") Integer status,
+                                                             @Param("idCardList") List<String> importIdCard,
+                                                             @Param("halfYearAgo") LocalDateTime halfYearAgo);
 }

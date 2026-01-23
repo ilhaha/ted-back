@@ -336,9 +336,17 @@ examine:
   deptId:
     examCenterId: 1
 
+# 资料类型身份证id
+document:
+  id-card-id: 19
+
 # 有道路考试的八大类ID
 certificate:
   road-exam-type-id: 21
+
+# 特种设备相关管理分类id
+category:
+  special-equipment-manage-type-id: 34
 
 # 焊接分类id
 welding:

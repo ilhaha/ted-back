@@ -105,8 +105,15 @@
         SELECT 1
         FROM ted_user_qualification tuq
         WHERE tuq.user_id = su.id
-        AND tuq.category_id = cur_tp.category_id
         AND tuq.is_deleted = 0
+        <choose>
+            <when test="examType == 0">
+                AND tuq.category_id = #{specialEquipmentManageTypeId}
+            </when>
+            <otherwise>
+                AND tuq.category_id = cur_tp.category_id
+            </otherwise>
+        </choose>
         )
         <if test="excludeIds != null and !excludeIds.isEmpty()">
             AND su.id NOT IN
