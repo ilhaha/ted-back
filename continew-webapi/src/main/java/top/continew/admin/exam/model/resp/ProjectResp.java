@@ -101,6 +101,13 @@ public class ProjectResp extends BaseResp {
     @Schema(description = "项目类型（0-作业人员 1-检验人员）")
     private Integer projectType;
 
+
+    /**
+     * 项目考试等级（ 1一级 2 二级）
+     */
+    @Schema(description = "项目考试等级（ 1一级 2 二级）")
+    private Integer projectLevel;
+
     /**
      * 是否有实操考试（0无，1有）
      */

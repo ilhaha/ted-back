@@ -18,16 +18,16 @@ package top.continew.admin.exam.model.vo;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
-public class ProjectCategoryProjectFlatVo {
+public class ProjectTreeNodeVo {
 
-    /** 八大类 */
-    private Long categoryId;
-    private String categoryName;
+    private Long value;
+    private String label;
 
-    /** 项目 */
-    private Long projectId;
-    private String projectName;
     private Integer isOperation;
-    private Integer projectLevel; // ⭐ 必须新增（0 / 1 / 2）
+    private Boolean disabled;
+
+    private List<ProjectTreeNodeVo> children;
 }

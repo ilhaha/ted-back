@@ -470,39 +470,66 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     }
 
     @Override
-    public List<ProjectCategoryTreeVo> getDeptProject(Integer planType) {
+    public List<ProjectTreeNodeVo> getDeptProject(Integer planType) {
 
         UserTokenDo userInfo = TokenLocalThreadUtil.get();
-//        ValidationUtils.throwIfNull(userInfo, ErrorMessageConstant.USER_AUTHENTICATION_FAILED);
 
         Long deptId = null;
         if (!UserConstant.ADMIN_USER_ID.equals(userInfo.getUserId())) {
             deptId = userInfo.getDeptId();
         }
 
-        List<ProjectCategoryProjectFlatVo> flats = baseMapper.getDeptProjectTree(deptId, planType);
+        List<ProjectCategoryProjectFlatVo> flats =
+                baseMapper.getDeptProjectTree(deptId, planType);
 
-        Map<Long, ProjectCategoryTreeVo> categoryMap = new LinkedHashMap<>();
+        Map<Long, ProjectTreeNodeVo> categoryMap = new LinkedHashMap<>();
+        Map<Long, Map<Integer, ProjectTreeNodeVo>> levelCache = new HashMap<>();
 
         for (ProjectCategoryProjectFlatVo flat : flats) {
 
-            ProjectCategoryTreeVo categoryVo = categoryMap.computeIfAbsent(flat.getCategoryId(), id -> {
-                ProjectCategoryTreeVo vo = new ProjectCategoryTreeVo();
-                vo.setValue(flat.getCategoryId());
-                vo.setLabel(flat.getCategoryName());
-                vo.setChildren(new ArrayList<>());
-                return vo;
-            });
+            // ===== 分类节点 =====
+            ProjectTreeNodeVo categoryVo =
+                    categoryMap.computeIfAbsent(flat.getCategoryId(), id -> {
+                        ProjectTreeNodeVo vo = new ProjectTreeNodeVo();
+                        vo.setValue(flat.getCategoryId());
+                        vo.setLabel(flat.getCategoryName());
+                        vo.setChildren(new ArrayList<>());
+                        return vo;
+                    });
 
-            // 判断项目是否存在
-            if (flat.getProjectId() != null) {
-                ProjectVo projectVo = new ProjectVo();
-                projectVo.setValue(flat.getProjectId());
-                projectVo.setLabel(flat.getProjectName());
-                projectVo.setIsOperation(flat.getIsOperation());
-
-                categoryVo.getChildren().add(projectVo);
+            if (flat.getProjectId() == null) {
+                continue;
             }
+
+            // ===== 项目节点 =====
+            ProjectTreeNodeVo projectVo = new ProjectTreeNodeVo();
+            projectVo.setValue(flat.getProjectId());
+            projectVo.setLabel(flat.getProjectName());
+            projectVo.setIsOperation(flat.getIsOperation());
+
+            Integer level = flat.getProjectLevel();
+
+            // ===== level = 0 → 不分级 =====
+            if (level == null || level == 0) {
+                categoryVo.getChildren().add(projectVo);
+                continue;
+            }
+
+            // ===== level = 1 / 2 → 中间层 =====
+            Map<Integer, ProjectTreeNodeVo> levelMap =
+                    levelCache.computeIfAbsent(flat.getCategoryId(), k -> new HashMap<>());
+
+            ProjectTreeNodeVo levelVo =
+                    levelMap.computeIfAbsent(level, lv -> {
+                        ProjectTreeNodeVo vo = new ProjectTreeNodeVo();
+                        vo.setValue(flat.getCategoryId() * 1000 + lv);
+                        vo.setLabel((lv == 1 ? "一级" : "二级") + flat.getCategoryName());
+                        vo.setChildren(new ArrayList<>());
+                        categoryVo.getChildren().add(vo);
+                        return vo;
+                    });
+
+            levelVo.getChildren().add(projectVo);
         }
 
         return new ArrayList<>(categoryMap.values());

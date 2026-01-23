@@ -78,6 +78,11 @@ public class ProjectReq implements Serializable {
     private Integer projectType;
 
     /**
+     * 项目考试等级（ 1一级 2 二级）
+     */
+    private Integer projectLevel;
+
+    /**
      * 是否有实操考试（0无，1有）
      */
     private Integer isOperation;

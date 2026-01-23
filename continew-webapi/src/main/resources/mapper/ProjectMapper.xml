@@ -21,11 +21,13 @@
             parameterType="map"
             resultType="top.continew.admin.exam.model.vo.ProjectCategoryProjectFlatVo">
         SELECT
-        tc.id AS categoryId,
+        tc.id   AS categoryId,
         tc.name AS categoryName,
-        tp.id AS projectId,
-        tp.project_name AS projectName,
-        tp.is_operation AS isOperation
+
+        tp.id            AS projectId,
+        tp.project_name  AS projectName,
+        tp.project_level AS projectLevel,
+        tp.is_operation  AS isOperation
         FROM ted_category tc
         INNER JOIN ted_project tp
         ON tc.id = tp.category_id
@@ -49,7 +51,7 @@
         <if test="deptId != null">
             AND tp.dept_id = #{deptId}
         </if>
-        ORDER BY tc.id, tp.id
+        ORDER BY tc.id, tp.project_level, tp.id
     </select>
 
     <select id="selectBindingLocationByIds" resultType="java.lang.Long">
