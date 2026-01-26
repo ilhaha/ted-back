@@ -88,4 +88,9 @@ public class CandidatesExamPlanVo implements Serializable {
      */
     private Boolean enableProctorWarning;
 
+    /**
+     * 是否复用理论成绩（0=否, 1=是）
+     */
+    private Integer theoryScoreReused;
+
 }

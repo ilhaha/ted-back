@@ -158,4 +158,9 @@ public class EnrollResp extends BaseResp {
      * 准考证
      */
     private String ticketUrl;
+
+    /**
+     * 是否复用理论成绩（0=否, 1=是）
+     */
+    private Integer theoryScoreReused;
 }

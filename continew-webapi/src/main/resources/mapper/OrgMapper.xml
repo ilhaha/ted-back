@@ -271,6 +271,75 @@
         WHERE tep.exam_project_id = #{projectId}
           AND tep.is_deleted = 0
     </select>
+    <select id="selectPlanByPlanId" resultType="java.lang.Long">
+        SELECT ep.id
+        FROM ted_exam_plan ep
+                 JOIN ted_project p
+                      ON ep.exam_project_id = p.id
+                 JOIN ted_exam_plan base
+                      ON base.id = #{examPlanId}
+                          AND base.plan_type = 0
+                          AND base.is_deleted = 0
+        WHERE p.project_type = 0
+          AND p.is_operation = 1
+          AND p.is_deleted = 0
+          AND ep.id &lt;&gt; #{examPlanId}
+          AND ep.plan_type = 0
+          AND ep.is_deleted = 0
+          AND ep.exam_project_id = base.exam_project_id
+    </select>
+
+    <select id="selectExamRecordsForTheoryReuse"
+            resultType="top.continew.admin.exam.model.entity.ExamRecordsDO">
+        SELECT *
+        FROM ted_exam_records ter
+        WHERE ter.exam_result_status = 0
+        AND ter.oper_input_status = 1
+        AND ter.is_deleted = 0
+        AND ter.exam_scores <![CDATA[>=]]> 70
+        AND ter.oper_scores <![CDATA[<=]]> 70
+        AND YEAR(ter.create_time) = YEAR(NOW())
+        AND EXISTS (
+        SELECT 1
+        FROM ted_enroll te
+        WHERE te.exam_plan_id = ter.plan_id
+        AND te.user_id = ter.candidate_id
+        AND te.exam_status = 2
+        AND te.enroll_status = 2
+        AND te.is_deleted = 0
+        AND te.theory_score_reused = 0
+        AND YEAR(te.create_time) = YEAR(NOW())
+        <if test="candidateIds != null and candidateIds.size() > 0
+                   and planIds != null and planIds.size() > 0">
+            AND (
+            <foreach collection="candidateIds" item="cid" separator=" OR ">
+                <foreach collection="planIds" item="pid" separator=" OR ">
+                    (te.user_id = #{cid} AND te.exam_plan_id = #{pid})
+                </foreach>
+            </foreach>
+            )
+        </if>
+        )
+
+    </select>
+    <select id="selectAlterReusedCandidates" resultType="java.lang.Long">
+        SELECT DISTINCT enroll.user_id
+        FROM ted_enroll enroll
+        WHERE enroll.theory_score_reused = 1
+        AND enroll.is_deleted = 0
+        AND YEAR(enroll.create_time) = YEAR(NOW())
+        <if test="candidateIds != null and candidateIds.size() > 0
+           and planIds != null and planIds.size() > 0">
+            AND (
+            <foreach collection="candidateIds" item="cid" separator=" OR ">
+                <foreach collection="planIds" item="pid" separator=" OR ">
+                    (enroll.user_id = #{cid}
+                    AND enroll.exam_plan_id = #{pid})
+                </foreach>
+            </foreach>
+            )
+        </if>
+    </select>
 
 
     <update id="approveStudent" parameterType="java.lang.Long">

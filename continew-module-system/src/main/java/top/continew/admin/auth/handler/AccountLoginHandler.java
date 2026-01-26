@@ -44,6 +44,7 @@ import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
 import top.continew.admin.auth.model.resp.LoginResp;
 import top.continew.admin.common.constant.*;
 import top.continew.admin.common.constant.enums.EnrollExamStatusEnum;
+import top.continew.admin.common.constant.enums.TheoryScoreReuseEnum;
 import top.continew.admin.common.model.entity.UserRoleDeptDo;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
@@ -160,6 +161,7 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         CandidatesExamPlanVo candidatesExamPlanVo = userService.getPlanInfo(candidatesExamPlanReq);
         // 找不到对应的考试
         ValidationUtils.throwIf(ObjectUtil.isEmpty(candidatesExamPlanVo), "请核对身份证号或准考证号是否正确");
+        ValidationUtils.throwIf(TheoryScoreReuseEnum.YES.getValue().equals(candidatesExamPlanVo.getTheoryScoreReused()),"您已免考理论考试，无需再次考试");
         ValidationUtils.throwIf(!PlanConstant.EXAM_BEGUN.getStatus()
             .equals(candidatesExamPlanVo.getStatus()) || (EnrollStatusConstant.SUBMITTED.equals(candidatesExamPlanVo
                 .getExamStatus()) || EnrollStatusConstant.COMPLETED.equals(candidatesExamPlanVo

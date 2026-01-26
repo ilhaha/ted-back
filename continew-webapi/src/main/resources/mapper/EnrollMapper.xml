@@ -182,6 +182,8 @@
     </select>
     <select id="getWorkerApplyList" resultType="top.continew.admin.exam.model.resp.EnrollResp">
         SELECT te.id,
+               te.seat_id,
+               te.theory_score_reused,
                te.create_time,
                toc.class_name,
                su.nickname AS nick_name,
@@ -200,7 +202,7 @@
                  LEFT JOIN ted_worker_apply twa
                            ON su.username = twa.id_card_number AND twa.class_id = te.class_id AND
                               twa.is_deleted = 0 ${ew.customSqlSegment}
-        ORDER BY te.create_time DESC
+        ORDER BY te.seat_id
     </select>
     <select id="selectAuditNoticeToClass"
             resultType="top.continew.admin.exam.model.resp.WorkerAuditNoticeResp">

@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.annotations.Param;
+import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.system.model.req.user.UserOrgDTO;
 import top.continew.admin.training.model.dto.OrgDTO;
 import top.continew.admin.training.model.resp.OrgCandidatesResp;
@@ -32,6 +33,7 @@ import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.training.model.entity.OrgDO;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 机构信息 Mapper
@@ -126,4 +128,10 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
      */
     List<Long> getPassedButUncertifiedCandidateIds(@Param("projectId") Long projectId);
 
+    List<Long> selectPlanByPlanId(@Param("examPlanId") Long examPlanId);
+
+    List<ExamRecordsDO> selectExamRecordsForTheoryReuse(@Param("candidateIds") Set<Long> candidateIds,
+                                                        @Param("planIds") List<Long> planIds);
+
+    List<Long> selectAlterReusedCandidates(@Param("candidateIds") Set<Long> allCandidateIds, @Param("planIds") List<Long> planIds);
 }

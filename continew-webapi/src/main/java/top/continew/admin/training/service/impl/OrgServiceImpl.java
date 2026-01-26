@@ -58,6 +58,7 @@ import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
+import top.continew.admin.exam.model.dto.ExamPresenceDTO;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.mapper.UserMapper;
@@ -104,6 +105,7 @@ import java.time.YearMonth;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -198,12 +200,16 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     private final WeldingExamApplicationMapper weldingExamApplicationMapper;
 
+    private final ExamRecordsMapper examRecordsMapper;
+
     @Value("${welding.metal-project-id}")
     private Long metalProjectId;
 
     @Value("${welding.nonmetal-project-id}")
     private Long nonmetalProjectId;
 
+    @Value("${certificate.road-exam-type-id}")
+    private Long roadExamTypeId;
 
     @Override
     public PageResp<OrgResp> page(OrgQuery query, PageQuery pageQuery) {
@@ -1400,10 +1406,78 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         }).toList();
         enrollMapper.insertBatch(insertEnrollList);
 
-        // 生成通知单
-        //        examineePaymentAuditService.generatePaymentAudit(insertEnrollList);
+        // 插入的报名记录，先查看有没有理论成绩合格，但是实操成绩不合格的记录，在一年内免考理论成绩
+        // 通过考试计划id，找出跟他同项目的考试计划
+        List<Long> planIds = baseMapper.selectPlanByPlanId(examPlanId);
+        if (ObjectUtil.isEmpty(planIds)) {
+            return Boolean.TRUE;
+        }
+        // 找出今年已经复用过理论考试成绩的考生
+        List<Long> alterReusedCandidates = baseMapper.selectAlterReusedCandidates(allCandidateIds,planIds);
+        Set<Long> reusedSet = new HashSet<>(alterReusedCandidates);
+        allCandidateIds.removeIf(reusedSet::contains);
 
-        return true;
+        if (ObjectUtil.isEmpty(allCandidateIds)) {
+            return Boolean.TRUE;
+        }
+
+        // 当前报名的人和上面的计划一一比对，找出一年内有效（理论成绩合格）的考试记录
+        List<ExamRecordsDO> canReuseTheoryRecords = baseMapper.selectExamRecordsForTheoryReuse(allCandidateIds, planIds);
+        if (ObjectUtil.isEmpty(canReuseTheoryRecords)) {
+            return Boolean.TRUE;
+        }
+        // 一年只能复用一次，Java端按 candidateId 去重，取最新的一条
+        Map<Long, ExamRecordsDO> latestRecordMap = canReuseTheoryRecords.stream()
+                .collect(Collectors.toMap(
+                        ExamRecordsDO::getCandidateId,
+                        Function.identity(),
+                        (r1, r2) -> {
+                            if (r1.getCreateTime() == null) return r2;
+                            if (r2.getCreateTime() == null) return r1;
+                            return r1.getCreateTime().isAfter(r2.getCreateTime()) ? r1 : r2;
+                        }
+                ));
+
+
+        // 判断考试计划是否有道路成绩
+        ExamPresenceDTO examPlanOperAndRoadDTO = examRecordsMapper.hasOperationOrRoadExam(examPlanId, roadExamTypeId);
+        boolean hasRoad = ProjectHasExamTypeEnum.YES.getValue().equals(examPlanOperAndRoadDTO.getIsRoad());
+
+        List<ExamRecordsDO> insertReuseList = latestRecordMap.values().stream()
+                .map(item -> {
+                    ExamRecordsDO insert = new ExamRecordsDO();
+                    insert.setPlanId(examPlanId);
+                    insert.setCandidateId(item.getCandidateId());
+                    insert.setExamScores(item.getExamScores());
+                    insert.setOperScores(0);
+                    insert.setOperInputStatus(ExamScoreEntryStatusEnum.NO_ENTRY.getValue());
+                    insert.setRoadScores(0);
+                    insert.setRoadInputStatus(hasRoad ? ExamScoreEntryStatusEnum.NO_ENTRY.getValue() : ExamScoreEntryStatusEnum.ENTERED.getValue());
+                    insert.setAttemptType(ExamRecordAttemptEnum.FIRST.getValue());
+                    insert.setExamPaper(item.getExamPaper());
+                    insert.setExamResultStatus(ExamResultStatusEnum.NOT_ENTERED.getValue());
+                    insert.setRegistrationProgress(ExamRecordsRegisterationProgressEnum.REVIEWED.getValue());
+                    insert.setIsCertificateGenerated(ExamRecprdsHasCertofocateEnum.NO.getValue());
+                    return insert;
+                })
+                .toList();
+
+        if (ObjectUtil.isNotEmpty(insertReuseList)) {
+            examRecordsMapper.insertBatch(insertReuseList);
+            // 修改刚刚插入的报名信息，将复用信息状态改成已复用
+            List<Long> reusedUserIds = insertReuseList.stream()
+                    .map(ExamRecordsDO::getCandidateId)
+                    .distinct()
+                    .toList();
+            LambdaUpdateWrapper<EnrollDO> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.in(EnrollDO::getUserId, reusedUserIds)
+                    .eq(EnrollDO::getExamPlanId, examPlanId)
+                    .set(EnrollDO::getExamStatus,EnrollStatusConstant.SUBMITTED)
+                    .set(EnrollDO::getEnrollStatus,EnrollStatusConstant.COMPLETED)
+                    .set(EnrollDO::getTheoryScoreReused, TheoryScoreReuseEnum.YES.getValue());
+            enrollMapper.update(null, updateWrapper);
+        }
+        return Boolean.TRUE;
     }
 
     /**

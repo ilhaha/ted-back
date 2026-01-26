@@ -651,8 +651,8 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         // 10. 更新导入记录
         for (WorkerApplyDO item : toImport) {
             WorkerApplyDO latest = latestApprovedMap.get(item.getIdCardNumber());
+            System.out.println(latest);
             if (latest != null) {
-                System.out.println(latest.getCandidateName());
                 // 复用基本信息
                 item.setQualificationName(latest.getQualificationName());
                 item.setQualificationPath(latest.getQualificationPath());

@@ -90,4 +90,9 @@ public class EnrollDO extends BaseDO {
      * 作业人员班级id，检验人员为空
      */
     private Long classId;
+
+    /**
+     * 是否复用理论成绩（0=否, 1=是）
+     */
+    private Integer theoryScoreReused;
 }

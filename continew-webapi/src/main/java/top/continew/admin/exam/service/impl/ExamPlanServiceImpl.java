@@ -1272,6 +1272,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         boolean isConfirmed = PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue().equals(isFinalConfirmed);
         List<EnrollDO> enrollList = enrollMapper.selectList(
                 new LambdaQueryWrapper<EnrollDO>().eq(EnrollDO::getExamPlanId, planId)
+                        .orderByAsc(EnrollDO::getId)
         );
         ValidationUtils.throwIf(ObjectUtil.isEmpty(enrollList) && isConfirmed, "未查询到考生报名信息");
 
@@ -1336,13 +1337,15 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 Long classroomId = classroomIds.get(random.nextInt(classroomIds.size()));
                 String examDate = examPlanDO.getStartTime().format(formatter);
                 String projectCode = projectDO.getProjectCode();
-                String redisKey = RedisConstant.EXAM_NUMBER_KEY + projectCode + ":" + examDate;
+                String redisKey = RedisConstant.EXAM_NUMBER_KEY + projectCode + ":" + examDate + ":" + planId;
 
                 // Redis 原子自增
                 Long seq = redisTemplate.opsForValue().increment(redisKey);
-                if (seq == 1) {
-                    redisTemplate.expire(redisKey, Duration.ofDays(RedisConstant.EXAM_NUMBER_KEY_EXPIRE_DAYS));
-                }
+
+                 if (seq == 1) {
+                     redisTemplate.expire(redisKey, Duration.ofDays(RedisConstant.EXAM_NUMBER_KEY_EXPIRE_DAYS));
+                 }
+
                 String examNumber = projectCode + "B" + examDate + String.format("%04d", seq);
 
                 enroll.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
@@ -1400,7 +1403,6 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 candidateExamPaperMapper.insertBatch(candidateExamPaperDOList);
             }
         }
-
         return success;
     }
 

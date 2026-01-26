@@ -38,10 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.ExamRecordConstants;
-import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
-import top.continew.admin.common.constant.enums.ExamPlanTypeEnum;
-import top.continew.admin.common.constant.enums.ExamRecordAttemptEnum;
-import top.continew.admin.common.constant.enums.PlanFinalConfirmedStatus;
+import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -514,6 +511,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         queryWrapper.eq("te.is_deleted", 0);
         queryWrapper.eq("te.classroom_id", classroomId);
         queryWrapper.eq("te.exam_plan_id", planId);
+        queryWrapper.eq("te.theory_score_reused", TheoryScoreReuseEnum.NO.getValue());
         if (enrollQuery.getNickName() != null) {
             queryWrapper.like("sys_user.nickName", enrollQuery.getNickName());
         }
@@ -808,21 +806,38 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         Map<Long, ExamPlanDO> planMap = examPlanList.stream()
             .collect(Collectors.toMap(ExamPlanDO::getId, Function.identity()));
 
-        // 4️ 考试时间校验
+        // 4 考试时间校验
         LocalDateTime now = LocalDateTime.now();
+        // 复用理论成绩的删除掉
+        List<EnrollDO> reuseList = new ArrayList<>();
+
         for (EnrollDO enroll : enrollDOList) {
             ExamPlanDO plan = planMap.get(enroll.getExamPlanId());
             ValidationUtils.throwIfNull(plan, "找不到对应的考试计划：" + enroll.getExamPlanId());
             LocalDateTime examStartTime = plan.getStartTime();
             ValidationUtils.throwIfNull(examStartTime, "考试开始时间为空，无法取消报名");
             boolean canCancel = ChronoUnit.DAYS.between(now, examStartTime) >= 5;
-            ValidationUtils.throwIf(!canCancel, "距离考试不足5天，无法取消报名");
+//            ValidationUtils.throwIf(!canCancel, "距离考试不足5天，无法取消报名");
+            if (TheoryScoreReuseEnum.YES.getValue().equals(enroll.getTheoryScoreReused())) {
+                reuseList.add(enroll);
+            }
+        }
+        if (ObjectUtil.isNotEmpty(reuseList)) {
+            LambdaQueryWrapper<ExamRecordsDO> deleteWrapper = new LambdaQueryWrapper<>();
+            deleteWrapper.and(wrapper -> {
+                reuseList.forEach(enroll -> {
+                    wrapper.or(w -> w.eq(ExamRecordsDO::getCandidateId, enroll.getUserId())
+                            .eq(ExamRecordsDO::getPlanId, enroll.getExamPlanId()));
+                });
+            });
+
+            examRecordsMapper.delete(deleteWrapper);
         }
 
         // 5️ 批量删除缴费审核记录
         // 构造批量条件：同一语句删除多条
-        examineePaymentAuditMapper.delete(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-            .in(ExamineePaymentAuditDO::getEnrollId, enrollDOList.stream().map(EnrollDO::getId).toList()));
+//        examineePaymentAuditMapper.delete(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+//            .in(ExamineePaymentAuditDO::getEnrollId, enrollDOList.stream().map(EnrollDO::getId).toList()));
 
         // 6️ 删除报名记录（父类批量删除）
         super.delete(ids);
