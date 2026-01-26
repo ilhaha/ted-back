@@ -149,15 +149,16 @@ public class ExamineeDocumentServiceImpl extends BaseServiceImpl<ExamineeDocumen
                 if (enrollDO != null) {
                     throw new BusinessException("您已报名考试，不能重新上传资料！请等到考试结束再操作");
                 }
+                status = 0;
             } else if (status == 2) {
                 // 将状态改为3
                 status = 3;
             }
-            oldDoc.setStatus(status);
         } else {
             oldDoc.setStatus(DocumentConstant.PENDING_REVIEW);
         }
         // 更新资料路径与状态
+        oldDoc.setStatus(status);
         oldDoc.setDocPath(studentUploadDocumentsReq.getDocPath());
         oldDoc.setUpdateUser(userId);
         int updated = documentMapper.updateById(oldDoc);

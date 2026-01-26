@@ -81,7 +81,7 @@ public class LoginStudentController extends BaseController<UserService, UserResp
         req.setRoleIds(List.of(candidatesId));
         req.setDeptId(examCenterId);
         req.setNickname(req.getNickname());
-        req.setPhone(rawPhone);
+        req.setPhone(aesWithHMAC.encryptAndSign(rawPhone));
         req.setUsername(username);
         String rawPassword = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(req.getPassword()));
         ValidationUtils.throwIfNull(rawPassword, "密码解密失败");
