@@ -94,6 +94,12 @@ public class ProjectDO extends BaseDO {
     private Integer isOperation;
 
     /**
+     * 是否有理论考试（0无，1有）
+     */
+    private Integer isTheory;
+
+
+    /**
      * 项目收费标准
      */
     private Long examFee;

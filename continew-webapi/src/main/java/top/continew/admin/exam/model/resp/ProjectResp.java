@@ -114,6 +114,12 @@ public class ProjectResp extends BaseResp {
     @Schema(description = "是否有实操考试（0无，1有）")
     private Integer isOperation;
 
+    /**
+     * 是否有理论考试（0无，1有）
+     */
+    @Schema(description = "是否有理论考试（0无，1有）")
+    private Integer isTheory;
+
     //    /**
     //     * 删除标记
     //     */

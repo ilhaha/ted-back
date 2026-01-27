@@ -114,6 +114,13 @@ public class ProjectDetailResp extends BaseDetailResp {
     private Integer isOperation;
 
     /**
+     * 是否有理论考试（0无，1有）
+     */
+    @Schema(description = "是否有理论考试（0无，1有）")
+    @ExcelProperty(value = "是否有理论考试（0无，1有）")
+    private Integer isTheory;
+
+    /**
      * 描述
      */
     //    @Schema(description = "描述")
