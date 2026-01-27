@@ -84,7 +84,7 @@ public class ProjectDO extends BaseDO {
 
 
     /**
-     * 项目考试等级（ 1一级 2 二级）
+     * 项目考试等级（ 0无 1一级 2 二级）
      */
     private Integer projectLevel;
 
@@ -97,7 +97,6 @@ public class ProjectDO extends BaseDO {
      * 是否有理论考试（0无，1有）
      */
     private Integer isTheory;
-
 
     /**
      * 项目收费标准

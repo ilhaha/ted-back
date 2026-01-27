@@ -205,18 +205,19 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
         }
         int age = Period.between(birthday, LocalDate.now()).getYears();
         // 取证考试：≤ 60 周岁
-        if (projectDO.getIsOperation() == 0) {
+        if (projectDO.getIsTheory() == 1 ) {
             if (age > 60) {
                 throw new BusinessException("取证考试报名年龄不能超过60周岁");
             }
         }
         // 换证考试：≤ 65 周岁
-        else if (projectDO.getIsOperation() == 1) {
+        else if (projectDO.getIsTheory() == 0 && projectDO.getProjectLevel() != 0 ) {
             if (age > 65) {
                 throw new BusinessException("换证考试报名年龄不能超过65周岁");
             }
+        }else {
+            throw new BusinessException("考试报名年龄不能超过60周岁");
         }
-
 
         // 查询该考生在该计划下是否已存在申报记录
         LambdaQueryWrapper<SpecialCertificationApplicantDO> queryWrapper = new LambdaQueryWrapper<>();
