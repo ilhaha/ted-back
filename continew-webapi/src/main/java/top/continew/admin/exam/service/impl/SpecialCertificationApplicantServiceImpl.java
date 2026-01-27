@@ -18,6 +18,7 @@ package top.continew.admin.exam.service.impl;
 
 import cn.crane4j.core.util.StringUtils;
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.IdcardUtil;
 import com.alibaba.fastjson.JSON;
 import com.aliyun.sdk.service.dysmsapi20170525.AsyncClient;
 import com.aliyun.sdk.service.dysmsapi20170525.models.SendSmsRequest;
@@ -43,15 +44,14 @@ import org.springframework.util.ObjectUtils;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.enums.SpecialCertificationApplicantEnum;
 import top.continew.admin.common.model.entity.UserTokenDo;
+import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 
 import top.continew.admin.config.ali.AliYunConfig;
 import top.continew.admin.constant.SmsConstants;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.BatchAuditSpecialCertificationApplicantDTO;
-import top.continew.admin.exam.model.entity.EnrollDO;
-import top.continew.admin.exam.model.entity.ExamPlanDO;
-import top.continew.admin.exam.model.entity.ExamineePaymentAuditDO;
+import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.EnrollReq;
 import top.continew.admin.exam.model.req.SpecialCertificationApplicantListReq;
 import top.continew.admin.exam.model.resp.EnrollDetailResp;
@@ -64,14 +64,16 @@ import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
-import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
 import top.continew.admin.exam.model.query.SpecialCertificationApplicantQuery;
 import top.continew.admin.exam.model.req.SpecialCertificationApplicantReq;
 import top.continew.admin.exam.model.resp.SpecialCertificationApplicantDetailResp;
 import top.continew.admin.exam.model.resp.SpecialCertificationApplicantResp;
 import top.continew.admin.exam.service.SpecialCertificationApplicantService;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -103,6 +105,9 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     private ExamPlanMapper examPlanMapper;
 
     @Resource
+    private ProjectMapper projectMapper;
+
+    @Resource
     private ClassroomMapper classroomMapper;
 
     @Resource
@@ -116,6 +121,8 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
 
     @Resource
     private ExamineePaymentAuditMapper examineePaymentAuditMapper;
+
+    private final AESWithHMAC aesWithHMAC;
 
     /**
      * 根据考生和计划ID查询申报记录
@@ -162,9 +169,54 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     public Boolean candidatesUpload(SpecialCertificationApplicantReq req) {
         UserTokenDo user = TokenLocalThreadUtil.get();
 
-        //判定该计划是否确定考试时间和考试地点
+        /* ========= 1. 解密身份证号 ========= */
+        String encryptIdCard = user.getUsername();
+        if (encryptIdCard == null || encryptIdCard.trim().isEmpty()) {
+            throw new BusinessException("身份证号为空，无法判断年龄");
+        }
+
+        String idCard;
+        try {
+            idCard = aesWithHMAC.verifyAndDecrypt(encryptIdCard);
+        } catch (Exception e) {
+            throw new BusinessException("身份证号解密失败");
+        }
+
+        /* ========= 2. 解析出生日期 ========= */
+        LocalDate birthday = parseBirthdayFromIdCard(idCard);
+        if (birthday == null) {
+            throw new BusinessException("身份证号不合法，无法解析出生日期");
+        }
+
+        /* ========= 3. 查询考试计划并校验状态 ========= */
         ExamPlanDO examPlanDO = examPlanMapper.selectById(req.getPlanId());
-        ValidationUtils.throwIf(examPlanDO == null || examPlanDO.getIsFinalConfirmed() == 1, "该考试计划已确定考试时间以及地点，无法报名。");
+        ValidationUtils.throwIf(
+                examPlanDO == null || examPlanDO.getIsFinalConfirmed() == 1,
+                "该考试计划已确定考试时间以及地点，无法报名。"
+        );
+
+        /* ========= 4. 根据考试类型校验年龄 ========= */
+        ProjectDO projectDO = null;
+        if (examPlanDO != null) {
+            projectDO = projectMapper.selectById(examPlanDO.getExamProjectId());
+        }
+        if (projectDO == null) {
+            throw new BusinessException("考试项目不存在");
+        }
+        int age = Period.between(birthday, LocalDate.now()).getYears();
+        // 取证考试：≤ 60 周岁
+        if (projectDO.getIsOperation() == 0) {
+            if (age > 60) {
+                throw new BusinessException("取证考试报名年龄不能超过60周岁");
+            }
+        }
+        // 换证考试：≤ 65 周岁
+        else if (projectDO.getIsOperation() == 1) {
+            if (age > 65) {
+                throw new BusinessException("换证考试报名年龄不能超过65周岁");
+            }
+        }
+
 
         // 查询该考生在该计划下是否已存在申报记录
         LambdaQueryWrapper<SpecialCertificationApplicantDO> queryWrapper = new LambdaQueryWrapper<>();
@@ -251,6 +303,23 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
         }
 
         return true;
+    }
+
+
+    private LocalDate parseBirthdayFromIdCard(String idCard) {
+        try {
+            String birth;
+            if (idCard.length() == 18) {
+                birth = idCard.substring(6, 14);
+            } else if (idCard.length() == 15) {
+                birth = "19" + idCard.substring(6, 12);
+            } else {
+                return null;
+            }
+            return LocalDate.parse(birth, DateTimeFormatter.ofPattern("yyyyMMdd"));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override
