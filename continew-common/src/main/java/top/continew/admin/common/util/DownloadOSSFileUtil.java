@@ -49,7 +49,7 @@ public class DownloadOSSFileUtil {
                 return outputStream.toByteArray();
             }
         } catch (IOException e) {
-            throw new BusinessException("文件下载失败", e);
+            throw new BusinessException("系统繁忙", e);
         }
     }
 

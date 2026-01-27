@@ -1333,23 +1333,15 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
             // ======= 1. 先批量生成报名表里的准考证号 =======
             List<EnrollDO> enrollUpdateList = new ArrayList<>();
+            String examDate = examPlanDO.getStartTime().format(formatter);
+            String projectCode = projectDO.getProjectCode();
+            String redisKey = RedisConstant.EXAM_NUMBER_KEY + projectCode + ":" + examDate + ":" + planId;
+            redisTemplate.delete(redisKey);
+
             for (EnrollDO enroll : enrollList) {
                 Long classroomId = classroomIds.get(random.nextInt(classroomIds.size()));
-                String examDate = examPlanDO.getStartTime().format(formatter);
-                String projectCode = projectDO.getProjectCode();
-                String redisKey = RedisConstant.EXAM_NUMBER_KEY + projectCode + ":" + examDate + ":" + planId;
-
-                // Redis 原子自增
-                Long seq = redisTemplate.opsForValue().increment(redisKey);
-
-                 if (seq == 1) {
-                     redisTemplate.expire(redisKey, Duration.ofDays(RedisConstant.EXAM_NUMBER_KEY_EXPIRE_DAYS));
-                 }
-
-                String examNumber = projectCode + "B" + examDate + String.format("%04d", seq);
-
+                String examNumber = projectCode + "B" + examDate + String.format("%04d", enroll.getSeatId());
                 enroll.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
-                enroll.setSeatId(seq);
                 enroll.setClassroomId(classroomId);
                 enrollUpdateList.add(enroll);
             }

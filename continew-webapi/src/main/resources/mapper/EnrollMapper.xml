@@ -185,16 +185,17 @@
                te.seat_id,
                te.theory_score_reused,
                te.create_time,
+               te.enroll_status,
                toc.class_name,
                su.nickname AS nick_name,
                twet.ticket_url,
                twa.face_photo,
-               org.name AS org_name
+               org.name    AS org_name
         FROM ted_enroll te
                  LEFT JOIN ted_org_class toc
                            ON te.class_id = toc.id AND toc.is_deleted = 0
                  LEFT JOIN ted_org org
-                            ON toc.org_id = org.id AND org.is_deleted = 0
+                           ON toc.org_id = org.id AND org.is_deleted = 0
                  LEFT JOIN sys_user su
                            ON te.user_id = su.id
                  LEFT JOIN ted_worker_exam_ticket twet
@@ -241,5 +242,35 @@
                  LEFT JOIN ted_examinee_payment_audit tepa
                            ON te.id = tepa.enroll_id AND tepa.is_deleted = 0 ${ew.customSqlSegment}
         ORDER BY te.create_time DESC
+    </select>
+    <select id="downloadSummaryList" resultType="top.continew.admin.exam.model.resp.EnrollResp">
+        SELECT te.id,
+               te.seat_id,
+               toc.class_name,
+               su.nickname AS nick_name,
+               su.username AS user_name,
+               su.gender,
+               tp.project_code,
+               tc.`name`   AS category_name
+        FROM ted_enroll te
+                 LEFT JOIN ted_org_class toc
+                           ON te.class_id = toc.id AND toc.is_deleted = 0
+                 LEFT JOIN ted_org org
+                           ON toc.org_id = org.id AND org.is_deleted = 0
+                 LEFT JOIN sys_user su
+                           ON te.user_id = su.id
+                 LEFT JOIN ted_worker_exam_ticket twet
+                           ON te.id = twet.enroll_id AND twet.is_deleted = 0
+                 LEFT JOIN ted_worker_apply twa
+                           ON su.username = twa.id_card_number AND twa.class_id = te.class_id AND
+                              twa.is_deleted = 0
+                 LEFT JOIN ted_exam_plan tep
+                           ON te.exam_plan_id = tep.id AND tep.is_deleted = 0
+                 LEFT JOIN ted_project tp
+                           ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN ted_category tc
+                           ON tp.category_id = tc.id AND tc.is_deleted = 0
+            ${ew.customSqlSegment}
+        ORDER BY te.seat_id
     </select>
 </mapper>

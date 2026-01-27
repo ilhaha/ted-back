@@ -241,4 +241,10 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      * @return
      */
     ExcelParseResultVO parsedWorkerExcel(MultipartFile file, Long classId);
+
+    /**
+     * 下载成绩汇总表
+     */
+    ResponseEntity<byte[]> downloadSummary(Long planId);
+
 }

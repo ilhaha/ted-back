@@ -367,6 +367,13 @@ aes:
 # Excel 模板配置
 excel:
   template:
+    summary-table:
+      # 成绩汇总表模板
+      grade:
+        url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2026/1/26/grade_summary_table.xls
+      # 叉车成绩汇总表
+      forklift_performance:
+        url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2026/1/26/forklift_performance_summary_table.xls
     # 准考证模板
     admission-ticket:
       url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/10/22/68f8c4095814e0d894c63935.xlsx

@@ -35,6 +35,8 @@ import lombok.RequiredArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.exception.AuthException;
+import net.dreamlu.mica.core.utils.AesUtil;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.*;
@@ -43,10 +45,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -56,10 +55,12 @@ import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.dto.ExcelUploadFileResultDTO;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
+import top.continew.admin.common.util.DownloadOSSFileUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.ExamPresenceDTO;
 import top.continew.admin.exam.model.entity.*;
+import top.continew.admin.exam.model.resp.EnrollResp;
 import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
@@ -98,15 +99,15 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.YearMonth;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * 机构信息业务实现
@@ -127,9 +128,6 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Resource
     private OrgCategoryRelationMapper orgCategoryRelMapper;
-
-    @Resource
-    private AESWithHMAC aesWithHMAC;
 
     @Resource
     private ProjectMapper projectMapper;
@@ -202,6 +200,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     private final ExamRecordsMapper examRecordsMapper;
 
+    private final AESWithHMAC aesWithHMAC;
+
     @Value("${welding.metal-project-id}")
     private Long metalProjectId;
 
@@ -210,6 +210,12 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Value("${certificate.road-exam-type-id}")
     private Long roadExamTypeId;
+
+    @Value("${excel.template.summary-table.grade.url}")
+    private String gradeTemplateUrl;
+
+    @Value("${excel.template.summary-table.forklift_performance.url}")
+    private String forkliftTemplateUrl;
 
     @Override
     public PageResp<OrgResp> page(OrgQuery query, PageQuery pageQuery) {
@@ -1394,6 +1400,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 throw new BusinessException("以下考生证书仍在有效期内，暂不可报名考试：" + existedNames);
             }
         }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMdd");
+        String examDate = examPlanDO.getStartTime().format(formatter);
+        String redisKey = RedisConstant.EXAM_NUMBER_KEY + projectCode + ":" + examDate + ":" + examPlanId;
 
         // 插入报名表
         List<EnrollDO> insertEnrollList = projectClassCandidateList.stream().map(item -> {
@@ -1402,6 +1411,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             enrollDO.setClassId(item.get(1));
             enrollDO.setUserId(item.get(2));
             enrollDO.setEnrollStatus(EnrollStatusConstant.SIGNED_UP);
+            Long seq = redisTemplate.opsForValue().increment(redisKey);
+            enrollDO.setSeatId(seq);
             return enrollDO;
         }).toList();
         enrollMapper.insertBatch(insertEnrollList);
@@ -1413,7 +1424,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             return Boolean.TRUE;
         }
         // 找出今年已经复用过理论考试成绩的考生
-        List<Long> alterReusedCandidates = baseMapper.selectAlterReusedCandidates(allCandidateIds,planIds);
+        List<Long> alterReusedCandidates = baseMapper.selectAlterReusedCandidates(allCandidateIds, planIds);
         Set<Long> reusedSet = new HashSet<>(alterReusedCandidates);
         allCandidateIds.removeIf(reusedSet::contains);
 
@@ -1472,8 +1483,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             LambdaUpdateWrapper<EnrollDO> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.in(EnrollDO::getUserId, reusedUserIds)
                     .eq(EnrollDO::getExamPlanId, examPlanId)
-                    .set(EnrollDO::getExamStatus,EnrollStatusConstant.SUBMITTED)
-                    .set(EnrollDO::getEnrollStatus,EnrollStatusConstant.COMPLETED)
+                    .set(EnrollDO::getExamStatus, EnrollStatusConstant.SUBMITTED)
+                    .set(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
                     .set(EnrollDO::getTheoryScoreReused, TheoryScoreReuseEnum.YES.getValue());
             enrollMapper.update(null, updateWrapper);
         }
@@ -1839,6 +1850,170 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         } catch (Exception e) {
             e.printStackTrace();
             throw new BusinessException("导入过程发生错误，请检查模板是否被修改");
+        }
+    }
+
+    /**
+     * 下载成绩汇总表
+     */
+    @Override
+    public ResponseEntity<byte[]> downloadSummary(Long planId) {
+        // 1校验考试计划
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(planId);
+        ValidationUtils.throwIfNull(examPlanDO, "考试计划信息不存在");
+        ValidationUtils.throwIf(!PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue()
+                .equals(examPlanDO.getIsFinalConfirmed()), "考试未确认，暂无法下载");
+
+        // 2判断是否有道路成绩
+        ExamPresenceDTO examPlanOperAndRoadDTO = examRecordsMapper.hasOperationOrRoadExam(planId, roadExamTypeId);
+        boolean hasRoad = ProjectHasExamTypeEnum.YES.getValue().equals(examPlanOperAndRoadDTO.getIsRoad());
+
+        // 3查询报名信息
+        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+        OrgDTO orgDTO = baseMapper.getOrgId(userTokenDo.getUserId());
+        ValidationUtils.throwIfNull(orgDTO, "当前信息已过期");
+
+        List<EnrollResp> enrollList = enrollMapper.downloadSummaryList(
+                new QueryWrapper<EnrollDO>()
+                        .eq("te.exam_plan_id", planId)
+                        .eq("te.is_deleted", 0)
+                        .eq("toc.org_id", orgDTO.getId())
+
+        );
+        ValidationUtils.throwIfEmpty(enrollList, "暂无报考信息");
+
+        // 4下载模板和获取写入参数
+        byte[] templateBytes = DownloadOSSFileUtil.downloadUrlToBytes(hasRoad ? forkliftTemplateUrl : gradeTemplateUrl);
+        ValidationUtils.throwIf(templateBytes == null || templateBytes.length == 0, "系统繁忙");
+
+        int writeStartRow = hasRoad ? DownloadSummaryConstants.WRITE_START_ROW_FORKLIFT : DownloadSummaryConstants.WRITE_START_ROW_GRADE;
+        int writeEndCell = DownloadSummaryConstants.WRITE_END_CEL;
+        int writeRowNumber = DownloadSummaryConstants.WRITE_ROW_NUMBER;
+        // 5填充 Excel
+        byte[] resultBytes = fillExamSummary(templateBytes, enrollList, writeStartRow, writeEndCell, writeRowNumber);
+
+        // 6构建返回 ResponseEntity
+        boolean isZip = enrollList.size() > writeRowNumber;
+        String fileName = isZip ? (hasRoad ? "叉车成绩汇总表.zip" : "成绩汇总表.zip") : (hasRoad ? "叉车成绩汇总表.xls" : "成绩汇总表.xls");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDisposition(
+                ContentDisposition.attachment()
+                        .filename(fileName, StandardCharsets.UTF_8)
+                        .build()
+        );
+        headers.add("Access-Control-Expose-Headers", "Content-Disposition");
+
+        return new ResponseEntity<>(resultBytes, headers, HttpStatus.OK);
+    }
+
+
+    /**
+     * 填充考试汇总表
+     *
+     * @param templateBytes Excel 模板字节
+     * @param enrollList    报名信息列表
+     * @param startRow      写入开始行（0-based）
+     * @param endCell       写入结束列（0-based）
+     * @param rowNumber     每张表写入行数
+     * @return 填充后的字节数组，如果超过 rowNumber，返回 ZIP 压缩包，否则返回 Excel 文件
+     */
+    public byte[] fillExamSummary(byte[] templateBytes,
+                                  List<EnrollResp> enrollList,
+                                  int startRow,
+                                  int endCell,
+                                  int rowNumber) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            if (enrollList.size() <= rowNumber) {
+                // 直接生成一个 Excel 文件
+                byte[] excelBytes = createSingleExcel(templateBytes, enrollList, startRow, endCell, rowNumber);
+                return excelBytes;
+            } else {
+                // 超过行数限制 → 分成多张表，打包成 ZIP
+                try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+                    int sheetCount = (int) Math.ceil((double) enrollList.size() / rowNumber);
+                    for (int i = 0; i < sheetCount; i++) {
+                        int fromIndex = i * rowNumber;
+                        int toIndex = Math.min(fromIndex + rowNumber, enrollList.size());
+                        List<EnrollResp> subList = enrollList.subList(fromIndex, toIndex);
+
+                        byte[] excelBytes = createSingleExcel(templateBytes, subList, startRow, endCell, rowNumber);
+
+                        String fileName = "成绩汇总表_" + (i + 1) + ".xls";
+                        ZipEntry entry = new ZipEntry(fileName);
+                        zos.putNextEntry(entry);
+                        zos.write(excelBytes);
+                        zos.closeEntry();
+                    }
+                    zos.finish();
+                }
+                return baos.toByteArray();
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException("填充 Excel 汇总表失败", e);
+        }
+    }
+
+    /**
+     * 创建单个 Excel 文件
+     */
+    private byte[] createSingleExcel(byte[] templateBytes,
+                                     List<EnrollResp> enrollList,
+                                     int startRow,
+                                     int endCell,
+                                     int rowNumber) throws IOException {
+
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(templateBytes);
+             Workbook workbook = new HSSFWorkbook(bais);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+
+            for (int i = 0; i < enrollList.size(); i++) {
+                EnrollResp enroll = enrollList.get(i);
+                Row row = sheet.getRow(startRow + i);
+                if (row == null) row = sheet.createRow(startRow + i);
+
+                for (int cellIndex = 0; cellIndex <= endCell; cellIndex++) {
+                    Cell cell = row.getCell(cellIndex);
+                    if (cell == null) cell = row.createCell(cellIndex);
+
+                    switch (cellIndex) {
+                        case 0:
+                            cell.setCellValue(enroll.getClassName());
+                            break;
+                        case 1:
+                            cell.setCellValue(enroll.getSeatId());
+                            break;
+                        case 2:
+                            cell.setCellValue(enroll.getNickName());
+                            break;
+                        case 3:
+                            cell.setCellValue(enroll.getGender().getDescription());
+                            break;
+                        case 4:
+                            cell.setCellValue(aesWithHMAC.verifyAndDecrypt(enroll.getUsername()));
+                            break;
+                        case 5:
+                            cell.setCellValue("");
+                            break;
+                        case 6:
+                            cell.setCellValue(enroll.getCategoryName());
+                            break;
+                        case 7:
+                            cell.setCellValue(enroll.getProjectCode());
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            workbook.write(baos);
+            return baos.toByteArray();
         }
     }
 

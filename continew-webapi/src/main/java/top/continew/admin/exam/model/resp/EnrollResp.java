@@ -20,6 +20,7 @@ import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import top.continew.admin.common.enums.GenderEnum;
 import top.continew.admin.common.model.resp.BaseResp;
 
 import java.io.Serial;
@@ -57,6 +58,23 @@ public class EnrollResp extends BaseResp {
      */
     @Schema(description = "考试项目id")
     private String examProjectId;
+
+    /**
+     * 性别
+     */
+    @Schema(description = "性别")
+    private GenderEnum gender;
+
+    /**
+     * 考试项目代码
+     */
+    @Schema(description = "考试项目代码")
+    private String projectCode;
+    /**
+     * 申请考核项目种类
+     */
+    @Schema(description = "申请考核项目种类")
+    private String categoryName;
     /**
      * 考试开始时间
      */
@@ -89,6 +107,11 @@ public class EnrollResp extends BaseResp {
      */
     @Schema(description = "考生名称")
     private String nickName;
+    /**
+     * 考生身份证号
+     */
+    @Schema(description = "考生身份证号")
+    private String username;
     /**
      * 考场号
      */
@@ -163,4 +186,9 @@ public class EnrollResp extends BaseResp {
      * 是否复用理论成绩（0=否, 1=是）
      */
     private Integer theoryScoreReused;
+
+    /**
+     * 报名状态（0：未报名，1：已报名：2：已完成，3：已过期）
+     */
+    private Integer enrollStatus;
 }

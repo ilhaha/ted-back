@@ -16,6 +16,9 @@
 
 package top.continew.admin.training.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaIgnore;
+import cn.dev33.satoken.filter.SaPathCheckFilterForJakartaServlet;
 import com.alibaba.excel.EasyExcel;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
@@ -66,6 +69,16 @@ import java.util.UUID;
 public class OrgController extends BaseController<OrgService, OrgResp, OrgDetailResp, OrgQuery, OrgReq> {
     @Resource
     private OrgService orgService;
+    private SaPathCheckFilterForJakartaServlet saPathCheckFilterForJakartaServlet;
+
+    /**
+     * 下载成绩汇总表
+     */
+    @SaCheckPermission("download:summary:table")
+    @GetMapping("/download/summary/{planId}")
+    public ResponseEntity<byte[]> downloadSummary(@PathVariable("planId") Long planId) {
+        return baseService.downloadSummary(planId);
+    }
 
     /**
      * 解析导入作业人员Excel
