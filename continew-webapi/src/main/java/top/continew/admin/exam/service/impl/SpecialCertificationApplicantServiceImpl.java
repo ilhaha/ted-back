@@ -204,21 +204,24 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
             throw new BusinessException("考试项目不存在");
         }
         int age = Period.between(birthday, LocalDate.now()).getYears();
-        // 取证考试：≤ 60 周岁
-        if (projectDO.getIsTheory() == 1 ) {
+        // ≤ 60 周岁：有理论考试
+        if (projectDO.getIsTheory() == 1) {
             if (age > 60) {
                 throw new BusinessException("取证考试报名年龄不能超过60周岁");
             }
         }
-        // 换证考试：≤ 65 周岁
-        else if (projectDO.getIsTheory() == 0 && projectDO.getProjectLevel() != 0 ) {
-            if (age > 65) {
-                throw new BusinessException("换证考试报名年龄不能超过65周岁");
+        // ≤ 60 周岁：无理论考试 + 无等级
+        else if (projectDO.getIsTheory() == 0 && projectDO.getProjectLevel() == 0) {
+            if (age > 60) {
+                throw new BusinessException("检验人员换证考试报名年龄不能超过60周岁");
             }
-        }else {
-            throw new BusinessException("考试报名年龄不能超过60周岁");
         }
-
+        // ≤ 65 周岁：无理论考试 + 有等级（换证）
+        else if (projectDO.getIsTheory() == 0) {
+            if (age > 65) {
+                throw new BusinessException("无损检测换证考试报名年龄不能超过65周岁");
+            }
+        }
         // 查询该考生在该计划下是否已存在申报记录
         LambdaQueryWrapper<SpecialCertificationApplicantDO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SpecialCertificationApplicantDO::getCandidatesId, user.getUserId())
