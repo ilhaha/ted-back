@@ -36,7 +36,7 @@ public class InputScoresReq {
     private List<ScoreItemReq> scoresList;
 
     /**
-     * 录入成绩类型：1 实操成绩 2 道路成绩
+     * 录入成绩类型：0 理论成绩 1 实操成绩 2 道路成绩
      */
     @NotNull(message = "成绩类型不能为空")
     private Integer scoresType;

@@ -81,7 +81,7 @@ public class ExamRecordsResp extends BaseResp {
      * 考试得分，(项目id_得分#项目id_得分#)
      */
     @Schema(description = "考试得分，(项目id_得分#项目id_得分#)")
-    private String examScores;
+    private Integer examScores;
 
     /**
      * 更新人
@@ -194,6 +194,9 @@ public class ExamRecordsResp extends BaseResp {
      */
     private Long projectId;
 
-
+    /**
+     * 序号
+     */
+    private Integer seatId;
 
 }

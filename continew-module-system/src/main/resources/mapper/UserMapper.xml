@@ -384,18 +384,17 @@
     </select>
     <select id="selectExamStaffFeeByUserId"
             resultType="top.continew.admin.system.model.vo.ExamStaffFeeExportVO">
-        SELECT
-            pi.exam_plan_id,
-            pi.invigilator_id,
-            u.nickname AS nickname,
-            ep.exam_plan_name AS examPlanName,
-            ep.start_time AS startTime,
-            c.classroom_name AS classroomName,
-            pi.practical_fee,
-            pi.theory_fee,
-            (IFNULL(pi.practical_fee, 0) + IFNULL(pi.theory_fee, 0)) AS totalFee,
-            pi.invigilate_status,
-            pi.create_time
+        SELECT pi.exam_plan_id,
+               pi.invigilator_id,
+               u.nickname                                               AS nickname,
+               ep.exam_plan_name                                        AS examPlanName,
+               ep.start_time                                            AS startTime,
+               c.classroom_name                                         AS classroomName,
+               pi.practical_fee,
+               pi.theory_fee,
+               (IFNULL(pi.practical_fee, 0) + IFNULL(pi.theory_fee, 0)) AS totalFee,
+               pi.invigilate_status,
+               pi.create_time
         FROM ted_plan_invigilate pi
                  LEFT JOIN sys_user u
                            ON pi.invigilator_id = u.id

@@ -98,6 +98,18 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
     }
 
     /**
+     * 修改考试记录的理论成绩
+     *
+     * @param inputScoresReq
+     * @return
+     */
+    @SaCheckPermission("update:theoretical:score")
+    @PostMapping("/update/exam/score")
+    public Boolean updateExamScores(@RequestBody @Validated InputScoresReq inputScoresReq) {
+        return baseService.updateExamScores(inputScoresReq);
+    }
+
+    /**
      * 录入普通项目实操、道路成绩
      *
      * @param inputScoresReq

@@ -144,4 +144,9 @@ public class ExamRecordDTO {
      */
     private String weldingOperScores;
 
+    /**
+     * 序号
+     */
+    private Integer seatId;
+
 }

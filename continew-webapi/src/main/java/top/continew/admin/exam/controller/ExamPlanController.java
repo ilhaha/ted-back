@@ -72,6 +72,16 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     private ExamPlanService examPlanService;
 
     /**
+     * 确认考试成绩
+     * @return
+     */
+    @PostMapping("/score/confirmed/{planId}/{classId}")
+    @SaCheckPermission("plan:score:confirmed")
+    public Boolean scoreConfirmed(@PathVariable("planId") Long planId,@PathVariable("classId") Long classId){
+        return baseService.scoreConfirmed(planId,classId);
+    }
+
+    /**
      * 机构根据班级列表获取每个班级在考试计划下的报名人数、考试人数、及格人数、成绩录入情况
      *
      * @param query

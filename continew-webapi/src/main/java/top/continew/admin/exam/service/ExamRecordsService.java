@@ -94,4 +94,12 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
      */
     Boolean inputWeldingScores( List<InputWeldingScoreReq> inputWeldingScoreReqs);
 
+    /**
+     * 修改考试记录的理论成绩
+     *
+     * @param inputScoresReq
+     * @return
+     */
+    Boolean updateExamScores(InputScoresReq inputScoresReq);
+
 }

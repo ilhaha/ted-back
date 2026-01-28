@@ -27,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum ExamScoreInputTypeEnum {
 
+    exam(0, "理论成绩"),
+
     OPER(1, "实操成绩"),
 
     ROAD(2, "道路成绩");

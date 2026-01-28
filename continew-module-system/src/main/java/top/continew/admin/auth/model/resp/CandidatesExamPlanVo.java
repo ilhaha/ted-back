@@ -93,4 +93,8 @@ public class CandidatesExamPlanVo implements Serializable {
      */
     private Integer theoryScoreReused;
 
+    /**
+     * 一寸照
+     */
+    private String facePhoto;
 }

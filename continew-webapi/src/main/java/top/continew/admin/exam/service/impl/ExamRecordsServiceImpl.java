@@ -849,13 +849,11 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
             ExamRecordsDO update = new ExamRecordsDO();
             update.setId(record.getId());
             update.setOperInputStatus(ExamScoreEntryStatusEnum.ENTERED.getValue());
-
+            update.setOperScores(operPassed ? ExamRecordConstants.PASSING_SCORE : 0);
             if (operPassed && record.getExamScores() >= ExamRecordConstants.PASSING_SCORE) {
                 update.setExamResultStatus(ExamResultStatusEnum.PASSED.getValue());
-                update.setOperScores(ExamRecordConstants.PASSING_SCORE);
             } else {
                 update.setExamResultStatus(ExamResultStatusEnum.FAILED.getValue());
-                update.setOperScores(0);
             }
 
             updateRecords.add(update);
@@ -865,6 +863,99 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         if (CollUtil.isNotEmpty(updateRecords)) {
             baseMapper.updateBatchById(updateRecords);
         }
+
+        return Boolean.TRUE;
+    }
+
+    /**
+     * 修改考试记录的理论成绩
+     *
+     * @param inputScoresReq
+     * @return
+     */
+    @Override
+    public Boolean updateExamScores(InputScoresReq inputScoresReq) {
+        List<ScoreItemReq> scoresList = inputScoresReq.getScoresList();
+        ValidationUtils.throwIfEmpty(scoresList, "暂无可修改的理论成绩");
+
+        Integer scoresType = inputScoresReq.getScoresType();
+        ValidationUtils.throwIfNull(scoresType, "成绩类型不能为空");
+        ValidationUtils.throwIf(!ExamScoreInputTypeEnum.exam.getValue().equals(scoresType), "暂不支持修改该类型的成绩");
+
+        List<Long> recordIds = scoresList.stream().map(ScoreItemReq::getRecordId).toList();
+        ValidationUtils.throwIfEmpty(recordIds, "成绩列表中不存在有效考试记录");
+
+        // 查询考试记录
+        List<ExamRecordsDO> examRecordsDOS = baseMapper.selectByIds(recordIds);
+        ValidationUtils.throwIfEmpty(examRecordsDOS, "所选的考试记录不存在");
+
+        // 检查是否存在没参加理论考试的
+        List<Long> notExamCandidateIds = examRecordsDOS.stream()
+                .filter(record -> ExamRecprdsHasCertofocateEnum.YES.getValue().equals(record.getIsCertificateGenerated()))
+                .map(ExamRecordsDO::getCandidateId)
+                .toList();
+
+        if (!notExamCandidateIds.isEmpty()) {
+            List<UserDO> users = userMapper.selectByIds(notExamCandidateIds);
+            List<String> nicknames = users.stream().map(UserDO::getNickname).toList();
+            ValidationUtils.throwIfNotEmpty(nicknames, String.join("、", nicknames) + " 未参加理论考试");
+        }
+
+        // 检查是否已生成证书
+        List<Long> candidateIds = examRecordsDOS.stream()
+                .filter(record -> ExamRecprdsHasCertofocateEnum.YES.getValue().equals(record.getIsCertificateGenerated()))
+                .map(ExamRecordsDO::getCandidateId)
+                .toList();
+
+        if (!candidateIds.isEmpty()) {
+            List<UserDO> users = userMapper.selectByIds(candidateIds);
+            List<String> nicknames = users.stream().map(UserDO::getNickname).toList();
+            ValidationUtils.throwIfNotEmpty(nicknames, String.join("、", nicknames) + " 已生成证书信息，无法再次修改理论成绩");
+        }
+
+        List<Long> distinctPlanIds = examRecordsDOS.stream().map(ExamRecordsDO::getPlanId).distinct().toList();
+
+        // 查询计划支持的考试类型
+        List<CheckPlanHasExamTypeDTO> planExamTypes = baseMapper.checkPlanHasExamType(distinctPlanIds, roadExamTypeId);
+
+        // 提前构建 planId -> CheckPlanHasExamTypeDTO 映射，提高查找效率
+        Map<Long, CheckPlanHasExamTypeDTO> planTypeMap = planExamTypes.stream()
+                .collect(Collectors.toMap(CheckPlanHasExamTypeDTO::getPlanId, dto -> dto));
+
+        Map<Long, Integer> scoreMap = scoresList.stream()
+                .collect(Collectors.toMap(ScoreItemReq::getRecordId, ScoreItemReq::getScores));
+
+        examRecordsDOS.forEach(record -> {
+            Integer recordScore = scoreMap.get(record.getId());
+            ValidationUtils.throwIfNull(recordScore, "考试记录 " + record.getId() + " 分数不能为空");
+
+            record.setExamScores(recordScore);
+
+            // 获取计划考试类型
+            CheckPlanHasExamTypeDTO planType = planTypeMap.get(record.getPlanId());
+            boolean isOperRequired = planType != null && ProjectHasExamTypeEnum.YES.getValue()
+                    .equals(planType.getIsOperation());
+            boolean isRoadRequired = planType != null && ProjectHasExamTypeEnum.YES.getValue()
+                    .equals(planType.getIsRoad());
+
+            // 判断是否合格
+            boolean passed = true;
+            if (record.getExamScores() == null || record.getExamScores() < ExamRecordConstants.PASSING_SCORE)
+                passed = false;
+            if (isOperRequired && (record.getOperScores() == null || record
+                    .getOperScores() < ExamRecordConstants.PASSING_SCORE))
+                passed = false;
+            if (isRoadRequired && (record.getRoadScores() == null || record
+                    .getRoadScores() < ExamRecordConstants.PASSING_SCORE))
+                passed = false;
+
+            record.setExamResultStatus(passed
+                    ? ExamResultStatusEnum.PASSED.getValue()
+                    : ExamResultStatusEnum.FAILED.getValue());
+        });
+
+        // 批量更新成绩 + 合格状态
+        baseMapper.updateBatchById(examRecordsDOS);
 
         return Boolean.TRUE;
     }

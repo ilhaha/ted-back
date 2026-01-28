@@ -159,6 +159,8 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         candidatesExamPlanReq.setExamNumber(examNumberEncrypt);
         //        candidatesExamPlanReq.setEnrollStatus(ExamEnrollStatusEnum.SIGNED_UP.getValue());
         CandidatesExamPlanVo candidatesExamPlanVo = userService.getPlanInfo(candidatesExamPlanReq);
+        System.out.println(candidatesExamPlanReq);
+        System.out.println(candidatesExamPlanVo);
         // 找不到对应的考试
         ValidationUtils.throwIf(ObjectUtil.isEmpty(candidatesExamPlanVo), "请核对身份证号或准考证号是否正确");
         ValidationUtils.throwIf(TheoryScoreReuseEnum.YES.getValue().equals(candidatesExamPlanVo.getTheoryScoreReused()),"您已免考理论考试，无需再次考试");
@@ -202,6 +204,7 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         examCandidateInfoVO.setWarningShortFilm(candidatesExamPlanVo.getWarningShortFilm());
         examCandidateInfoVO.setExamDuration(candidatesExamPlanVo.getExamDuration());
         examCandidateInfoVO.setEnableProctorWarning(candidatesExamPlanVo.getEnableProctorWarning());
+        examCandidateInfoVO.setFacePhoto(candidatesExamPlanVo.getFacePhoto());
         // 修改考生的考试状态为已签到(如果是补考不修改)
         if (!EnrollStatusConstant.RETAKE.equals(candidatesExamPlanVo.getExamStatus())) {
             userService.updateExamStatus(user.getId(), examNumberEncrypt, candidatesExamPlanVo

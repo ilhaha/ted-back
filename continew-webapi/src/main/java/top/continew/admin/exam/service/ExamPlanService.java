@@ -201,4 +201,11 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @return
      */
     PageResp<ExamPlanResp> getClassExamStatsPageForOrg(ExamPlanQuery query, PageQuery pageQuery);
+
+    /**
+     * 确认考试成绩
+     * @return
+     */
+    Boolean scoreConfirmed(Long planId,Long classId);
+
 }

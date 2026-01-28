@@ -23,6 +23,7 @@
                tp.project_name,
                tp.id AS project_id,
                toc.class_name,
+               te.seat_id,
                CASE
                    WHEN tc.id = #{roadExamTypeId} THEN 1
                    ELSE 0
@@ -79,9 +80,10 @@
             tp.is_operation,
             tp.project_name,
             toc.class_name,
+            te.seat_id,
             tc.id
         ORDER BY
-            ter.id
+            te.seat_id
     </select>
     <select id="getRecordsById" resultType="top.continew.admin.exam.model.entity.ExamRecordsDO">
         SELECT ter.*, tep.exam_plan_name AS planName, su.nickname AS candidateName

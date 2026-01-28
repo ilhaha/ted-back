@@ -1649,6 +1649,9 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tep.is_deleted", 0);
         queryWrapper.eq("tep.status", ExamPlanStatusEnum.STARTED.getValue());
+        queryWrapper.eq("tep.plan_type",ExamPlanTypeEnum.WORKER.getValue());
+        queryWrapper.eq("tep.is_score_confirmed",ScoreConfirmStatusEnum.UNCONFIRMED.getValue());
+
         super.sort(queryWrapper, pageQuery);
 
         IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery
@@ -1684,6 +1687,83 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         build.getList().forEach(this::fill);
         return build;
     }
+
+    /**
+     * 确认考试成绩
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean scoreConfirmed(Long planId,Long classId) {
+
+        // 校验考试计划
+        ExamPlanDO plan = baseMapper.selectById(planId);
+        ValidationUtils.throwIfNull(plan, "记录信息不存在");
+
+        ValidationUtils.throwIf(
+                ScoreConfirmStatusEnum.CONFIRMED.getValue().equals(plan.getIsScoreConfirmed()),
+                "成绩已确认，无法重复确认"
+        );
+
+        // 查询该班级下报了当前计划的所有人
+        List<EnrollDO> classEnrollList = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
+                .eq(EnrollDO::getExamPlanId, plan.getId())
+                .eq(EnrollDO::getClassId, classId)
+                .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
+                .select(EnrollDO::getUserId));
+        ValidationUtils.throwIfEmpty(classEnrollList,"该班级暂无考试记录");
+
+        List<Long> candidateIds = classEnrollList.stream().map(EnrollDO::getUserId).toList();
+
+        // 查询考试记录
+        List<ExamRecordsDO> records = examRecordsMapper.selectList(
+                new LambdaQueryWrapper<ExamRecordsDO>()
+                        .eq(ExamRecordsDO::getPlanId, plan.getId())
+                        .in(ExamRecordsDO::getCandidateId,candidateIds)
+
+        );
+        ValidationUtils.throwIfEmpty(records, "暂无考试记录");
+
+        // 是否存在未录入考试结果
+        ValidationUtils.throwIf(
+                records.stream().anyMatch(r ->
+                        ExamResultStatusEnum.NOT_ENTERED.getValue() == r.getExamResultStatus()),
+                "存在未录入成绩的考试记录，请先进行录入"
+        );
+
+        // 是否存在实操 / 道路成绩未录入
+        ValidationUtils.throwIf(
+                records.stream().anyMatch(r ->
+                        ExamScoreEntryStatusEnum.NO_ENTRY.getValue()
+                                .equals(r.getRoadInputStatus())
+                                || ExamScoreEntryStatusEnum.NO_ENTRY.getValue()
+                                .equals(r.getOperInputStatus())),
+                "存在实操或道路成绩未录入记录，请先进行录入"
+        );
+
+        // 是否存在及格但未生成证书的记录
+        ValidationUtils.throwIf(
+                records.stream().anyMatch(r ->
+                        ExamResultStatusEnum.PASSED.getValue() == r.getExamResultStatus()
+                                && ExamRecprdsHasCertofocateEnum.NO.getValue()
+                                .equals(r.getIsCertificateGenerated())),
+                "存在考试及格但未生成证书信息记录，请先进行生成"
+        );
+
+        // 确认成绩（加状态条件，防并发）
+        int updated = baseMapper.update(
+                null,
+                new LambdaUpdateWrapper<ExamPlanDO>()
+                        .set(ExamPlanDO::getIsScoreConfirmed, ScoreConfirmStatusEnum.CONFIRMED.getValue())
+                        .eq(ExamPlanDO::getId, plan.getId())
+                        .eq(ExamPlanDO::getIsScoreConfirmed, ScoreConfirmStatusEnum.UNCONFIRMED.getValue())
+        );
+
+        ValidationUtils.throwIf(updated == 0, "成绩确认失败，请刷新后重试");
+
+        return Boolean.TRUE;
+    }
+
 
     /**
      * 随机生成监考员开考密码
