@@ -86,6 +86,12 @@ public class EnrollDO extends BaseDO {
      */
     private Integer examStatus;
 
+
+    /**
+     * 是否补考（0否、1是）
+     */
+    private Integer isMakeup;
+
     /**
      * 作业人员班级id，检验人员为空
      */

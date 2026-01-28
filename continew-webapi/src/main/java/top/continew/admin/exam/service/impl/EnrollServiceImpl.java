@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service.impl;
 
+import cn.crane4j.core.util.CollectionUtils;
 import cn.crane4j.core.util.StringUtils;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -36,6 +37,10 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import top.continew.admin.certificate.mapper.CandidateCertificateMapper;
+import top.continew.admin.certificate.mapper.CertificateProjectMapper;
+import top.continew.admin.certificate.model.entity.CandidateCertificateDO;
+import top.continew.admin.certificate.model.entity.CertificateProjectDO;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.ExamRecordConstants;
 import top.continew.admin.common.constant.enums.*;
@@ -52,6 +57,7 @@ import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
 import top.continew.admin.examconnect.model.req.RestPaperReq;
 import top.continew.admin.examconnect.service.QuestionBankService;
 import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.training.mapper.OrgUserMapper;
 import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
@@ -69,6 +75,7 @@ import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -107,8 +114,6 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     @Resource
     private ExamineePaymentAuditMapper examineePaymentAuditMapper;
 
-    @Resource
-    private UserMapper userMapper;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -121,6 +126,13 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     private final QuestionBankService questionBankService;
 
     private final OrgUserMapper orgUserMapper;
+
+    private final CandidateExamProjectMapper candidateExamProjectMapper;
+
+    private final LicenseCertificateMapper licenseCertificateMapper;
+
+
+
 
     /**
      * 获取报名相关所有信息
@@ -149,60 +161,168 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         return detailEnrollList;
     }
 
-    //
     //获取带有状态的报名列表
     @Override
-    public PageResp<EnrollStatusResp> getEnrollStatusList(EnrollQuery query, PageQuery pageQuery, Long enrollStatus) {
-        // 1️ 获取登录用户
-        UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+    public PageResp<EnrollStatusResp> getEnrollStatusList(
+            EnrollQuery query,
+            PageQuery pageQuery,
+            Long isMakeup,
+            Long enrollStatus) {
 
-        // 2 构建基础查询
+        // 默认第一次报名
+        if (isMakeup == null || isMakeup == 0) {
+            return queryFirstApply(query, pageQuery, enrollStatus);
+        }
+
+        // 补考报名
+        if (isMakeup == 1) {
+            return queryMakeupApply(query, pageQuery, enrollStatus);
+        }
+
+        // 兜底（理论不会走）
+        return PageResp.build(
+                new Page<>(pageQuery.getPage(), pageQuery.getSize()),
+                EnrollStatusResp.class
+        );
+    }
+
+    //第一次报名逻辑
+    private PageResp<EnrollStatusResp> queryFirstApply(
+            EnrollQuery query,
+            PageQuery pageQuery,
+            Long enrollStatus) {
+
+        Long userId = TokenLocalThreadUtil.get().getUserId();
+
+        // ① 查询「不能首考」的项目（当前轮次已首考但还没走到可补考）
+        List<Long> forbiddenProjectIds =
+                candidateExamProjectMapper.selectList(
+                                new LambdaQueryWrapper<CandidateExamProjectDO>()
+                                        .eq(CandidateExamProjectDO::getCandidateId, userId)
+                                        .eq(CandidateExamProjectDO::getPassed, 0)
+                                        .eq(CandidateExamProjectDO::getUsedMakeup, 0)
+                                        .select(CandidateExamProjectDO::getProjectId)
+                        ).stream()
+                        .map(CandidateExamProjectDO::getProjectId)
+                        .collect(Collectors.toList());
+
         QueryWrapper<EnrollDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tep.is_deleted", 0);
         queryWrapper.eq("tep.status", ExamPlanStatusEnum.IN_FORCE.getValue());
-        queryWrapper.eq("plan_type", ExamPlanTypeEnum.INSPECTION.getValue());
+        queryWrapper.eq("tep.plan_type", ExamPlanTypeEnum.INSPECTION.getValue());
 
-        // 3️ 按状态过滤
-        if (enrollStatus != null) {
-            switch (enrollStatus.intValue()) {
-                case 0: // 未报名
-                    queryWrapper.nested(qw -> qw.eq("te.enroll_status", 0).or().isNull("te.enroll_status"));
-                    break;
-                case 1: // 已报名
-                    queryWrapper.eq("te.enroll_status", 1);
-                    break;
-                case 2: // 已完成
-                    queryWrapper.eq("te.enroll_status", 2).eq("tep.status", 6);
-                    break;
-                case 4: // 审核中
-                    queryWrapper.eq("te.enroll_status", 4);
-                    break;
-                case 5: // 虚假信息
-                    queryWrapper.eq("te.enroll_status", 5);
-                    break;
-                case 6: // 已过期
-                    queryWrapper.eq("tep.status", 6);
-                    break;
-                default:
-                    break;
-            }
+        // 排除不能首考的项目
+        if (!CollectionUtils.isEmpty(forbiddenProjectIds)) {
+            queryWrapper.notIn("tep.exam_project_id", forbiddenProjectIds);
         }
 
-        // 4️ 排序
+        buildEnrollStatusCondition(queryWrapper, enrollStatus);
         super.sort(queryWrapper, pageQuery);
 
-        // 5️ 执行分页查询
-        IPage<EnrollStatusResp> page = baseMapper.getEnrollList(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper, userTokenDo.getUserId());
+        IPage<EnrollStatusResp> page = baseMapper.getEnrollList(
+                new Page<>(pageQuery.getPage(), pageQuery.getSize()),
+                queryWrapper,
+                userId
+        );
 
-        // 6️ 封装返回结果
-        PageResp<EnrollStatusResp> pageResp = PageResp.build(page, EnrollStatusResp.class);
+        PageResp<EnrollStatusResp> resp =
+                PageResp.build(page, EnrollStatusResp.class);
 
-        // 7️ 填充扩展字段
-        pageResp.getList().forEach(this::fill);
-
-        return pageResp;
+        resp.getList().forEach(this::fill);
+        return resp;
     }
+
+    //补考报名逻辑
+    private PageResp<EnrollStatusResp> queryMakeupApply(
+            EnrollQuery query,
+            PageQuery pageQuery,
+            Long enrollStatus) {
+
+        Long userId = TokenLocalThreadUtil.get().getUserId();
+
+        // ① 查询「可补考」的考试项目
+        List<Long> makeupProjectIds =
+                candidateExamProjectMapper.selectList(
+                                new LambdaQueryWrapper<CandidateExamProjectDO>()
+                                        .eq(CandidateExamProjectDO::getCandidateId, userId)
+                                        .eq(CandidateExamProjectDO::getPassed, 0)
+                                        .eq(CandidateExamProjectDO::getUsedMakeup, 0)
+                                        .select(CandidateExamProjectDO::getProjectId)
+                        ).stream()
+                        .map(CandidateExamProjectDO::getProjectId)
+                        .collect(Collectors.toList());
+
+        if (CollectionUtils.isEmpty(makeupProjectIds)) {
+            return emptyPage(pageQuery);
+        }
+
+
+        QueryWrapper<EnrollDO> queryWrapper = this.buildQueryWrapper(query);
+        queryWrapper.eq("tep.is_deleted", 0);
+        queryWrapper.eq("tep.status", ExamPlanStatusEnum.IN_FORCE.getValue());
+        queryWrapper.eq("tep.plan_type", ExamPlanTypeEnum.INSPECTION.getValue());
+        queryWrapper.in("tep.exam_project_id", makeupProjectIds);
+
+        buildEnrollStatusCondition(queryWrapper, enrollStatus);
+        super.sort(queryWrapper, pageQuery);
+
+        IPage<EnrollStatusResp> page = baseMapper.getEnrollList(
+                new Page<>(pageQuery.getPage(), pageQuery.getSize()),
+                queryWrapper,
+                userId
+        );
+
+        PageResp<EnrollStatusResp> resp =
+                PageResp.build(page, EnrollStatusResp.class);
+
+        resp.getList().forEach(this::fill);
+        return resp;
+    }
+
+    //报名状态过滤
+    private void buildEnrollStatusCondition(
+            QueryWrapper<EnrollDO> queryWrapper,
+            Long enrollStatus) {
+
+        if (enrollStatus == null) {
+            return;
+        }
+
+        switch (enrollStatus.intValue()) {
+            case 0:
+                queryWrapper.nested(qw ->
+                        qw.eq("te.enroll_status", 0)
+                                .or()
+                                .isNull("te.enroll_status"));
+                break;
+            case 1:
+                queryWrapper.eq("te.enroll_status", 1);
+                break;
+            case 2:
+                queryWrapper.eq("te.enroll_status", 2)
+                        .eq("tep.status", 6);
+                break;
+            case 4:
+                queryWrapper.eq("te.enroll_status", 4);
+                break;
+            case 5:
+                queryWrapper.eq("te.enroll_status", 5);
+                break;
+            case 6:
+                queryWrapper.eq("tep.status", 6);
+                break;
+            default:
+                break;
+        }
+    }
+    //空分页工具方法
+    private PageResp<EnrollStatusResp> emptyPage(PageQuery pageQuery) {
+        return PageResp.build(
+                new Page<>(pageQuery.getPage(), pageQuery.getSize()),
+                EnrollStatusResp.class
+        );
+    }
+
 
     //获取带有状态的报名详情列表
     @Override

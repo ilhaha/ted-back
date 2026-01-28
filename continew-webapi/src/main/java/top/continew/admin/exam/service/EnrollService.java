@@ -52,7 +52,7 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      * @param enrollStatus 报名状态（可选）
      * @return 分页结果
      */
-    PageResp<EnrollStatusResp> getEnrollStatusList(EnrollQuery query, PageQuery pageQuery, Long enrollStatus);
+    PageResp<EnrollStatusResp> getEnrollStatusList(EnrollQuery query, PageQuery pageQuery,Long isMakeup, Long enrollStatus);
 
     public EnrollStatusDetailResp getEnrollStatusDetail(Long examPlanId);
 
