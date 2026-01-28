@@ -132,9 +132,4 @@ public class ExamPlanDO extends BaseDO {
      */
     private String examFee;
 
-    /**
-     * 是否已确认成绩(0：未确认，1已确认)
-     */
-    private Integer isScoreConfirmed;
-
 }

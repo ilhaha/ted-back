@@ -308,10 +308,11 @@
                  JOIN ted_org org
                       ON toc.org_id = org.id
                           AND org.is_deleted = 0
+                 JOIN ted_plan_apply_class tpac
+                      ON toc.id = tpac.class_id AND is_score_confirmed = 0 AND tpac.is_deleted = 0
                  LEFT JOIN dedup_records dr
                            ON dr.plan_id = tep.id
-                               AND dr.candidate_id = te.user_id
-            ${ew.customSqlSegment}
+                               AND dr.candidate_id = te.user_id ${ew.customSqlSegment}
         GROUP BY
             tep.id,
             tep.exam_plan_name,

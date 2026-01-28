@@ -44,6 +44,7 @@ import top.continew.admin.common.constant.WorkerApplyCheckConstants;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
+import top.continew.admin.common.model.entity.BaseDO;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -651,7 +652,6 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         // 10. 更新导入记录
         for (WorkerApplyDO item : toImport) {
             WorkerApplyDO latest = latestApprovedMap.get(item.getIdCardNumber());
-            System.out.println(latest);
             if (latest != null) {
                 // 复用基本信息
                 item.setQualificationName(latest.getQualificationName());
@@ -743,6 +743,19 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
             if (CollUtil.isNotEmpty(orgClassCandidateDOS)) {
                 orgClassCandidateMapper.insertBatch(orgClassCandidateDOS);
+            }
+        }
+
+        // 查询班级是否是未缴费状态
+        OrgClassDO orgClassDO = orgClassMapper.selectById(classId);
+        if (OrgClassPayStatusEnum.UNPAID.getCode().equals(orgClassDO.getPayStatus())) {
+            // 未缴费 查出所有的作业人员是否都是待考试
+            Long count = baseMapper.selectCount(new LambdaQueryWrapper<WorkerApplyDO>()
+                    .eq(WorkerApplyDO::getClassId, classId)
+                    .ne(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.APPROVED.getValue()));
+            if (count <= 0) {
+                // 如果全部是待考试那就生成缴费通知单
+                examineePaymentAuditService.generatePaymentAuditByClassId(classId);
             }
         }
 

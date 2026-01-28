@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="top.continew.admin.exam.mapper.PlanApplyClassMapper">
+
+    <select id="selectExamPlanPage" resultType="top.continew.admin.exam.model.resp.PlanApplyClassDetailResp">
+        SELECT tpac.plan_id,
+               tep.exam_plan_name,
+               tp.project_name,
+               tc.`name`                     AS category_name,
+               COUNT(DISTINCT tpac.class_id) AS total_class_count,
+
+               COUNT(DISTINCT
+                     CASE
+                         WHEN tpac.is_score_confirmed = 1 THEN tpac.class_id
+                         ELSE NULL
+                         END
+               )                             AS confirmed_class_count,
+
+               COUNT(DISTINCT
+                     CASE
+                         WHEN tpac.is_score_confirmed = 0 THEN tpac.class_id
+                         ELSE NULL
+                         END
+               )                             AS unconfirmed_class_count,
+
+               COUNT(DISTINCT
+                     CASE
+                         WHEN tpac.is_score_confirmed = 1 THEN ter.candidate_id
+                         ELSE NULL
+                         END
+               )                             AS total_candidate_count,
+
+               SUM(CASE
+                       WHEN tpac.is_score_confirmed = 1
+                           AND ter.exam_result_status = 1
+                           THEN 1
+                       ELSE 0
+                   END)                      AS pass_count,
+
+               SUM(CASE
+                       WHEN tpac.is_score_confirmed = 1
+                           AND ter.exam_result_status = 0
+                           THEN 1
+                       ELSE 0
+                   END)                      AS fail_count
+
+        FROM ted_plan_apply_class tpac
+                 JOIN ted_exam_plan tep
+                      ON tpac.plan_id = tep.id
+                          AND tep.is_deleted = 0
+                 JOIN ted_enroll te
+                      ON tep.id = te.exam_plan_id
+                          AND tpac.class_id = te.class_id
+                          AND te.is_deleted = 0
+                 JOIN ted_exam_records ter
+                      ON te.exam_plan_id = ter.plan_id
+                          AND te.user_id = ter.candidate_id
+                 JOIN ted_project tp
+                      ON tep.exam_project_id = tp.id
+                          AND tp.is_deleted = 0
+                 JOIN ted_category tc
+                      ON tp.category_id = tc.id
+                          AND tc.is_deleted = 0
+            ${ew.customSqlSegment}
+        GROUP BY tpac.plan_id,
+            tep.exam_plan_name,
+            tp.project_name,
+            tc.`name`
+        HAVING COUNT (DISTINCT CASE WHEN tpac.is_score_confirmed = 1 THEN tpac.class_id END) &gt; 0
+        ORDER BY tep.id DESC
+    </select>
+
+</mapper>
