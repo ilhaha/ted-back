@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
+import lombok.val;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -49,6 +50,7 @@ import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.*;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.*;
+import top.continew.admin.exam.model.resp.ClassExamTableResp;
 import top.continew.admin.exam.model.resp.WeldingOperScoreVO;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
@@ -958,6 +960,86 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         baseMapper.updateBatchById(examRecordsDOS);
 
         return Boolean.TRUE;
+    }
+
+    /**
+     * 获取计划对应报考班级的成绩列表
+     *
+     * @param planId
+     * @param planId
+     * @return
+     */
+    @Override
+    public List<ClassExamTableResp> getClassExamTableList(Long planId) {
+        List<ExamRecordDTO> list = baseMapper.getClassExamTableList(planId, roadExamTypeId, metalProjectId, nonmetalProjectId);
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(planId);
+        Long examProjectId = examPlanDO.getExamProjectId();
+        boolean isWeldingProject = metalProjectId.equals(examProjectId) || nonmetalProjectId.equals(examProjectId);
+
+        if (CollUtil.isEmpty(list)) {
+            return Collections.emptyList();
+        }
+        Map<String, List<ExamRecordDTO>> classMap =
+                list.stream()
+                        .collect(Collectors.groupingBy(
+                                r -> StrUtil.blankToDefault(r.getClassName(), "未分班")
+                        ));
+
+        // 汇总每个班级
+        List<ClassExamTableResp> result = classMap.entrySet()
+                .stream()
+                .map(entry -> {
+                    String className = entry.getKey();
+                    List<ExamRecordDTO> records = entry.getValue();
+
+                    long passCount = records.stream()
+                            .filter(r -> Objects.equals(r.getExamResultStatus(), 1))
+                            .count();
+
+                    long failCount = records.stream()
+                            .filter(r -> Objects.equals(r.getExamResultStatus(), 0))
+                            .count();
+
+                    ClassExamTableResp resp = new ClassExamTableResp();
+                    resp.setClassName(className);
+                    resp.setPassCount(passCount);
+                    resp.setFailCount(failCount);
+                    if (!ObjectUtils.isEmpty(records)) {
+                        resp.setRecords(records.stream().map(item -> {
+                            ExamRecordsResp examRecordsResp = new ExamRecordsResp();
+                            examRecordsResp.setId(item.getId());
+                            examRecordsResp.setClassName(item.getClassName());
+                            examRecordsResp.setExamScores(item.getExamScores());
+                            examRecordsResp.setExamResultStatus(item.getExamResultStatus());
+                            examRecordsResp.setOperInputStatus(item.getOperInputStatus());
+                            examRecordsResp.setOperScores(item.getOperScores());
+                            examRecordsResp.setPlanId(item.getPlanId());
+                            examRecordsResp.setRoadScores(item.getRoadScores());
+                            examRecordsResp.setRoadInputStatus(item.getRoadInputStatus());
+                            examRecordsResp.setCandidateId(item.getCandidateId());
+                            examRecordsResp.setCandidateName(item.getCandidateName());
+                            examRecordsResp.setSeatId(item.getSeatId());
+                            examRecordsResp.setIsRoad(item.getIsRoad());
+                            examRecordsResp.setProjectId(item.getProjectId());
+                            // 解密身份证号
+                            examRecordsResp.setUsername(aesWithHMAC.verifyAndDecrypt(item.getUsername()));
+                            // 如果是焊接项目，解析 JSON 成对象列表
+                            if (isWeldingProject && !StringUtils.isEmpty(item.getWeldingOperScores())) {
+                                examRecordsResp.setWeldingOperScoreVoList(
+                                        JSONUtil.toList(item.getWeldingOperScores(), WeldingOperScoreVO.class)
+                                );
+                            }
+                            return examRecordsResp;
+                        }).toList());
+
+                    }
+                    return resp;
+                })
+                // 可选：按班级名排序
+                .sorted(Comparator.comparing(ClassExamTableResp::getClassName))
+                .collect(Collectors.toList());
+
+        return result;
     }
 
 

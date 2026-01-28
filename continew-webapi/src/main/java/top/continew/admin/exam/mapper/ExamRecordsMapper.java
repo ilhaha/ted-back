@@ -83,4 +83,16 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
      */
     List<Map<String, Object>> selectWeldingProjectCodeByRecordIds(@Param("recordIds") List<Long> recordIds);
 
+    /**
+     * 查询考试计划报考班级的考生考试情况
+     * @param planId
+     * @param roadExamTypeId
+     * @param metalProjectId
+     * @param nonmetalProjectId
+     * @return
+     */
+    List<ExamRecordDTO> getClassExamTableList(@Param("planId") Long planId,
+                                              @Param("roadExamTypeId") Long roadExamTypeId,
+                                              @Param("metalProjectId") Long metalProjectId,
+                                              @Param("nonmetalProjectId") Long nonmetalProjectId);
 }

@@ -25,6 +25,7 @@ import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.req.InputWeldingScoreReq;
+import top.continew.admin.exam.model.resp.ClassExamTableResp;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.admin.training.model.query.OrgClassQuery;
 import top.continew.admin.training.model.resp.OrgClassResp;
@@ -60,6 +61,19 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
 
     @Resource
     private ExamRecordsService baseService;
+
+    /**
+     * 获取计划对应报考班级的成绩列表
+     *
+     * @param planId
+     * @param planId
+     * @return
+     */
+    @SaCheckPermission("exam:planApplyClass:detail")
+    @GetMapping("/grade/{planId}")
+    public List<ClassExamTableResp> getClassExamTableList(@PathVariable("planId") Long planId) {
+        return baseService.getClassExamTableList(planId);
+    }
 
     /**
      * 获取某个考试的所有考试计划列表

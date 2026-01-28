@@ -21,7 +21,7 @@
                su.username,
                tp.is_operation,
                tp.project_name,
-               tp.id AS project_id,
+               tp.id              AS project_id,
                toc.class_name,
                te.seat_id,
                CASE
@@ -247,6 +247,83 @@
             #{id}
         </foreach>
         GROUP BY er.id
+    </select>
+    <select id="getClassExamTableList" resultType="top.continew.admin.exam.model.dto.ExamRecordDTO">
+        SELECT ter.id,
+               ter.plan_id,
+               ter.candidate_id,
+               ter.exam_scores,
+               ter.oper_scores,
+               ter.oper_input_status,
+               ter.road_scores,
+               ter.road_input_status,
+               ter.exam_result_status,
+               su.nickname        AS candidateName,
+               su.username,
+               tp.is_operation,
+               tp.project_name,
+               tp.id              AS project_id,
+               toc.class_name,
+               te.seat_id,
+               CASE
+                   WHEN tc.id = #{roadExamTypeId} THEN 1
+                   ELSE 0
+                   END            AS is_road,
+               CASE
+                   WHEN tp.id IN (#{metalProjectId}, #{nonmetalProjectId}) THEN
+                       JSON_ARRAYAGG(
+                               JSON_OBJECT(
+                                       'id', twos.id,
+                                       'project_code', twos.project_code,
+                                       'oper_score', twos.oper_score
+                               )
+                       )
+                   ELSE
+                       JSON_ARRAY()
+                   END            AS welding_oper_scores
+        FROM ted_exam_records AS ter
+                 LEFT JOIN ted_exam_plan AS tep
+                           ON ter.plan_id = tep.id AND tep.is_deleted = 0
+                 LEFT JOIN ted_project AS tp
+                           ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN ted_category AS tc
+                           ON tp.category_id = tc.id AND tc.is_deleted = 0
+                 LEFT JOIN sys_user AS su
+                           ON ter.candidate_id = su.id
+                 LEFT JOIN ted_enroll AS te
+                           ON ter.plan_id = te.exam_plan_id AND te.user_id = su.id AND te.is_deleted = 0
+                 LEFT JOIN ted_org_class AS toc
+                           ON te.class_id = toc.id AND toc.is_deleted = 0
+                 LEFT JOIN ted_welding_oper_score AS twos
+                           ON ter.id = twos.record_id
+                               AND ter.plan_id = twos.plan_id
+                               AND ter.candidate_id = twos.candidate_id
+                               AND twos.is_deleted = 0
+        WHERE ter.plan_id = #{planId}
+          AND ter.is_deleted = 0
+        GROUP BY ter.id,
+                 ter.plan_id,
+                 ter.candidate_id,
+                 ter.exam_scores,
+                 ter.oper_scores,
+                 ter.oper_input_status,
+                 ter.road_scores,
+                 ter.road_input_status,
+                 ter.attempt_type,
+                 ter.is_certificate_generated,
+                 ter.exam_paper,
+                 ter.exam_result_status,
+                 ter.registration_progress,
+                 ter.create_time,
+                 tep.exam_plan_name,
+                 su.nickname,
+                 su.username,
+                 tp.is_operation,
+                 tp.project_name,
+                 toc.class_name,
+                 te.seat_id,
+                 tc.id
+        ORDER BY te.seat_id
     </select>
 
 

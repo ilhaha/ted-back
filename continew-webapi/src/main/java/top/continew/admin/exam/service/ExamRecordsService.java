@@ -21,6 +21,7 @@ import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.req.InputWeldingScoreReq;
+import top.continew.admin.exam.model.resp.ClassExamTableResp;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -102,4 +103,12 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
      */
     Boolean updateExamScores(InputScoresReq inputScoresReq);
 
+    /**
+     * 获取计划对应报考班级的成绩列表
+     *
+     * @param planId
+     * @param planId
+     * @return
+     */
+    List<ClassExamTableResp> getClassExamTableList(Long planId);
 }
