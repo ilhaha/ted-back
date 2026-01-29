@@ -163,7 +163,8 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         System.out.println(candidatesExamPlanVo);
         // 找不到对应的考试
         ValidationUtils.throwIf(ObjectUtil.isEmpty(candidatesExamPlanVo), "请核对身份证号或准考证号是否正确");
-        ValidationUtils.throwIf(TheoryScoreReuseEnum.YES.getValue().equals(candidatesExamPlanVo.getTheoryScoreReused()),"您已免考理论考试，无需再次考试");
+        ValidationUtils.throwIf(TheoryScoreReuseEnum.YES.getValue()
+            .equals(candidatesExamPlanVo.getTheoryScoreReused()), "您已免考理论考试，无需再次考试");
         ValidationUtils.throwIf(!PlanConstant.EXAM_BEGUN.getStatus()
             .equals(candidatesExamPlanVo.getStatus()) || (EnrollStatusConstant.SUBMITTED.equals(candidatesExamPlanVo
                 .getExamStatus()) || EnrollStatusConstant.COMPLETED.equals(candidatesExamPlanVo

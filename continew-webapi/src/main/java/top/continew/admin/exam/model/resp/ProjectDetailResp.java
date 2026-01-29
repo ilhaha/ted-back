@@ -98,7 +98,6 @@ public class ProjectDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "项目类型（0-作业人员 1-检验人员）")
     private Integer projectType;
 
-
     /**
      * 项目考试等级（ 1一级 2 二级）
      */

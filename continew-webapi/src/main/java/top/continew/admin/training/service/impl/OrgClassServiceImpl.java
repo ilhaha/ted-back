@@ -86,7 +86,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * 培训机构班级业务实现
@@ -191,30 +190,21 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         Long orgId = orgDO.getId();
         req.setOrgId(orgId);
         // 判断是否添加的是焊接项目的班级
-        boolean isWelding = Objects.equals(projectId, metalProjectId)
-                || Objects.equals(projectId, nonmetalProjectId);
+        boolean isWelding = Objects.equals(projectId, metalProjectId) || Objects.equals(projectId, nonmetalProjectId);
 
         if (isWelding) {
             // 判断焊接类型
             WeldingTypeEnum weldingTypeEnum = Objects.equals(projectId, metalProjectId)
-                    ? WeldingTypeEnum.METAL
-                    : WeldingTypeEnum.NON_METAL;
+                ? WeldingTypeEnum.METAL
+                : WeldingTypeEnum.NON_METAL;
 
-            Long count = weldingExamApplicationMapper.selectCount(
-                    new LambdaQueryWrapper<WeldingExamApplicationDO>()
-                            .eq(WeldingExamApplicationDO::getOrgId, orgId)
-                            .eq(WeldingExamApplicationDO::getStatus,
-                                    WeldingExamApplicationStatusEnum.PASS_REVIEW.getValue())
-                            .eq(WeldingExamApplicationDO::getWeldingType,
-                                    weldingTypeEnum.getValue())
-            );
+            Long count = weldingExamApplicationMapper.selectCount(new LambdaQueryWrapper<WeldingExamApplicationDO>()
+                .eq(WeldingExamApplicationDO::getOrgId, orgId)
+                .eq(WeldingExamApplicationDO::getStatus, WeldingExamApplicationStatusEnum.PASS_REVIEW.getValue())
+                .eq(WeldingExamApplicationDO::getWeldingType, weldingTypeEnum.getValue()));
 
-            ValidationUtils.throwIf(
-                    count == null || count == 0,
-                    "机构下未有申报通过的" + weldingTypeEnum.getDesc() + "项目"
-            );
+            ValidationUtils.throwIf(count == null || count == 0, "机构下未有申报通过的" + weldingTypeEnum.getDesc() + "项目");
         }
-
 
         // 循环重试生成班级编号并插入
         Long classId = null;
@@ -255,9 +245,6 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
         return classId;
     }
-
-
-
 
     /**
      * 生成班级编号
@@ -370,10 +357,11 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
     public Boolean endApply(OrgClassReq req, Long id) {
         // 先查有没有待审的资料
         Long count = workerApplyMapper.selectCount(new LambdaQueryWrapper<WorkerApplyDO>()
-                .eq(WorkerApplyDO::getClassId, id)
-                .in(WorkerApplyDO::getStatus, Arrays.asList(WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue(),
-                        WorkerApplyReviewStatusEnum.REJECTED.getValue(), WorkerApplyReviewStatusEnum.DOC_COMPLETE.getValue())));
-        ValidationUtils.throwIf(count > 0,"当前班级仍有人员未完成资料上传，暂无法结束报名");
+            .eq(WorkerApplyDO::getClassId, id)
+            .in(WorkerApplyDO::getStatus, Arrays.asList(WorkerApplyReviewStatusEnum.WAIT_UPLOAD
+                .getValue(), WorkerApplyReviewStatusEnum.REJECTED.getValue(), WorkerApplyReviewStatusEnum.DOC_COMPLETE
+                    .getValue())));
+        ValidationUtils.throwIf(count > 0, "当前班级仍有人员未完成资料上传，暂无法结束报名");
         update(req, id);
         return Boolean.TRUE;
     }

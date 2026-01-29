@@ -16,7 +16,6 @@
 
 package top.continew.admin.common.controller;
 
-import top.continew.admin.common.model.resp.CarouselIndexResp;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,8 +28,6 @@ import top.continew.admin.common.model.req.CarouselReq;
 import top.continew.admin.common.model.resp.CarouselDetailResp;
 import top.continew.admin.common.model.resp.CarouselResp;
 import top.continew.admin.common.service.CarouselService;
-
-import java.util.List;
 
 /**
  * 轮播图管理管理 API
@@ -47,9 +44,9 @@ public class CarouselController extends BaseController<CarouselService, Carousel
     /**
      * 考生首页获取轮播图
      */
-//    @GetMapping("/index")
-//    public List<CarouselIndexResp> index() {
-//        return baseService.index();
-//    }
+    //    @GetMapping("/index")
+    //    public List<CarouselIndexResp> index() {
+    //        return baseService.index();
+    //    }
 
 }

@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.training.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
@@ -20,10 +36,7 @@ import top.continew.admin.common.constant.enums.CandidateTypeEnum;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.exam.mapper.LicenseCertificateMapper;
-import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.entity.LicenseCertificateDO;
-import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
-import top.continew.admin.exam.model.resp.ExamPlanResp;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.dto.UserDetailDTO;
 import top.continew.admin.system.model.entity.UserDO;
@@ -56,7 +69,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMapper, CandidateTypeDO, CandidateTypeResp, CandidateTypeDetailResp, CandidateTypeQuery, CandidateTypeReq> implements CandidateTypeService {
 
-
     private final AESWithHMAC aesWithHMAC;
 
     private final UserService userService;
@@ -67,9 +79,8 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
 
     private final LicenseCertificateMapper licenseCertificateMapper;
 
-
     /**
-     * 重写page  查询作业人员信息
+     * 重写page 查询作业人员信息
      *
      * @param query
      * @param pageQuery
@@ -88,7 +99,7 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
             queryWrapper.eq("su.username", aesWithHMAC.encryptAndSign(idNumber));
         }
         IPage<CandidateTypeDetailResp> page = baseMapper.getWorkerPage(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+            .getSize()), queryWrapper);
         List<CandidateTypeDetailResp> records = page.getRecords();
         if (ObjectUtil.isNotEmpty(records)) {
             page.setRecords(records.stream().map(item -> {
@@ -114,9 +125,8 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         CandidateTypeDO candidateTypeDO = baseMapper.selectById(req.getId());
         ValidationUtils.throwIfNull(candidateTypeDO, "所操作的用户信息不存在");
 
-        LambdaUpdateWrapper<CandidateTypeDO> updateWrapper =
-                new LambdaUpdateWrapper<CandidateTypeDO>()
-                        .eq(CandidateTypeDO::getId, req.getId());
+        LambdaUpdateWrapper<CandidateTypeDO> updateWrapper = new LambdaUpdateWrapper<CandidateTypeDO>()
+            .eq(CandidateTypeDO::getId, req.getId());
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -129,21 +139,19 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
 
             LocalDateTime endTime = calculateBlacklistEndTime(now, durationType);
 
-            updateWrapper
-                    .set(CandidateTypeDO::getIsBlacklist, BlacklistConstants.IS_BLACKLIST)
-                    .set(CandidateTypeDO::getBlacklistDurationType, durationType)
-                    .set(CandidateTypeDO::getBlacklistReason, req.getBlacklistReason())
-                    .set(CandidateTypeDO::getBlacklistTime, now)
-                    .set(CandidateTypeDO::getBlacklistEndTime, endTime);
+            updateWrapper.set(CandidateTypeDO::getIsBlacklist, BlacklistConstants.IS_BLACKLIST)
+                .set(CandidateTypeDO::getBlacklistDurationType, durationType)
+                .set(CandidateTypeDO::getBlacklistReason, req.getBlacklistReason())
+                .set(CandidateTypeDO::getBlacklistTime, now)
+                .set(CandidateTypeDO::getBlacklistEndTime, endTime);
 
         } else {
             // ===== 解除黑名单 =====
-            updateWrapper
-                    .set(CandidateTypeDO::getIsBlacklist, BlacklistConstants.NOT_BLACKLIST)
-                    .set(CandidateTypeDO::getBlacklistDurationType, BlacklistConstants.DURATION_NONE)
-                    .set(CandidateTypeDO::getBlacklistReason, null)
-                    .set(CandidateTypeDO::getBlacklistTime, null)
-                    .set(CandidateTypeDO::getBlacklistEndTime, null);
+            updateWrapper.set(CandidateTypeDO::getIsBlacklist, BlacklistConstants.NOT_BLACKLIST)
+                .set(CandidateTypeDO::getBlacklistDurationType, BlacklistConstants.DURATION_NONE)
+                .set(CandidateTypeDO::getBlacklistReason, null)
+                .set(CandidateTypeDO::getBlacklistTime, null)
+                .set(CandidateTypeDO::getBlacklistEndTime, null);
         }
 
         return baseMapper.update(null, updateWrapper) > 0;
@@ -172,7 +180,6 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         }
     }
 
-
     @Override
     public CandidateTypeDetailResp get(Long id) {
         // 查询详情
@@ -198,7 +205,6 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         return newDetailResp;
     }
 
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(CandidateTypeReq req, Long id) {
@@ -208,7 +214,6 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
             throw new BusinessException("该作业人员不存在");
         }
         String oldUserName = userDO.getUsername();
-
 
         try {
             //身份证解密 → 加密
@@ -236,9 +241,8 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
             }
             String encryptedPhone = aesWithHMAC.encryptAndSign(rawPhone);
             // 判断手机号是否存在
-            if (userMapper.selectCount(new LambdaQueryWrapper<UserDO>()
-                    .eq(UserDO::getPhone, encryptedPhone)
-                    .ne(UserDO::getId, userDO.getId())) > 0) {
+            if (userMapper.selectCount(new LambdaQueryWrapper<UserDO>().eq(UserDO::getPhone, encryptedPhone)
+                .ne(UserDO::getId, userDO.getId())) > 0) {
                 throw new BusinessException("该手机号码已存在，且不属于当前人员");
             }
             userDO.setPhone(encryptedPhone);
@@ -260,13 +264,14 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
             String newPhone = userDO.getPhone();
             String newUserName = userDO.getUsername();
             workerApplyMapper.update(new LambdaUpdateWrapper<WorkerApplyDO>()
-                    .eq(WorkerApplyDO::getIdCardNumber, oldUserName)
-                    .set(WorkerApplyDO::getIdCardNumber, newUserName).set(WorkerApplyDO::getPhone, newPhone));
+                .eq(WorkerApplyDO::getIdCardNumber, oldUserName)
+                .set(WorkerApplyDO::getIdCardNumber, newUserName)
+                .set(WorkerApplyDO::getPhone, newPhone));
 
             licenseCertificateMapper.update(new LambdaUpdateWrapper<LicenseCertificateDO>()
-                    .eq(LicenseCertificateDO::getIdcardNo, oldUserName).set(LicenseCertificateDO::getIdcardNo, newUserName));
+                .eq(LicenseCertificateDO::getIdcardNo, oldUserName)
+                .set(LicenseCertificateDO::getIdcardNo, newUserName));
             userService.updateById(userDO);
-
 
         } catch (DuplicateKeyException e) {
             // 数据库唯一索引冲突（身份证重复）

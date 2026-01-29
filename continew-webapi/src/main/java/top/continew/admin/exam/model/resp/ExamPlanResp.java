@@ -231,7 +231,6 @@ ExamPlanResp extends BaseResp {
     @Schema(description = "未生成证书人数")
     private Integer certificateNotGeneratedCount;
 
-
     /**
      * 缺考人数
      */

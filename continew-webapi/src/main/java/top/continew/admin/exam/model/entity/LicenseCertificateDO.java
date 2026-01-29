@@ -183,7 +183,6 @@ public class LicenseCertificateDO extends BaseDO {
      */
     private Integer isDeleted;
 
-
     /**
      * 审批类型（0=初申，1=复审等）
      */

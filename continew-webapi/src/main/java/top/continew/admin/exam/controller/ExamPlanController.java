@@ -73,12 +73,13 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     /**
      * 确认考试成绩
+     * 
      * @return
      */
     @PostMapping("/score/confirmed/{planId}/{classId}")
     @SaCheckPermission("plan:score:confirmed")
-    public Boolean scoreConfirmed(@PathVariable("planId") Long planId,@PathVariable("classId") Long classId){
-        return baseService.scoreConfirmed(planId,classId);
+    public Boolean scoreConfirmed(@PathVariable("planId") Long planId, @PathVariable("classId") Long classId) {
+        return baseService.scoreConfirmed(planId, classId);
     }
 
     /**

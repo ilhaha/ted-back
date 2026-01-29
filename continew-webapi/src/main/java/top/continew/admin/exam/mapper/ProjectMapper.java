@@ -116,19 +116,14 @@ public interface ProjectMapper extends BaseMapper<ProjectDO> {
 
     /**
      * 根据项目编码集合查询项目列表
+     * 
      * @param projectCodes 项目编码集合
      * @return 已存在的项目列表
      */
-    @Select({
-            "<script>",
-            "SELECT id, project_code, project_name, category_id, project_status, project_type",
-            "FROM ted_project",
-            "WHERE project_code IN",
-            "<foreach collection='projectCodes' item='code' open='(' separator=',' close=')'>",
-            "#{code}",
-            "</foreach>",
-            "</script>"
-    })
+    @Select({"<script>", "SELECT id, project_code, project_name, category_id, project_status, project_type",
+        "FROM ted_project", "WHERE project_code IN",
+        "<foreach collection='projectCodes' item='code' open='(' separator=',' close=')'>", "#{code}", "</foreach>",
+        "</script>"})
     List<ProjectDO> selectByCodes(@Param("projectCodes") Set<String> projectCodes);
 
 }

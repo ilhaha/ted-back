@@ -122,12 +122,10 @@ public class ExamRecordDTO {
      */
     private String projectName;
 
-
     /**
      * 项目id
      */
     private Long projectId;
-
 
     /**
      * 所属班级

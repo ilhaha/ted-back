@@ -56,7 +56,6 @@ public class CategoryResp extends BaseResp {
     @Schema(description = "种类类型")
     private Integer categoryType;
 
-
     /**
      * 更新人ID
      */

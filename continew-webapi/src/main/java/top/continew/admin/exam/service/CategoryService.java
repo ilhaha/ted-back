@@ -40,6 +40,7 @@ public interface CategoryService extends BaseService<CategoryResp, CategoryDetai
      * @return
      */
     List<ProjectVo> getSelectOptions(List<Integer> categoryType);
+
     /**
      * 根据最后一个值来查前面的值
      * 

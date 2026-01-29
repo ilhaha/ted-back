@@ -479,8 +479,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             deptId = userInfo.getDeptId();
         }
 
-        List<ProjectCategoryProjectFlatVo> flats =
-                baseMapper.getDeptProjectTree(deptId, planType);
+        List<ProjectCategoryProjectFlatVo> flats = baseMapper.getDeptProjectTree(deptId, planType);
 
         Map<Long, ProjectTreeNodeVO> categoryMap = new LinkedHashMap<>();
         Map<Long, Map<Integer, ProjectTreeNodeVO>> levelCache = new HashMap<>();
@@ -488,14 +487,13 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
         for (ProjectCategoryProjectFlatVo flat : flats) {
 
             // ===== 分类节点 =====
-            ProjectTreeNodeVO categoryVo =
-                    categoryMap.computeIfAbsent(flat.getCategoryId(), id -> {
-                        ProjectTreeNodeVO vo = new ProjectTreeNodeVO();
-                        vo.setValue(flat.getCategoryId());
-                        vo.setLabel(flat.getCategoryName());
-                        vo.setChildren(new ArrayList<>());
-                        return vo;
-                    });
+            ProjectTreeNodeVO categoryVo = categoryMap.computeIfAbsent(flat.getCategoryId(), id -> {
+                ProjectTreeNodeVO vo = new ProjectTreeNodeVO();
+                vo.setValue(flat.getCategoryId());
+                vo.setLabel(flat.getCategoryName());
+                vo.setChildren(new ArrayList<>());
+                return vo;
+            });
 
             if (flat.getProjectId() == null) {
                 continue;
@@ -516,18 +514,17 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             }
 
             // ===== level = 1 / 2 → 中间层 =====
-            Map<Integer, ProjectTreeNodeVO> levelMap =
-                    levelCache.computeIfAbsent(flat.getCategoryId(), k -> new HashMap<>());
+            Map<Integer, ProjectTreeNodeVO> levelMap = levelCache.computeIfAbsent(flat
+                .getCategoryId(), k -> new HashMap<>());
 
-            ProjectTreeNodeVO levelVo =
-                    levelMap.computeIfAbsent(level, lv -> {
-                        ProjectTreeNodeVO vo = new ProjectTreeNodeVO();
-                        vo.setValue(flat.getCategoryId() * 1000 + lv);
-                        vo.setLabel((lv == 1 ? "一级" : "二级") + flat.getCategoryName());
-                        vo.setChildren(new ArrayList<>());
-                        categoryVo.getChildren().add(vo);
-                        return vo;
-                    });
+            ProjectTreeNodeVO levelVo = levelMap.computeIfAbsent(level, lv -> {
+                ProjectTreeNodeVO vo = new ProjectTreeNodeVO();
+                vo.setValue(flat.getCategoryId() * 1000 + lv);
+                vo.setLabel((lv == 1 ? "一级" : "二级") + flat.getCategoryName());
+                vo.setChildren(new ArrayList<>());
+                categoryVo.getChildren().add(vo);
+                return vo;
+            });
 
             levelVo.getChildren().add(projectVo);
         }

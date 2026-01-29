@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.exam.schedule;
 
 import cn.crane4j.core.util.CollectionUtils;
@@ -49,17 +65,11 @@ public class CertificateExpireScheduler {
         log.info("【证书过期处理】任务开始");
 
         //  查询已过期、已生效的证书
-        List<LicenseCertificateDO> expiredCertList =
-                licenseCertificateMapper.selectList(
-                        new LambdaQueryWrapper<LicenseCertificateDO>()
-                                .eq(LicenseCertificateDO::getCertGenerated, 1)
-                                .lt(LicenseCertificateDO::getEndDate, LocalDate.now())
-                                .eq(LicenseCertificateDO::getIsDeleted, false)
-                                .select(
-                                        LicenseCertificateDO::getCandidateId,
-                                        LicenseCertificateDO::getRecordId
-                                )
-                );
+        List<LicenseCertificateDO> expiredCertList = licenseCertificateMapper
+            .selectList(new LambdaQueryWrapper<LicenseCertificateDO>().eq(LicenseCertificateDO::getCertGenerated, 1)
+                .lt(LicenseCertificateDO::getEndDate, LocalDate.now())
+                .eq(LicenseCertificateDO::getIsDeleted, false)
+                .select(LicenseCertificateDO::getCandidateId, LicenseCertificateDO::getRecordId));
 
         if (CollectionUtils.isEmpty(expiredCertList)) {
             log.info("【证书过期处理】无过期证书，任务结束");
@@ -68,27 +78,19 @@ public class CertificateExpireScheduler {
 
         //  recordId → ExamRecords → planId
         Set<Long> recordIds = expiredCertList.stream()
-                .map(LicenseCertificateDO::getRecordId)
-                .collect(Collectors.toSet());
+            .map(LicenseCertificateDO::getRecordId)
+            .collect(Collectors.toSet());
 
-        Map<Long, ExamRecordsDO> recordMap =
-                examRecordsMapper.selectBatchIds(recordIds).stream()
-                        .collect(Collectors.toMap(
-                                ExamRecordsDO::getId,
-                                r -> r
-                        ));
+        Map<Long, ExamRecordsDO> recordMap = examRecordsMapper.selectBatchIds(recordIds)
+            .stream()
+            .collect(Collectors.toMap(ExamRecordsDO::getId, r -> r));
 
         //  planId → ExamPlan → projectId
-        Set<Long> planIds = recordMap.values().stream()
-                .map(ExamRecordsDO::getPlanId)
-                .collect(Collectors.toSet());
+        Set<Long> planIds = recordMap.values().stream().map(ExamRecordsDO::getPlanId).collect(Collectors.toSet());
 
-        Map<Long, ExamPlanDO> planMap =
-                examPlanMapper.selectBatchIds(planIds).stream()
-                        .collect(Collectors.toMap(
-                                ExamPlanDO::getId,
-                                p -> p
-                        ));
+        Map<Long, ExamPlanDO> planMap = examPlanMapper.selectBatchIds(planIds)
+            .stream()
+            .collect(Collectors.toMap(ExamPlanDO::getId, p -> p));
 
         // 组装 candidateId + projectId，去重
         Set<String> handledKeySet = new HashSet<>();
@@ -116,19 +118,15 @@ public class CertificateExpireScheduler {
             }
 
             //  重置 CandidateExamProject（进入新一轮）
-            int updated =
-                    candidateExamProjectMapper.update(
-                            null,
-                            new LambdaUpdateWrapper<CandidateExamProjectDO>()
-                                    .eq(CandidateExamProjectDO::getCandidateId, candidateId)
-                                    .eq(CandidateExamProjectDO::getProjectId, projectId)
-                                    .eq(CandidateExamProjectDO::getPassed, 1) // 幂等
-                                    .set(CandidateExamProjectDO::getPassed, 0)
-                                    .set(CandidateExamProjectDO::getUsedMakeup, 0)
-                                    .setSql("attempt_no = attempt_no + 1")
-                                    .set(CandidateExamProjectDO::getPassTime, null)
-                                    .set(CandidateExamProjectDO::getCertificateExpireTime, null)
-                    );
+            int updated = candidateExamProjectMapper.update(null, new LambdaUpdateWrapper<CandidateExamProjectDO>()
+                .eq(CandidateExamProjectDO::getCandidateId, candidateId)
+                .eq(CandidateExamProjectDO::getProjectId, projectId)
+                .eq(CandidateExamProjectDO::getPassed, 1) // 幂等
+                .set(CandidateExamProjectDO::getPassed, 0)
+                .set(CandidateExamProjectDO::getUsedMakeup, 0)
+                .setSql("attempt_no = attempt_no + 1")
+                .set(CandidateExamProjectDO::getPassTime, null)
+                .set(CandidateExamProjectDO::getCertificateExpireTime, null));
 
             resetCount += updated;
         }

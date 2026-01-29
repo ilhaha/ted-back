@@ -132,6 +132,4 @@ public class WorkerQrcodeUploadReq {
      */
     private List<String> weldingProjectCode;
 
-
-
 }

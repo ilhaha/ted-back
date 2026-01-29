@@ -187,7 +187,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
                                                           @Validated PageQuery pageQuery,
                                                           @RequestParam(required = false) Long isMakeup,
                                                           @RequestParam(required = false) Long enrollStatus) {
-        return enrollService.getEnrollStatusList(query, pageQuery,isMakeup, enrollStatus);
+        return enrollService.getEnrollStatusList(query, pageQuery, isMakeup, enrollStatus);
     }
 
     @GetMapping("/getEnrollInfo")

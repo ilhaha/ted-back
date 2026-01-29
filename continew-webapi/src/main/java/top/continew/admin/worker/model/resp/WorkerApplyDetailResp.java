@@ -204,7 +204,6 @@ public class WorkerApplyDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "政治面貌")
     private String politicalStatus;
 
-
     /**
      * 焊接资格项目,非焊接项目可为空
      */

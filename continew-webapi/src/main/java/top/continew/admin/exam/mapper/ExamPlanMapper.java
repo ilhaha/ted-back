@@ -115,20 +115,16 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
                                                                       @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper,
                                                                       @Param("roadExamTypeId") Long roadExamTypeId);
 
-    List<ClassroomInvigilatorDTO> getClassroomIdsWithExamOnDate(
-            @Param("startOfDay") LocalDateTime startOfDay,
-            @Param("endOfDay") LocalDateTime endOfDay
-    );
+    List<ClassroomInvigilatorDTO> getClassroomIdsWithExamOnDate(@Param("startOfDay") LocalDateTime startOfDay,
+                                                                @Param("endOfDay") LocalDateTime endOfDay);
 
     /**
      * 查询指定监考员列表中，具备指定考试计划对应考试类别资质的监考员
      */
-    List<Long> selectQualifiedInvigilators(
-            @Param("examPlanId") Long examPlanId,
-            @Param("userIds") List<Long> userIds
-    );
+    List<Long> selectQualifiedInvigilators(@Param("examPlanId") Long examPlanId, @Param("userIds") List<Long> userIds);
 
-    List<ClassroomInvigilatorDTO> findInvigilatorsByDateAndClassrooms(@Param("startTime") LocalDateTime startTime,@Param(("classroomIds")) List<Long> classroomIds);
+    List<ClassroomInvigilatorDTO> findInvigilatorsByDateAndClassrooms(@Param("startTime") LocalDateTime startTime,
+                                                                      @Param(("classroomIds")) List<Long> classroomIds);
 
     IPage<ExamPlanDetailResp> selectOrgExamPlanPagegetClassExamStatsPage(@Param("page") Page<Object> objectPage,
                                                                          @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper,

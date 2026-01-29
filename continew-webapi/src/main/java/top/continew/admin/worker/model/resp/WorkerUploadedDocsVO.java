@@ -17,7 +17,6 @@
 package top.continew.admin.worker.model.resp;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.util.List;

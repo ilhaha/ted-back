@@ -369,14 +369,13 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
     @Override
     public List<CascadeOptionsVo> getOptions() {
 
-        List<CategoryDO> categoryDOList =
-                categoryMapper.selectList(new QueryWrapper<CategoryDO>().eq("is_deleted", 0));
+        List<CategoryDO> categoryDOList = categoryMapper.selectList(new QueryWrapper<CategoryDO>().eq("is_deleted", 0));
 
-        List<ProjectDO> projectDOList =
-                projectMapper.selectList(new QueryWrapper<ProjectDO>().eq("is_deleted", 0).eq("project_status",2) );
+        List<ProjectDO> projectDOList = projectMapper.selectList(new QueryWrapper<ProjectDO>().eq("is_deleted", 0)
+            .eq("project_status", 2));
 
-        List<KnowledgeTypeDO> knowledgeTypeDOList =
-                knowledgeTypeMapper.selectList(new QueryWrapper<KnowledgeTypeDO>().eq("is_deleted", 0));
+        List<KnowledgeTypeDO> knowledgeTypeDOList = knowledgeTypeMapper.selectList(new QueryWrapper<KnowledgeTypeDO>()
+            .eq("is_deleted", 0));
 
         List<CascadeOptionsVo> vos = new ArrayList<>();
 
@@ -422,18 +421,17 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
                 }
 
                 // ===== level = 1 / 2 → 插中间层 =====
-                Map<Integer, CascadeOptionsVo> levelMap =
-                        levelCache.computeIfAbsent(categoryDO.getId(), k -> new HashMap<>());
+                Map<Integer, CascadeOptionsVo> levelMap = levelCache.computeIfAbsent(categoryDO
+                    .getId(), k -> new HashMap<>());
 
-                CascadeOptionsVo levelVo =
-                        levelMap.computeIfAbsent(level, lv -> {
-                            CascadeOptionsVo vo = new CascadeOptionsVo();
-                            vo.setValue(categoryDO.getId() + "-" + lv);
-                            vo.setLabel((lv == 1 ? "一级" : "二级") + categoryDO.getName());
-                            vo.setChildren(new ArrayList<>());
-                            categoryVo.getChildren().add(vo);
-                            return vo;
-                        });
+                CascadeOptionsVo levelVo = levelMap.computeIfAbsent(level, lv -> {
+                    CascadeOptionsVo vo = new CascadeOptionsVo();
+                    vo.setValue(categoryDO.getId() + "-" + lv);
+                    vo.setLabel((lv == 1 ? "一级" : "二级") + categoryDO.getName());
+                    vo.setChildren(new ArrayList<>());
+                    categoryVo.getChildren().add(vo);
+                    return vo;
+                });
 
                 levelVo.getChildren().add(projectVo);
             }

@@ -43,8 +43,6 @@ public enum WorkerApplyReviewStatusEnum {
 
     ALTER_EXAM(7, "已考试");
 
-
-
     private final Integer value;
     private final String description;
 }

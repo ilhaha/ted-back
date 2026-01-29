@@ -204,8 +204,9 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
 
     /**
      * 确认考试成绩
+     * 
      * @return
      */
-    Boolean scoreConfirmed(Long planId,Long classId);
+    Boolean scoreConfirmed(Long planId, Long classId);
 
 }

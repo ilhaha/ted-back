@@ -53,10 +53,7 @@ public class CategoryController extends BaseController<CategoryService, Category
      */
     @Operation(summary = "获取八大类下拉框")
     @GetMapping("/selectOptions")
-    public List<ProjectVo> getSelectOptions(
-            @Parameter(description = "种类类型（支持多个，如?categoryType=3&categoryType=4）")
-            @RequestParam(required = false) List<Integer> categoryType
-    ) {
+    public List<ProjectVo> getSelectOptions(@Parameter(description = "种类类型（支持多个，如?categoryType=3&categoryType=4）") @RequestParam(required = false) List<Integer> categoryType) {
         return baseService.getSelectOptions(categoryType);
     }
 

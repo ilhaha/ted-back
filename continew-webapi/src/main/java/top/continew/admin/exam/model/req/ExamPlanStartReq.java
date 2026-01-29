@@ -16,7 +16,6 @@
 
 package top.continew.admin.exam.model.req;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 

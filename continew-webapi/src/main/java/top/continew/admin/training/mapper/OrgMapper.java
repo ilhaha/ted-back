@@ -133,5 +133,6 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
     List<ExamRecordsDO> selectExamRecordsForTheoryReuse(@Param("candidateIds") Set<Long> candidateIds,
                                                         @Param("planIds") List<Long> planIds);
 
-    List<Long> selectAlterReusedCandidates(@Param("candidateIds") Set<Long> allCandidateIds, @Param("planIds") List<Long> planIds);
+    List<Long> selectAlterReusedCandidates(@Param("candidateIds") Set<Long> allCandidateIds,
+                                           @Param("planIds") List<Long> planIds);
 }

@@ -16,16 +16,13 @@
 
 package top.continew.admin.exam.service.impl;
 
-import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -50,8 +47,6 @@ import top.continew.admin.examconnect.model.entity.StepDO;
 import top.continew.admin.util.RedisUtil;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
-import top.continew.starter.extension.crud.model.query.PageQuery;
-import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.exam.mapper.CategoryMapper;
 import top.continew.admin.exam.model.entity.CategoryDO;
@@ -65,7 +60,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static cn.hutool.poi.excel.cell.CellUtil.getCellValue;
@@ -98,6 +92,7 @@ public class CategoryServiceImpl extends BaseServiceImpl<CategoryMapper, Categor
     public List<ProjectVo> getSelectOptions(List<Integer> categoryTypeList) {
         return baseMapper.getSelectOptions(categoryTypeList);
     }
+
     @Override
     public AllPathVo getAllPath(Long id) {
         AllPathVo allPathVo = new AllPathVo();

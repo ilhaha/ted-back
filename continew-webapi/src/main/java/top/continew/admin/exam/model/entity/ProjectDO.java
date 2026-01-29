@@ -82,7 +82,6 @@ public class ProjectDO extends BaseDO {
      */
     private Integer projectType;
 
-
     /**
      * 项目考试等级（ 0无 1一级 2 二级）
      */

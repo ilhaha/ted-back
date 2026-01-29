@@ -78,6 +78,7 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
 
     /**
      * 批量查询考试记录对应焊接项目
+     * 
      * @param recordIds 考试记录ID列表
      * @return Map<recordId, weldingProjectCodes>
      */
@@ -85,6 +86,7 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
 
     /**
      * 查询考试计划报考班级的考生考试情况
+     * 
      * @param planId
      * @param roadExamTypeId
      * @param metalProjectId

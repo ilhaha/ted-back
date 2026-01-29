@@ -86,7 +86,6 @@ public class EnrollDO extends BaseDO {
      */
     private Integer examStatus;
 
-
     /**
      * 是否补考（0否、1是）
      */

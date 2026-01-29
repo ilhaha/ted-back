@@ -16,12 +16,9 @@
 
 package top.continew.admin.exam.model.req;
 
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.util.List;
 
 /**
  * @author ilhaha
@@ -39,7 +36,6 @@ public class InputWeldingScoreReq implements Serializable {
      * 焊接项目实操成绩id
      */
     private Long weldingOperScoreId;
-
 
     /**
      * 实操成绩

@@ -63,7 +63,6 @@ public class CategoryDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "类别代号")
     private String code;
 
-
     /**
      * 种类类型
      */

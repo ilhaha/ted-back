@@ -19,7 +19,6 @@ package top.continew.admin.exam.service;
 import top.continew.admin.document.model.resp.DocumentTypeResp;
 import top.continew.admin.exam.model.req.ExamLocationReqStr;
 import top.continew.admin.exam.model.resp.StudentProjectDetailResp;
-import top.continew.admin.exam.model.vo.ProjectCategoryTreeVO;
 import top.continew.admin.exam.model.vo.ProjectTreeNodeVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.model.vo.ProjectWithClassroomVO;

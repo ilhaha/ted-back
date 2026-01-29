@@ -27,8 +27,6 @@ import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.req.InputWeldingScoreReq;
 import top.continew.admin.exam.model.resp.ClassExamTableResp;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
-import top.continew.admin.training.model.query.OrgClassQuery;
-import top.continew.admin.training.model.resp.OrgClassResp;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -134,7 +132,6 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
     public Boolean inputScores(@RequestBody @Validated InputScoresReq inputScoresReq) {
         return baseService.inputScores(inputScoresReq);
     }
-
 
     /**
      * 录入焊接项目实操
