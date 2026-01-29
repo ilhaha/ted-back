@@ -258,17 +258,17 @@
                ter.road_scores,
                ter.road_input_status,
                ter.exam_result_status,
-               su.nickname        AS candidateName,
+               su.nickname AS candidateName,
                su.username,
                tp.is_operation,
                tp.project_name,
-               tp.id              AS project_id,
+               tp.id       AS project_id,
                toc.class_name,
                te.seat_id,
                CASE
                    WHEN tc.id = #{roadExamTypeId} THEN 1
                    ELSE 0
-                   END            AS is_road,
+                   END     AS is_road,
                CASE
                    WHEN tp.id IN (#{metalProjectId}, #{nonmetalProjectId}) THEN
                        JSON_ARRAYAGG(
@@ -280,7 +280,7 @@
                        )
                    ELSE
                        JSON_ARRAY()
-                   END            AS welding_oper_scores
+                   END     AS welding_oper_scores
         FROM ted_exam_records AS ter
                  LEFT JOIN ted_exam_plan AS tep
                            ON ter.plan_id = tep.id AND tep.is_deleted = 0
@@ -299,6 +299,11 @@
                                AND ter.plan_id = twos.plan_id
                                AND ter.candidate_id = twos.candidate_id
                                AND twos.is_deleted = 0
+                 JOIN ted_plan_apply_class tpac
+                      ON tpac.plan_id = ter.plan_id
+                          AND tpac.class_id = toc.id
+                          AND tpac.is_deleted = 0
+                          AND tpac.is_score_confirmed = 1
         WHERE ter.plan_id = #{planId}
           AND ter.is_deleted = 0
         GROUP BY ter.id,

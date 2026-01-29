@@ -129,4 +129,8 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
     );
 
     List<ClassroomInvigilatorDTO> findInvigilatorsByDateAndClassrooms(@Param("startTime") LocalDateTime startTime,@Param(("classroomIds")) List<Long> classroomIds);
+
+    IPage<ExamPlanDetailResp> selectOrgExamPlanPagegetClassExamStatsPage(@Param("page") Page<Object> objectPage,
+                                                                         @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper,
+                                                                         @Param("roadExamTypeId") Long roadExamTypeId);
 }

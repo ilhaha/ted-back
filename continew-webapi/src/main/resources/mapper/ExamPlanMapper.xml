@@ -261,6 +261,66 @@
         WHERE id = #{id}
             FOR UPDATE
     </select>
+    <select id="selectOrgExamPlanPagegetClassExamStatsPage"
+            resultType="top.continew.admin.exam.model.resp.ExamPlanDetailResp">
+        WITH dedup_records AS (SELECT plan_id,
+                                      candidate_id,
+                                      exam_result_status,
+                                      is_certificate_generated,
+                                      exam_paper
+                               FROM ted_exam_records
+                               WHERE is_deleted = 0
+                               GROUP BY plan_id, candidate_id, exam_result_status, is_certificate_generated, exam_paper)
+        SELECT tep.id,
+               tep.exam_plan_name,
+               tp.project_name,
+               org.name                                                                     AS org_name,
+               tp.is_operation                                                              AS has_oper,
+               toc.id                                                                       AS class_id,
+               toc.class_name,
+               CASE WHEN tc.id = #{roadExamTypeId} THEN 1 ELSE 0 END                        AS has_road,
+               COUNT(DISTINCT te.user_id)                                                   AS enrolled_count,
+               COUNT(DISTINCT dr.candidate_id)                                              AS exam_count,
+               COUNT(DISTINCT CASE WHEN dr.exam_result_status = 1 THEN dr.candidate_id END) AS passed_count,
+               COUNT(DISTINCT CASE WHEN dr.exam_result_status = 0 THEN dr.candidate_id END) AS failed_count,
+               COUNT(DISTINCT CASE WHEN dr.exam_result_status = 2 THEN dr.candidate_id END) AS not_entered_count,
+               COUNT(DISTINCT CASE
+                                  WHEN dr.is_certificate_generated = 1
+                                      THEN dr.candidate_id END)                             AS certificate_generated_count,
+               COUNT(DISTINCT CASE
+                                  WHEN dr.is_certificate_generated = 0
+                                      THEN dr.candidate_id END)                             AS certificate_not_generated_count,
+               COUNT(DISTINCT CASE
+                                  WHEN dr.exam_paper IS NULL
+                                      THEN dr.candidate_id END)                             AS absent_count
+        FROM ted_exam_plan tep
+                 JOIN ted_project tp
+                      ON tep.exam_project_id = tp.id
+                          AND tp.is_deleted = 0
+                 JOIN ted_category tc
+                      ON tp.category_id = tc.id AND tc.is_deleted = 0
+                 JOIN ted_enroll te
+                      ON tep.id = te.exam_plan_id
+                          AND te.is_deleted = 0
+                 JOIN ted_org_class toc
+                      ON te.class_id = toc.id
+                          AND toc.is_deleted = 0
+                 JOIN ted_org org
+                      ON toc.org_id = org.id
+                          AND org.is_deleted = 0
+                 LEFT JOIN dedup_records dr
+                           ON dr.plan_id = tep.id
+                               AND dr.candidate_id = te.user_id
+            ${ew.customSqlSegment}
+        GROUP BY
+            tep.id,
+            tep.exam_plan_name,
+            tp.project_name,
+            org.name,
+            toc.id,
+            toc.class_name
+        ORDER BY toc.id DESC
+    </select>
     <select id="selectExamPlanPagegetClassExamStatsPage"
             resultType="top.continew.admin.exam.model.resp.ExamPlanDetailResp">
         WITH dedup_records AS (SELECT plan_id,
@@ -308,11 +368,14 @@
                  JOIN ted_org org
                       ON toc.org_id = org.id
                           AND org.is_deleted = 0
-                 JOIN ted_plan_apply_class tpac
-                      ON toc.id = tpac.class_id AND is_score_confirmed = 0 AND tpac.is_deleted = 0
                  LEFT JOIN dedup_records dr
                            ON dr.plan_id = tep.id
-                               AND dr.candidate_id = te.user_id ${ew.customSqlSegment}
+                               AND dr.candidate_id = te.user_id
+                 LEFT JOIN ted_plan_apply_class tpac
+                           ON tpac.plan_id = tep.id
+                               AND tpac.class_id = toc.id
+                               AND tpac.is_deleted = 0 ${ew.customSqlSegment}
+             AND (tpac.is_score_confirmed IS NULL OR tpac.is_score_confirmed = 0)
         GROUP BY
             tep.id,
             tep.exam_plan_name,

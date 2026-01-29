@@ -2059,7 +2059,24 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 worker.setStatus(WorkerApplyReviewStatusEnum.WAIT_UPLOAD.getValue());
                 worker.setClassId(classId);
                 worker.setApplyType(WorkerApplyTypeEnum.ORG_IMPORT.getValue());
-                worker.setWeldingProjectCode(weldingProject);
+                if (weldingProject != null) {
+                    // 去掉首尾逗号
+                    weldingProject = weldingProject.trim();
+                    if (weldingProject.startsWith(",")) {
+                        weldingProject = weldingProject.substring(1);
+                    }
+                    if (weldingProject.endsWith(",")) {
+                        weldingProject = weldingProject.substring(0, weldingProject.length() - 1);
+                    }
+
+                    // 分割、去重、重新拼接
+                    weldingProject = Arrays.stream(weldingProject.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .distinct()
+                            .collect(Collectors.joining(","));
+                    worker.setWeldingProjectCode(weldingProject);
+                }
                 successList.add(worker);
 
             } catch (Exception e) {
@@ -2737,6 +2754,10 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             // 焊接项目还需要判断焊接资格项目是否填写
             if (isWelding) {
                 String weldingProject = getCellString(row, 7);
+                if (StrUtil.isNotBlank(weldingProject)) {
+                    weldingProject = weldingProject.replaceAll("^,+|,+$", "");
+                }
+
                 if (StrUtil.isBlank(weldingProject)) {
                     throw new BusinessException(
                             String.format("第 %d 行焊接资格项目不能为空", rowIndex + 1)
