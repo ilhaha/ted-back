@@ -993,11 +993,11 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
                     List<ExamRecordDTO> records = entry.getValue();
 
                     long passCount = records.stream()
-                            .filter(r -> Objects.equals(r.getExamResultStatus(), 1))
+                            .filter(r -> Objects.equals(r.getExamResultStatus(), ExamResultStatusEnum.PASSED.getValue()))
                             .count();
 
                     long failCount = records.stream()
-                            .filter(r -> Objects.equals(r.getExamResultStatus(), 0))
+                            .filter(r -> Objects.equals(r.getExamResultStatus(), ExamResultStatusEnum.FAILED.getValue()))
                             .count();
 
                     ClassExamTableResp resp = new ClassExamTableResp();
@@ -1036,7 +1036,16 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
                     return resp;
                 })
                 // 可选：按班级名排序
-                .sorted(Comparator.comparing(ClassExamTableResp::getClassName))
+                .sorted(Comparator.comparing(
+                        resp -> {
+                            List<ExamRecordsResp> records = resp.getRecords();
+                            if (ObjectUtil.isEmpty(records)) {
+                                return Integer.MAX_VALUE;
+                            }
+                            return Optional.ofNullable(records.get(0).getSeatId())
+                                    .orElse(Integer.MAX_VALUE);
+                        }
+                ))
                 .collect(Collectors.toList());
 
         return result;

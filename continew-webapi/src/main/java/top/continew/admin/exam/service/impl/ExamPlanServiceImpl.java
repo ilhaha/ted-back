@@ -1660,7 +1660,6 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         queryWrapper.eq("tep.is_deleted", 0);
         queryWrapper.eq("tep.status", ExamPlanStatusEnum.STARTED.getValue());
         queryWrapper.eq("tep.plan_type", ExamPlanTypeEnum.WORKER.getValue());
-
         super.sort(queryWrapper, pageQuery);
 
         IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery
@@ -1689,7 +1688,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         super.sort(queryWrapper, pageQuery);
 
-        IPage<ExamPlanDetailResp> page = baseMapper.selectExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery
+        IPage<ExamPlanDetailResp> page = baseMapper.selectOrgExamPlanPagegetClassExamStatsPage(new Page<>(pageQuery
                 .getPage(), pageQuery.getSize()), queryWrapper, roadExamTypeId);
 
         PageResp<ExamPlanResp> build = PageResp.build(page, super.getListClass());

@@ -2,6 +2,7 @@ package top.continew.admin.training.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.crypto.CryptoException;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -15,14 +16,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 import top.continew.admin.common.constant.BlacklistConstants;
+import top.continew.admin.common.constant.enums.CandidateTypeEnum;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
+import top.continew.admin.exam.mapper.LicenseCertificateMapper;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.entity.LicenseCertificateDO;
 import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
 import top.continew.admin.exam.model.resp.ExamPlanResp;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.dto.UserDetailDTO;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.system.service.UserService;
+import top.continew.admin.worker.mapper.WorkerApplyMapper;
+import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -52,9 +59,13 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
 
     private final AESWithHMAC aesWithHMAC;
 
-    private final top.continew.admin.system.service.UserService userService;
+    private final UserService userService;
 
     private final UserMapper userMapper;
+
+    private final WorkerApplyMapper workerApplyMapper;
+
+    private final LicenseCertificateMapper licenseCertificateMapper;
 
 
     /**
@@ -67,7 +78,7 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
     @Override
     public PageResp<CandidateTypeResp> page(CandidateTypeQuery query, PageQuery pageQuery) {
         QueryWrapper<CandidateTypeDO> queryWrapper = this.buildQueryWrapper(query);
-        queryWrapper.eq("tct.is_deleted", 0);
+        queryWrapper.eq("tct.type", CandidateTypeEnum.WORKER.getValue()).eq("tct.is_deleted", 0);
         String candidateName = query.getCandidateName();
         if (StringUtil.isNotBlank(candidateName)) {
             queryWrapper.like("su.nickname", candidateName);
@@ -189,12 +200,15 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
 
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void update(CandidateTypeReq req, Long id) {
         //查询用户
         UserDO userDO = userService.getById(req.getCandidateId());
         if (userDO == null) {
             throw new BusinessException("该作业人员不存在");
         }
+        String oldUserName = userDO.getUsername();
+
 
         try {
             //身份证解密 → 加密
@@ -210,8 +224,9 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
             queryWrapper.ne("id", userDO.getId());
             boolean exists = userMapper.selectCount(queryWrapper) > 0;
             if (exists) {
-                throw new BusinessException("该身份证已存在，请重新输入");
+                throw new BusinessException("该身份证号已存在，且不属于当前人员");
             }
+
             userDO.setUsername(encryptedIdCard);
 
             //电话号码解密 → 加密
@@ -220,6 +235,12 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
                 throw new BusinessException("电话号码解密失败");
             }
             String encryptedPhone = aesWithHMAC.encryptAndSign(rawPhone);
+            // 判断手机号是否存在
+            if (userMapper.selectCount(new LambdaQueryWrapper<UserDO>()
+                    .eq(UserDO::getPhone, encryptedPhone)
+                    .ne(UserDO::getId, userDO.getId())) > 0) {
+                throw new BusinessException("该手机号码已存在，且不属于当前人员");
+            }
             userDO.setPhone(encryptedPhone);
 
         } catch (CryptoException e) {
@@ -235,7 +256,18 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
 
         // 更新数据库
         try {
+            // 修改该身份证下得所有信息
+            String newPhone = userDO.getPhone();
+            String newUserName = userDO.getUsername();
+            workerApplyMapper.update(new LambdaUpdateWrapper<WorkerApplyDO>()
+                    .eq(WorkerApplyDO::getIdCardNumber, oldUserName)
+                    .set(WorkerApplyDO::getIdCardNumber, newUserName).set(WorkerApplyDO::getPhone, newPhone));
+
+            licenseCertificateMapper.update(new LambdaUpdateWrapper<LicenseCertificateDO>()
+                    .eq(LicenseCertificateDO::getIdcardNo, oldUserName).set(LicenseCertificateDO::getIdcardNo, newUserName));
             userService.updateById(userDO);
+
+
         } catch (DuplicateKeyException e) {
             // 数据库唯一索引冲突（身份证重复）
             throw new BusinessException("该身份证已存在，请重新输入", e);
