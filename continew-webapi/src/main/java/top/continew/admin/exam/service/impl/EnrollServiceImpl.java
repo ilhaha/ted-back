@@ -189,13 +189,18 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         QueryWrapper<EnrollDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tep.is_deleted", 0);
-        queryWrapper.eq("tep.status", ExamPlanStatusEnum.IN_FORCE.getValue());
+        // 只有不是“查看全部”时，才限制为进行中
+        if (enrollStatus == null || enrollStatus.intValue() != 6) {
+            queryWrapper.eq("tep.status", ExamPlanStatusEnum.IN_FORCE.getValue());
+        }
         queryWrapper.eq("tep.plan_type", ExamPlanTypeEnum.INSPECTION.getValue());
 
-        // 排除不能首考的项目
-        if (!CollectionUtils.isEmpty(forbiddenProjectIds)) {
+        // 查看全部时，不做首考项目过滤
+        if ((enrollStatus == null || enrollStatus.intValue() != 6)
+                && !CollectionUtils.isEmpty(forbiddenProjectIds)) {
             queryWrapper.notIn("tep.exam_project_id", forbiddenProjectIds);
         }
+
 
         buildEnrollStatusCondition(queryWrapper, enrollStatus);
         super.sort(queryWrapper, pageQuery);
@@ -231,7 +236,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         QueryWrapper<EnrollDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.eq("tep.is_deleted", 0);
-        queryWrapper.eq("tep.status", ExamPlanStatusEnum.IN_FORCE.getValue());
+        if (enrollStatus == null || enrollStatus.intValue() != 6) {
+            queryWrapper.eq("tep.status", ExamPlanStatusEnum.IN_FORCE.getValue());
+        }
         queryWrapper.eq("tep.plan_type", ExamPlanTypeEnum.INSPECTION.getValue());
         queryWrapper.in("tep.exam_project_id", makeupProjectIds);
 
