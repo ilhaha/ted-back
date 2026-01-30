@@ -16,6 +16,7 @@
 
 package top.continew.admin.training.model.resp;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -145,4 +146,22 @@ public class CandidateTypeResp extends BaseResp {
      */
     @Schema(description = "一寸照")
     private String avatar;
+
+    /**
+     * 学历
+     */
+    @Schema(description = "学历")
+    private String education;
+
+    /**
+     * 工作区域
+     */
+    @Schema(description = "工作区域")
+    private String address;
+
+    /**
+     * 工作单位
+     */
+    @Schema(description = "工作单位")
+    private String workUnit;
 }

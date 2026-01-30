@@ -153,4 +153,25 @@ public class CandidateTypeDetailResp extends BaseDetailResp {
     @Schema(description = "一寸照")
     @ExcelProperty(value = "一寸照")
     private String avatar;
+
+    /**
+     * 学历
+     */
+    @Schema(description = "学历")
+    @ExcelProperty(value = "学历")
+    private String education;
+
+    /**
+     * 工作区域
+     */
+    @Schema(description = "工作区域")
+    @ExcelProperty(value = "工作区域")
+    private String address;
+
+    /**
+     * 工作单位
+     */
+    @Schema(description = "工作单位")
+    @ExcelProperty(value = "工作单位")
+    private String workUnit;
 }

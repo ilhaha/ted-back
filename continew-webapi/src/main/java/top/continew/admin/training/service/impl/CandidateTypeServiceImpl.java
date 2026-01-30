@@ -98,6 +98,11 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         if (StringUtil.isNotBlank(idNumber)) {
             queryWrapper.eq("su.username", aesWithHMAC.encryptAndSign(idNumber));
         }
+
+        String phone = query.getPhone();
+        if (StringUtil.isNotBlank(phone)) {
+            queryWrapper.eq("su.phone", aesWithHMAC.encryptAndSign(phone));
+        }
         IPage<CandidateTypeDetailResp> page = baseMapper.getWorkerPage(new Page<>(pageQuery.getPage(), pageQuery
             .getSize()), queryWrapper);
         List<CandidateTypeDetailResp> records = page.getRecords();

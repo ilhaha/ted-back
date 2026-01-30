@@ -61,4 +61,18 @@ public class CandidateTypeQuery implements Serializable {
     @Schema(description = "考生身份证")
     @QueryIgnore
     private String idNumber;
+
+    /**
+     * 联系方式
+     */
+    @Schema(description = "联系方式")
+    @QueryIgnore
+    private String phone;
+
+    /**
+     * 工作单位
+     */
+    @Schema(description = "工作单位")
+    @Query(type = QueryType.LIKE,columns = "twa_latest.work_unit")
+    private String workUnit;
 }

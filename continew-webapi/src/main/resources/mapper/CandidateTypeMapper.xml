@@ -20,26 +20,56 @@
                su.username,
                su.phone,
                su.avatar,
+               twa_latest.education,
+               twa_latest.address,
+               twa_latest.work_unit,
+
                COUNT(ter.id)                                          AS exam_total_count,
                COUNT(CASE WHEN ter.exam_result_status = 1 THEN 1 END) AS pass_count,
-
                COUNT(CASE WHEN ter.exam_result_status = 0 THEN 1 END) AS fail_count
+
         FROM ted_candidate_type tct
                  JOIN sys_user su
                       ON tct.candidate_id = su.id
+
                  LEFT JOIN ted_exam_records ter
                            ON su.id = ter.candidate_id
                                AND ter.is_deleted = 0
-            ${ew.customSqlSegment} AND ter.exam_result_status != 2
+                               AND ter.exam_result_status != 2
+LEFT JOIN (
+  SELECT *
+  FROM (
+    SELECT
+      twa.*,
+      ROW_NUMBER() OVER (
+        PARTITION BY twa.id_card_number
+        ORDER BY twa.create_time DESC
+      ) AS rn
+    FROM ted_worker_apply twa
+    WHERE twa.is_deleted = 0
+      AND twa.status = 1
+  ) t
+  WHERE t.rn = 1
+) twa_latest
+        ON twa_latest.id_card_number = su.username
+            ${ew.customSqlSegment}
         GROUP BY
             tct.id,
+            tct.candidate_id,
             tct.is_blacklist,
             tct.blacklist_reason,
             tct.blacklist_duration_type,
             tct.blacklist_time,
             tct.blacklist_end_time,
-            su.nickname
-        ORDER BY id DESC
+            su.nickname,
+            su.username,
+            su.phone,
+            su.avatar,
+            twa_latest.education,
+            twa_latest.address,
+            twa_latest.work_unit
+        ORDER BY
+            tct.id DESC
     </select>
 
 </mapper>
