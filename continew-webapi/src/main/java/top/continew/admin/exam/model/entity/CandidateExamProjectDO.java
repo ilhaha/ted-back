@@ -56,12 +56,12 @@ public class CandidateExamProjectDO extends BaseDO {
     /**
      * 当前轮次是否已补考：0-否 1-是
      */
-    private Boolean usedMakeup;
+    private Integer usedMakeup;
 
     /**
      * 是否通过：0-未通过 1-通过
      */
-    private Boolean passed;
+    private Integer passed;
 
     /**
      * 通过时间
