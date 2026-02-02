@@ -118,4 +118,17 @@ public class SpecialCertificationApplicantResp extends BaseResp {
      */
     @Schema(description = "审核状态（0：未审核，1：审核通过，2：审核不通过）")
     private Integer status;
+
+
+    /** 项目名称 */
+    @Schema(description = "项目名称")
+    private String projectName;
+
+
+    /**
+     * 项目等级（0 无等级 ，1 一级 ，2 二级）
+     */
+    @Schema(description = "项目等级")
+    private String projectLevel;
+
 }

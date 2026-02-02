@@ -531,7 +531,7 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
         // 根据 pageQuery 里的排序参数，对查询结果进行排序
         super.sort(queryWrapper, pageQuery);
         // 执行分页查询
-        IPage<SpecialCertificationApplicantDO> page = baseMapper.getSpecialCertification(new Page<>(pageQuery
+        IPage<SpecialCertificationApplicantResp> page = baseMapper.getSpecialCertification(new Page<>(pageQuery
                 .getPage(), pageQuery.getSize()), queryWrapper);
         // 将查询结果转换成 PageResp 对象
         PageResp<SpecialCertificationApplicantResp> pageResp = PageResp.build(page, super.getListClass());

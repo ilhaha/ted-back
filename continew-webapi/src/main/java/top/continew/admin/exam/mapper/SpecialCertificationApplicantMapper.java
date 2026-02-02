@@ -21,6 +21,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
+import top.continew.admin.exam.model.resp.SpecialCertificationApplicantResp;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO;
@@ -34,8 +35,8 @@ import java.util.List;
  * @since 2025/04/07 15:43
  */
 public interface SpecialCertificationApplicantMapper extends BaseMapper<SpecialCertificationApplicantDO> {
-    IPage<SpecialCertificationApplicantDO> getSpecialCertification(@Param("page") Page<SpecialCertificationApplicantDO> page,
-                                                                   @Param(Constants.WRAPPER) QueryWrapper<SpecialCertificationApplicantDO> queryWrapper);
+    IPage<SpecialCertificationApplicantResp> getSpecialCertification(@Param("page") Page<SpecialCertificationApplicantResp> page,
+                                                                     @Param(Constants.WRAPPER) QueryWrapper<SpecialCertificationApplicantDO> queryWrapper);
 
     Integer insertStudentImage(@Param("scaList") List<SpecialCertificationApplicantDO> scaList,
                                @Param("createdUserId") Long createdUserId);

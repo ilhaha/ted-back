@@ -11,13 +11,17 @@
     </insert>
 
     <select id="getSpecialCertification"
-            resultType="top.continew.admin.exam.model.entity.SpecialCertificationApplicantDO">
-        select tsca.*,su.nickname AS candidatesName,
-               tep.exam_plan_name AS planName
+            resultType="top.continew.admin.exam.model.resp.SpecialCertificationApplicantResp">
+        select tsca.*,
+               su.nickname        AS candidatesName,
+               tep.exam_plan_name AS planName,
+                tp.project_name    AS projectName,
+                tp.project_level    AS projectLevel
         from ted_special_certification_applicant tsca
-         LEFT JOIN sys_user su ON tsca.candidates_id = su.id
-        LEFT JOIN ted_exam_plan tep on tep.id = tsca.plan_id
-        ${ew.customSqlSegment}
+                 LEFT JOIN sys_user su ON tsca.candidates_id = su.id
+                 LEFT JOIN ted_exam_plan tep on tep.id = tsca.plan_id
+                 LEFT JOIN ted_project tp on tp.id = tep.exam_project_id
+            ${ew.customSqlSegment}
     </select>
     <select id="selectLog" resultType="top.continew.admin.system.model.entity.UserDO">
         select * from sys_user u
