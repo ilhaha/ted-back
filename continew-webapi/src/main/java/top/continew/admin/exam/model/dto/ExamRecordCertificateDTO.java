@@ -37,6 +37,12 @@ public class ExamRecordCertificateDTO {
     private String nickname;
 
     /**
+     * 工作区域
+     */
+    private String address;
+
+
+    /**
      * 用户名 / 身份证号
      */
     private String username;

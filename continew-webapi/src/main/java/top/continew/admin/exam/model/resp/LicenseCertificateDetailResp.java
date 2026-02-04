@@ -50,6 +50,13 @@ public class LicenseCertificateDetailResp extends BaseDetailResp {
     private Long recordId;
 
     /**
+     * 工作区域
+     */
+    @Schema(description = "工作区域")
+    @ExcelProperty(value = "工作区域")
+    private String address;
+
+    /**
      * 数据来源
      */
     @Schema(description = "数据来源")

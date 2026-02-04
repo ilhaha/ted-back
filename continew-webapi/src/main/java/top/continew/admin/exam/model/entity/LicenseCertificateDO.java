@@ -59,6 +59,11 @@ public class LicenseCertificateDO extends BaseDO {
     private String infoinputorg;
 
     /**
+     * 工作区域
+     */
+    private String address;
+
+    /**
      * 姓名
      */
     private String psnName;

@@ -577,7 +577,7 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
                 licenseCertificateDO.setInfoinputorg(LicenseCertificateConstant.INFO_INPUTORG);
                 licenseCertificateDO.setPsnName(item.getNickname());
                 licenseCertificateDO.setIdcardNo(item.getUsername());
-
+                licenseCertificateDO.setAddress(item.getAddress());
                 String workUnit = item.getWorkUnit();
                 String finalWorkUnit = ObjectUtils.isEmpty(workUnit) ? LicenseCertificateConstant.WORK_UNIT : workUnit;
                 licenseCertificateDO.setOriginalComName(finalWorkUnit);

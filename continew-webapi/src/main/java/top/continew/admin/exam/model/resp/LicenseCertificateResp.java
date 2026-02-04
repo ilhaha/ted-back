@@ -51,6 +51,12 @@ public class LicenseCertificateResp extends BaseResp {
     private String datasource;
 
     /**
+     * 工作区域
+     */
+    @Schema(description = "工作区域")
+    private String address;
+
+    /**
      * 信息录入单位
      */
     @Schema(description = "信息录入单位")

@@ -19,6 +19,7 @@ package top.continew.admin.worker.model.resp;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -62,6 +63,11 @@ public class DocDetailResp implements Serializable {
      * 身份证反面存储地址
      */
     private String idCardPhotoBack;
+
+    /**
+     * 出生日期
+     */
+    private LocalDate birthDate;
 
     /**
      * 一寸免冠照存储地址

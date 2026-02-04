@@ -141,6 +141,7 @@
         te.user_id,
         twa.work_unit,
         twa.face_photo,
+        twa.address,
         tc.`name` AS category_name,
         tp.project_name,
         tp.project_code,

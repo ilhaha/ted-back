@@ -48,6 +48,13 @@ public class LicenseCertificateQuery implements Serializable {
     private String psnName;
 
     /**
+     * 工作区域
+     */
+    @Schema(description = "工作区域")
+    @Query(type = QueryType.EQ)
+    private String address;
+
+    /**
      * 身份证号
      */
     @Schema(description = "身份证号")

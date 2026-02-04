@@ -345,12 +345,6 @@
                COUNT(DISTINCT CASE WHEN dr.exam_result_status = 0 THEN dr.candidate_id END) AS failed_count,
                COUNT(DISTINCT CASE WHEN dr.exam_result_status = 2 THEN dr.candidate_id END) AS not_entered_count,
                COUNT(DISTINCT CASE
-                                  WHEN dr.is_certificate_generated = 1
-                                      THEN dr.candidate_id END)                             AS certificate_generated_count,
-               COUNT(DISTINCT CASE
-                                  WHEN dr.is_certificate_generated = 0
-                                      THEN dr.candidate_id END)                             AS certificate_not_generated_count,
-               COUNT(DISTINCT CASE
                                   WHEN dr.exam_paper IS NULL
                                       THEN dr.candidate_id END)                             AS absent_count
         FROM ted_exam_plan tep

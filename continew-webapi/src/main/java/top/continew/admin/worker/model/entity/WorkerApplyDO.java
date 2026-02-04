@@ -16,6 +16,7 @@
 
 package top.continew.admin.worker.model.entity;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -23,6 +24,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import top.continew.admin.common.model.entity.BaseDO;
 
 import java.io.Serial;
+import java.time.LocalDate;
 
 /**
  * 作业人员报名实体
@@ -76,6 +78,11 @@ public class WorkerApplyDO extends BaseDO {
      * 身份证住址
      */
     private String idCardAddress;
+
+    /**
+     * 出生日期
+     */
+    private LocalDate birthDate;
 
     /**
      * 身份证正面存储地址

@@ -1784,12 +1784,12 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         // 属于焊接项目
         Boolean isWelding = metalProjectId.equals(projectId) || nonmetalProjectId.equals(projectId);
         // 判断焊接类型
-        Integer weldingType = null;
-        if (Objects.equals(projectId, metalProjectId)) {
-            weldingType = WeldingTypeEnum.METAL.getValue();
-        } else if (Objects.equals(projectId, nonmetalProjectId)) {
-            weldingType = WeldingTypeEnum.NON_METAL.getValue();
-        }
+//        Integer weldingType = null;
+//        if (Objects.equals(projectId, metalProjectId)) {
+//            weldingType = WeldingTypeEnum.METAL.getValue();
+//        } else if (Objects.equals(projectId, nonmetalProjectId)) {
+//            weldingType = WeldingTypeEnum.NON_METAL.getValue();
+//        }
 
         if (file.isEmpty()) {
             throw new BusinessException("文件不能为空");
@@ -1813,7 +1813,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             validateTemplate(sheet, validateHeaders);
 
             // ============ 阶段2：行级校验（仅检查存在性） ============
-            validateRows(sheet, validateHeaders, isWelding, weldingType, orgClassDO.getOrgId());
+            validateRows(sheet, validateHeaders, isWelding);
 
             // ============ 阶段3：上传校验============
             ExcelParseResultVO excelParseResultVO = parsedExcel(sheet, classId, isWelding);
@@ -2624,9 +2624,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      */
     private void validateRows(XSSFSheet sheet,
                               List<String> expectedHeaders,
-                              Boolean isWelding,
-                              Integer weldingType,
-                              Long orgId) {
+                              Boolean isWelding) {
 
         int rowCount = sheet.getPhysicalNumberOfRows();
 
@@ -2635,20 +2633,20 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         Set<String> phoneSet = new HashSet<>();
 
         // 如果是焊接项目先查出当前机构已申请的所有焊接资格项目
-        List<String> orgWeldingProjectCodes = Collections.emptyList();
+//        List<String> orgWeldingProjectCodes = Collections.emptyList();
 
-        if (isWelding) {
-            List<WeldingExamApplicationDO> weldingExamApplicationDOS = weldingExamApplicationMapper
-                .selectList(new LambdaQueryWrapper<WeldingExamApplicationDO>()
-                    .eq(WeldingExamApplicationDO::getOrgId, orgId)
-                    .eq(WeldingExamApplicationDO::getStatus, WeldingExamApplicationStatusEnum.PASS_REVIEW.getValue())
-                    .eq(WeldingExamApplicationDO::getWeldingType, weldingType)
-                    .select(WeldingExamApplicationDO::getProjectCode));
-
-            orgWeldingProjectCodes = weldingExamApplicationDOS.stream()
-                .map(WeldingExamApplicationDO::getProjectCode)
-                .collect(Collectors.toList());
-        }
+//        if (isWelding) {
+//            List<WeldingExamApplicationDO> weldingExamApplicationDOS = weldingExamApplicationMapper
+//                .selectList(new LambdaQueryWrapper<WeldingExamApplicationDO>()
+//                    .eq(WeldingExamApplicationDO::getOrgId, orgId)
+//                    .eq(WeldingExamApplicationDO::getStatus, WeldingExamApplicationStatusEnum.PASS_REVIEW.getValue())
+//                    .eq(WeldingExamApplicationDO::getWeldingType, weldingType)
+//                    .select(WeldingExamApplicationDO::getProjectCode));
+//
+//            orgWeldingProjectCodes = weldingExamApplicationDOS.stream()
+//                .map(WeldingExamApplicationDO::getProjectCode)
+//                .collect(Collectors.toList());
+//        }
 
         for (int rowIndex = 1; rowIndex < rowCount; rowIndex++) {
 
@@ -2746,30 +2744,30 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                     throw new BusinessException(String.format("第 %d 行焊接资格项目不能为空", rowIndex + 1));
                 }
 
-                if (orgWeldingProjectCodes.isEmpty()) {
-                    throw new BusinessException("当前机构暂无对应的已通过审核的焊接资格项目");
-                }
+//                if (orgWeldingProjectCodes.isEmpty()) {
+//                    throw new BusinessException("当前机构暂无对应的已通过审核的焊接资格项目");
+//                }
 
                 // Excel 中的焊接项目（去空格、去重）
-                final List<String> weldingProjectExcel = Arrays.stream(weldingProject.split(","))
-                    .map(String::trim)
-                    .filter(StrUtil::isNotBlank)
-                    .distinct()
-                    .collect(Collectors.toList());
+//                final List<String> weldingProjectExcel = Arrays.stream(weldingProject.split(","))
+//                    .map(String::trim)
+//                    .filter(StrUtil::isNotBlank)
+//                    .distinct()
+//                    .collect(Collectors.toList());
 
                 // 使用 Set
-                final Set<String> orgWeldingProjectCodeSet = new HashSet<>(orgWeldingProjectCodes);
+//                final Set<String> orgWeldingProjectCodeSet = new HashSet<>(orgWeldingProjectCodes);
 
                 // 查出 Excel 中“机构未申请 / 未通过审核”的项目
-                List<String> notExistProjects = weldingProjectExcel.stream()
-                    .filter(code -> !orgWeldingProjectCodeSet.contains(code))
-                    .collect(Collectors.toList());
+//                List<String> notExistProjects = weldingProjectExcel.stream()
+//                    .filter(code -> !orgWeldingProjectCodeSet.contains(code))
+//                    .collect(Collectors.toList());
 
-                if (!notExistProjects.isEmpty()) {
-                    throw new BusinessException(String
-                        .format("第 %d 行焊接资格项目【%s】未在当前机构已通过审核的焊接资格范围内或不属于该焊接类型", rowIndex + 1, String
-                            .join(",", notExistProjects)));
-                }
+//                if (!notExistProjects.isEmpty()) {
+//                    throw new BusinessException(String
+//                        .format("第 %d 行焊接资格项目【%s】未在当前机构已通过审核的焊接资格范围内或不属于该焊接类型", rowIndex + 1, String
+//                            .join(",", notExistProjects)));
+//                }
             }
         }
     }

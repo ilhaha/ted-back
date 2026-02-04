@@ -16,11 +16,14 @@
 
 package top.continew.admin.worker.model.req;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import top.continew.admin.document.model.dto.DocFileDTO;
 
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -72,6 +75,12 @@ public class WorkerOrgUploadReq {
      */
     @NotBlank(message = "身份证未上传")
     private String idCardPhotoFront;
+
+    /**
+     * 出生日期
+     */
+    @NotNull(message = "身份证未上传")
+    private LocalDate birthDate;
 
     /**
      * 作业人员身份证反面地址
