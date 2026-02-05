@@ -107,6 +107,7 @@ import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -1615,10 +1616,17 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             String projectCode = projectDO.getProjectCode();
             String redisKey = RedisConstant.EXAM_NUMBER_KEY + projectCode + ":" + examDate + ":" + planId;
             redisTemplate.delete(redisKey);
+            // 记录当前项目当天有几次确认考试的计划
+            String planCountKey = RedisConstant.EXAM_PLAN_COUNT_KEY
+                    + projectCode + ":" + examDate;
+            Long planCount = redisTemplate.opsForValue().increment(planCountKey);
+            if (planCount != null && planCount == 1L) {
+                redisTemplate.expire(planCountKey, RedisConstant.EXAM_NUMBER_KEY_EXPIRE_DAYS, TimeUnit.DAYS);
+            }
 
             for (EnrollDO enroll : enrollList) {
                 Long classroomId = classroomIds.get(random.nextInt(classroomIds.size()));
-                String examNumber = projectCode + "B" + examDate + String.format("%04d", enroll.getSeatId());
+                String examNumber = projectCode + planCount + examDate + String.format("%04d", enroll.getSeatId());
                 enroll.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
                 enroll.setClassroomId(classroomId);
                 enrollUpdateList.add(enroll);

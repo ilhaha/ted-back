@@ -42,6 +42,7 @@ import top.continew.admin.exam.model.resp.ExamRecordsResp;
 import top.continew.admin.exam.service.ExamRecordsService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
+import top.continew.starter.log.annotation.Log;
 
 import java.util.List;
 
@@ -151,6 +152,7 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
      * @param examRecordsDO
      * @return
      */
+    @Log(ignore = true)
     @PostMapping("/candidates/add")
     public String candidatesAdd(@RequestBody ExamRecordsDO examRecordsDO) {
         baseService.candidatesAdd(examRecordsDO);

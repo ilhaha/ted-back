@@ -159,8 +159,6 @@ public class AccountLoginHandler extends AbstractLoginHandler<AccountLoginReq> {
         candidatesExamPlanReq.setExamNumber(examNumberEncrypt);
         //        candidatesExamPlanReq.setEnrollStatus(ExamEnrollStatusEnum.SIGNED_UP.getValue());
         CandidatesExamPlanVo candidatesExamPlanVo = userService.getPlanInfo(candidatesExamPlanReq);
-        System.out.println(candidatesExamPlanReq);
-        System.out.println(candidatesExamPlanVo);
         // 找不到对应的考试
         ValidationUtils.throwIf(ObjectUtil.isEmpty(candidatesExamPlanVo), "请核对身份证号或准考证号是否正确");
         ValidationUtils.throwIf(TheoryScoreReuseEnum.YES.getValue()
