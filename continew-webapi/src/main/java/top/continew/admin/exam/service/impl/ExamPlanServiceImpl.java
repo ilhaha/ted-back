@@ -819,6 +819,273 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         return pageResp;
     }
 
+    @Override
+    public void inspectorUpdate(ExamPlanReq req, Long id) {
+        // 1. 查询考试计划
+        ExamPlanDO examPlanDO = baseMapper.selectById(id);
+        ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划");
+
+        // 2. 校验最终确定考试时间及地点状态
+        ValidationUtils.throwIf(PlanFinalConfirmedStatus.DIRECTOR_PENDING.getValue()
+                .equals(req.getIsFinalConfirmed()), "最终确定考试时间及地点已确认");
+
+        // 3. 解析报名时间段
+        List<String> enrollList = req.getEnrollList();
+        if (CollUtil.isEmpty(enrollList) || enrollList.size() < 2) {
+            ValidationUtils.validate("报名时间列表不完整");
+        }
+        req.setEnrollStartTime(DateUtil.parse(enrollList.get(0)));
+        req.setEnrollEndTime(DateUtil.parse(enrollList.get(1)));
+        req.setAdmitCardEndTime(req.getAdmitCardEndTime());
+
+        // 校验报名结束时间不能晚于考试开始时间
+        //        ValidationUtils.throwIf(!DateUtil.validateEnrollmentTime(req.getEnrollEndTime(), req
+        //                .getStartTime()), "报名结束时间不能晚于考试开始时间");
+
+        // 考试开始时间不能早于当前时间
+        //        ValidationUtils.throwIf(req.getStartTime().isBefore(LocalDateTime.now().minusSeconds(2)), "考试开始时间不能早于当前时间");
+
+        // 查询考试项目
+        ProjectDO projectDO = projectMapper.selectById(req.getExamProjectId());
+        ValidationUtils.throwIfNull(projectDO, "未查询到考试项目");
+
+        // 获取前端传来的监考员人数和考场列表
+        Integer invigilatorCount = req.getInvigilatorCount();
+        List<Long> theoryIds = req.getTheoryClassroomId();
+        List<Long> operIds = req.getOperationClassroomId();
+
+        // 统计需要分配的考场数量
+        int totalClassrooms = 0;
+
+        // 仅在项目有理论考试时，统计理论考场
+        if (projectDO.getIsTheory() != null && projectDO.getIsTheory() == 1) {
+            totalClassrooms += (theoryIds != null ? theoryIds.size() : 0);
+        }
+
+        // 仅在项目有实操考试时，统计实操考场
+        if (projectDO.getIsOperation() != null && projectDO.getIsOperation() == 1) {
+            totalClassrooms += (operIds != null ? operIds.size() : 0);
+        }
+
+        // 校验监考员人数是否足够
+        ValidationUtils.throwIf(invigilatorCount < totalClassrooms,
+                "所设置的监考员人数不足以分配到全部考场");
+
+
+        // 判断有没有启用监考员劳务费
+        List<Long> classroomIds = new ArrayList<>();
+        LaborFeeDO laborFeeDO = laborFeeMapper.selectOne(new LambdaQueryWrapper<LaborFeeDO>()
+                .eq(LaborFeeDO::getIsEnabled, Boolean.TRUE));
+        ValidationUtils.throwIfNull(laborFeeDO, "当前未配置启用中的监考劳务费规则");
+
+        if (!CollectionUtils.isEmpty(theoryIds)) {
+            classroomIds.addAll(theoryIds);
+        }
+        if (!CollectionUtils.isEmpty(operIds)) {
+            classroomIds.addAll(operIds);
+        }
+
+        // 2. 查询报名记录
+        //        ValidationUtils.throwIfEmpty(enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
+        //                .eq(EnrollDO::getExamPlanId, id)), "未查询到考生报名信息");
+
+        //        if (!CollectionUtils.isEmpty(classroomIds)) {
+        //            List<String> conflictClassrooms = baseMapper.listConflictClassrooms(req.getStartTime(), classroomIds);
+        //            ValidationUtils.throwIfNotEmpty(conflictClassrooms, "以下考场当天已存在考试：" + String.join("、", conflictClassrooms));
+        //        }
+
+        //        // 4.如果是新的考场人数小于之前的考场人数，无法成功
+        //        LambdaQueryWrapper<ExamineePaymentAuditDO> examineePaymentAuditDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        //        examineePaymentAuditDOLambdaQueryWrapper.eq(ExamineePaymentAuditDO::getExamPlanId, id)
+        //                .eq(ExamineePaymentAuditDO::getAuditStatus, PaymentAuditStatusEnum.APPROVED.getValue());
+        //        Long candidateCount = examineePaymentAuditMapper.selectCount(examineePaymentAuditDOLambdaQueryWrapper);
+        //        Long totalCapacity = classroomMapper.selectByIds(req.getClassroomId())
+        //                .stream()
+        //                .mapToLong(ClassroomDO::getMaxCandidates)
+        //                .sum();
+        //        ValidationUtils.throwIf(candidateCount > totalCapacity, String
+        //                .format("已报名 %d 人，但所选考场最多只能容纳 %d 人，请重新选择考场", candidateCount, totalCapacity));
+
+        // 5. 如果是检验类型，校验报名人员是否全部审核通过
+        if (ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType())) {
+            long pendingCount = specialCertificationApplicantMapper
+                    .selectCount(new LambdaQueryWrapper<SpecialCertificationApplicantDO>()
+                            .eq(SpecialCertificationApplicantDO::getPlanId, id)
+                            .notIn(SpecialCertificationApplicantDO::getStatus, Arrays
+                                    .asList(SpecialCertificationApplicantAuditStatusEnum.APPROVED
+                                            .getValue(), SpecialCertificationApplicantAuditStatusEnum.FAKE_MATERIAL.getValue())));
+            ValidationUtils.throwIf(pendingCount > 0, "存在未审核考试报名申请，请审核后再确认考试时间或地点");
+        }
+
+        // 6. 校验考试人员缴费状态
+        long unpaidCount = examineePaymentAuditMapper.selectCount(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                .eq(ExamineePaymentAuditDO::getExamPlanId, id)
+                .notIn(ExamineePaymentAuditDO::getAuditStatus, Arrays.asList(PaymentAuditStatusEnum.APPROVED
+                        .getValue(), PaymentAuditStatusEnum.REFUNDED.getValue())));
+        ValidationUtils.throwIf(unpaidCount > 0, "存在考试人员未提交缴费通知单或审核未通过，请到考生缴费审核管理完成审核");
+
+        // 7. 计算考试结束时间
+        //        ProjectDO projectDO = projectMapper.selectById(req.getExamProjectId());
+        //        ValidationUtils.throwIfNull(projectDO, "未查询到考试项目");
+
+        //        req.setStartTime(req.getStartTime());
+        //        req.setEndTime(req.getStartTime().plusMinutes(projectDO.getExamDuration()));
+
+        req.setIsFinalConfirmed(PlanFinalConfirmedStatus.DIRECTOR_PENDING.getValue());
+
+        // 8.在选择的考试的时间，考场有没有是否有别的考试
+        //        ValidationUtils.throwIf(hasClassroomTimeConflict(req.getStartTime(), req.getEndTime(), req
+        //                .getClassroomId(), id) > 0, "所选考场在所选时间段前后30分钟内已有考试计划，请调整考试时间或更换考场。");
+
+        req.setAssignType(InvigilatorAssignTypeEnum.RANDOM_FIRST.getValue());
+
+
+        //判断是检验检测类型，通过考试项目中的等级和理论考试进行判断
+        if (ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType())
+                && projectDO.getIsTheory() != null && projectDO.getIsTheory() == 1 && projectDO.getProjectLevel() != null
+                && projectDO.getProjectLevel() == 1) {
+            //检验检验检测类型考试计划，是否有足够的题库考试
+            questionBankService.generateExamQuestionBank(id);
+        }
+        // 10.插入考场和计划关系
+        if (!CollectionUtils.isEmpty(classroomIds)) {
+            // 添加考场信息
+            examPlanMapper.savePlanClassroom(examPlanDO.getId(), classroomIds);
+        }
+
+        List<Long> alterHandClassroomIds = new ArrayList<>();
+        int alterInvigilatorCount = 0;
+        // 处理理论班级
+        if (!CollectionUtils.isEmpty(theoryIds)) {
+            List<ClassroomInvigilatorDTO> hasExamStartDateList = baseMapper
+                    .findInvigilatorsByDateAndClassrooms(examPlanDO.getStartTime(), theoryIds);
+            if (!CollectionUtils.isEmpty(hasExamStartDateList)) {
+                // 如果只有理论考试，那么把所有的监考员都安排到理论考场
+                if (CollectionUtils.isEmpty(operIds)) {
+                    List<PlanInvigilateDO> invigilateDOS = hasExamStartDateList.stream().map(item -> {
+                        PlanInvigilateDO record = new PlanInvigilateDO();
+                        record.setExamPlanId(examPlanDO.getId());
+                        record.setInvigilatorId(item.getInvigilatorId());
+                        record.setClassroomId(item.getClassroomId());
+                        record.setInvigilateStatus(InvigilateStatusEnum.NOT_START.getValue());
+                        record.setTheoryFee(laborFeeDO.getTheoryFee());
+                        record.setPracticalFee(laborFeeDO.getPracticalFee());
+                        return record;
+                    }).collect(Collectors.toList());
+
+                    if (invigilateDOS.size() > invigilatorCount) {
+                        Collections.shuffle(invigilateDOS);
+                        invigilateDOS = invigilateDOS.subList(0, invigilatorCount);
+                    }
+                    // 批量插入
+                    planInvigilateMapper.insertBatch(invigilateDOS);
+                    // 记录已处理的考场 & 数量
+                    alterHandClassroomIds.addAll(theoryIds);
+                    alterInvigilatorCount += invigilateDOS.size();
+                } else {
+                    // 先保证理论考试必须有一个监考员
+                    ClassroomInvigilatorDTO classroomInvigilatorDTO = hasExamStartDateList.get(0);
+                    PlanInvigilateDO record = new PlanInvigilateDO();
+                    // 考试计划 ID
+                    record.setExamPlanId(examPlanDO.getId());
+                    // 监考员 ID
+                    record.setInvigilatorId(classroomInvigilatorDTO.getInvigilatorId());
+                    // 考场号
+                    Long classroomId = classroomInvigilatorDTO.getClassroomId();
+                    record.setClassroomId(classroomId);
+                    // 监考状态
+                    record.setInvigilateStatus(InvigilateStatusEnum.NOT_START.getValue());
+                    record.setTheoryFee(laborFeeDO.getTheoryFee());
+                    record.setPracticalFee(laborFeeDO.getPracticalFee());
+                    planInvigilateMapper.insert(record);
+                    alterHandClassroomIds.add(classroomId);
+                    alterInvigilatorCount++;
+                }
+            } else {
+                // 如果当天没考试，随机分配理论考场一个监考老师
+                // 11.随机分配监考人员
+                randomInvigilator(theoryIds, examPlanDO.getStartTime(), id, theoryIds
+                        .size(), laborFeeDO, ExamTypeEnum.THEORY.getValue());
+                alterHandClassroomIds.addAll(theoryIds);
+                alterInvigilatorCount += theoryIds.size();
+            }
+        }
+
+        // 处理实操考场
+        if (!CollectionUtils.isEmpty(operIds)) {
+            List<ClassroomInvigilatorDTO> hasOperExamStartDateList = baseMapper
+                    .findInvigilatorsByDateAndClassrooms(examPlanDO.getStartTime(), operIds);
+            // 今天已有考试的考场复用
+            if (!CollectionUtils.isEmpty(hasOperExamStartDateList)) {
+                // 按考场分组
+                Map<Long, List<ClassroomInvigilatorDTO>> classroomMap = hasOperExamStartDateList.stream()
+                        .collect(Collectors.groupingBy(ClassroomInvigilatorDTO::getClassroomId));
+
+                List<PlanInvigilateDO> invigilateDOS = new ArrayList<>();
+
+                // 每个考场只取 1 个监考员
+                for (Map.Entry<Long, List<ClassroomInvigilatorDTO>> entry : classroomMap.entrySet()) {
+                    ClassroomInvigilatorDTO item = entry.getValue().get(0);
+                    PlanInvigilateDO record = new PlanInvigilateDO();
+                    record.setExamPlanId(examPlanDO.getId());
+                    record.setInvigilatorId(item.getInvigilatorId());
+                    record.setClassroomId(item.getClassroomId());
+                    record.setInvigilateStatus(InvigilateStatusEnum.NOT_START.getValue());
+                    record.setTheoryFee(laborFeeDO.getTheoryFee());
+                    record.setPracticalFee(laborFeeDO.getPracticalFee());
+                    invigilateDOS.add(record);
+                    alterHandClassroomIds.add(item.getClassroomId());
+                }
+                // 批量插入
+                planInvigilateMapper.insertBatch(invigilateDOS);
+
+                alterInvigilatorCount += invigilateDOS.size();
+            } else {
+                // 今天没有考试，随机分配
+                randomInvigilator(operIds, examPlanDO.getStartTime(), id, operIds
+                        .size(), laborFeeDO, ExamTypeEnum.PRACTICE.getValue());
+                alterHandClassroomIds.addAll(operIds);
+                alterInvigilatorCount += operIds.size();
+            }
+        }
+
+        // 判断是否所有的考场都安排了监考员
+        if (alterHandClassroomIds.size() < classroomIds.size()) {
+            // 找出没有安排监考员的考场
+            Set<Long> unAssignedClassroomSet = new HashSet<>(classroomIds);
+            unAssignedClassroomSet.removeAll(alterHandClassroomIds);
+            List<Long> unAssignedClassroomIds = new ArrayList<>(unAssignedClassroomSet);
+            // 随机安排
+            randomInvigilator(unAssignedClassroomIds, examPlanDO.getStartTime(), id, unAssignedClassroomIds
+                    .size(), laborFeeDO, ExamTypeEnum.PRACTICE.getValue());
+            alterHandClassroomIds.addAll(unAssignedClassroomIds);
+            alterInvigilatorCount += unAssignedClassroomIds.size();
+        }
+        // 如果考场都安排了监考员，但已处理的考场数量小于前端传来的要求整个计划所需监考员，需要给某些考场进行再添加监考员，指导满足前端需要的监考员数量
+        if (alterInvigilatorCount < invigilatorCount) {
+            // 1. 还差多少个监考员
+            int remainInvigilatorCount = invigilatorCount - alterInvigilatorCount;
+            List<Long> needAddInvigilatorClassroomIds;
+            // 2. 如果可选考场数 <= 需要补的数量，全部返回
+            if (alterHandClassroomIds.size() <= remainInvigilatorCount) {
+                needAddInvigilatorClassroomIds = new ArrayList<>(alterHandClassroomIds);
+            } else {
+                // 3. 否则随机取 remainInvigilatorCount 个
+                List<Long> shuffledClassroomIds = new ArrayList<>(alterHandClassroomIds);
+                Collections.shuffle(shuffledClassroomIds);
+                needAddInvigilatorClassroomIds = shuffledClassroomIds.stream()
+                        .limit(remainInvigilatorCount)
+                        .collect(Collectors.toList());
+            }
+            // 随机安排
+            randomInvigilator(needAddInvigilatorClassroomIds, examPlanDO
+                    .getStartTime(), id, remainInvigilatorCount, laborFeeDO, ExamTypeEnum.PRACTICE.getValue());
+        }
+
+        // 9. 执行更新
+        super.update(req, id);
+    }
+
     /**
      * 解析日期
      *
@@ -1407,6 +1674,112 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         return success;
     }
 
+
+    /**
+     * 检验人员中心主任确认考试
+     *
+     * @param planId
+     * @param isFinalConfirmed
+     * @return
+     */
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean inspectorCenterDirectorConform(Long planId, Integer isFinalConfirmed) {
+        // 查询计划
+        ExamPlanDO examPlanDO = baseMapper.selectById(planId);
+        ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划信息");
+
+        // 查询理论考场
+        List<Long> classroomIds = examPlanMapper.getPlanExamTheoryClassroom(planId);
+        ValidationUtils.throwIfEmpty(classroomIds, "考试计划未分配理论考场");
+
+        // 查询报名记录
+        boolean isConfirmed = PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue().equals(isFinalConfirmed);
+        List<EnrollDO> enrollList = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
+                .eq(EnrollDO::getExamPlanId, planId)
+                .orderByAsc(EnrollDO::getId));
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(enrollList) && isConfirmed, "未查询到考生报名信息");
+
+        // 增加考试计划和班级关联表
+//        planApplyClassMapper.insertBatch(enrollList.stream().map(EnrollDO::getClassId).distinct().map(classId -> {
+//            PlanApplyClassDO planApplyClassDO = new PlanApplyClassDO();
+//            planApplyClassDO.setClassId(classId);
+//            planApplyClassDO.setPlanId(planId);
+//            return planApplyClassDO;
+//        }).toList());
+
+        // 查询监考员列表
+        List<InvigilatorAssignResp> invigilatorList = planInvigilateMapper.getListByPlanId(planId);
+        ValidationUtils.throwIfEmpty(invigilatorList, "未选择监考员");
+
+        // 查询项目信息
+        ProjectDO projectDO = projectMapper.selectById(examPlanDO.getExamProjectId());
+
+        // 更新计划状态
+        LambdaUpdateWrapper<ExamPlanDO> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(ExamPlanDO::getId, planId).set(ExamPlanDO::getIsFinalConfirmed, isFinalConfirmed);
+
+        // 主任驳回
+        if (PlanFinalConfirmedStatus.DIRECTOR_REJECTED.getValue().equals(isFinalConfirmed)) {
+            updateWrapper.set(ExamPlanDO::getAssignType, null);
+            planInvigilateMapper.delete(new LambdaQueryWrapper<PlanInvigilateDO>()
+                    .eq(PlanInvigilateDO::getExamPlanId, planId));
+            planClassroomMapper.delete(new LambdaQueryWrapper<PlancalssroomDO>()
+                    .eq(PlancalssroomDO::getPlanId, planId));
+        }
+
+        boolean success = baseMapper.update(updateWrapper) > 0;
+
+        // 生成开考密码（每个考场统一）
+        Map<Long, List<InvigilatorAssignResp>> groupByClassroom = invigilatorList.stream()
+                .collect(Collectors.groupingBy(InvigilatorAssignResp::getClassroomId));
+        List<PlanInvigilateDO> updateList = new ArrayList<>();
+        for (Map.Entry<Long, List<InvigilatorAssignResp>> entry : groupByClassroom.entrySet()) {
+            String examPassword = generateExamPassword();
+            for (InvigilatorAssignResp item : entry.getValue()) {
+                PlanInvigilateDO planInvigilateDO = new PlanInvigilateDO();
+                planInvigilateDO.setId(item.getId());
+                planInvigilateDO.setExamPassword(examPassword);
+                updateList.add(planInvigilateDO);
+            }
+        }
+        if (!updateList.isEmpty()) {
+            planInvigilateMapper.updateBatchById(updateList);
+        }
+
+        // 主任确认 && 检验检测人员考试 -> 只生成试卷
+        if (success && isConfirmed
+                && ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType())
+                && projectDO.getIsTheory() != null && projectDO.getIsTheory() == 1 && projectDO.getProjectLevel() != null
+                && projectDO.getProjectLevel() == 1) {
+
+            List<CandidateExamPaperDO> paperList = new ArrayList<>();
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            for (EnrollDO enroll : enrollList) {
+
+                ExamPaperVO examPaperVO = questionBankService.generateExamQuestionBank(planId);
+
+                CandidateExamPaperDO paper = new CandidateExamPaperDO();
+                try {
+                    paper.setPaperJson(objectMapper.writeValueAsString(examPaperVO));
+                } catch (Exception e) {
+                    throw new BusinessException("生成试卷失败");
+                }
+
+                paper.setEnrollId(enroll.getId());
+                paperList.add(paper);
+            }
+
+            if (!paperList.isEmpty()) {
+                candidateExamPaperMapper.insertBatch(paperList);
+            }
+        }
+        return success;
+    }
+
+
     /**
      * 调整考试/报名时间
      *
@@ -1439,6 +1812,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         update.setId(planId);
         update.setStartTime(req.getStartTime());
+        update.setAdmitCardEndTime(req.getAdmitCardEndTime());
         return baseMapper.updateById(update) > 0;
     }
 

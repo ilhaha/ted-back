@@ -131,4 +131,10 @@ public class SpecialCertificationApplicantResp extends BaseResp {
     @Schema(description = "项目等级")
     private String projectLevel;
 
+    /**
+     * 特种设备类别
+     */
+    @Schema(description = "特种设备类别")
+    private String categoryName;
+
 }

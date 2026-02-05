@@ -112,9 +112,4 @@ public class SpecialCertificationApplicantDO extends BaseDO {
      */
     private Boolean isDeleted;
 
-    /**
-     * 计划名称（非数据库字段，用于展示）
-     */
-    @TableField(exist = false)
-    private String planName;
 }

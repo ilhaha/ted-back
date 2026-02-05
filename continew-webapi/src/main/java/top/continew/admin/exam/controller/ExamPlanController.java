@@ -51,6 +51,7 @@ import top.continew.admin.exam.model.resp.ExamPlanResp;
 import top.continew.admin.exam.service.ExamPlanService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
+import top.continew.starter.web.model.R;
 
 import java.util.List;
 
@@ -286,6 +287,32 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     @GetMapping("/selectOptions")
     public List<ProjectVo> getSelectOptions() {
         return baseService.getSelectOptions();
+    }
+
+
+    /**
+     * 检验人员确认考试时间
+     */
+    @PutMapping("confirm/{id}")
+    public R<Void> inspectorUpdate(
+            @PathVariable Long id,
+            @RequestBody @Validated ExamPlanReq req
+    ) {
+        examPlanService.inspectorUpdate(req, id);
+        return R.ok();
+    }
+
+    /**
+     * 检验人员中心主任确认考试
+     *
+     * @param planId
+     * @param isFinalConfirmed
+     * @return
+     */
+    @PostMapping("/inspector/conform/{planId}/{isFinalConfirmed}")
+    public Boolean inspectorCenterDirectorConform(@PathVariable("planId") Long planId,
+                                         @PathVariable("isFinalConfirmed") Integer isFinalConfirmed) {
+        return baseService.inspectorCenterDirectorConform(planId, isFinalConfirmed);
     }
 
 }

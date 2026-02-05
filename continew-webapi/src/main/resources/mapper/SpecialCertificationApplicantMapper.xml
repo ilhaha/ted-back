@@ -16,11 +16,13 @@
                su.nickname        AS candidatesName,
                tep.exam_plan_name AS planName,
                 tp.project_name    AS projectName,
-                tp.project_level    AS projectLevel
+                tp.project_level    AS projectLevel,
+                tc.name   AS categoryName
         from ted_special_certification_applicant tsca
                  LEFT JOIN sys_user su ON tsca.candidates_id = su.id
                  LEFT JOIN ted_exam_plan tep on tep.id = tsca.plan_id
                  LEFT JOIN ted_project tp on tp.id = tep.exam_project_id
+                 LEFT JOIN ted_category tc on tc.id = tp.category_id
             ${ew.customSqlSegment}
     </select>
     <select id="selectLog" resultType="top.continew.admin.system.model.entity.UserDO">

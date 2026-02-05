@@ -11,6 +11,7 @@
                tep.end_time,
                tep.max_candidates,
                tep.actual_candidates,
+               tep.admit_card_end_time,
                tep.plan_type,
                tep.assign_type,
                tep.status,
@@ -82,6 +83,7 @@
                tep.max_candidates,
                tep.actual_candidates,
                tep.enroll_start_time,
+                tep.admit_card_end_time,
                tep.enroll_end_time,
                tep.plan_type,
                tep.status,
@@ -95,7 +97,9 @@
                tp.project_name,
                tep.exam_project_id,
                tep.location_id,
-               tp.exam_duration
+               tp.exam_duration,
+               tp.is_operation AS hasOper,
+               tp.is_theory AS hasTheory
         FROM ted_exam_plan tep
                  LEFT JOIN ted_exam_location as tel ON tel.id = tep.location_id
                  LEFT JOIN ted_project as tp ON tp.id = tep.exam_project_id

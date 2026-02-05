@@ -113,6 +113,12 @@ public class ExamPlanDO extends BaseDO {
      * 报名结束时间
      */
     private LocalDateTime enrollEndTime;
+
+    /**
+     * 准考证下载截止时间
+     */
+    private LocalDateTime admitCardEndTime;
+
     /**
      * 描述
      */

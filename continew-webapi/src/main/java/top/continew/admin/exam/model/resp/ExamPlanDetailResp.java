@@ -279,8 +279,19 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     private Integer hasOper;
 
     /**
+     * 理论考试（1有，0没有）
+     */
+    private Integer hasTheory;
+
+    /**
      * 道路考试（1有，0没有）
      */
     private Integer hasRoad;
+
+
+    /**
+     * 准考证下载截止时间
+     */
+    private LocalDateTime admitCardEndTime;
 
 }

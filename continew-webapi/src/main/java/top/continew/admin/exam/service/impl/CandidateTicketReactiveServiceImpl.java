@@ -30,14 +30,12 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
-import top.continew.admin.exam.mapper.CandidateExamPaperMapper;
-import top.continew.admin.exam.mapper.EnrollMapper;
-import top.continew.admin.exam.mapper.ExamIdcardMapper;
-import top.continew.admin.exam.mapper.ExamTicketMapper;
+import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.CandidateTicketDTO;
 import top.continew.admin.exam.model.entity.CandidateExamPaperDO;
 import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.ExamIdcardDO;
+import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.service.CandidateTicketService;
 import top.continew.admin.examconnect.model.resp.ExamPaperVO;
 import top.continew.admin.examconnect.service.QuestionBankService;
@@ -55,6 +53,8 @@ import top.continew.admin.worker.model.entity.WorkerExamTicketDO;
 import top.continew.starter.core.exception.BusinessException;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,6 +86,8 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
     private final QuestionBankService questionBankService;
 
     private final CandidateExamPaperMapper candidateExamPaperMapper;
+
+    private final ExamPlanMapper examPlanMapper;
 
     @Override
     public String generateWorkerTicket(Long userId, String idCard, String examNumber, Long classId, String className) {
@@ -166,6 +168,30 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
         }
         //判断是作业人员还是检验人员
         if (enrollDO.getClassId() == null) {
+            // 提取考试计划ID，提前校验非空
+            Long examPlanId = enrollDO.getExamPlanId();
+            if (examPlanId == null) {
+                throw new BusinessException("考试计划ID为空，无法查询准考证截止时间");
+            }
+            // 通过考试计划id查找准考证下载截至时间
+            ExamPlanDO examPlanDO = examPlanMapper.selectById(examPlanId);
+            if (examPlanDO == null) {
+                throw new BusinessException("未找到该考试计划记录");
+            }
+            // 获取准考证下载截止时间，校验非空
+            LocalDateTime admitCardEndTime = examPlanDO.getAdmitCardEndTime();
+            if (admitCardEndTime == null) {
+                throw new BusinessException("准考证下载截至时间未设置，无法生成准考证");
+            }
+            // 截止时间 -> 毫秒级时间戳（使用固定北京时区，避免依赖服务器环境）
+            long admitCardEndTimestamp = admitCardEndTime.atZone(ZoneId.of("Asia/Shanghai"))
+                    .toInstant()
+                    .toEpochMilli();
+            // 获取当前时间戳（毫秒级），进行截止时间校验
+            long currentTimestamp = System.currentTimeMillis();
+            if (currentTimestamp > admitCardEndTimestamp) {
+                throw new BusinessException("准考证下载已截止，无法生成准考证");
+            }
             //检验人员
             Long userId = enrollDO.getUserId();
             String examNumber = aesWithHMAC.verifyAndDecrypt(enrollDO.getExamNumber());

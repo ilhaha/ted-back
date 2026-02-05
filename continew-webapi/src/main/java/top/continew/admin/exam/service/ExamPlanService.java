@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service;
 
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
@@ -113,6 +114,16 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      */
     PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery, PageQuery pageQuery);
 
+    /**
+     * 检验人员管理员确认考试计划
+     *
+     * @param req
+     * @param id
+     */
+
+    @Transactional(rollbackFor = Exception.class)
+    void inspectorUpdate(ExamPlanReq req, Long id);
+
     void batchUpdatePlanMaxCandidates(List<ExamPlanDTO> planList);
 
     /**
@@ -140,6 +151,16 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @return
      */
     Boolean centerDirectorConform(Long planId, Integer isFinalConfirmed);
+
+    /**
+     * 检验人员中心主任确认考试
+     *
+     * @param planId
+     * @param isFinalConfirmed
+     * @return
+     */
+    @Transactional(rollbackFor = Exception.class)
+    Boolean inspectorCenterDirectorConform(Long planId, Integer isFinalConfirmed);
 
     /**
      * 调整考试/报名时间
