@@ -603,6 +603,8 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         identityCardExamInfoVO.setUserId(userId);
         identityCardExamInfoVO.setName(userName);
         identityCardExamInfoVO.setShowStatus(1);
+        //准考证下载截至时间
+        identityCardExamInfoVO.setAdmitCardEndTime(examPlanDO.getAdmitCardEndTime());
         ValidationUtils.throwIfBlank(identityCardExamInfoVO.getExamNumber(), "准考证号为空，无法查看");
         identityCardExamInfoVO.setExamNumber(aesWithHMAC.verifyAndDecrypt(identityCardExamInfoVO.getExamNumber()));
 

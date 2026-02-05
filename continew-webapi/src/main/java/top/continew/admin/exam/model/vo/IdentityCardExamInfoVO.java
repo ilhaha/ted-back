@@ -18,6 +18,7 @@ package top.continew.admin.exam.model.vo;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -39,4 +40,7 @@ public class IdentityCardExamInfoVO {
     private Date endTime;
     //下载准考证pdf显示状态 0-隐藏 1-显示
     private Integer showStatus;
+
+    private LocalDateTime admitCardEndTime;
+
 }

@@ -28,14 +28,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.constant.enums.ExamPlanTypeEnum;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.CandidateTicketDTO;
-import top.continew.admin.exam.model.entity.CandidateExamPaperDO;
-import top.continew.admin.exam.model.entity.EnrollDO;
-import top.continew.admin.exam.model.entity.ExamIdcardDO;
-import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.service.CandidateTicketService;
 import top.continew.admin.examconnect.model.resp.ExamPaperVO;
 import top.continew.admin.examconnect.service.QuestionBankService;
@@ -89,6 +87,8 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
 
     private final ExamPlanMapper examPlanMapper;
 
+    private final ProjectMapper projectMapper;
+
     @Override
     public String generateWorkerTicket(Long userId, String idCard, String examNumber, Long classId, String className) {
         // 1. 查询准考证数据（同步）
@@ -96,6 +96,8 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
         if (dto == null) {
             throw new RuntimeException("未找到该用户的准考证数据！");
         }
+
+        //
 
         // 2. 查询照片URL（同步）
         WorkerApplyDO workerApplyDO = workerApplyMapper.selectOne(new LambdaQueryWrapper<WorkerApplyDO>()
@@ -128,15 +130,22 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
 
     @Override
     public List<Map<String, Object>> queryByIdCardAndPhone(String username, String phone) {
+
         // 身份证解密再加密
-        String encryptedIdCard = aesWithHMAC.encryptAndSign(SecureUtils.decryptByRsaPrivateKey(username));
+        String encryptedIdCard =
+                aesWithHMAC.encryptAndSign(SecureUtils.decryptByRsaPrivateKey(username));
+
         // 电话号码解密再加密
-        String encryptedPhone = aesWithHMAC.encryptAndSign(SecureUtils.decryptByRsaPrivateKey(phone));
+        String encryptedPhone =
+                aesWithHMAC.encryptAndSign(SecureUtils.decryptByRsaPrivateKey(phone));
 
         // 查询用户ID
-        UserDO user = userMapper.selectOne(new LambdaQueryWrapper<UserDO>().eq(UserDO::getUsername, encryptedIdCard)
-            .eq(UserDO::getPhone, encryptedPhone)
-            .select(UserDO::getId));
+        UserDO user = userMapper.selectOne(
+                new LambdaQueryWrapper<UserDO>()
+                        .eq(UserDO::getUsername, encryptedIdCard)
+                        .eq(UserDO::getPhone, encryptedPhone)
+                        .select(UserDO::getId)
+        );
 
         if (user == null || user.getId() == null) {
             throw new BusinessException("用户信息不存在或身份证和电话号码不匹配");
@@ -144,15 +153,25 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
 
         Long userId = user.getId();
         // 查询报名记录
-        List<Long> enrollIds = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
-            .eq(EnrollDO::getUserId, userId)
-            .eq(EnrollDO::getEnrollStatus, 1)
-            .select(EnrollDO::getId)).stream().map(EnrollDO::getId).toList();
+        List<Long> enrollIds = enrollMapper.selectList(
+                new LambdaQueryWrapper<EnrollDO>()
+                        .eq(EnrollDO::getUserId, userId)
+                        .eq(EnrollDO::getEnrollStatus, 1)
+                        .select(EnrollDO::getId)
+        ).stream().map(EnrollDO::getId).toList();
 
         if (enrollIds.isEmpty()) {
             throw new BusinessException("未找到该用户报名记录");
         }
-        return examTicketMapper.findTicketsByEnrollIds(enrollIds);
+
+        // 查询准考证
+        List<Map<String, Object>> tickets =
+                examTicketMapper.findTicketsByEnrollIds(enrollIds);
+
+        if (tickets == null || tickets.isEmpty()) {
+            throw new BusinessException("该用户暂无可下载准考证");
+        }
+        return tickets;
     }
 
     @Override
@@ -225,49 +244,84 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
         }
     }
 
-    // 完全同步执行，适配MVC
+    // 完全同步执行，适配 MVC
     @Override
     public ResponseEntity<byte[]> generateTicket(Long userId, String examNumber) {
-        try {
-            // 查询准考证数据
-            String encryptedExamNumber = aesWithHMAC.encryptAndSign(examNumber);
-            CandidateTicketDTO dto = examTicketMapper.findTicketByUserAndExamNumber(userId, encryptedExamNumber);
-            if (dto == null) {
-                throw new BusinessException("未找到该用户的准考证数据！");
-            }
 
-            // 查询照片URL
-            QueryWrapper<ExamIdcardDO> queryWrapper = new QueryWrapper<ExamIdcardDO>().eq("id_card_number", dto
-                .getIdCard()).eq("is_deleted", 0).select("face_photo");
-            ExamIdcardDO idCard = examIdcardMapper.selectOne(queryWrapper);
-            String photoUrl = idCard != null ? idCard.getFacePhoto() : null;
+        // ========= 1. 查询准考证 =========
+        String encryptedExamNumber = aesWithHMAC.encryptAndSign(examNumber);
+        CandidateTicketDTO dto =
+                examTicketMapper.findTicketByUserAndExamNumber(userId, encryptedExamNumber);
 
-            // 解密并组装数据
-            dto.setTicketId(examNumber);
-            dto.setIdCard(aesWithHMAC.verifyAndDecrypt(dto.getIdCard()));
-            Map<String, Object> dataMap = assembleData(dto);
+        if (dto == null) {
+            throw new BusinessException("未找到该用户的准考证数据！");
+        }
 
-            //查找考生报名信息
-            EnrollDO record = enrollMapper.selectOne(new LambdaQueryWrapper<EnrollDO>().eq(EnrollDO::getUserId, userId)
-                .eq(EnrollDO::getExamNumber, aesWithHMAC.encryptAndSign(examNumber))
-                .select(EnrollDO::getExamPlanId, EnrollDO::getId));
+        // ========= 2. 截止时间校验 =========
+        LocalDateTime admitCardEndTime = dto.getAdmitCardEndTime();
+        if (admitCardEndTime == null) {
+            throw new BusinessException("准考证下载截至时间未设置，无法生成准考证");
+        }
+
+        long admitCardEndTimestamp = admitCardEndTime
+                .atZone(ZoneId.of("Asia/Shanghai"))
+                .toInstant()
+                .toEpochMilli();
+
+        if (System.currentTimeMillis() > admitCardEndTimestamp) {
+            throw new BusinessException("准考证下载已截止，无法生成准考证");
+        }
+
+        // ========= 3. 查询照片 =========
+        ExamIdcardDO idCard = examIdcardMapper.selectOne(
+                new QueryWrapper<ExamIdcardDO>()
+                        .eq("id_card_number", dto.getIdCard())
+                        .eq("is_deleted", 0)
+                        .select("face_photo")
+        );
+
+        String photoUrl = idCard != null ? idCard.getFacePhoto() : null;
+
+        // ========= 4. 组装数据 =========
+        dto.setTicketId(examNumber);
+        dto.setIdCard(aesWithHMAC.verifyAndDecrypt(dto.getIdCard()));
+
+        Map<String, Object> dataMap = assembleData(dto);
+
+        // ========= 5. 查报名信息 =========
+        EnrollDO record = enrollMapper.selectOne(
+                new LambdaQueryWrapper<EnrollDO>()
+                        .eq(EnrollDO::getUserId, userId)
+                        .eq(EnrollDO::getExamNumber, encryptedExamNumber)
+                        .select(EnrollDO::getExamPlanId, EnrollDO::getId)
+        );
+
+        if (record == null) {
+            throw new BusinessException("未找到报名信息");
+        }
+
+        // ========= 6. 异步生成试卷 =========
+        //判断是否需要生成试卷（只有检验检测一级考试才需要生成试卷）
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(record.getExamPlanId());
+        ProjectDO projectDO = projectMapper.selectById(examPlanDO.getExamProjectId());
+        if (ExamPlanTypeEnum.INSPECTION.getValue().equals(examPlanDO.getPlanType())
+                && projectDO.getIsTheory() != null && projectDO.getIsTheory() == 1 && projectDO.getProjectLevel() != null
+                && projectDO.getProjectLevel() == 1) {
             // 异步生成试卷
             asyncGenerateExamPaper(record.getExamPlanId(), record.getId());
-
-            // 下载照片
-            byte[] photoBytes = loadPhotoSync(photoUrl);
-
-            //返回PDF响应
-            String fileName = "准考证_" + examNumber + ".pdf";
-            return excelUtilReactive.generatePdfResponseEntitySync(dataMap, excelTemplateUrl, photoBytes, fileName);
-
-        } catch (Exception e) {
-            log.error("生成准考证失败：", e);
-            String errorMsg = "下载准考证失败：" + e.getMessage();
-            return ResponseEntity.internalServerError()
-                .contentType(org.springframework.http.MediaType.TEXT_PLAIN)
-                .body(errorMsg.getBytes(StandardCharsets.UTF_8));
         }
+
+        // ========= 7. 下载照片 =========
+        byte[] photoBytes = loadPhotoSync(photoUrl);
+
+        // ========= 8. 返回 PDF =========
+        String fileName = "准考证_" + examNumber + ".pdf";
+        return excelUtilReactive.generatePdfResponseEntitySync(
+                dataMap,
+                excelTemplateUrl,
+                photoBytes,
+                fileName
+        );
     }
 
     @Async

@@ -18,6 +18,7 @@ package top.continew.admin.exam.model.dto;
 
 import lombok.Data;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * <p>
@@ -63,4 +64,7 @@ public class CandidateTicketDTO implements Serializable {
 
     /** 考生照片 */
     private String photo;
+
+    /** 准考证下载截至时间 */
+    private LocalDateTime admitCardEndTime;
 }

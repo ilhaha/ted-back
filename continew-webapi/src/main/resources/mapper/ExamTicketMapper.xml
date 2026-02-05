@@ -26,6 +26,7 @@
             tc.id AS classroom_id,
             tc.classroom_name,
             c.name AS category_name,
+            ep.admit_card_end_time,
             p.project_name,
             DATE_FORMAT(ep.start_time, '%Y-%m-%d %H:%i') AS exam_time
         FROM ted_enroll e
@@ -55,6 +56,9 @@
         <foreach collection="enrollIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
+        AND e.exam_number IS NOT NULL
+        AND p.admit_card_end_time > NOW()
+        AND p.is_deleted = 0
         AND e.is_deleted = 0
     </select>
 </mapper>
