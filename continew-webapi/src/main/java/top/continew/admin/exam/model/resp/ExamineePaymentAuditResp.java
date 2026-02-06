@@ -104,6 +104,14 @@ public class ExamineePaymentAuditResp extends BaseResp {
     @Schema(description = "缴费通知单URL")
     private String auditNoticeUrl;
 
+
+
+    /**
+     * 退款url
+     */
+    @Schema(description = "退款url")
+    private String refundNoticeUrl;
+
     /**
      * 审核状态：0-待缴费 1-已缴费待审核，2-审核通过，3-审核驳回，4-补正审核 ，5-退款审核， 6-已退款, 7-退款驳回
      */

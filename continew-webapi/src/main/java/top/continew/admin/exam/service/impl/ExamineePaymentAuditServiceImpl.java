@@ -201,52 +201,75 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         if (req.getExamPlanId() == null || req.getExamineeId() == null) {
             throw new BusinessException("考试计划ID或考生ID不能为空！");
         }
-        if (req.getPaymentProofUrl() == null || req.getPaymentProofUrl().isEmpty()) {
-            throw new BusinessException("缴费凭证地址不能为空！");
+        // 提取凭证URL并校验，重命名变量更通用（可传缴费/退款凭证）
+        String uploadUrl = req.getPaymentProofUrl();
+        if (uploadUrl == null || uploadUrl.isEmpty()) {
+            throw new BusinessException("凭证地址不能为空！");
         }
         // 查找当前记录
         ExamineePaymentAuditDO record = examineePaymentAuditMapper
-            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>().eq(ExamineePaymentAuditDO::getExamPlanId, req
-                .getExamPlanId())
-                .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
-                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                .last("LIMIT 1"));
+                .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId, req.getExamPlanId())
+                        .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                        .last("LIMIT 1"));
         if (record == null || record.getAuditNoticeUrl() == null) {
             throw new BusinessException("未找到缴费通知记录，不能上传凭证！");
         }
-        Integer uploadStatus = req.getAuditStatus();  // 考生上传时传的状态
+        Integer uploadStatus = req.getAuditStatus();  // 考生上传时传的原始状态
         if (uploadStatus == null) {
             throw new BusinessException("上传状态不能为空！");
         }
+
+        //判断考试时间
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(req.getExamPlanId());
+        ValidationUtils.throwIf(examPlanDO == null, "考试计划不存在");
+        ValidationUtils.throwIf(LocalDateTime.now()
+                .isAfter(examPlanDO.getStartTime().minusDays(5)), "距离考试不足5天，无法重新上传资料。");
+
+        // 状态转换：根据考生上传的原始状态，确定最终要更新的审核状态
         Integer newStatus;
         switch (uploadStatus) {
             case 0:  // 待缴费
             case 1:  // 已缴费待审核
-                newStatus = 1; // 上传后都变为已缴费待审核
+                newStatus = 1; // 上传后→已缴费待审核（缴费场景）
                 break;
             case 2:  // 审核通过
             case 5:  // 退款审核中
             case 7:  // 退款驳回
-                newStatus = 5; // 上传后进入退款审核
+                newStatus = 5; // 上传后→退款审核（退款场景）
                 break;
             case 3:  // 审核驳回
             case 4:  // 补正审核
-                newStatus = 4;
+                newStatus = 4; // 上传后→补正审核（补正缴费凭证场景）
                 break;
             case 6:  // 已退款
                 throw new BusinessException("该考生已退款，禁止操作！");
             default:
                 throw new BusinessException("未知的上传状态：" + uploadStatus);
         }
-        // 更新记录
-        record.setAuditStatus(newStatus);
-        record.setPaymentProofUrl(req.getPaymentProofUrl());
-        record.setPaymentTime(LocalDateTime.now());
-        record.setUpdateTime(LocalDateTime.now());
 
+        // ========== 核心修改：根据最终newStatus区分赋值缴费/退款凭证 ==========
+        record.setAuditStatus(newStatus); // 更新最终审核状态
+        record.setUpdateTime(LocalDateTime.now()); // 更新操作时间
+        // 缴费场景：newStatus=1 → 赋值给缴费凭证URL
+        if (newStatus == 1) {
+            record.setPaymentProofUrl(uploadUrl);
+            record.setPaymentTime(LocalDateTime.now()); // 缴费场景同步更新缴费时间
+        }
+        // 退款场景：newStatus=5 → 赋值给退款通知单URL
+        else if (newStatus == 5) {
+            record.setRefundNoticeUrl(uploadUrl);
+        }
+        // 补正场景：newStatus=4 → 赋值给缴费凭证URL（补正缴费相关材料）
+        else if (newStatus == 4) {
+            record.setPaymentProofUrl(uploadUrl);
+        }
+
+        // 执行更新
         int result = examineePaymentAuditMapper.updateById(record);
         if (result <= 0) {
-            throw new BusinessException("上传缴费凭证失败，请稍后再试！");
+            throw new BusinessException("上传凭证失败，请稍后再试！");
         }
         return true;
     }
