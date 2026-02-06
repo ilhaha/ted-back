@@ -16,7 +16,6 @@
 
 package top.continew.admin.exam.model.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import top.continew.admin.common.model.entity.BaseDO;

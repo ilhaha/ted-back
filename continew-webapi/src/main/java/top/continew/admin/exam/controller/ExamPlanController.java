@@ -289,15 +289,11 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
         return baseService.getSelectOptions();
     }
 
-
     /**
      * 检验人员确认考试时间
      */
     @PutMapping("confirm/{id}")
-    public R<Void> inspectorUpdate(
-            @PathVariable Long id,
-            @RequestBody @Validated ExamPlanReq req
-    ) {
+    public R<Void> inspectorUpdate(@PathVariable Long id, @RequestBody @Validated ExamPlanReq req) {
         examPlanService.inspectorUpdate(req, id);
         return R.ok();
     }
@@ -311,7 +307,7 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
      */
     @PostMapping("/inspector/conform/{planId}/{isFinalConfirmed}")
     public Boolean inspectorCenterDirectorConform(@PathVariable("planId") Long planId,
-                                         @PathVariable("isFinalConfirmed") Integer isFinalConfirmed) {
+                                                  @PathVariable("isFinalConfirmed") Integer isFinalConfirmed) {
         return baseService.inspectorCenterDirectorConform(planId, isFinalConfirmed);
     }
 

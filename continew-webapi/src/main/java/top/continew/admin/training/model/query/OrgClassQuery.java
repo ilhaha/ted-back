@@ -59,7 +59,7 @@ public class OrgClassQuery implements Serializable {
      * 报考项目
      */
     @Schema(description = "报考项目")
-    @Query(type = QueryType.LIKE,columns = "tp.project_name")
+    @Query(type = QueryType.LIKE, columns = "tp.project_name")
     private String projectName;
 
     /**

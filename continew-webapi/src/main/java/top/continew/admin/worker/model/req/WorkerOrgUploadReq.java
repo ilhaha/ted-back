@@ -16,14 +16,12 @@
 
 package top.continew.admin.worker.model.req;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import top.continew.admin.document.model.dto.DocFileDTO;
 
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
 
 /**

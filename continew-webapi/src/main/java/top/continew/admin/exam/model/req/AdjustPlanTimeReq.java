@@ -49,11 +49,10 @@ public class AdjustPlanTimeReq implements Serializable {
     @Size(min = 2, max = 2, message = "报名开始时间范围必须包含 2 个时间点")
     private List<@Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$", message = "报名开始时间格式不正确") String> enrollList;
 
-
     /**
      * 准考证下载截至时间
      */
-//    @NotNull(message = "准考证下载截至时间不能为空")
+    //    @NotNull(message = "准考证下载截至时间不能为空")
     private LocalDateTime admitCardEndTime;
 
 }

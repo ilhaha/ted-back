@@ -288,7 +288,6 @@ public class ExamPlanDetailResp extends BaseDetailResp {
      */
     private Integer hasRoad;
 
-
     /**
      * 准考证下载截止时间
      */

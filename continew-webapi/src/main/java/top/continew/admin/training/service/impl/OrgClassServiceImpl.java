@@ -45,7 +45,6 @@ import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.ProjectMapper;
 import top.continew.admin.exam.mapper.WeldingExamApplicationMapper;
 import top.continew.admin.exam.model.entity.ProjectDO;
-import top.continew.admin.exam.model.entity.WeldingExamApplicationDO;
 import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
 import top.continew.admin.system.model.resp.FileInfoResp;
@@ -85,7 +84,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * 培训机构班级业务实现
@@ -151,11 +149,11 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
             Integer flag = query.getFlag();
             if (AuditQueryFlagEnum.APPLY_AUDIT.getCode().equals(flag)) {
                 page = baseMapper.adminQueryWorkerClassPage(new Page<>(pageQuery.getPage(), pageQuery
-                        .getSize()), queryWrapper);
+                    .getSize()), queryWrapper);
 
             } else {
                 page = baseMapper.adminQueryPayAuditPage(new Page<>(pageQuery.getPage(), pageQuery
-                        .getSize()), queryWrapper);
+                    .getSize()), queryWrapper);
             }
         }
         PageResp<OrgClassResp> build = PageResp.build(page, super.getListClass());
@@ -183,28 +181,28 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         ProjectDO projectDO = projectMapper.selectById(projectId);
         ValidationUtils.throwIfNull(projectDO, "未查询到考试项目信息");
         req.setPayStatus(projectDO.getExamFee() == 0L
-                ? OrgClassPayStatusEnum.FREE.getCode()
-                : OrgClassPayStatusEnum.UNPAID.getCode());
+            ? OrgClassPayStatusEnum.FREE.getCode()
+            : OrgClassPayStatusEnum.UNPAID.getCode());
 
         // 设置机构ID
         Long orgId = orgDO.getId();
         req.setOrgId(orgId);
         // 判断是否添加的是焊接项目的班级
-//        boolean isWelding = Objects.equals(projectId, metalProjectId) || Objects.equals(projectId, nonmetalProjectId);
-//
-//        if (isWelding) {
-//            // 判断焊接类型
-//            WeldingTypeEnum weldingTypeEnum = Objects.equals(projectId, metalProjectId)
-//                ? WeldingTypeEnum.METAL
-//                : WeldingTypeEnum.NON_METAL;
-//
-//            Long count = weldingExamApplicationMapper.selectCount(new LambdaQueryWrapper<WeldingExamApplicationDO>()
-//                .eq(WeldingExamApplicationDO::getOrgId, orgId)
-//                .eq(WeldingExamApplicationDO::getStatus, WeldingExamApplicationStatusEnum.PASS_REVIEW.getValue())
-//                .eq(WeldingExamApplicationDO::getWeldingType, weldingTypeEnum.getValue()));
-//
-//            ValidationUtils.throwIf(count == null || count == 0, "机构下未有申报通过的" + weldingTypeEnum.getDesc() + "项目");
-//        }
+        //        boolean isWelding = Objects.equals(projectId, metalProjectId) || Objects.equals(projectId, nonmetalProjectId);
+        //
+        //        if (isWelding) {
+        //            // 判断焊接类型
+        //            WeldingTypeEnum weldingTypeEnum = Objects.equals(projectId, metalProjectId)
+        //                ? WeldingTypeEnum.METAL
+        //                : WeldingTypeEnum.NON_METAL;
+        //
+        //            Long count = weldingExamApplicationMapper.selectCount(new LambdaQueryWrapper<WeldingExamApplicationDO>()
+        //                .eq(WeldingExamApplicationDO::getOrgId, orgId)
+        //                .eq(WeldingExamApplicationDO::getStatus, WeldingExamApplicationStatusEnum.PASS_REVIEW.getValue())
+        //                .eq(WeldingExamApplicationDO::getWeldingType, weldingTypeEnum.getValue()));
+        //
+        //            ValidationUtils.throwIf(count == null || count == 0, "机构下未有申报通过的" + weldingTypeEnum.getDesc() + "项目");
+        //        }
 
         // 循环重试生成班级编号并插入
         Long classId = null;
@@ -237,7 +235,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
                 // 更新二维码地址
                 baseMapper.update(new LambdaUpdateWrapper<OrgClassDO>().eq(OrgClassDO::getId, classId)
-                        .set(OrgClassDO::getQrcodeApplyUrl, qrUrl));
+                    .set(OrgClassDO::getQrcodeApplyUrl, qrUrl));
             } catch (Exception e) {
                 throw new BusinessException("二维码生成失败，请稍后重试");
             }
@@ -268,9 +266,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
         // 统计今年同类型同项目班级数量
         Long count = baseMapper.selectCount(new LambdaQueryWrapper<OrgClassDO>().eq(OrgClassDO::getClassType, req
-                        .getClassType())
-                .eq(OrgClassDO::getProjectId, projectDO.getId())
-                .eq(OrgClassDO::getOrgId, orgId));
+            .getClassType()).eq(OrgClassDO::getProjectId, projectDO.getId()).eq(OrgClassDO::getOrgId, orgId));
 
         Long sequence = count + 1;
         String sequenceStr = String.format("%03d", sequence);
@@ -301,7 +297,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
      */
     private String buildQrContent(Long classId) throws UnsupportedEncodingException {
         String encryptedClassId = URLEncoder.encode(aesWithHMAC.encryptAndSign(String
-                .valueOf(classId)), StandardCharsets.UTF_8);
+            .valueOf(classId)), StandardCharsets.UTF_8);
         return qrcodeUrl + "?classId=" + encryptedClassId;
     }
 
@@ -339,9 +335,9 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         if (SelectClassConstants.ORG_QUERY.equals(orgQueryFlag)) {
             UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
             TedOrgUser tedOrgUser = orgUserMapper.selectOne(new LambdaQueryWrapper<TedOrgUser>()
-                    .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
-                    .select(TedOrgUser::getOrgId, TedOrgUser::getId)
-                    .last("limit 1"));
+                .eq(TedOrgUser::getUserId, userTokenDo.getUserId())
+                .select(TedOrgUser::getOrgId, TedOrgUser::getId)
+                .last("limit 1"));
             orgId = tedOrgUser.getOrgId();
         }
         return baseMapper.getSelectClassByProject(projectId, classType, orgId);
@@ -359,10 +355,10 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
     public Boolean endApply(OrgClassReq req, Long id) {
         // 先查有没有待审的资料
         Long count = workerApplyMapper.selectCount(new LambdaQueryWrapper<WorkerApplyDO>()
-                .eq(WorkerApplyDO::getClassId, id)
-                .in(WorkerApplyDO::getStatus, Arrays.asList(WorkerApplyReviewStatusEnum.WAIT_UPLOAD
-                        .getValue(), WorkerApplyReviewStatusEnum.REJECTED.getValue(), WorkerApplyReviewStatusEnum.DOC_COMPLETE
-                        .getValue())));
+            .eq(WorkerApplyDO::getClassId, id)
+            .in(WorkerApplyDO::getStatus, Arrays.asList(WorkerApplyReviewStatusEnum.WAIT_UPLOAD
+                .getValue(), WorkerApplyReviewStatusEnum.REJECTED.getValue(), WorkerApplyReviewStatusEnum.DOC_COMPLETE
+                    .getValue())));
         ValidationUtils.throwIf(count > 0, "当前班级仍有人员未完成资料上传，暂无法结束报名");
         update(req, id);
         return Boolean.TRUE;
@@ -400,13 +396,13 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
         // 先判断该班级下是否有考试的报名资料未通过的考生
         Long noPassCount = workerApplyMapper.selectCount(new LambdaQueryWrapper<WorkerApplyDO>()
-                .eq(WorkerApplyDO::getClassId, classId)
-                .ne(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.APPROVED.getValue()));
+            .eq(WorkerApplyDO::getClassId, classId)
+            .ne(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.APPROVED.getValue()));
         ValidationUtils.throwIf(noPassCount > 0, "班级下存在 " + noPassCount + " 名考生报考资料未通过，请先处理");
 
         // 统计班级考生人数
         Long personCount = orgClassCandidateMapper.selectCount(new LambdaQueryWrapper<OrgClassCandidateDO>()
-                .eq(OrgClassCandidateDO::getClassId, classId));
+            .eq(OrgClassCandidateDO::getClassId, classId));
         ValidationUtils.throwIf(personCount <= 0, "该班级下无考生信息");
 
         OrgClassDO update = new OrgClassDO();

@@ -41,7 +41,6 @@ public class ExamRecordCertificateDTO {
      */
     private String address;
 
-
     /**
      * 用户名 / 身份证号
      */

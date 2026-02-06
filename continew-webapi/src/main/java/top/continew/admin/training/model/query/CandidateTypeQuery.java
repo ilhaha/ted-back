@@ -73,6 +73,6 @@ public class CandidateTypeQuery implements Serializable {
      * 工作单位
      */
     @Schema(description = "工作单位")
-    @Query(type = QueryType.LIKE,columns = "twa_latest.work_unit")
+    @Query(type = QueryType.LIKE, columns = "twa_latest.work_unit")
     private String workUnit;
 }

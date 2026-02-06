@@ -16,7 +16,6 @@
 
 package top.continew.admin.worker.model.entity;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableName;
