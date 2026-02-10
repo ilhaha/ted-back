@@ -640,8 +640,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void cancelEnroll(Long examPlanId) {
-        Long userId = TokenLocalThreadUtil.get().getUserId();
+    public Boolean cancelEnroll(Long userId,Long examPlanId) {
         ValidationUtils.throwIfNull(examPlanId, "考试计划ID不能为空");
         ValidationUtils.throwIfNull(userId, "用户ID不能为空");
 
@@ -663,18 +662,21 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         // 缴费状态校验（仅当前用户的缴费记录）
         ExamineePaymentAuditDO examineePaymentAuditDO = examineePaymentAuditMapper
-            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
-                .eq(ExamineePaymentAuditDO::getExamineeId, userId) // 关键：加考生ID筛选
-                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                .select(ExamineePaymentAuditDO::getAuditStatus));
+                .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
+                        .eq(ExamineePaymentAuditDO::getExamPlanId, examPlanId)
+                        .eq(ExamineePaymentAuditDO::getExamineeId, userId) // 关键：加考生ID筛选
+                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                        .select(ExamineePaymentAuditDO::getAuditStatus));
         ValidationUtils.throwIf(examineePaymentAuditDO != null && Objects.equals(examineePaymentAuditDO
-            .getAuditStatus(), 2), "缴费审核已通过，请先申请退款，通过后，再取消报名");
+                .getAuditStatus(), 2), "缴费审核已通过，请先申请退款，通过后，再取消报名");
 
         // 执行删除
         examineePaymentAuditMapper.deleteFromPayment(examPlanId, userId);
         enrollMapper.deleteFromEnroll(examPlanId, userId);
         enrollMapper.deleteFromApplicant(examPlanId, userId);
+
+        // 所有校验通过且删除操作执行完成，返回true
+        return true;
     }
 
     /**

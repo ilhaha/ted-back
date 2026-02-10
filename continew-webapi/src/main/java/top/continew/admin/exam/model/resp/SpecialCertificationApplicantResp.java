@@ -135,13 +135,11 @@ public class SpecialCertificationApplicantResp extends BaseResp {
     @Schema(description = "特种设备类别")
     private String categoryName;
 
-
     /**
      * 退款凭证
      */
     @Schema(description = "退款凭证")
     private String refundNoticeUrl;
-
 
     /**
      * 缴费凭证

@@ -52,6 +52,7 @@ import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditDetailResp;
 import top.continew.admin.exam.model.resp.ExamineePaymentAuditResp;
 import top.continew.admin.exam.model.resp.PaymentInfoVO;
+import top.continew.admin.exam.service.EnrollService;
 import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
@@ -136,6 +137,9 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
     @Resource
     private UploadService uploadService;
 
+    @Resource
+    private EnrollService enrollService;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Resource
@@ -208,11 +212,11 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         }
         // 查找当前记录
         ExamineePaymentAuditDO record = examineePaymentAuditMapper
-                .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>()
-                        .eq(ExamineePaymentAuditDO::getExamPlanId, req.getExamPlanId())
-                        .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
-                        .eq(ExamineePaymentAuditDO::getIsDeleted, false)
-                        .last("LIMIT 1"));
+            .selectOne(new LambdaQueryWrapper<ExamineePaymentAuditDO>().eq(ExamineePaymentAuditDO::getExamPlanId, req
+                .getExamPlanId())
+                .eq(ExamineePaymentAuditDO::getExamineeId, req.getExamineeId())
+                .eq(ExamineePaymentAuditDO::getIsDeleted, false)
+                .last("LIMIT 1"));
         if (record == null || record.getAuditNoticeUrl() == null) {
             throw new BusinessException("未找到缴费通知记录，不能上传凭证！");
         }
@@ -225,7 +229,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         ExamPlanDO examPlanDO = examPlanMapper.selectById(req.getExamPlanId());
         ValidationUtils.throwIf(examPlanDO == null, "考试计划不存在");
         ValidationUtils.throwIf(LocalDateTime.now()
-                .isAfter(examPlanDO.getStartTime().minusDays(5)), "距离考试不足5天，无法重新上传资料。");
+            .isAfter(examPlanDO.getStartTime().minusDays(5)), "距离考试不足5天，无法重新上传资料。");
 
         // 状态转换：根据考生上传的原始状态，确定最终要更新的审核状态
         Integer newStatus;
@@ -605,7 +609,9 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
     private void handleRefundAudit(ExamineePaymentAuditDO record, Integer newStatus) {
         if (newStatus == 2) {
             record.setAuditStatus(6); // 已退款
-            // ... 业务待定
+            //取消考生报名信息
+            Boolean cancelResult = enrollService.cancelEnroll(record.getExamineeId() ,record.getExamPlanId());
+            ValidationUtils.throwIf(!cancelResult, "报名失败，无法生成准考证信息");
         } else {
             record.setAuditStatus(7); // 退款驳回
         }

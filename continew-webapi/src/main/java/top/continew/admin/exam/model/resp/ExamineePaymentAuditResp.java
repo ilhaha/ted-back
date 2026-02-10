@@ -104,8 +104,6 @@ public class ExamineePaymentAuditResp extends BaseResp {
     @Schema(description = "缴费通知单URL")
     private String auditNoticeUrl;
 
-
-
     /**
      * 退款url
      */

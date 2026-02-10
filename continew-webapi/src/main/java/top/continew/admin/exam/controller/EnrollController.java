@@ -20,6 +20,7 @@ import cn.dev33.satoken.annotation.SaCheckPermission;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.model.req.MakeUpExamReq;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
@@ -212,7 +213,8 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     @GetMapping("/cancelEnroll/{examPlanId}")
     public void cancelEnroll(@PathVariable("examPlanId") Long examPlanId) {
-        enrollService.cancelEnroll(examPlanId);
+        Long userId = TokenLocalThreadUtil.get().getUserId();
+        enrollService.cancelEnroll(userId ,examPlanId);
     }
 
 }

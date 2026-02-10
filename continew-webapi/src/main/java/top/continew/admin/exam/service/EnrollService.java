@@ -117,10 +117,11 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
 
     /**
      * 取消报名
-     * 
+     * @param userId 考生id
      * @param examPlanId 计划id
+     *
      */
-    void cancelEnroll(Long examPlanId);
+    Boolean cancelEnroll(Long userId,Long examPlanId);
 
     /**
      * 下载某个考试的缴费通知单
