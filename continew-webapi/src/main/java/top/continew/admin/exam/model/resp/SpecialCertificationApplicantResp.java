@@ -119,6 +119,10 @@ public class SpecialCertificationApplicantResp extends BaseResp {
     @Schema(description = "审核状态（0：未审核，1：审核通过，2：审核不通过）")
     private Integer status;
 
+    /** 项目ID */
+    @Schema(description = "项目ID")
+    private String projectId;
+
     /** 项目名称 */
     @Schema(description = "项目名称")
     private String projectName;
@@ -128,6 +132,12 @@ public class SpecialCertificationApplicantResp extends BaseResp {
      */
     @Schema(description = "项目等级")
     private String projectLevel;
+
+    /**
+     * 申请人考试类型（1.首考，2.补考）
+     */
+    @Schema(description = "申请人考试类型")
+    private Integer examType;
 
     /**
      * 特种设备类别

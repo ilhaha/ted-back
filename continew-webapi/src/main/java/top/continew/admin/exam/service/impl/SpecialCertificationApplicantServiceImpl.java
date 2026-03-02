@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service.impl;
 
+import cn.crane4j.core.util.CollectionUtils;
 import cn.crane4j.core.util.StringUtils;
 import cn.hutool.core.bean.BeanUtil;
 import com.alibaba.fastjson.JSON;
@@ -123,6 +124,8 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     private final AESWithHMAC aesWithHMAC;
 
     private final LicenseCertificateMapper licenseCertificateMapper;
+
+    private final CandidateExamProjectMapper candidateExamProjectMapper;
 
     /**
      * 根据考生和计划ID查询申报记录
@@ -460,11 +463,10 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
     }
 
     @Override
-    //重写page
+// 重写page
     public PageResp<SpecialCertificationApplicantResp> page(SpecialCertificationApplicantQuery query,
                                                             PageQuery pageQuery) {
-        //根据mapper查出考生名
-        //封装返回结果
+        // 构建查询条件
         QueryWrapper<SpecialCertificationApplicantDO> queryWrapper = this.buildQueryWrapper(query);
         if (query.getCandidatesName() != null) {
             queryWrapper.like("su.nickname", query.getCandidatesName());
@@ -477,12 +479,57 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
         // 根据 pageQuery 里的排序参数，对查询结果进行排序
         super.sort(queryWrapper, pageQuery);
         // 执行分页查询
-        IPage<SpecialCertificationApplicantResp> page = baseMapper.getSpecialCertification(new Page<>(pageQuery
-            .getPage(), pageQuery.getSize()), queryWrapper);
+        IPage<SpecialCertificationApplicantResp> page = baseMapper.getSpecialCertification(
+                new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+
+        // 1. 提取分页结果中的「考生ID+考试项目ID」组合（核心：按项目维度匹配）
+        // 先定义组合键：用"考生ID_考试项目ID"作为唯一标识
+        Map<String, SpecialCertificationApplicantResp> respMap = new HashMap<>();
+        List<Long> candidateIds = page.getRecords().stream()
+                .filter(resp -> resp.getCandidatesId() != null && resp.getProjectId() != null) // 确保有考生ID和项目ID
+                .peek(resp -> {
+                    // 构建组合键："考生ID_考试项目ID"
+                    String key = resp.getCandidatesId() + "_" + resp.getProjectId();
+                    respMap.put(key, resp);
+                })
+                .map(SpecialCertificationApplicantResp::getCandidatesId)
+                .collect(Collectors.toList());
+
+        // 2. 批量查询「考生+项目」维度的补考信息，构建组合键->usedMakeup的映射
+        Map<String, Integer> projectMakeupMap = new HashMap<>();
+        if (!CollectionUtils.isEmpty(candidateIds)) {
+            List<CandidateExamProjectDO> makeupList = candidateExamProjectMapper.selectList(
+                    new LambdaQueryWrapper<CandidateExamProjectDO>()
+                            .in(CandidateExamProjectDO::getCandidateId, candidateIds)
+                            .select(
+                                    CandidateExamProjectDO::getCandidateId,
+                                    CandidateExamProjectDO::getProjectId, // 考试项目ID（关键匹配字段）
+                                    CandidateExamProjectDO::getUsedMakeup
+                            )
+            );
+
+            // 构建「考生ID_考试项目ID」->usedMakeup的映射
+            for (CandidateExamProjectDO doObj : makeupList) {
+                if (doObj.getCandidateId() == null || doObj.getProjectId() == null) {
+                    continue; // 跳过无项目ID的记录
+                }
+                String key = doObj.getCandidateId() + "_" + doObj.getProjectId();
+                projectMakeupMap.put(key, doObj.getUsedMakeup());
+            }
+        }
+
+        // 3. 遍历映射，按「考生+项目」维度设置examType
+        respMap.forEach((key, resp) -> {
+            // 匹配不到则设为0（首考），匹配到则取对应usedMakeup
+            Integer usedMakeup = projectMakeupMap.getOrDefault(key, 0);//设置默认值为0（首考）
+            resp.setExamType(usedMakeup);
+        });
+
         // 将查询结果转换成 PageResp 对象
         PageResp<SpecialCertificationApplicantResp> pageResp = PageResp.build(page, super.getListClass());
         // 遍历查询结果列表，调用 fill 方法填充额外字段或处理数据
         pageResp.getList().forEach(this::fill);
+
         return pageResp;
     }
 

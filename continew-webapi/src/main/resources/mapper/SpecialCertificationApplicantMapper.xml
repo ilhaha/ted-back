@@ -14,7 +14,9 @@
             resultType="top.continew.admin.exam.model.resp.SpecialCertificationApplicantResp">
         select tsca.*,
                su.nickname        AS candidatesName,
+               su.username        AS candidatesUsername,
                tep.exam_plan_name AS planName,
+                tp.id             AS projectId,
                 tp.project_name    AS projectName,
                 tp.project_level    AS projectLevel,
                 tc.name   AS categoryName

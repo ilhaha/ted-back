@@ -52,6 +52,14 @@ public class SpecialCertificationApplicantQuery implements Serializable {
     //    @Schema(description = "更新时间")
     //    @Query(type = QueryType.EQ)
     //    private LocalDateTime updateTime;
+
+    /**
+     * 考生ID
+     */
+    @Schema(description = "考生ID")
+    @QueryIgnore
+    private Long candidatesId;
+
     /**
      * 考生名称
      */
