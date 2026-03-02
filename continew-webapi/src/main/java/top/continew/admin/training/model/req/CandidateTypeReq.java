@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.*;
+import java.util.List;
 
 /**
  * 创建或修改考生类型参数
@@ -80,4 +81,9 @@ public class CandidateTypeReq implements Serializable {
      * 一寸照
      */
     private String avatar;
+
+    /**
+     * 禁考项目
+     */
+    private List<Long> disableProjectIds;
 }

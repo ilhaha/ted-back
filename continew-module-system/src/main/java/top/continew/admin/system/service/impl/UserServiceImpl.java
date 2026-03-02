@@ -1204,10 +1204,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
         // 查询每条记录
         List<ExamStaffFeeExportVO> list = userMapper.selectExamStaffFeeByUserId(userId);
-
-        if (CollUtil.isEmpty(list)) {
-            throw new RuntimeException("暂无可导出的劳务费数据");
-        }
+        ValidationUtils.throwIfEmpty(list,"暂无可导出的劳务费数据");
         // 计算总和
         BigDecimal totalPracticalFee = BigDecimal.ZERO;
         BigDecimal totalTheoryFee = BigDecimal.ZERO;

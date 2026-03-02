@@ -123,6 +123,12 @@ public class UserResp extends BaseDetailResp {
     @Schema(description = "角色名称列表", example = "测试人员")
     private List<String> roleNames;
 
+    /**
+     * 监考考试类型（0理论考试、1实操考试）
+     */
+    @Schema(description = "监考考试类型（0理论考试、1实操考试）", example = "监考考试类型（0理论考试、1实操考试）")
+    private Integer examSupervisionType;
+
     @Override
     public Boolean getDisabled() {
         return this.getIsSystem() || Objects.equals(this.getId(), UserContextHolder.getUserId());

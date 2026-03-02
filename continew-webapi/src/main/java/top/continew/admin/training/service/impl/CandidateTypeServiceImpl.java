@@ -32,15 +32,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 import top.continew.admin.common.constant.BlacklistConstants;
+import top.continew.admin.common.constant.ProjectConstant;
 import top.continew.admin.common.constant.enums.CandidateTypeEnum;
+import top.continew.admin.common.constant.enums.ProjectTypeEnum;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.exam.mapper.LicenseCertificateMapper;
+import top.continew.admin.exam.mapper.ProjectMapper;
 import top.continew.admin.exam.model.entity.LicenseCertificateDO;
+import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.dto.UserDetailDTO;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.service.UserService;
+import top.continew.admin.training.mapper.CandidateTypeDisableProjectMapper;
+import top.continew.admin.training.model.entity.CandidateTypeDisableProjectDO;
 import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.starter.core.exception.BusinessException;
@@ -58,6 +64,9 @@ import top.continew.admin.training.service.CandidateTypeService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 考生类型业务实现
@@ -78,6 +87,10 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
     private final WorkerApplyMapper workerApplyMapper;
 
     private final LicenseCertificateMapper licenseCertificateMapper;
+
+    private final CandidateTypeDisableProjectMapper candidateTypeDisableProjectMapper;
+
+    private final ProjectMapper projectMapper;
 
     /**
      * 重写page 查询作业人员信息
@@ -104,12 +117,62 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
             queryWrapper.eq("su.phone", aesWithHMAC.encryptAndSign(phone));
         }
         IPage<CandidateTypeDetailResp> page = baseMapper.getWorkerPage(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
         List<CandidateTypeDetailResp> records = page.getRecords();
         if (ObjectUtil.isNotEmpty(records)) {
+
+            // 查出所有作业人员项目（只查必要字段）
+            List<ProjectDO> allProject =
+                    projectMapper.selectList(
+                            new LambdaQueryWrapper<ProjectDO>()
+                                    .select(ProjectDO::getId, ProjectDO::getProjectName)
+                                    .eq(ProjectDO::getProjectType, ProjectTypeEnum.WORKER.getValue())
+                    );
+
+            Map<Long, String> projectMap = allProject.stream()
+                    .collect(Collectors.toMap(
+                            ProjectDO::getId,
+                            ProjectDO::getProjectName
+                    ));
+
+            // 一次性查出当前页所有禁用项目关联
+            List<Long> candidateTypeIds = records.stream()
+                    .map(CandidateTypeDetailResp::getId)
+                    .toList();
+
+            List<CandidateTypeDisableProjectDO> allDisableProjects =
+                    candidateTypeDisableProjectMapper.selectList(
+                            new LambdaQueryWrapper<CandidateTypeDisableProjectDO>()
+                                    .in(CandidateTypeDisableProjectDO::getCandidateTypeId, candidateTypeIds)
+                    );
+
+            // 按 candidateTypeId 分组
+            Map<Long, List<CandidateTypeDisableProjectDO>> disableProjectMap =
+                    allDisableProjects.stream()
+                            .collect(Collectors.groupingBy(
+                                    CandidateTypeDisableProjectDO::getCandidateTypeId
+                            ));
+
+            // 组装数据
             page.setRecords(records.stream().map(item -> {
+
+                List<CandidateTypeDisableProjectDO> disableList =
+                        disableProjectMap.get(item.getId());
+
+                if (ObjectUtil.isNotEmpty(disableList)) {
+
+                    String disableProjectNames = disableList.stream()
+                            .map(CandidateTypeDisableProjectDO::getDisableProjectId)
+                            .map(projectMap::get)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.joining("、"));
+
+                    item.setDisableProjectNames(disableProjectNames);
+                }
+
                 item.setUsername(aesWithHMAC.verifyAndDecrypt(item.getUsername()));
                 item.setPhone(aesWithHMAC.verifyAndDecrypt(item.getPhone()));
+
                 return item;
             }).toList());
         }
@@ -131,7 +194,7 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         ValidationUtils.throwIfNull(candidateTypeDO, "所操作的用户信息不存在");
 
         LambdaUpdateWrapper<CandidateTypeDO> updateWrapper = new LambdaUpdateWrapper<CandidateTypeDO>()
-            .eq(CandidateTypeDO::getId, req.getId());
+                .eq(CandidateTypeDO::getId, req.getId());
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -145,18 +208,32 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
             LocalDateTime endTime = calculateBlacklistEndTime(now, durationType);
 
             updateWrapper.set(CandidateTypeDO::getIsBlacklist, BlacklistConstants.IS_BLACKLIST)
-                .set(CandidateTypeDO::getBlacklistDurationType, durationType)
-                .set(CandidateTypeDO::getBlacklistReason, req.getBlacklistReason())
-                .set(CandidateTypeDO::getBlacklistTime, now)
-                .set(CandidateTypeDO::getBlacklistEndTime, endTime);
+                    .set(CandidateTypeDO::getBlacklistDurationType, durationType)
+                    .set(CandidateTypeDO::getBlacklistReason, req.getBlacklistReason())
+                    .set(CandidateTypeDO::getBlacklistTime, now)
+                    .set(CandidateTypeDO::getBlacklistEndTime, endTime);
 
+            // 添加禁考项目
+            List<Long> disableProjectIds = req.getDisableProjectIds();
+            if (ObjectUtil.isNotEmpty(disableProjectIds)) {
+                List<CandidateTypeDisableProjectDO> insertCandidateTypeDisableProjectList = disableProjectIds.stream().map(disableProjectId -> {
+                    CandidateTypeDisableProjectDO candidateTypeDisableProjectDO = new CandidateTypeDisableProjectDO();
+                    candidateTypeDisableProjectDO.setCandidateTypeId(req.getId());
+                    candidateTypeDisableProjectDO.setDisableProjectId(disableProjectId);
+                    return candidateTypeDisableProjectDO;
+                }).toList();
+                candidateTypeDisableProjectMapper.insertBatch(insertCandidateTypeDisableProjectList);
+            }
         } else {
             // ===== 解除黑名单 =====
             updateWrapper.set(CandidateTypeDO::getIsBlacklist, BlacklistConstants.NOT_BLACKLIST)
-                .set(CandidateTypeDO::getBlacklistDurationType, BlacklistConstants.DURATION_NONE)
-                .set(CandidateTypeDO::getBlacklistReason, null)
-                .set(CandidateTypeDO::getBlacklistTime, null)
-                .set(CandidateTypeDO::getBlacklistEndTime, null);
+                    .set(CandidateTypeDO::getBlacklistDurationType, BlacklistConstants.DURATION_NONE)
+                    .set(CandidateTypeDO::getBlacklistReason, null)
+                    .set(CandidateTypeDO::getBlacklistTime, null)
+                    .set(CandidateTypeDO::getBlacklistEndTime, null);
+
+            candidateTypeDisableProjectMapper.delete(new LambdaQueryWrapper<CandidateTypeDisableProjectDO>()
+                    .eq(CandidateTypeDisableProjectDO::getCandidateTypeId, req.getId()));
         }
 
         return baseMapper.update(null, updateWrapper) > 0;
@@ -167,22 +244,16 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
      */
     private LocalDateTime calculateBlacklistEndTime(LocalDateTime now, Integer durationType) {
 
-        switch (durationType) {
-            case BlacklistConstants.DURATION_1_DAY:
-                return now.plusDays(1);
-            case BlacklistConstants.DURATION_1_MONTH:
-                return now.plusMonths(1);
-            case BlacklistConstants.DURATION_3_MONTH:
-                return now.plusMonths(3);
-            case BlacklistConstants.DURATION_6_MONTH:
-                return now.plusMonths(6);
-            case BlacklistConstants.DURATION_1_YEAR:
-                return now.plusYears(1);
-            case BlacklistConstants.DURATION_FOREVER:
-                return null; // 无期限
-            default:
-                return null;
+        if (durationType == null || durationType == BlacklistConstants.DURATION_NONE) {
+            return null;
         }
+
+        if (durationType == BlacklistConstants.DURATION_FOREVER) {
+            return null;
+        }
+
+        // 1 / 3 / 5 直接作为年数
+        return now.plusYears(durationType);
     }
 
     @Override
@@ -247,7 +318,7 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
             String encryptedPhone = aesWithHMAC.encryptAndSign(rawPhone);
             // 判断手机号是否存在
             if (userMapper.selectCount(new LambdaQueryWrapper<UserDO>().eq(UserDO::getPhone, encryptedPhone)
-                .ne(UserDO::getId, userDO.getId())) > 0) {
+                    .ne(UserDO::getId, userDO.getId())) > 0) {
                 throw new BusinessException("该手机号码已存在，且不属于当前人员");
             }
             userDO.setPhone(encryptedPhone);
@@ -269,13 +340,13 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
             String newPhone = userDO.getPhone();
             String newUserName = userDO.getUsername();
             workerApplyMapper.update(new LambdaUpdateWrapper<WorkerApplyDO>()
-                .eq(WorkerApplyDO::getIdCardNumber, oldUserName)
-                .set(WorkerApplyDO::getIdCardNumber, newUserName)
-                .set(WorkerApplyDO::getPhone, newPhone));
+                    .eq(WorkerApplyDO::getIdCardNumber, oldUserName)
+                    .set(WorkerApplyDO::getIdCardNumber, newUserName)
+                    .set(WorkerApplyDO::getPhone, newPhone));
 
             licenseCertificateMapper.update(new LambdaUpdateWrapper<LicenseCertificateDO>()
-                .eq(LicenseCertificateDO::getIdcardNo, oldUserName)
-                .set(LicenseCertificateDO::getIdcardNo, newUserName));
+                    .eq(LicenseCertificateDO::getIdcardNo, oldUserName)
+                    .set(LicenseCertificateDO::getIdcardNo, newUserName));
             userService.updateById(userDO);
 
         } catch (DuplicateKeyException e) {

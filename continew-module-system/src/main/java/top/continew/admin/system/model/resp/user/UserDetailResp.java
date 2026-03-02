@@ -100,6 +100,12 @@ public class UserDetailResp extends BaseDetailResp {
     private String deptName;
 
     /**
+     * 监考考试类型（0理论考试、1实操考试）
+     */
+    @Schema(description = "监考考试类型（0理论考试、1实操考试）", example = "监考考试类型（0理论考试、1实操考试）")
+    private Integer examSupervisionType;
+
+    /**
      * 角色 ID 列表
      */
     @Schema(description = "角色 ID 列表", example = "2")

@@ -71,10 +71,10 @@ public class CandidateTypeDetailResp extends BaseDetailResp {
     private String blacklistReason;
 
     /**
-     * 黑名单时长类型 0-无 1-1天 2-1个月 3-3个月 4-6个月 5-1年 6-无期限
+     * 黑名单时长类型 0-无 1-1年 3-3年  5-5年 -1-无期限
      */
-    @Schema(description = "黑名单时长类型 0-无 1-1天 2-1个月 3-3个月 4-6个月 5-1年 6-无期限")
-    @ExcelProperty(value = "黑名单时长类型 0-无 1-1天 2-1个月 3-3个月 4-6个月 5-1年 6-无期限")
+    @Schema(description = "黑名单时长类型 0-无 1-1年 3-3年  5-5年 -1-无期限")
+    @ExcelProperty(value = "黑名单时长类型 0-无 1-1年 3-3年  5-5年 -1-无期限")
     private Integer blacklistDurationType;
 
     /**
@@ -174,4 +174,11 @@ public class CandidateTypeDetailResp extends BaseDetailResp {
     @Schema(description = "工作单位")
     @ExcelProperty(value = "工作单位")
     private String workUnit;
+
+    /**
+     * 禁考项目
+     */
+    @Schema(description = "禁考项目")
+    @ExcelProperty(value = "禁考项目")
+    private String disableProjectNames;
 }

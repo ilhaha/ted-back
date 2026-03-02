@@ -110,4 +110,10 @@ public class UserReq implements Serializable {
      */
     @Schema(description = "状态", example = "1")
     private DisEnableStatusEnum status;
+
+    /**
+     * 监考考试类型（0理论考试、1实操考试）
+     */
+    @Schema(description = "监考考试类型（0理论考试、1实操考试）", example = "0")
+    private Integer examSupervisionType;
 }

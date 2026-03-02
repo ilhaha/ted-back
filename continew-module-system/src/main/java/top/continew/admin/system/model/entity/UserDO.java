@@ -107,6 +107,11 @@ public class UserDO extends BaseDO {
     private Boolean isSystem;
 
     /**
+     * 监考考试类型（0理论考试、1实操考试）
+     */
+    private Integer examSupervisionType;
+
+    /**
      * 最后一次修改密码时间
      */
     private LocalDateTime pwdResetTime;

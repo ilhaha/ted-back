@@ -121,6 +121,7 @@
                 #{id}
             </foreach>
         </if>
+        AND su.exam_supervision_type = #{examType}
     </select>
 
 
