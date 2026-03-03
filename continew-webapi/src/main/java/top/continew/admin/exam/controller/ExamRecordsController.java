@@ -21,11 +21,13 @@ import cn.dev33.satoken.annotation.SaIgnore;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import top.continew.admin.document.model.resp.DocumentCandidatesResp;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.req.InputWeldingScoreReq;
 import top.continew.admin.exam.model.resp.ClassExamTableResp;
+import top.continew.admin.exam.model.resp.FirstScoreResp;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.starter.extension.crud.enums.Api;
 
@@ -187,6 +189,18 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
     @GetMapping("/getRecordsById/{id}")
     public ExamRecordsDetailResp getRecordsById(@PathVariable String id) {
         return baseService.getRecordsById(Long.valueOf(id));
+    }
+
+
+    /**
+     * 根据考生id和项目id查找该考生的初考成绩
+     * @param candidateId
+     * @param projectId
+     *
+     */
+    @GetMapping("/firstScore")
+    public FirstScoreResp getFirstScore(@RequestParam Long candidateId, @RequestParam Long projectId) {
+        return baseService.getFirstScore(candidateId, projectId);
     }
 
 }

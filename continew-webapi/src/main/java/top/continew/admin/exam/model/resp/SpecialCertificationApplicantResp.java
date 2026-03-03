@@ -134,7 +134,7 @@ public class SpecialCertificationApplicantResp extends BaseResp {
     private String projectLevel;
 
     /**
-     * 申请人考试类型（1.首考，2.补考）
+     * 申请人考试类型（0.已首考，1.已补考）
      */
     @Schema(description = "申请人考试类型")
     private Integer examType;

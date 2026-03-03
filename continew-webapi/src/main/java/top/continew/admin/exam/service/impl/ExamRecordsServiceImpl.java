@@ -31,11 +31,13 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import lombok.val;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import top.continew.admin.common.constant.*;
 import top.continew.admin.common.constant.enums.*;
@@ -47,8 +49,7 @@ import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.*;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.*;
-import top.continew.admin.exam.model.resp.ClassExamTableResp;
-import top.continew.admin.exam.model.resp.WeldingOperScoreVO;
+import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
 import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
@@ -63,8 +64,6 @@ import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.exam.model.query.ExamRecordsQuery;
-import top.continew.admin.exam.model.resp.ExamRecordsDetailResp;
-import top.continew.admin.exam.model.resp.ExamRecordsResp;
 import top.continew.admin.exam.service.ExamRecordsService;
 
 import java.io.*;
@@ -117,6 +116,12 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
     private final OrgUserMapper orgUserMapper;
 
     private final WeldingOperScoreMapper weldingOperScoreMapper;
+
+    private final ExamRecordsMapper examRecordsMapper;
+
+    private final CandidateExamProjectMapper candidateExamProjectMapper;
+
+    private final ProjectMapper projectMapper;
 
     @Value("${certificate.road-exam-type-id}")
     public Long roadExamTypeId;
@@ -1025,6 +1030,113 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
             .collect(Collectors.toList());
 
         return result;
+    }
+
+    @Override
+    public FirstScoreResp getFirstScore(Long candidateId, Long projectId) {
+        // 1. 第一步：判断该考生该项目的考试状态（首考/补考）
+        CandidateExamProjectDO examProjectStatus = getCandidateExamProjectStatus(candidateId, projectId);
+        if (examProjectStatus == null) {
+            // 考生无该项目的考试状态记录，无成绩可查
+            return null;
+        }
+
+        // 首考判断：轮次>0 且 未使用补考 即为首考（核心逻辑）
+        boolean isFirstExam = examProjectStatus.getAttemptNo() > 0 && examProjectStatus.getUsedMakeup() == 0;
+        if (!isFirstExam) {
+            // 非首考，直接返回null（只查首考的不合格成绩）
+            return null;
+        }
+
+        // 2. 第二步：查询该项目下的所有有效考试计划（未删除）
+        List<ExamPlanDO> examPlanList = getExamPlanListByProjectId(projectId);
+        if (CollectionUtils.isEmpty(examPlanList)) {
+            // 该项目无考试计划，无成绩可查
+            return null;
+        }
+        // 提取计划ID列表，用于后续查询成绩
+        List<Long> planIdList = examPlanList.stream().map(ExamPlanDO::getId).collect(Collectors.toList());
+
+        // 3. 第三步：查询该考生在这些计划下的最新不合格考试记录
+        ExamRecordsDO latestFailedRecord = getLatestFailedExamRecord(candidateId, planIdList);
+        if (latestFailedRecord == null) {
+            // 无不合格成绩记录
+            return null;
+        }
+
+        // 4. 转换为响应对象并补充计划名称等信息
+        return convertToResp(latestFailedRecord, examPlanList);
+    }
+
+    /**
+     * 获取考生-项目的考试状态（首考/补考判断依据）
+     */
+    private CandidateExamProjectDO getCandidateExamProjectStatus(Long candidateId, Long projectId) {
+        LambdaQueryWrapper<CandidateExamProjectDO> queryWrapper = new LambdaQueryWrapper<CandidateExamProjectDO>()
+                .eq(CandidateExamProjectDO::getCandidateId, candidateId)
+                .eq(CandidateExamProjectDO::getProjectId, projectId)
+                .eq(CandidateExamProjectDO::getIsDeleted, 0) // 未删除
+                .eq(CandidateExamProjectDO::getPassed, 0); // 未通过该项目
+        return candidateExamProjectMapper.selectOne(queryWrapper);
+    }
+
+    /**
+     * 查询指定项目下的所有有效考试计划
+     */
+    private List<ExamPlanDO> getExamPlanListByProjectId(Long projectId) {
+        LambdaQueryWrapper<ExamPlanDO> queryWrapper = new LambdaQueryWrapper<ExamPlanDO>()
+                .eq(ExamPlanDO::getExamProjectId, projectId)
+                .eq(ExamPlanDO::getIsDeleted, 0); // 未删除
+        return examPlanMapper.selectList(queryWrapper);
+    }
+
+    /**
+     * 查询考生在指定计划下的最新不合格考试记录（首考）
+     */
+    private ExamRecordsDO getLatestFailedExamRecord(Long candidateId, List<Long> planIdList) {
+        LambdaQueryWrapper<ExamRecordsDO> queryWrapper = new LambdaQueryWrapper<ExamRecordsDO>()
+                .eq(ExamRecordsDO::getCandidateId, candidateId)
+                .in(ExamRecordsDO::getPlanId, planIdList)
+                .eq(ExamRecordsDO::getExamResultStatus, 0) // 不及格
+                .eq(ExamRecordsDO::getAttemptType, 0) // 首考（双重验证）
+                .eq(ExamRecordsDO::getIsDeleted, 0) // 未删除
+                .orderByDesc(ExamRecordsDO::getCreateTime) // 按创建时间倒序
+                .last("LIMIT 1"); // 取最新一条
+        return examRecordsMapper.selectOne(queryWrapper);
+    }
+
+    /**
+     * 转换为响应对象，补充计划名称等信息
+     */
+    private FirstScoreResp convertToResp(ExamRecordsDO record, List<ExamPlanDO> planList) {
+        FirstScoreResp resp = new FirstScoreResp();
+        // 复制基本字段
+        BeanUtils.copyProperties(record, resp);
+
+        // 补充考生姓名（从用户表查询）
+        UserDO user = userMapper.selectById(record.getCandidateId());
+        if (user != null) {
+            resp.setCandidateName(user.getNickname());
+        }
+        // 补充计划名称
+        planList.stream()
+                .filter(plan -> plan.getId().equals(record.getPlanId()))
+                .findFirst()
+                .ifPresent(plan -> resp.setPlanName(plan.getExamPlanName()));
+
+        // 补充项目ID和项目名称（从计划中获取）
+        planList.stream()
+                .filter(plan -> plan.getId().equals(record.getPlanId()))
+                .findFirst()
+                .ifPresent(plan -> {
+                    resp.setProjectId(plan.getExamProjectId());
+                    // 从项目表查询项目名称
+                    ProjectDO project = projectMapper.selectById(plan.getExamProjectId());
+                    if (project != null) {
+                        resp.setProjectName(project.getProjectName());
+                    }
+                });
+        return resp;
     }
 
     private String generateClassXml(List<LicenseCertificateDO> certList) {

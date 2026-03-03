@@ -22,6 +22,7 @@ import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
 import top.continew.admin.exam.model.req.InputWeldingScoreReq;
 import top.continew.admin.exam.model.resp.ClassExamTableResp;
+import top.continew.admin.exam.model.resp.FirstScoreResp;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -111,4 +112,15 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
      * @return
      */
     List<ClassExamTableResp> getClassExamTableList(Long planId);
+
+
+    /**
+     * 根据考生id和项目id查找该考生的初考成绩
+     * @param candidateId
+     * @param projectId
+     *
+     */
+    FirstScoreResp getFirstScore(Long candidateId, Long projectId);
+
+
 }

@@ -520,8 +520,8 @@ public class SpecialCertificationApplicantServiceImpl extends BaseServiceImpl<Sp
 
         // 3. 遍历映射，按「考生+项目」维度设置examType
         respMap.forEach((key, resp) -> {
-            // 匹配不到则设为0（首考），匹配到则取对应usedMakeup
-            Integer usedMakeup = projectMakeupMap.getOrDefault(key, 0);//设置默认值为0（首考）
+            // 匹配不到则设为2（以前没有申请过（定义为首考）），匹配到则取对应usedMakeup
+            Integer usedMakeup = projectMakeupMap.getOrDefault(key, 2);//设置默认值为2（以前没有申请过（定义为首考））
             resp.setExamType(usedMakeup);
         });
 
