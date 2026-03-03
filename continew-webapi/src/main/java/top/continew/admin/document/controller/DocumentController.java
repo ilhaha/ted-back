@@ -23,8 +23,7 @@ import jakarta.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.document.model.req.QrcodeUploadReq;
-import top.continew.admin.document.model.resp.CandidateDocumentResp;
-import top.continew.admin.document.model.resp.DocumentTypeAddResp;
+import top.continew.admin.document.model.resp.*;
 import top.continew.admin.document.model.vo.DocumentTypeNameVO;
 import top.continew.admin.document.service.DocumentTypeService;
 import top.continew.starter.extension.crud.enums.Api;
@@ -37,8 +36,6 @@ import top.continew.starter.extension.crud.annotation.CrudRequestMapping;
 import top.continew.admin.common.controller.BaseController;
 import top.continew.admin.document.model.query.DocumentQuery;
 import top.continew.admin.document.model.req.DocumentReq;
-import top.continew.admin.document.model.resp.DocumentDetailResp;
-import top.continew.admin.document.model.resp.DocumentResp;
 import top.continew.admin.document.service.DocumentService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -115,6 +112,15 @@ public class DocumentController extends BaseController<DocumentService, Document
     @SaCheckPermission("document:document:list")
     public PageResp<CandidateDocumentResp> pageByCandidate(DocumentQuery query, PageQuery pageQuery) {
         return documentService.pageByCandidate(query, pageQuery);
+    }
+
+    /**
+     * 根据考生id查询不同项目的所需资料
+     *
+     */
+    @GetMapping("/listByCandidateId")
+    public List<DocumentCandidatesResp> listByCandidateId(@RequestParam Long candidateId, @RequestParam Long projectId) {
+        return documentService.getDocumentTypeByCandidateId(candidateId, projectId);
     }
 
 }

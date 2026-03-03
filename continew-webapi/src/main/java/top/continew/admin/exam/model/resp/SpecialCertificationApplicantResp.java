@@ -121,7 +121,7 @@ public class SpecialCertificationApplicantResp extends BaseResp {
 
     /** 项目ID */
     @Schema(description = "项目ID")
-    private String projectId;
+    private Long projectId;
 
     /** 项目名称 */
     @Schema(description = "项目名称")

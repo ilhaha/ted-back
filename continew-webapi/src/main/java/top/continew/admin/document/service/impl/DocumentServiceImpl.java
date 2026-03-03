@@ -19,6 +19,7 @@ package top.continew.admin.document.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -28,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
@@ -44,7 +46,9 @@ import top.continew.admin.document.model.req.QrcodeUploadReq;
 import top.continew.admin.document.model.resp.*;
 import top.continew.admin.document.service.cache.DocumentTypeCache;
 import top.continew.admin.exam.mapper.EnrollMapper;
+import top.continew.admin.exam.mapper.ProjectDocumentTypeMapper;
 import top.continew.admin.exam.model.entity.EnrollDO;
+import top.continew.admin.exam.model.entity.ProjectDocumentTypeDO;
 import top.continew.starter.core.exception.BusinessException;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -58,6 +62,8 @@ import top.continew.admin.document.service.DocumentService;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.mysql.cj.util.TimeUtil.DATE_FORMATTER;
 
 /**
  * 资料核心存储业务实现
@@ -79,6 +85,9 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
 
     @Resource
     private EnrollMapper enrollMapper;
+
+    @Resource
+    private ProjectDocumentTypeMapper projectDocumentTypeMapper;
 
     @Override
     public PageResp<DocumentResp> page(DocumentQuery query, PageQuery pageQuery) {
@@ -370,5 +379,85 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
             throw new RuntimeException("审核失败，未更新任何记录");
         }
         return true;
+    }
+
+    @Override
+    public List<DocumentCandidatesResp> getDocumentTypeByCandidateId(Long candidateId, Long projectId) {
+        // 最终返回的响应列表
+        List<DocumentCandidatesResp> resultList = new ArrayList<>();
+
+        //步骤1：根据项目ID查询关联的资料类型ID（过滤已删除）
+        LambdaQueryWrapper<ProjectDocumentTypeDO> projectDocWrapper = new LambdaQueryWrapper<>();
+        projectDocWrapper.eq(ProjectDocumentTypeDO::getProjectId, projectId)
+                .eq(ProjectDocumentTypeDO::getIsDeleted, 0);
+        List<ProjectDocumentTypeDO> projectDocumentTypeList = projectDocumentTypeMapper.selectList(projectDocWrapper);
+        if (CollectionUtils.isEmpty(projectDocumentTypeList)) {
+            return resultList; // 无关联资料类型，返回空列表
+        }
+
+        // 提取资料类型ID列表
+        List<Long> documentTypeIds = projectDocumentTypeList.stream()
+                .map(ProjectDocumentTypeDO::getDocumentTypeId)
+                .collect(Collectors.toList());
+
+        // 步骤2：根据资料类型ID查询资料类型详情（过滤已删除）
+        LambdaQueryWrapper<DocumentTypeDO> docTypeWrapper = new LambdaQueryWrapper<>();
+        docTypeWrapper.in(DocumentTypeDO::getId, documentTypeIds)
+                .eq(DocumentTypeDO::getIsDeleted, 0);
+        List<DocumentTypeDO> documentTypeList = documentTypeMapper.selectList(docTypeWrapper);
+        if (CollectionUtils.isEmpty(documentTypeList)) {
+            return resultList; // 无资料类型详情，返回空列表
+        }
+
+        // 步骤3：根据考生ID+资料类型ID查询已上传的资料信息（过滤已删除）
+        LambdaQueryWrapper<DocumentDO> docWrapper = new LambdaQueryWrapper<>();
+        docWrapper.eq(DocumentDO::getCreateUser, candidateId) // create_user存储考生ID
+                .in(DocumentDO::getTypeId, documentTypeIds)
+                .eq(DocumentDO::getIsDeleted, 0);
+        List<DocumentDO> documentList = documentMapper.selectList(docWrapper);
+
+        // 将资料按「资料类型ID」分组，方便后续匹配
+        Map<Long, DocumentDO> docTypeToDocMap = documentList.stream()
+                .collect(Collectors.toMap(DocumentDO::getTypeId, doc -> doc, (existing, replacement) -> existing));
+
+        // 步骤4：封装响应结果（遍历资料类型，匹配考生上传的资料）
+        for (DocumentTypeDO docType : documentTypeList) {
+            DocumentCandidatesResp resp = new DocumentCandidatesResp();
+            Long currentTypeId = docType.getId(); // 当前资料类型ID
+
+            // --- 基础字段：资料类型信息 ---
+            resp.setTypeName(docType.getTypeName()); // 资料种类名称
+            resp.setTypeId(currentTypeId); // 资料类型ID
+
+            // --- 考生上传的资料信息（有则赋值，无则默认空/0） ---
+            DocumentDO candidateDoc = docTypeToDocMap.get(currentTypeId);
+            if (candidateDoc != null) {
+                resp.setId(candidateDoc.getId()); // 资料ID
+                resp.setStatus(Long.valueOf(candidateDoc.getStatus())); // 审核状态（tinyint转Long）
+                resp.setAuditRemark(candidateDoc.getAuditRemark()); // 审核备注
+                resp.setDocumentUrl(candidateDoc.getDocPath()); // 图片url（存储路径作为URL）
+
+                // 审核时间：update_time作为审核时间（业务逻辑：审核后会更新update_time）
+                if (candidateDoc.getUpdateTime() != null) {
+                    resp.setReviewTime(DATE_FORMATTER.format(candidateDoc.getUpdateTime()));
+                } else {
+                    resp.setReviewTime(""); // 未审核则为空
+                }
+                resp.setReviewer(""); // 无用户表时默认空
+            } else {
+                // 考生未上传该类型资料，设置默认值
+                resp.setId(null);
+                resp.setStatus(0L); // 待审核（默认值）
+                resp.setAuditRemark("");
+                resp.setCreateUser(candidateId); // 创建人ID（考生ID）
+                resp.setDocumentUrl(""); // 无图片URL
+                resp.setReviewer(""); // 无审核人
+                resp.setReviewTime(""); // 无审核时间
+            }
+
+            resultList.add(resp);
+        }
+
+        return resultList;
     }
 }
