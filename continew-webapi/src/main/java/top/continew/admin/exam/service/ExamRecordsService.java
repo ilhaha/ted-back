@@ -113,14 +113,13 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
      */
     List<ClassExamTableResp> getClassExamTableList(Long planId);
 
-
     /**
      * 根据考生id和项目id查找该考生的初考成绩
+     * 
      * @param candidateId
      * @param projectId
      *
      */
     FirstScoreResp getFirstScore(Long candidateId, Long projectId);
-
 
 }

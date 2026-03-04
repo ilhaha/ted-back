@@ -33,14 +33,11 @@ public final class BlacklistConstants {
     /** 黑名单时长：无 */
     public static final int DURATION_NONE = 0;
 
-
     /** 黑名单时长：1年 */
     public static final int DURATION_1_YEAR = 1;
 
-
     /** 黑名单时长：3年 */
     public static final int DURATION_3_YEAR = 3;
-
 
     /** 黑名单时长：5年 */
     public static final int DURATION_5_YEAR = 5;

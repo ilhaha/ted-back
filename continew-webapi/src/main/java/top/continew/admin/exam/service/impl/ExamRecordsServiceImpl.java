@@ -1073,10 +1073,10 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
      */
     private CandidateExamProjectDO getCandidateExamProjectStatus(Long candidateId, Long projectId) {
         LambdaQueryWrapper<CandidateExamProjectDO> queryWrapper = new LambdaQueryWrapper<CandidateExamProjectDO>()
-                .eq(CandidateExamProjectDO::getCandidateId, candidateId)
-                .eq(CandidateExamProjectDO::getProjectId, projectId)
-                .eq(CandidateExamProjectDO::getIsDeleted, 0) // 未删除
-                .eq(CandidateExamProjectDO::getPassed, 0); // 未通过该项目
+            .eq(CandidateExamProjectDO::getCandidateId, candidateId)
+            .eq(CandidateExamProjectDO::getProjectId, projectId)
+            .eq(CandidateExamProjectDO::getIsDeleted, 0) // 未删除
+            .eq(CandidateExamProjectDO::getPassed, 0); // 未通过该项目
         return candidateExamProjectMapper.selectOne(queryWrapper);
     }
 
@@ -1085,8 +1085,8 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
      */
     private List<ExamPlanDO> getExamPlanListByProjectId(Long projectId) {
         LambdaQueryWrapper<ExamPlanDO> queryWrapper = new LambdaQueryWrapper<ExamPlanDO>()
-                .eq(ExamPlanDO::getExamProjectId, projectId)
-                .eq(ExamPlanDO::getIsDeleted, 0); // 未删除
+            .eq(ExamPlanDO::getExamProjectId, projectId)
+            .eq(ExamPlanDO::getIsDeleted, 0); // 未删除
         return examPlanMapper.selectList(queryWrapper);
     }
 
@@ -1095,13 +1095,13 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
      */
     private ExamRecordsDO getLatestFailedExamRecord(Long candidateId, List<Long> planIdList) {
         LambdaQueryWrapper<ExamRecordsDO> queryWrapper = new LambdaQueryWrapper<ExamRecordsDO>()
-                .eq(ExamRecordsDO::getCandidateId, candidateId)
-                .in(ExamRecordsDO::getPlanId, planIdList)
-                .eq(ExamRecordsDO::getExamResultStatus, 0) // 不及格
-                .eq(ExamRecordsDO::getAttemptType, 0) // 首考（双重验证）
-                .eq(ExamRecordsDO::getIsDeleted, 0) // 未删除
-                .orderByDesc(ExamRecordsDO::getCreateTime) // 按创建时间倒序
-                .last("LIMIT 1"); // 取最新一条
+            .eq(ExamRecordsDO::getCandidateId, candidateId)
+            .in(ExamRecordsDO::getPlanId, planIdList)
+            .eq(ExamRecordsDO::getExamResultStatus, 0) // 不及格
+            .eq(ExamRecordsDO::getAttemptType, 0) // 首考（双重验证）
+            .eq(ExamRecordsDO::getIsDeleted, 0) // 未删除
+            .orderByDesc(ExamRecordsDO::getCreateTime) // 按创建时间倒序
+            .last("LIMIT 1"); // 取最新一条
         return examRecordsMapper.selectOne(queryWrapper);
     }
 
@@ -1120,22 +1120,19 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
         }
         // 补充计划名称
         planList.stream()
-                .filter(plan -> plan.getId().equals(record.getPlanId()))
-                .findFirst()
-                .ifPresent(plan -> resp.setPlanName(plan.getExamPlanName()));
+            .filter(plan -> plan.getId().equals(record.getPlanId()))
+            .findFirst()
+            .ifPresent(plan -> resp.setPlanName(plan.getExamPlanName()));
 
         // 补充项目ID和项目名称（从计划中获取）
-        planList.stream()
-                .filter(plan -> plan.getId().equals(record.getPlanId()))
-                .findFirst()
-                .ifPresent(plan -> {
-                    resp.setProjectId(plan.getExamProjectId());
-                    // 从项目表查询项目名称
-                    ProjectDO project = projectMapper.selectById(plan.getExamProjectId());
-                    if (project != null) {
-                        resp.setProjectName(project.getProjectName());
-                    }
-                });
+        planList.stream().filter(plan -> plan.getId().equals(record.getPlanId())).findFirst().ifPresent(plan -> {
+            resp.setProjectId(plan.getExamProjectId());
+            // 从项目表查询项目名称
+            ProjectDO project = projectMapper.selectById(plan.getExamProjectId());
+            if (project != null) {
+                resp.setProjectName(project.getProjectName());
+            }
+        });
         return resp;
     }
 

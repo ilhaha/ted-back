@@ -21,7 +21,6 @@ import cn.dev33.satoken.annotation.SaIgnore;
 import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import top.continew.admin.document.model.resp.DocumentCandidatesResp;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 import top.continew.admin.exam.model.req.GenerateReq;
 import top.continew.admin.exam.model.req.InputScoresReq;
@@ -191,9 +190,9 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
         return baseService.getRecordsById(Long.valueOf(id));
     }
 
-
     /**
      * 根据考生id和项目id查找该考生的初考成绩
+     * 
      * @param candidateId
      * @param projectId
      *

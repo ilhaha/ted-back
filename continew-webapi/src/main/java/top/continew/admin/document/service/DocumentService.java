@@ -19,7 +19,6 @@ package top.continew.admin.document.service;
 import top.continew.admin.document.model.req.DocumentAuditReq;
 import top.continew.admin.document.model.req.QrcodeUploadReq;
 import top.continew.admin.document.model.resp.*;
-import top.continew.admin.document.model.vo.DocumentTypeNameVO;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
@@ -67,11 +66,11 @@ public interface DocumentService extends BaseService<DocumentResp, DocumentDetai
 
     boolean auditDocument(DocumentAuditReq request);
 
-
     /**
      * 根据考生id查询不同项目的所需资料
+     * 
      * @param candidateId 考生id
      * @return List<DocumentTypeNameVO>
      */
-    List<DocumentCandidatesResp> getDocumentTypeByCandidateId(Long candidateId ,Long projectId);
+    List<DocumentCandidatesResp> getDocumentTypeByCandidateId(Long candidateId, Long projectId);
 }

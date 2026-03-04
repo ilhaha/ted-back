@@ -610,7 +610,7 @@ public class ExamineePaymentAuditServiceImpl extends BaseServiceImpl<ExamineePay
         if (newStatus == 2) {
             record.setAuditStatus(6); // 已退款
             //取消考生报名信息
-            Boolean cancelResult = enrollService.cancelEnroll(record.getExamineeId() ,record.getExamPlanId());
+            Boolean cancelResult = enrollService.cancelEnroll(record.getExamineeId(), record.getExamPlanId());
             ValidationUtils.throwIf(!cancelResult, "报名失败，无法生成准考证信息");
         } else {
             record.setAuditStatus(7); // 退款驳回

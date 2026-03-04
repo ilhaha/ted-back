@@ -214,7 +214,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
     @GetMapping("/cancelEnroll/{examPlanId}")
     public void cancelEnroll(@PathVariable("examPlanId") Long examPlanId) {
         Long userId = TokenLocalThreadUtil.get().getUserId();
-        enrollService.cancelEnroll(userId ,examPlanId);
+        enrollService.cancelEnroll(userId, examPlanId);
     }
 
 }

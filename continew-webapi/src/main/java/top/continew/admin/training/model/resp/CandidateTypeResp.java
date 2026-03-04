@@ -63,7 +63,7 @@ public class CandidateTypeResp extends BaseResp {
     private String blacklistReason;
 
     /**
-     * 黑名单时长类型 0-无 1-1年 3-3年  5-5年 -1-无期限
+     * 黑名单时长类型 0-无 1-1年 3-3年 5-5年 -1-无期限
      */
     @Schema(description = "黑名单时长类型 0-无 1-1年 3-3年  5-5年 -1-无期限")
     private Integer blacklistDurationType;

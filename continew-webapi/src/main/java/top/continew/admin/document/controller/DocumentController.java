@@ -119,7 +119,8 @@ public class DocumentController extends BaseController<DocumentService, Document
      *
      */
     @GetMapping("/listByCandidateId")
-    public List<DocumentCandidatesResp> listByCandidateId(@RequestParam Long candidateId, @RequestParam Long projectId) {
+    public List<DocumentCandidatesResp> listByCandidateId(@RequestParam Long candidateId,
+                                                          @RequestParam Long projectId) {
         return documentService.getDocumentTypeByCandidateId(candidateId, projectId);
     }
 

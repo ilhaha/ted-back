@@ -269,10 +269,12 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
      */
     UserDetailDTO selectUserDetailById(@Param("id") Long id);
 
-    List<ExamStaffFeeExportVO> selectExamStaffFeeByUserId(@Param("userId") Long userId, @Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
+    List<ExamStaffFeeExportVO> selectExamStaffFeeByUserId(@Param("userId") Long userId,
+                                                          @Param("startTime") LocalDateTime startTime,
+                                                          @Param("endTime") LocalDateTime endTime);
 
-    List<ExamStaffFeeExportVO> selectAllExamStaffFee(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
-
+    List<ExamStaffFeeExportVO> selectAllExamStaffFee(@Param("startTime") LocalDateTime startTime,
+                                                     @Param("endTime") LocalDateTime endTime);
 
     boolean existsByUsernameAndIdNot(String encryptedIdCard, Long id);
 }

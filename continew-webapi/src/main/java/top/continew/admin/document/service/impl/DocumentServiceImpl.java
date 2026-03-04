@@ -388,8 +388,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
 
         //步骤1：根据项目ID查询关联的资料类型ID（过滤已删除）
         LambdaQueryWrapper<ProjectDocumentTypeDO> projectDocWrapper = new LambdaQueryWrapper<>();
-        projectDocWrapper.eq(ProjectDocumentTypeDO::getProjectId, projectId)
-                .eq(ProjectDocumentTypeDO::getIsDeleted, 0);
+        projectDocWrapper.eq(ProjectDocumentTypeDO::getProjectId, projectId).eq(ProjectDocumentTypeDO::getIsDeleted, 0);
         List<ProjectDocumentTypeDO> projectDocumentTypeList = projectDocumentTypeMapper.selectList(projectDocWrapper);
         if (CollectionUtils.isEmpty(projectDocumentTypeList)) {
             return resultList; // 无关联资料类型，返回空列表
@@ -397,13 +396,12 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
 
         // 提取资料类型ID列表
         List<Long> documentTypeIds = projectDocumentTypeList.stream()
-                .map(ProjectDocumentTypeDO::getDocumentTypeId)
-                .collect(Collectors.toList());
+            .map(ProjectDocumentTypeDO::getDocumentTypeId)
+            .collect(Collectors.toList());
 
         // 步骤2：根据资料类型ID查询资料类型详情（过滤已删除）
         LambdaQueryWrapper<DocumentTypeDO> docTypeWrapper = new LambdaQueryWrapper<>();
-        docTypeWrapper.in(DocumentTypeDO::getId, documentTypeIds)
-                .eq(DocumentTypeDO::getIsDeleted, 0);
+        docTypeWrapper.in(DocumentTypeDO::getId, documentTypeIds).eq(DocumentTypeDO::getIsDeleted, 0);
         List<DocumentTypeDO> documentTypeList = documentTypeMapper.selectList(docTypeWrapper);
         if (CollectionUtils.isEmpty(documentTypeList)) {
             return resultList; // 无资料类型详情，返回空列表
@@ -412,13 +410,13 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         // 步骤3：根据考生ID+资料类型ID查询已上传的资料信息（过滤已删除）
         LambdaQueryWrapper<DocumentDO> docWrapper = new LambdaQueryWrapper<>();
         docWrapper.eq(DocumentDO::getCreateUser, candidateId) // create_user存储考生ID
-                .in(DocumentDO::getTypeId, documentTypeIds)
-                .eq(DocumentDO::getIsDeleted, 0);
+            .in(DocumentDO::getTypeId, documentTypeIds)
+            .eq(DocumentDO::getIsDeleted, 0);
         List<DocumentDO> documentList = documentMapper.selectList(docWrapper);
 
         // 将资料按「资料类型ID」分组，方便后续匹配
         Map<Long, DocumentDO> docTypeToDocMap = documentList.stream()
-                .collect(Collectors.toMap(DocumentDO::getTypeId, doc -> doc, (existing, replacement) -> existing));
+            .collect(Collectors.toMap(DocumentDO::getTypeId, doc -> doc, (existing, replacement) -> existing));
 
         // 步骤4：封装响应结果（遍历资料类型，匹配考生上传的资料）
         for (DocumentTypeDO docType : documentTypeList) {

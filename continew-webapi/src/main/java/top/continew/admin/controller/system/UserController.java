@@ -18,7 +18,6 @@ package top.continew.admin.controller.system;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaIgnore;
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -39,7 +38,6 @@ import top.continew.admin.common.constant.RegexConstants;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
-import top.continew.admin.invigilate.service.PlanInvigilateService;
 import top.continew.admin.system.model.dto.UserDetailDTO;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.query.UserQuery;
@@ -288,7 +286,7 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     public void exportExamStaffFee(@RequestParam("userId") Long userId,
                                    @RequestParam("exportDate") String exportDate,
                                    HttpServletResponse response) {
-        userService.exportExamStaffFee(userId, exportDate,response);
+        userService.exportExamStaffFee(userId, exportDate, response);
     }
 
     /**

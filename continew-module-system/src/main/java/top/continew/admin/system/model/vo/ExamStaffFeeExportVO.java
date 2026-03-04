@@ -19,7 +19,6 @@ package top.continew.admin.system.model.vo;
 import com.alibaba.excel.annotation.ExcelIgnore;
 import com.alibaba.excel.annotation.ExcelIgnoreUnannotated;
 import com.alibaba.excel.annotation.ExcelProperty;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -33,7 +32,7 @@ public class ExamStaffFeeExportVO {
     @ExcelIgnore
     private Long examPlanId;
     //
-//    @ExcelProperty("监考人员ID")
+    //    @ExcelProperty("监考人员ID")
     @ExcelIgnore
     private Long invigilatorId;
 
@@ -93,10 +92,9 @@ public class ExamStaffFeeExportVO {
     @ExcelProperty("监考劳务费")
     private BigDecimal examFee;
 
-//    @ExcelProperty("实发金额")
+    //    @ExcelProperty("实发金额")
     @ExcelIgnore
     private String totalFee;
-
 
     //    @ExcelProperty("监考状态")
     //    private String invigilateStatus;
