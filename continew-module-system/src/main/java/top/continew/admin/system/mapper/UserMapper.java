@@ -38,6 +38,7 @@ import top.continew.admin.system.model.vo.*;
 import top.continew.starter.extension.datapermission.annotation.DataPermission;
 import top.continew.starter.security.crypto.annotation.FieldEncrypt;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -268,7 +269,10 @@ public interface UserMapper extends DataPermissionMapper<UserDO> {
      */
     UserDetailDTO selectUserDetailById(@Param("id") Long id);
 
-    List<ExamStaffFeeExportVO> selectExamStaffFeeByUserId(@Param("userId") Long userId);
+    List<ExamStaffFeeExportVO> selectExamStaffFeeByUserId(@Param("userId") Long userId, @Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
+
+    List<ExamStaffFeeExportVO> selectAllExamStaffFee(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
+
 
     boolean existsByUsernameAndIdNot(String encryptedIdCard, Long id);
 }

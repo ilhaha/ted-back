@@ -367,6 +367,9 @@ aes:
 # Excel 模板配置
 excel:
   template:
+    # 批量导出劳务费模板
+    labor-fee:
+      url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2026/2/10/labor_expense_report_inspection_and_testing_personnel.xlsx
     summary-table:
       # 成绩汇总表模板
       grade:

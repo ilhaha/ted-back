@@ -18,6 +18,7 @@ package top.continew.admin.controller.system;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaIgnore;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,6 +30,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -86,8 +88,6 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     private UserService userService;
 
     private final OrgService orgService;
-
-    private final PlanInvigilateService planInvigilateService;
 
     @Resource
     private AESWithHMAC aesWithHMAC;
@@ -285,7 +285,18 @@ public class UserController extends BaseController<UserService, UserResp, UserDe
     @Operation(summary = "导出监考人员劳务费")
     @SaCheckPermission("examAffair:invigilation:exportFee")
     @GetMapping(value = "/examStaff/exportFee", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public void exportExamStaffFee(@RequestParam("userId") Long userId, HttpServletResponse response) {
-        userService.exportExamStaffFee(userId, response);
+    public void exportExamStaffFee(@RequestParam("userId") Long userId,
+                                   @RequestParam("exportDate") String exportDate,
+                                   HttpServletResponse response) {
+        userService.exportExamStaffFee(userId, exportDate,response);
+    }
+
+    /**
+     * 批量导出监考人员劳务费
+     */
+    @Operation(summary = "批量导出监考人员劳务费")
+    @GetMapping("/examStaff/exportFee/batch")
+    public ResponseEntity<byte[]> exportExamStaffFeeBatch(@RequestParam("exportDate") String exportDate) {
+        return userService.exportExamStaffFeeBatch(exportDate);
     }
 }

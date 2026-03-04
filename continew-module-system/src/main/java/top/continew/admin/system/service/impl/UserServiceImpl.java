@@ -29,6 +29,7 @@ import cn.hutool.extra.validation.ValidationUtil;
 import cn.hutool.http.ContentType;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.write.style.column.LongestMatchColumnWidthStyleStrategy;
 import com.alicp.jetcache.anno.CacheInvalidate;
 import com.alicp.jetcache.anno.CacheType;
@@ -46,12 +47,17 @@ import lombok.extern.slf4j.Slf4j;
 import me.ahoo.cosid.IdGenerator;
 import me.ahoo.cosid.provider.DefaultIdGeneratorProvider;
 import net.dreamlu.mica.core.result.R;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.auth.model.dto.ClassroomDTO;
 import top.continew.admin.auth.model.dto.InvigilatorPlanDTO;
@@ -86,6 +92,7 @@ import top.continew.admin.system.model.resp.user.UserImportResp;
 import top.continew.admin.system.model.resp.user.UserResp;
 import top.continew.admin.system.model.vo.*;
 import top.continew.admin.system.service.*;
+import top.continew.admin.util.ExcelUtils;
 import top.continew.starter.cache.redisson.util.RedisUtils;
 import top.continew.starter.core.constant.StringConstants;
 import top.continew.starter.core.exception.BusinessException;
@@ -99,13 +106,15 @@ import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.starter.web.util.FileUploadUtils;
 import top.continew.starter.core.util.SpringUtils;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
@@ -132,6 +141,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     private final UserRoleService userRoleService;
     private final RoleService roleService;
     private final AESWithHMAC aesWithHMAC;
+    private final RestTemplate restTemplate = new RestTemplate();
+
 
     @Resource
     private DeptService deptService;
@@ -154,6 +165,9 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     @Value("${examine.userRole.workerId}")
     private Long workerId;
 
+    @Value("${excel.template.labor-fee.url}")
+    private String laborFeeTemplateUrl;
+
     @Resource
     private RedisTemplate redisTemplate;
 
@@ -163,7 +177,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         queryWrapper.notIn("t3.role_id", Arrays.asList(invigilatorId, candidatesId, organizationId, workerId));
         super.sort(queryWrapper, pageQuery);
         IPage<UserDetailResp> page = baseMapper.selectUserPage(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
         page.setRecords(page.getRecords().stream().map(item -> {
             item.setPhone(aesWithHMAC.verifyAndDecrypt(item.getPhone()));
             item.setUsername(aesWithHMAC.verifyAndDecrypt(item.getUsername()));
@@ -185,7 +199,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
         // 调用新 Mapper 方法
         IPage<UserDetailResp> page = baseMapper.selectExamStaffPage(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), wrapper);
+                .getSize()), wrapper);
 
         // 解密
         page.setRecords(page.getRecords().stream().map(item -> {
@@ -241,7 +255,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         // 如果手机号已存在，则抛出异常
         final String errorMsgPhoneTemplate = "新增失败，[{}] 手机号已被使用";
         CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this
-            .isPhoneExists(phone, null), errorMsgPhoneTemplate, aesWithHMAC.verifyAndDecrypt(phone));
+                .isPhoneExists(phone, null), errorMsgPhoneTemplate, aesWithHMAC.verifyAndDecrypt(phone));
     }
 
     @Override
@@ -268,13 +282,13 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         CheckUtils.throwIf(StrUtil.isNotBlank(phone) && this.isPhoneExists(encryptPhone, id), errorMsgTemplate, phone);
         DisEnableStatusEnum newStatus = req.getStatus();
         CheckUtils.throwIf(DisEnableStatusEnum.DISABLE.equals(newStatus) && ObjectUtil.equal(id, UserContextHolder
-            .getUserId()), "不允许禁用当前用户");
+                .getUserId()), "不允许禁用当前用户");
         UserDO oldUser = super.getById(id);
         if (Boolean.TRUE.equals(oldUser.getIsSystem())) {
             CheckUtils.throwIfEqual(DisEnableStatusEnum.DISABLE, newStatus, "[{}] 是系统内置用户，不允许禁用", oldUser
-                .getNickname());
+                    .getNickname());
             Collection<Long> disjunctionRoleIds = CollUtil.disjunction(req.getRoleIds(), userRoleService
-                .listRoleIdByUserId(id));
+                    .listRoleIdByUserId(id));
             CheckUtils.throwIfNotEmpty(disjunctionRoleIds, "[{}] 是系统内置用户，不允许变更角色", oldUser.getNickname());
         }
         // 更新信息
@@ -301,12 +315,12 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     public void delete(List<Long> ids) {
         CheckUtils.throwIf(CollUtil.contains(ids, UserContextHolder.getUserId()), "不允许删除当前用户");
         List<UserDO> list = baseMapper.lambdaQuery()
-            .select(UserDO::getNickname, UserDO::getIsSystem)
-            .in(UserDO::getId, ids)
-            .list();
+                .select(UserDO::getNickname, UserDO::getIsSystem)
+                .in(UserDO::getId, ids)
+                .list();
         Optional<UserDO> isSystemData = list.stream().filter(UserDO::getIsSystem).findFirst();
         CheckUtils.throwIf(isSystemData::isPresent, "所选用户 [{}] 是系统内置用户，不允许删除", isSystemData.orElseGet(UserDO::new)
-            .getNickname());
+                .getNickname());
         // 删除用户和角色关联
         userRoleService.deleteByUserIds(ids);
         // 删除历史密码
@@ -354,10 +368,10 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         // 读取表格数据
         try {
             importRowList = EasyExcel.read(file.getInputStream())
-                .head(UserImportRowReq.class)
-                .sheet()
-                .headRowNumber(1)
-                .doReadSync();
+                    .head(UserImportRowReq.class)
+                    .sheet()
+                    .headRowNumber(1)
+                    .doReadSync();
         } catch (Exception e) {
             log.error("用户导入数据文件解析异常：{}", e.getMessage(), e);
             throw new BusinessException("数据文件解析异常");
@@ -373,13 +387,13 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         // 检测表格内数据是否合法
         Set<String> seenEmails = new HashSet<>();
         boolean hasDuplicateEmail = validRowList.stream()
-            .map(UserImportRowReq::getEmail)
-            .anyMatch(email -> email != null && !seenEmails.add(email));
+                .map(UserImportRowReq::getEmail)
+                .anyMatch(email -> email != null && !seenEmails.add(email));
         CheckUtils.throwIf(hasDuplicateEmail, "存在重复邮箱，请检测数据");
         Set<String> seenPhones = new HashSet<>();
         boolean hasDuplicatePhone = validRowList.stream()
-            .map(UserImportRowReq::getPhone)
-            .anyMatch(phone -> phone != null && !seenPhones.add(phone));
+                .map(UserImportRowReq::getPhone)
+                .anyMatch(phone -> phone != null && !seenPhones.add(phone));
         CheckUtils.throwIf(hasDuplicatePhone, "存在重复手机，请检测数据");
 
         // 校验是否存在错误角色
@@ -393,18 +407,18 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
         // 查询重复用户
         userImportResp
-            .setDuplicateUserRows(countExistByField(validRowList, UserImportRowReq::getUsername, UserDO::getUsername, false));
+                .setDuplicateUserRows(countExistByField(validRowList, UserImportRowReq::getUsername, UserDO::getUsername, false));
         // 查询重复邮箱
         userImportResp
-            .setDuplicateEmailRows(countExistByField(validRowList, UserImportRowReq::getEmail, UserDO::getEmail, true));
+                .setDuplicateEmailRows(countExistByField(validRowList, UserImportRowReq::getEmail, UserDO::getEmail, true));
         // 查询重复手机
         userImportResp
-            .setDuplicatePhoneRows(countExistByField(validRowList, UserImportRowReq::getPhone, UserDO::getPhone, true));
+                .setDuplicatePhoneRows(countExistByField(validRowList, UserImportRowReq::getPhone, UserDO::getPhone, true));
 
         // 设置导入会话并缓存数据，有效期10分钟
         String importKey = UUID.fastUUID().toString(true);
         RedisUtils.set(CacheConstants.DATA_IMPORT_KEY + importKey, JSONUtil.toJsonStr(validRowList), Duration
-            .ofMinutes(10));
+                .ofMinutes(10));
         userImportResp.setImportKey(importKey);
         return userImportResp;
     }
@@ -426,25 +440,25 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         List<String> existEmails = listExistByField(importUserList, UserImportRowReq::getEmail, UserDO::getEmail);
         List<String> existPhones = listExistByField(importUserList, UserImportRowReq::getPhone, UserDO::getPhone);
         List<UserDO> existUserList = listByUsernames(importUserList.stream()
-            .map(UserImportRowReq::getUsername)
-            .filter(Objects::nonNull)
-            .toList());
+                .map(UserImportRowReq::getUsername)
+                .filter(Objects::nonNull)
+                .toList());
         List<String> existUsernames = existUserList.stream().map(UserDO::getUsername).toList();
         CheckUtils
-            .throwIf(isExitImportUser(req, importUserList, existUsernames, existEmails, existPhones), "数据不符合导入策略，已退出导入");
+                .throwIf(isExitImportUser(req, importUserList, existUsernames, existEmails, existPhones), "数据不符合导入策略，已退出导入");
 
         // 基础数据准备
         Map<String, Long> userMap = existUserList.stream()
-            .collect(Collectors.toMap(UserDO::getUsername, UserDO::getId));
+                .collect(Collectors.toMap(UserDO::getUsername, UserDO::getId));
         List<RoleDO> roleList = roleService.listByNames(importUserList.stream()
-            .map(UserImportRowReq::getRoleName)
-            .distinct()
-            .toList());
+                .map(UserImportRowReq::getRoleName)
+                .distinct()
+                .toList());
         Map<String, Long> roleMap = roleList.stream().collect(Collectors.toMap(RoleDO::getName, RoleDO::getId));
         List<DeptDO> deptList = deptService.listByNames(importUserList.stream()
-            .map(UserImportRowReq::getDeptName)
-            .distinct()
-            .toList());
+                .map(UserImportRowReq::getDeptName)
+                .distinct()
+                .toList());
         Map<String, Long> deptMap = deptList.stream().collect(Collectors.toMap(DeptDO::getName, DeptDO::getId));
 
         // 批量操作数据库集合
@@ -483,10 +497,10 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     public void resetPassword(UserPasswordResetReq req, Long id) {
         super.getById(id);
         baseMapper.lambdaUpdate()
-            .set(UserDO::getPassword, req.getNewPassword())
-            .set(UserDO::getPwdResetTime, LocalDateTime.now())
-            .eq(UserDO::getId, id)
-            .update();
+                .set(UserDO::getPassword, req.getNewPassword())
+                .set(UserDO::getPwdResetTime, LocalDateTime.now())
+                .eq(UserDO::getId, id)
+                .update();
     }
 
     @Override
@@ -503,10 +517,10 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     public String updateAvatar(MultipartFile avatarFile, Long id) throws IOException {
         String avatarImageType = FileNameUtil.extName(avatarFile.getOriginalFilename());
         CheckUtils.throwIf(!StrUtil.equalsAnyIgnoreCase(avatarImageType, avatarSupportSuffix), "头像仅支持 {} 格式的图片", String
-            .join(StringConstants.CHINESE_COMMA, avatarSupportSuffix));
+                .join(StringConstants.CHINESE_COMMA, avatarSupportSuffix));
         // 更新用户头像
         String base64 = ImgUtil.toBase64DataUri(ImgUtil.scale(ImgUtil.toImage(avatarFile
-            .getBytes()), 100, 100, null), avatarImageType);
+                .getBytes()), 100, 100, null), avatarImageType);
         baseMapper.lambdaUpdate().set(UserDO::getAvatar, base64).eq(UserDO::getId, id).update();
         return base64;
     }
@@ -516,11 +530,11 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     public void updateBasicInfo(UserBasicInfoUpdateReq req, Long id) {
         super.getById(id);
         baseMapper.lambdaUpdate()
-            .set(UserDO::getNickname, req.getNickname())
-            .set(UserDO::getGender, req.getGender())
-            //            .set(UserDO::getAvatar, req.getAvatar())
-            .eq(UserDO::getId, id)
-            .update();
+                .set(UserDO::getNickname, req.getNickname())
+                .set(UserDO::getGender, req.getGender())
+                //            .set(UserDO::getAvatar, req.getAvatar())
+                .eq(UserDO::getId, id)
+                .update();
     }
 
     @Override
@@ -536,10 +550,10 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         int passwordRepetitionTimes = this.checkPassword(newPassword, user);
         // 更新密码和密码重置时间
         baseMapper.lambdaUpdate()
-            .set(UserDO::getPassword, newPassword)
-            .set(UserDO::getPwdResetTime, LocalDateTime.now())
-            .eq(UserDO::getId, id)
-            .update();
+                .set(UserDO::getPassword, newPassword)
+                .set(UserDO::getPwdResetTime, LocalDateTime.now())
+                .eq(UserDO::getId, id)
+                .update();
         // 保存历史密码
         userPasswordHistoryService.add(id, password, passwordRepetitionTimes);
         // 修改后登出
@@ -604,8 +618,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         Long deptId = userMapper.getDeptIdByExamPlanId(examPlanId, ExamPlanStatusEnum.IN_FORCE);
         QueryWrapper<UserDO> qw = this.buildQueryWrapper(query);
         qw.eq("u.dept_id", deptId)
-            .eq("r.id", invigilatorId)
-            .like(nickname != null && !nickname.isEmpty(), "u.nickname", nickname);
+                .eq("r.id", invigilatorId)
+                .like(nickname != null && !nickname.isEmpty(), "u.nickname", nickname);
         super.sort(qw, pageQuery);
         Page<UserDO> page = new Page<>(pageQuery.getPage(), pageQuery.getSize());
         IPage<InvigilatorVO> invigilatesList = userMapper.getInvigilates(qw, page);
@@ -634,7 +648,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         Long deptId = userMapper.getDeptIdByExamPlanId(examPlanId, ExamPlanStatusEnum.IN_FORCE);
         // 通过考试计划发布部门id查询监考人员信息和时间
         List<InvigilatorVO> invigilatorVOList = userMapper
-            .getInvigilatesAndTime(deptId, classroomId, invigilatorId, invigilateIds, ExamPlanStatusEnum.IN_FORCE, ExamPlanStatusEnum.ENDED);
+                .getInvigilatesAndTime(deptId, classroomId, invigilatorId, invigilateIds, ExamPlanStatusEnum.IN_FORCE, ExamPlanStatusEnum.ENDED);
         if (invigilatorVOList == null || invigilatorVOList.isEmpty()) {
             // 没有找到监考人员有监考计划
             invigilatorVOList = new ArrayList<>();
@@ -709,20 +723,20 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         userPasswordHistoryService.add(user.getId(), user.getPassword(), passwordRepetitionTimes);
         // 更新密码和密码重置时间
         return baseMapper.lambdaUpdate()
-            .set(UserDO::getPassword, password)
-            .set(UserDO::getPwdResetTime, LocalDateTime.now())
-            .eq(UserDO::getId, user.getId())
-            .update();
+                .set(UserDO::getPassword, password)
+                .set(UserDO::getPwdResetTime, LocalDateTime.now())
+                .eq(UserDO::getId, user.getId())
+                .update();
     }
 
     @Override
     public PageResp<UserResp> getStudentList(PageQuery pageQuery, UserQuery query, String nickname, Long orgId) {
         QueryWrapper<UserDO> queryWrapper = this.buildQueryWrapper(query);
         queryWrapper.like(nickname != null && !nickname.isEmpty(), "u.nickname", nickname)
-            .eq("oc.status", 2)
-            .eq("oc.is_deleted", 0)
-            .eq("o.id", orgId)
-            .eq("ur.role_id", candidatesId);
+                .eq("oc.status", 2)
+                .eq("oc.is_deleted", 0)
+                .eq("o.id", orgId)
+                .eq("ur.role_id", candidatesId);
         super.sort(queryWrapper, pageQuery);
         Page<UserDO> page = new Page<>(pageQuery.getPage(), pageQuery.getSize());
         IPage<UserResp> iPage = baseMapper.getStudentList(page, queryWrapper);
@@ -771,7 +785,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         String decryptionUsername = ExceptionUtils.exToNull(() -> SecureUtils.decryptByRsaPrivateKey(username));
         ValidationUtils.throwIfBlank(decryptionUsername, "用户名解密失败");
         return !redisTemplate.hasKey(RedisConstant.EXAM_STUDENTS_REGISTER + decryptionUsername) && userMapper
-            .findIsAccount(aesWithHMAC.encryptAndSign(decryptionUsername)) == null;
+                .findIsAccount(aesWithHMAC.encryptAndSign(decryptionUsername)) == null;
     }
 
     @Override
@@ -781,7 +795,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         super.sort(queryWrapper, sortQuery);
         List<UserDetailResp> entityList = baseMapper.selectUserList(queryWrapper);
         if (this.getEntityClass() == targetClass) {
-            return (List<E>)entityList;
+            return (List<E>) entityList;
         }
         return BeanUtil.copyToList(entityList, targetClass);
     }
@@ -799,19 +813,19 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         //            excludeUserIdList = userRoleService.listUserIdByRoleId(query.getRoleId());
         //        }
         return new QueryWrapper<UserDO>().and(StrUtil.isNotBlank(description), q -> q.like("t1.nickname", description))
-            .eq(null != query.getRoleId(), "t3.role_id", query.getRoleId())
-            //            .eq(null != status, "t1.status", status)
-            //            .between(CollUtil.isNotEmpty(createTimeList), "t1.create_time", CollUtil.getFirst(createTimeList), CollUtil
-            //                .getLast(createTimeList))
-            .and(null != deptId && !SysConstants.SUPER_DEPT_ID.equals(deptId), q -> {
-                List<Long> deptIdList = deptService.listChildren(deptId)
-                    .stream()
-                    .map(DeptDO::getId)
-                    .collect(Collectors.toList());
-                deptIdList.add(deptId);
-                q.in("t1.dept_id", deptIdList);
-            })
-            .in(CollUtil.isNotEmpty(userIdList), "t1.id", userIdList);
+                .eq(null != query.getRoleId(), "t3.role_id", query.getRoleId())
+                //            .eq(null != status, "t1.status", status)
+                //            .between(CollUtil.isNotEmpty(createTimeList), "t1.create_time", CollUtil.getFirst(createTimeList), CollUtil
+                //                .getLast(createTimeList))
+                .and(null != deptId && !SysConstants.SUPER_DEPT_ID.equals(deptId), q -> {
+                    List<Long> deptIdList = deptService.listChildren(deptId)
+                            .stream()
+                            .map(DeptDO::getId)
+                            .collect(Collectors.toList());
+                    deptIdList.add(deptId);
+                    q.in("t1.dept_id", deptIdList);
+                })
+                .in(CollUtil.isNotEmpty(userIdList), "t1.id", userIdList);
         //            .notIn(CollUtil.isNotEmpty(excludeUserIdList), "t1.id", excludeUserIdList);
     }
 
@@ -851,7 +865,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
                                      List<String> existPhones,
                                      List<String> existEmails) {
         return SKIP.validate(req.getDuplicateUser(), row.getUsername(), existUsernames) || SKIP.validate(req
-            .getDuplicateEmail(), row.getEmail(), existEmails) || SKIP.validate(req.getDuplicatePhone(), row
+                .getDuplicateEmail(), row.getEmail(), existEmails) || SKIP.validate(req.getDuplicatePhone(), row
                 .getPhone(), existPhones);
     }
 
@@ -871,9 +885,9 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
                                      List<String> existEmails,
                                      List<String> existPhones) {
         return list.stream()
-            .anyMatch(row -> EXIT.validate(req.getDuplicateUser(), row.getUsername(), existUsernames) || EXIT
-                .validate(req.getDuplicateEmail(), row.getEmail(), existEmails) || EXIT.validate(req
-                    .getDuplicatePhone(), row.getPhone(), existPhones));
+                .anyMatch(row -> EXIT.validate(req.getDuplicateUser(), row.getUsername(), existUsernames) || EXIT
+                        .validate(req.getDuplicateEmail(), row.getEmail(), existEmails) || EXIT.validate(req
+                        .getDuplicatePhone(), row.getPhone(), existPhones));
     }
 
     /**
@@ -892,8 +906,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         if (fieldValues.isEmpty()) {
             return 0;
         }
-        return (int)this.count(Wrappers.<UserDO>lambdaQuery()
-            .in(dbField, fieldEncrypt ? SecureUtils.encryptFieldByAes(fieldValues) : fieldValues));
+        return (int) this.count(Wrappers.<UserDO>lambdaQuery()
+                .in(dbField, fieldEncrypt ? SecureUtils.encryptFieldByAes(fieldValues) : fieldValues));
     }
 
     /**
@@ -912,8 +926,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
             return Collections.emptyList();
         }
         List<UserDO> userDOList = baseMapper.selectList(Wrappers.<UserDO>lambdaQuery()
-            .in(dbField, SecureUtils.encryptFieldByAes(fieldValues))
-            .select(dbField));
+                .in(dbField, SecureUtils.encryptFieldByAes(fieldValues))
+                .select(dbField));
         return userDOList.stream().map(dbField).filter(Objects::nonNull).toList();
     }
 
@@ -925,14 +939,14 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     private List<UserImportRowReq> filterImportData(List<UserImportRowReq> importRowList) {
         // 校验过滤
         List<UserImportRowReq> list = importRowList.stream()
-            .filter(row -> ValidationUtil.validate(row).isEmpty())
-            .toList();
+                .filter(row -> ValidationUtil.validate(row).isEmpty())
+                .toList();
         // 用户名去重
         return list.stream()
-            .collect(Collectors.toMap(UserImportRowReq::getUsername, user -> user, (existing, replacement) -> existing))
-            .values()
-            .stream()
-            .toList();
+                .collect(Collectors.toMap(UserImportRowReq::getUsername, user -> user, (existing, replacement) -> existing))
+                .values()
+                .stream()
+                .toList();
     }
 
     /**
@@ -948,10 +962,10 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
         PASSWORD_MIN_LENGTH.validate(password, MapUtil.getInt(passwordPolicy, PASSWORD_MIN_LENGTH.name()), user);
         // 密码是否必须包含特殊字符
         PASSWORD_REQUIRE_SYMBOLS.validate(password, MapUtil.getInt(passwordPolicy, PASSWORD_REQUIRE_SYMBOLS
-            .name()), user);
+                .name()), user);
         // 密码是否允许包含正反序账号名
         PASSWORD_ALLOW_CONTAIN_USERNAME.validate(password, MapUtil
-            .getInt(passwordPolicy, PASSWORD_ALLOW_CONTAIN_USERNAME.name()), user);
+                .getInt(passwordPolicy, PASSWORD_ALLOW_CONTAIN_USERNAME.name()), user);
         // 密码重复使用次数
         int passwordRepetitionTimes = MapUtil.getInt(passwordPolicy, PASSWORD_REPETITION_TIMES.name());
         PASSWORD_REPETITION_TIMES.validate(password, passwordRepetitionTimes, user);
@@ -1040,7 +1054,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
     /**
      * 修改考生的考试状态为已签到
-     * 
+     *
      * @param candidateId
      * @param examNumberEncrypt
      * @param planId
@@ -1059,8 +1073,8 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
      */
     private List<UserDO> listByUsernames(List<String> usernames) {
         return this.list(Wrappers.<UserDO>lambdaQuery()
-            .in(UserDO::getUsername, usernames)
-            .select(UserDO::getId, UserDO::getUsername));
+                .in(UserDO::getUsername, usernames)
+                .select(UserDO::getId, UserDO::getUsername));
     }
 
     /**
@@ -1079,7 +1093,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
     /**
      * 给获取到的数据按照开考时间进行排序
-     * 
+     *
      * @param invigilatesAndTime 监考人信息
      * @return 排序后的数据
      */
@@ -1106,7 +1120,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
     /**
      * 监考人是否符合时间条件
-     * 
+     *
      * @param invigilatesAndTime 监考人以及时间信息
      * @param startTime          考试开始时间
      * @param endTime            考试结束时间
@@ -1150,7 +1164,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
             // 计算是否有冲突
             boolean noConflict = !occupyMinutes.contains(newStart) && !occupyMinutes.contains(newEnd) && !existedPlan
-                .get();
+                    .get();
 
             InvigilatorVO newVO = new InvigilatorVO();
             newVO.setId(invigilator.getId());
@@ -1200,31 +1214,41 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
     }
 
     // 劳务费导出
-    public void exportExamStaffFee(Long userId, HttpServletResponse response) {
+    public void exportExamStaffFee(Long userId, String exportDate, HttpServletResponse response) {
 
         // 查询每条记录
-        List<ExamStaffFeeExportVO> list = userMapper.selectExamStaffFeeByUserId(userId);
-        ValidationUtils.throwIfEmpty(list,"暂无可导出的劳务费数据");
-        // 计算总和
-        BigDecimal totalPracticalFee = BigDecimal.ZERO;
-        BigDecimal totalTheoryFee = BigDecimal.ZERO;
+        YearMonth startYm = YearMonth.parse(exportDate);
+        YearMonth endYm = YearMonth.parse(exportDate);
 
+        LocalDateTime startTime = startYm.atDay(1).atStartOfDay();
+        LocalDateTime endTime = endYm.plusMonths(1).atDay(1).atStartOfDay();
+        List<ExamStaffFeeExportVO> list = userMapper.selectExamStaffFeeByUserId(userId, startTime, endTime);
+        ValidationUtils.throwIfEmpty(list, "暂无可导出的劳务费数据");
+        // 计算总和
+        BigDecimal totalAllFee = BigDecimal.ZERO;
         for (ExamStaffFeeExportVO vo : list) {
-            if (vo.getPracticalFee() != null) {
-                totalPracticalFee = totalPracticalFee.add(vo.getPracticalFee());
-            }
-            if (vo.getTheoryFee() != null) {
-                totalTheoryFee = totalTheoryFee.add(vo.getTheoryFee());
+            if (vo.getExamFee() != null) {
+                totalAllFee = totalAllFee.add(vo.getExamFee());
             }
         }
-        BigDecimal totalAllFee = totalPracticalFee.add(totalTheoryFee);
         // 构造总计行
         ExamStaffFeeExportVO totalVo = new ExamStaffFeeExportVO();
-        totalVo.setNickname("总计");
-        totalVo.setPracticalFee(totalPracticalFee);
-        totalVo.setTheoryFee(totalTheoryFee);
-        totalVo.setTotalFee(totalAllFee);
-        // 把总计行加到 list 尾部
+        totalVo.setNickname("应发金额");
+        totalVo.setExamPlanName(totalAllFee.toString());
+        BigDecimal tax = BigDecimal.ZERO;
+        BigDecimal threshold = new BigDecimal("800");
+        BigDecimal taxRate = new BigDecimal("0.2");
+        if (totalAllFee.compareTo(threshold) > 0) {
+            tax = totalAllFee
+                    .subtract(threshold)
+                    .multiply(taxRate)
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
+        totalVo.setStartTime("代扣税金");
+        totalVo.setClassroomName(tax.setScale(2, RoundingMode.HALF_UP).toString());
+        totalVo.setTotalFee(totalAllFee.subtract(tax).setScale(2, RoundingMode.HALF_UP).toString());
+        totalVo.setExamTypeName("实发金额");
+        totalVo.setExamFee(totalAllFee);
         list.add(totalVo);
         try {
             String fileName = URLEncoder.encode(list.get(0).getNickname() + "-监考劳务费.xlsx", StandardCharsets.UTF_8);
@@ -1232,13 +1256,249 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
             response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
 
             EasyExcel.write(response.getOutputStream(), ExamStaffFeeExportVO.class)
-                .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy()) // 自动拉宽列
-                .sheet("监考劳务费")
-                .doWrite(list);
+                    .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy()) // 自动拉宽列
+                    .sheet("监考劳务费")
+                    .doWrite(list);
 
         } catch (Exception e) {
             throw new RuntimeException("导出监考劳务费失败", e);
         }
+    }
+
+    /**
+     * 批量导出监考人员劳务费
+     */
+    @Override
+    public ResponseEntity<byte[]> exportExamStaffFeeBatch(String exportDate) {
+
+        byte[] templateBytes = restTemplate.getForObject(laborFeeTemplateUrl, byte[].class);
+        ValidationUtils.throwIf(templateBytes == null || templateBytes.length == 0, "导出模板不存在");
+
+        // 1. 格式化月份
+        YearMonth ym = YearMonth.parse(exportDate);
+        String formatted = ym.format(DateTimeFormatter.ofPattern("yyyy年M月"));
+
+        LocalDateTime startTime = ym.atDay(1).atStartOfDay();
+        LocalDateTime endTime = ym.plusMonths(1).atDay(1).atStartOfDay();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(templateBytes));
+             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+
+            // 2. 查询数据
+            List<ExamStaffFeeExportVO> list = userMapper.selectAllExamStaffFee(startTime, endTime);
+            ValidationUtils.throwIfEmpty(list, "暂无可导出的劳务费数据");
+
+            Sheet sheet = workbook.getSheetAt(0);
+
+            // 3. 填写劳务发生时间
+            ExcelUtils.setCellValue(sheet, 2, 2, formatted);
+
+            int dataStartRow = 7;      // 第8行开始填充
+            int templateDataRowCount = 34; // 模板固定可用行数
+            int footerRowIndex = 41;   // 第45行（索引）
+
+            Map<Long, List<ExamStaffFeeExportVO>> grouped = list.stream()
+                    .collect(Collectors.groupingBy(ExamStaffFeeExportVO::getInvigilatorId));
+
+            List<ExamStaffFeeSummaryVO> summaryList = new ArrayList<>();
+
+            for (Map.Entry<Long, List<ExamStaffFeeExportVO>> entry : grouped.entrySet()) {
+                List<ExamStaffFeeExportVO> records = entry.getValue();
+
+                // 总费用
+                BigDecimal totalFee = records.stream()
+                        .map(vo -> vo.getExamFee() == null ? BigDecimal.ZERO : vo.getExamFee())
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                //  代扣税金 = (总费用 - 800) * 0.2, 不小于 0
+                BigDecimal taxFee = totalFee.subtract(new BigDecimal("800"))
+                        .max(BigDecimal.ZERO)
+                        .multiply(new BigDecimal("0.2"))
+                        .setScale(2, RoundingMode.HALF_UP);
+
+                //  实发金额
+                BigDecimal actualFee = totalFee.subtract(taxFee).setScale(2, RoundingMode.HALF_UP);
+
+                //  拼接监考内容，多条换行
+                String examContent = records.stream()
+                        .map(r -> String.format("%s: %s %s %s %s",
+                                r.getStartTime(),       // 考试日期
+                                r.getExamTypeName(),  // 考试类型
+                                r.getCategoryName(),  // 种类名称
+                                r.getProjectName(),  // 项目名称
+                                r.getExamPlanName()     // 考试计划
+                        ))
+                        .collect(Collectors.joining("\n"));
+
+                ExamStaffFeeExportVO examStaffFeeExportVO = records.get(0);
+                summaryList.add(new ExamStaffFeeSummaryVO(
+                        entry.getKey(),
+                        examStaffFeeExportVO.getNickname(),
+                        totalFee,
+                        taxFee,
+                        actualFee,
+                        examContent,
+                        examStaffFeeExportVO.getInvigilatorIdNumber(),
+                        examStaffFeeExportVO.getInvigilatorBankName(),
+                        examStaffFeeExportVO.getInvigilatorBankAccount(),
+                        examStaffFeeExportVO.getInvigilatorUnit(),
+                        examStaffFeeExportVO.getInvigilatorTitle(),
+                        examStaffFeeExportVO.getPhone()
+                ));
+            }
+
+            // 4. 超过模板行数扩展
+            if (summaryList.size() > templateDataRowCount) {
+                expandDataRowsIfNeeded(sheet, summaryList.size(),dataStartRow,templateDataRowCount,footerRowIndex);
+            }
+
+            // 5. 写入数据
+            for (int i = 0; i < summaryList.size(); i++) {
+                int rowIndex = dataStartRow + i;
+                Row row = sheet.getRow(rowIndex);
+                if (row == null) row = sheet.createRow(rowIndex);
+
+                ExamStaffFeeSummaryVO vo = summaryList.get(i);
+
+                setCell(row, 0, i + 1);
+                setCell(row, 1, vo.getNickname());
+                setCell(row, 2, vo.getInvigilatorIdNumber());
+                setCell(row, 3, vo.getInvigilatorBankName());
+                setCell(row, 4, vo.getInvigilatorBankAccount());
+                setCell(row, 5, vo.getTotalFee().toString());
+                setCell(row, 6, vo.getExamContent());
+                setCell(row, 7, vo.getTaxFee().toString());
+                setCell(row, 8, vo.getActualFee().toString());
+                setCell(row, 9, vo.getInvigilatorUnit());
+                setCell(row, 10, vo.getInvigilatorTitle());
+                setCell(row, 11, aesWithHMAC.verifyAndDecrypt(vo.getPhone()));
+            }
+
+            // 6. 填充年月日
+            String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年M月d日"));
+
+            List<Integer> targetCols = Arrays.asList(2, 5, 8, 11); // 第3、第6、第9、第12列（索引从0）
+            int fillDateIndex = footerRowIndex + 3;
+            if (summaryList.size() <= templateDataRowCount) {
+                Row footerRow = sheet.getRow(fillDateIndex);
+                if (footerRow == null) footerRow = sheet.createRow(fillDateIndex);
+                for (int col : targetCols) {
+                    setCell(footerRow, col, currentDate);
+                }
+            } else {
+                // 超过34行，动态填充：新插入行表尾最后一行
+                int lastRowIndex = dataStartRow + summaryList.size() + 3;
+                Row footerRow = sheet.getRow(lastRowIndex);
+                if (footerRow == null) footerRow = sheet.createRow(lastRowIndex);
+                for (int col : targetCols) {
+                    setCell(footerRow, col, currentDate);
+                }
+            }
+
+            // 7. 让公式重新计算
+            sheet.setForceFormulaRecalculation(true);
+
+            // 8. 重命名Sheet
+            workbook.setSheetName(
+                    workbook.getSheetIndex(sheet),
+                    "劳动费" + formatted + "(签名)"
+            );
+
+            // 9. 输出
+            workbook.write(bos);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDisposition(ContentDisposition.attachment()
+                    .filename("劳动费支出表（检验检测人员）" + exportDate + ".xlsx",
+                            StandardCharsets.UTF_8)
+                    .build());
+            headers.add("Access-Control-Expose-Headers", "Content-Disposition");
+
+            return new ResponseEntity<>(bos.toByteArray(), headers, HttpStatus.OK);
+
+        } catch (Exception e) {
+            throw new RuntimeException("导出失败", e);
+        }
+    }
+
+    /**
+     * 扩展数据区（超过34行自动在表尾前插入）
+     */
+    private void expandDataRowsIfNeeded(Sheet sheet, int dataSize,int dataStartRowIndex ,int templateDataRowCount,int footerStartRowIndex) {
+
+        if (dataSize <= templateDataRowCount) {
+            return;
+        }
+
+        int extraRows = dataSize - templateDataRowCount;
+
+        //  整体下移表尾
+        sheet.shiftRows(
+                footerStartRowIndex,
+                sheet.getLastRowNum(),
+                extraRows,
+                true,
+                false
+        );
+
+        //  获取模板样式行（第8行）
+        Row templateRow = sheet.getRow(dataStartRowIndex);
+
+        for (int i = 0; i < extraRows; i++) {
+
+            int insertRowIndex = footerStartRowIndex + i;
+
+            Row newRow = sheet.createRow(insertRowIndex);
+
+            if (templateRow != null) {
+                copyRowStyle(templateRow, newRow);
+            }
+        }
+    }
+
+    /**
+     * 复制整行样式
+     */
+    private void copyRowStyle(Row sourceRow, Row targetRow) {
+
+        targetRow.setHeight(sourceRow.getHeight());
+
+        for (int i = 0; i < sourceRow.getLastCellNum(); i++) {
+
+            Cell sourceCell = sourceRow.getCell(i);
+            if (sourceCell == null) {
+                continue;
+            }
+
+            Cell newCell = targetRow.createCell(i);
+            newCell.setCellStyle(sourceCell.getCellStyle());
+        }
+    }
+
+    private void setCell(Row row, int colIndex, Object value) {
+
+        Cell cell = row.getCell(colIndex);
+
+        if (cell == null) {
+            cell = row.createCell(colIndex);
+        }
+
+        // 保留原样式
+        CellStyle style = cell.getCellStyle();
+
+        // 清空旧值
+        cell.setBlank();
+
+        if (value == null) {
+            cell.setCellValue("");
+        } else if (value instanceof Number) {
+            cell.setCellValue(((Number) value).doubleValue());
+        } else {
+            cell.setCellValue(value.toString());
+        }
+
+        // 重新应用原样式（防止丢失）
+        cell.setCellStyle(style);
     }
 
 }

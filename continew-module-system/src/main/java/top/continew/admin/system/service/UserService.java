@@ -17,6 +17,7 @@
 package top.continew.admin.system.service;
 
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.auth.model.dto.ClassroomDTO;
 import top.continew.admin.auth.model.dto.InvigilatorPlanDTO;
@@ -360,6 +361,10 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
 
     void deleteOrgUser(List<Long> list);
 
-    void exportExamStaffFee(Long userId, HttpServletResponse response);
+    void exportExamStaffFee(Long userId, String exportDate, HttpServletResponse response);
 
+    /**
+     * 批量导出监考人员劳务费
+     */
+    ResponseEntity<byte[]> exportExamStaffFeeBatch(String exportDate);
 }

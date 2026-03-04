@@ -105,6 +105,26 @@ public class UserDetailResp extends BaseDetailResp {
     @Schema(description = "监考考试类型（0理论考试、1实操考试）", example = "监考考试类型（0理论考试、1实操考试）")
     private Integer examSupervisionType;
 
+    /** 监考员身份证号 */
+    @Schema(description = "监考员身份证号")
+    private String invigilatorIdNumber;
+
+    /** 监考员开户银行名称 */
+    @Schema(description = "监考员开户银行名称")
+    private String invigilatorBankName;
+
+    /** 监考员银行卡号 */
+    @Schema(description = "监考员银行卡号")
+    private String invigilatorBankAccount;
+
+    /** 监考员所属单位 */
+    @Schema(description = "监考员所属单位")
+    private String invigilatorUnit;
+
+    /** 监考员职称 */
+    @Schema(description = "监考员职称")
+    private String invigilatorTitle;
+
     /**
      * 角色 ID 列表
      */

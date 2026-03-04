@@ -19,6 +19,7 @@ package top.continew.admin.system.model.vo;
 import com.alibaba.excel.annotation.ExcelIgnore;
 import com.alibaba.excel.annotation.ExcelIgnoreUnannotated;
 import com.alibaba.excel.annotation.ExcelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -29,10 +30,48 @@ import java.util.Date;
 public class ExamStaffFeeExportVO {
     //
     //    @ExcelProperty("考试计划ID")
-    //    private Long examPlanId;
+    @ExcelIgnore
+    private Long examPlanId;
     //
-    //    @ExcelProperty("监考人员ID")
-    //    private Long invigilatorId;
+//    @ExcelProperty("监考人员ID")
+    @ExcelIgnore
+    private Long invigilatorId;
+
+    /** 监考员身份证号 */
+    @ExcelIgnore
+    private String invigilatorIdNumber;
+
+    /** 监考员开户银行名称 */
+    @ExcelIgnore
+    private String invigilatorBankName;
+
+    /** 监考员银行卡号 */
+    @ExcelIgnore
+    private String invigilatorBankAccount;
+
+    /** 监考员所属单位 */
+    @ExcelIgnore
+    private String invigilatorUnit;
+
+    /** 监考员职称 */
+    @ExcelIgnore
+    private String invigilatorTitle;
+    /**
+     * 联系方式
+     */
+    private String phone;
+
+    /**
+     * 监考种类名称
+     */
+    @ExcelIgnore
+    private String categoryName;
+
+    /**
+     * 监考项目
+     */
+    @ExcelIgnore
+    private String projectName;
 
     /**
      * 导出字段
@@ -46,17 +85,18 @@ public class ExamStaffFeeExportVO {
     @ExcelProperty("考试日期")
     private String startTime;
 
-    @ExcelProperty("考场名称")   // 新增考场名称
+    @ExcelProperty("考场名称")
     private String classroomName;
+    @ExcelProperty("考试类型")
+    private String examTypeName;
 
-    @ExcelProperty("实操考试劳务费（元）")
-    private BigDecimal practicalFee;
+    @ExcelProperty("监考劳务费")
+    private BigDecimal examFee;
 
-    @ExcelProperty("理论考试劳务费（元）")
-    private BigDecimal theoryFee;
+//    @ExcelProperty("实发金额")
+    @ExcelIgnore
+    private String totalFee;
 
-    @ExcelProperty("劳务费合计（元）")
-    private BigDecimal totalFee;
 
     //    @ExcelProperty("监考状态")
     //    private String invigilateStatus;
