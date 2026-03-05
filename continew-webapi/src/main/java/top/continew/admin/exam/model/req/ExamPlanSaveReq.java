@@ -123,4 +123,12 @@ public class ExamPlanSaveReq {
     @NotNull(message = "考试费用不能为空")
     @Min(value = 0, message = "考试费用不能为负数")
     private Long examFee;
+
+    /**
+     * 考试计划说明
+     */
+    @Schema(description = "考试计划说明")
+    @Size(max = 500, message = "考试计划说明长度不能超过500个字符")
+    private String description;
+
 }

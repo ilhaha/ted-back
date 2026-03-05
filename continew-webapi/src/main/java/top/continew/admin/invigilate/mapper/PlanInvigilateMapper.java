@@ -77,7 +77,7 @@ public interface PlanInvigilateMapper extends BaseMapper<PlanInvigilateDO> {
                 tep.exam_plan_name,
                 tep.start_time,
                 tep.end_time,
-                tep.redeme,
+                tep.description,
                 tel.location_name,
                 tpi.invigilate_status
             FROM ted_plan_invigilate tpi

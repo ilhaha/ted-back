@@ -85,10 +85,10 @@ public class EnrollDetailResp extends BaseDetailResp {
     @Schema(description = "考试费用")
     private Long examFee;
     /**
-     * 考试描述
+     * 考试计划备注说明
      */
-    @Schema(description = "考试描述")
-    private String redeme;
+    @Schema(description = "考试备注说明")
+    private String description;
     /**
      * 证书列表
      */

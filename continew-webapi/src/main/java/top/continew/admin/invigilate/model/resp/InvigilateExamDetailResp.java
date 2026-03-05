@@ -32,7 +32,7 @@ public class InvigilateExamDetailResp {
     private String imageUrl;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private String redeme;
+    private String description;
     private String locationName;
     private Integer invigilateStatus;
     private Long examDuration;

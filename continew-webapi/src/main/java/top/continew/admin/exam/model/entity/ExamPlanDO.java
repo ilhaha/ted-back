@@ -120,9 +120,9 @@ public class ExamPlanDO extends BaseDO {
     private LocalDateTime admitCardEndTime;
 
     /**
-     * 描述
+     * 考试计划备注说明
      */
-    private String redeme;
+    private String description;
 
     /**
      * 删除标记

@@ -27,7 +27,7 @@
                tep.enroll_end_time,
                tep.exam_plan_name,
                tep.start_time                            AS exam_start_time,
-               tep.redeme,
+               tep.description,
                tep.is_final_confirmed,
                COALESCE(te.enroll_status, 0)             AS enroll_status
         FROM ted_exam_plan as tep
@@ -70,7 +70,7 @@
                tep.enroll_end_time,
                tep.exam_plan_name,
                tep.start_time    AS exam_start_time,
-               tep.redeme,
+               tep.description,
                te.enroll_status
         FROM ted_exam_plan as tep
                  LEFT JOIN ted_enroll AS te

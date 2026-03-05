@@ -143,10 +143,10 @@ ExamPlanResp extends BaseResp {
     private String approvalTime;
 
     /**
-     * 描述
+     * 考试计划备注说明
      */
-    @Schema(description = "描述")
-    private String redeme;
+    @Schema(description = "考试计划备注说明")
+    private String description;
     /**
      * 报名开始时间
      */

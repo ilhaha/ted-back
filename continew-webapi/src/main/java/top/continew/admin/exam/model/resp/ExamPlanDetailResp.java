@@ -225,13 +225,6 @@ public class ExamPlanDetailResp extends BaseDetailResp {
     private String examPassword;
 
     //    /**
-    //     * 描述
-    //     */
-    //    @Schema(description = "描述")
-    //    @ExcelProperty(value = "描述")
-    //    private String redeme;
-    //
-    //    /**
     //     * 删除标记
     //     */
     //    @Schema(description = "删除标记")
@@ -292,5 +285,8 @@ public class ExamPlanDetailResp extends BaseDetailResp {
      * 准考证下载截止时间
      */
     private LocalDateTime admitCardEndTime;
+
+    /** 考试计划备注说明 */
+    private String description;
 
 }
