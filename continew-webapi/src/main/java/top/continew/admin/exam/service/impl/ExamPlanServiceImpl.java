@@ -2011,6 +2011,21 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         return result;
     }
 
+    @Override
+    public List<CascaderOptionResp> getCascaderPlanByProjectId(Long projectId) {
+        //通过项目id查询考试计划列表
+        List<Map<String, Object>> planList = baseMapper.selectPlanByProjectId(projectId);
+        if (planList.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return planList.stream().filter(p -> p.get("exam_plan_name") != null).map(p -> {
+            CascaderOptionResp planResp = new CascaderOptionResp();
+            planResp.setValue(p.get("plan_id"));
+            planResp.setLabel((String)p.get("exam_plan_name"));
+            return planResp;
+        }).toList();
+    }
+
     /**
      * 根据班级列表获取每个班级在考试计划下的报名人数、考试人数、及格人数、成绩录入情况和证书生成情况
      *

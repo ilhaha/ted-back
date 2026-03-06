@@ -18,6 +18,7 @@ package top.continew.admin.exam.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -56,7 +57,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 后台查询考试计划报考人员
-     * 
+     *
      * @param query
      * @param pageQuery
      * @return
@@ -69,7 +70,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 监考员设置考生补考
-     * 
+     *
      * @param req
      * @return
      */
@@ -80,7 +81,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 下载某个班级的准考证
-     * 
+     *
      * @param classId
      * @param planId
      * @return
@@ -93,7 +94,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 下载某个考生的准考证
-     * 
+     *
      * @param enrollId
      * @return
      */
@@ -104,7 +105,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 下载某个班级的考试缴费通知单
-     * 
+     *
      * @param classId
      * @param planId
      * @return
@@ -117,7 +118,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 下载某个考生的缴费通知单
-     * 
+     *
      * @param enrollId
      * @return
      */
@@ -138,7 +139,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 获取考试计划对应考场的考生列表
-     * 
+     *
      * @param enrollQuery
      * @param pageQuery
      * @param planId
@@ -155,7 +156,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 获取对应考试计划的详细信息
-     * 
+     *
      * @param examPlanId
      * @return ;
      */
@@ -166,7 +167,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 获取对应状态的考生报名计划详细
-     * 
+     *
      * @param examPlanId;
      * @return EnrollStatusDetailResp
      */
@@ -177,7 +178,7 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
 
     /**
      * 分页获取对应状态的考生报名
-     * 
+     *
      * @param query        查询条件
      * @param pageQuery    分页参数
      * @param enrollStatus 报名状态（可选）
@@ -215,6 +216,31 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
     public void cancelEnroll(@PathVariable("examPlanId") Long examPlanId) {
         Long userId = TokenLocalThreadUtil.get().getUserId();
         enrollService.cancelEnroll(userId, examPlanId);
+    }
+
+    /**
+     * 通过考试项目id或者是考试计划id获取考试报名成功的考生列表（已生成准考证且能正常考试）
+     *
+     */
+    @GetMapping("/getExamCandidatesByPlanOrProject")
+    public PageResp<EnrollStatisticsResp> getExamCandidatesByPlanOrProject(@RequestParam(required = false) Long planId,
+                                                                           @RequestParam(required = false) Long projectId,
+                                                                           @Validated PageQuery pageQuery) {
+        return enrollService.getExamCandidatesByPlanOrProject(planId, projectId, pageQuery);
+    }
+
+
+    /**
+     * 通过考试项目id或者是考试计划导出考试报名成功的考生列表Excel（已生成准考证且能正常考试）
+     *
+     */
+    @GetMapping("/exportExamCandidatesByPlanOrProject")
+    public void exportExamCandidatesByPlanOrProject(
+            @RequestParam(required = false) Long planId,
+            @RequestParam(required = false) Long projectId,
+            HttpServletResponse response) {
+
+        enrollService.exportExamCandidatesByPlanOrProject(planId, projectId, response);
     }
 
 }

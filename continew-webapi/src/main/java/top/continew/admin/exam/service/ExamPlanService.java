@@ -205,6 +205,15 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      */
     List<CascaderPlanResp> getCascaderProjectPlan(Integer planType, Boolean isOrgQuery);
 
+
+    /**
+     * 根据考试项目id查询考试计划（选择器）
+     *
+     * @param projectId
+     */
+    List<CascaderOptionResp> getCascaderPlanByProjectId(Long projectId);
+
+
     /**
      * 根据班级列表获取每个班级在考试计划下的报名人数、考试人数、及格人数、成绩录入情况和证书生成情况
      *

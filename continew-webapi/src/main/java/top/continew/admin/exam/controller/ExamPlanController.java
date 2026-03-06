@@ -122,6 +122,17 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     }
 
     /**
+     * 根据考试项目id查询考试计划（选择器）
+     *
+     * @param projectId
+     */
+    @GetMapping("/plan/cascader/{projectId}")
+    public List<CascaderOptionResp> getCascaderPlanByProjectId(@PathVariable("projectId") Long projectId) {
+        return baseService.getCascaderPlanByProjectId(projectId);
+    }
+
+
+    /**
      * 根据考生身份证获取考生的所有考试准考证号
      *
      * @param username

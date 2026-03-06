@@ -248,7 +248,7 @@
                                AND tep.is_deleted = 0
                                AND tep.plan_type = #{planType}
                                AND tep.status = 6
-        WHERE tp.is_deleted = 0
+        WHERE tp.is_deleted = 0 AND tp.project_type = 0
     </select>
     <select id="selectOrgBindProjectId" resultType="java.lang.Long">
         SELECT tp.id
@@ -447,5 +447,21 @@
             #{plan.id}
         </foreach>
     </update>
+
+    <!-- 根据考试项目id查询考试计划（选择器） -->
+    <select id="selectPlanByProjectId" parameterType="java.lang.Long" resultType="java.util.Map">
+        SELECT
+            id AS plan_id,
+            exam_plan_name
+        FROM
+            ted_exam_plan
+        WHERE
+            exam_project_id = #{projectId}
+          AND is_deleted = 0
+          AND is_final_confirmed = 2
+        ORDER BY
+            create_time DESC
+    </select>
+
 
 </mapper>

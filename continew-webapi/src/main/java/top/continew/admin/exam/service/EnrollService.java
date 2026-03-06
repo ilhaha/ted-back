@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import top.continew.admin.exam.model.req.MakeUpExamReq;
 import top.continew.admin.exam.model.resp.*;
@@ -174,4 +175,18 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      * @return
      */
     PageResp<EnrollResp> adminQueryPayAuditPage(EnrollQuery query, PageQuery pageQuery);
+
+
+
+    /**
+     * 通过考试项目id或者是考试计划id获取考试报名成功的考生列表（已生成准考证且能正常考试）
+     */
+    PageResp<EnrollStatisticsResp> getExamCandidatesByPlanOrProject(Long planId, Long projectId, PageQuery pageQuery);
+
+
+    /**
+     * 通过考试项目id或者是考试计划导出考试报名成功的考生列表Excel（已生成准考证且能正常考试）
+     *
+     */
+    void exportExamCandidatesByPlanOrProject(Long planId, Long projectId, HttpServletResponse response);
 }

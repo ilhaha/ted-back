@@ -273,4 +273,63 @@
             ${ew.customSqlSegment}
         ORDER BY te.seat_id
     </select>
+
+    <select id="selectExamCandidates"
+            resultType="top.continew.admin.exam.model.resp.EnrollStatisticsResp">
+        SELECT
+        e.id,
+        e.exam_number AS examNumber,
+
+        -- 考试计划
+        p.id AS examPlanId,
+        p.exam_plan_name AS examPlanName,
+        p.start_time AS examStartTime,
+        p.enroll_end_time AS enrollEndTime,
+
+        -- 项目
+        pr.id AS examProjectId,
+        pr.project_name AS examProjectName,
+        pr.project_code AS projectCode,
+
+        -- 分类
+        c.name AS categoryName,
+
+        -- 用户信息
+        u.nickname AS nickName,
+        u.username,
+        u.gender,
+        u.phone,
+        u.company_name AS companyName
+
+        FROM ted_enroll e
+
+        LEFT JOIN ted_exam_plan p
+        ON e.exam_plan_id = p.id
+
+        LEFT JOIN ted_project pr
+        ON p.exam_project_id = pr.id
+
+        LEFT JOIN ted_category c
+        ON pr.category_id = c.id
+
+        LEFT JOIN sys_user u
+        ON e.user_id = u.id
+
+        WHERE
+        e.enroll_status IN (1,2)
+        AND e.class_id IS NULL
+        AND e.exam_number IS NOT NULL
+
+        <if test="planId != null">
+            AND e.exam_plan_id = #{planId}
+        </if>
+
+        <if test="planId == null and projectId != null">
+            AND p.exam_project_id = #{projectId}
+        </if>
+
+        ORDER BY e.create_time DESC
+
+    </select>
+
 </mapper>

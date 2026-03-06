@@ -129,4 +129,11 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
     IPage<ExamPlanDetailResp> selectOrgExamPlanPagegetClassExamStatsPage(@Param("page") Page<Object> objectPage,
                                                                          @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper,
                                                                          @Param("roadExamTypeId") Long roadExamTypeId);
+
+    /**
+     * 根据考试项目id查询考试计划（选择器）
+     *
+     * @param projectId
+     */
+    List<Map<String, Object>> selectPlanByProjectId(@Param("projectId") Long projectId);
 }

@@ -18,16 +18,24 @@ package top.continew.admin.exam.service.impl;
 
 import cn.crane4j.core.util.CollectionUtils;
 import cn.crane4j.core.util.StringUtils;
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.poi.excel.ExcelUtil;
+import cn.hutool.poi.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -42,6 +50,7 @@ import top.continew.admin.common.constant.ExamRecordConstants;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
+import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.*;
@@ -52,6 +61,8 @@ import top.continew.admin.exam.model.vo.ExamPlanVO;
 import top.continew.admin.exam.model.vo.IdentityCardExamInfoVO;
 import top.continew.admin.examconnect.model.req.RestPaperReq;
 import top.continew.admin.examconnect.service.QuestionBankService;
+import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.training.mapper.OrgUserMapper;
 import top.continew.admin.training.model.entity.TedOrgUser;
 import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
@@ -67,8 +78,10 @@ import top.continew.admin.exam.service.EnrollService;
 
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -122,6 +135,12 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     private final CandidateExamProjectMapper candidateExamProjectMapper;
 
     private final LicenseCertificateMapper licenseCertificateMapper;
+
+    private final UserMapper userMapper;
+
+    private final CategoryMapper categoryMapper;
+
+
 
     /**
      * 获取报名相关所有信息
@@ -308,6 +327,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         enrollInfoResp.setPhoneNumber(aesWithHMAC.verifyAndDecrypt(enrollInfoResp.getPhoneNumber()));
         return enrollInfoResp;
     }
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -890,6 +910,239 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     @Override
     public PageResp<EnrollResp> adminQueryPayAuditPage(EnrollQuery query, PageQuery pageQuery) {
         return page(query, pageQuery);
+    }
+
+    @Override
+    public PageResp<EnrollStatisticsResp> getExamCandidatesByPlanOrProject(Long planId, Long projectId, PageQuery pageQuery) {
+
+        Page<EnrollStatisticsResp> page = new Page<>(pageQuery.getPage(), pageQuery.getSize());
+
+        Page<EnrollStatisticsResp> result = enrollMapper.selectExamCandidates(page, planId, projectId);
+
+        // 解密敏感信息
+        result.getRecords().forEach(this::verifyAndDecryptField);
+
+        return PageResp.build(result);
+    }
+
+    @Override
+    public void exportExamCandidatesByPlanOrProject(Long planId, Long projectId, HttpServletResponse response) {
+
+        if (planId == null && projectId == null) {
+            throw new BusinessException("planId 或 projectId 不能同时为空");
+        }
+
+        LambdaQueryWrapper<EnrollDO> wrapper = new LambdaQueryWrapper<>();
+
+        wrapper.in(EnrollDO::getEnrollStatus, 1, 2)
+                .isNull(EnrollDO::getClassId)
+                .isNotNull(EnrollDO::getExamNumber);
+
+        if (planId != null) {
+            wrapper.eq(EnrollDO::getExamPlanId, planId);
+        } else {
+
+            List<Long> planIds = examPlanMapper.selectList(
+                    new LambdaQueryWrapper<ExamPlanDO>()
+                            .eq(ExamPlanDO::getExamProjectId, projectId)
+            ).stream().map(ExamPlanDO::getId).collect(Collectors.toList());
+
+            if (planIds.isEmpty()) {
+                throw new BusinessException("该考试项目下没有考试计划");
+            }
+
+            wrapper.in(EnrollDO::getExamPlanId, planIds);
+        }
+
+        List<EnrollDO> enrollList = enrollMapper.selectList(wrapper);
+
+        if (enrollList.isEmpty()) {
+            throw new BusinessException("没有符合条件的报名记录");
+        }
+
+    /*
+        =============================
+        查询用户
+        =============================
+     */
+
+        Set<Long> userIds = enrollList.stream()
+                .map(EnrollDO::getUserId)
+                .collect(Collectors.toSet());
+
+        Map<Long, UserDO> userMap = userMapper.selectBatchIds(userIds)
+                .stream()
+                .collect(Collectors.toMap(UserDO::getId, u -> u));
+
+
+    /*
+        =============================
+        查询考试计划
+        =============================
+     */
+
+        Set<Long> planIds = enrollList.stream()
+                .map(EnrollDO::getExamPlanId)
+                .collect(Collectors.toSet());
+
+        Map<Long, ExamPlanDO> planMap = examPlanMapper.selectBatchIds(planIds)
+                .stream()
+                .collect(Collectors.toMap(ExamPlanDO::getId, p -> p));
+
+
+    /*
+        =============================
+        查询考试项目
+        =============================
+     */
+
+        Set<Long> projectIds = planMap.values().stream()
+                .map(ExamPlanDO::getExamProjectId)
+                .collect(Collectors.toSet());
+
+        Map<Long, ProjectDO> projectMap = projectMapper.selectBatchIds(projectIds)
+                .stream()
+                .collect(Collectors.toMap(ProjectDO::getId, p -> p));
+
+
+    /*
+        =============================
+        查询项目类别
+        =============================
+     */
+
+        Set<Long> categoryIds = projectMap.values().stream()
+                .map(ProjectDO::getCategoryId)
+                .collect(Collectors.toSet());
+
+        Map<Long, CategoryDO> categoryMap = categoryMapper.selectBatchIds(categoryIds)
+                .stream()
+                .collect(Collectors.toMap(CategoryDO::getId, c -> c));
+
+
+    /*
+        =============================
+        构造导出 DTO
+        =============================
+     */
+
+        List<EnrollStatisticsResp> exportList = new ArrayList<>();
+
+        for (int i = 0; i < enrollList.size(); i++) {
+
+            EnrollDO enroll = enrollList.get(i);
+            EnrollStatisticsResp dto = new EnrollStatisticsResp();
+
+            dto.setId((long) (i + 1));
+            dto.setExamNumber(enroll.getExamNumber());
+
+            ExamPlanDO plan = planMap.get(enroll.getExamPlanId());
+            if (plan != null) {
+
+                dto.setExamPlanId(String.valueOf(plan.getId()));
+                dto.setExamPlanName(plan.getExamPlanName());
+                dto.setExamStartTime(plan.getStartTime());
+
+                ProjectDO project = projectMap.get(plan.getExamProjectId());
+                if (project != null) {
+
+                    dto.setExamProjectName(project.getProjectName());
+                    dto.setProjectCode(project.getProjectCode());
+
+                    CategoryDO category = categoryMap.get(project.getCategoryId());
+                    if (category != null) {
+                        dto.setCategoryName(category.getName());
+                    }
+                }
+            }
+
+            UserDO user = userMap.get(enroll.getUserId());
+            if (user != null) {
+
+                dto.setNickName(user.getNickname());
+                dto.setUsername(user.getUsername());
+                dto.setPhone(user.getPhone());
+                dto.setCompanyName(user.getCompanyName());
+            }
+
+            verifyAndDecryptField(dto);
+
+            exportList.add(dto);
+        }
+
+    /*
+        =============================
+        导出 Excel
+        =============================
+     */
+
+        try (ExcelWriter writer = ExcelUtil.getWriter(true)) {
+
+            writer.addHeaderAlias("id", "序号");
+            writer.addHeaderAlias("nickName", "考生名称");
+            writer.addHeaderAlias("username", "身份证号");
+            writer.addHeaderAlias("phone", "电话");
+            writer.addHeaderAlias("examNumber", "准考证号");
+            writer.addHeaderAlias("companyName", "单位名称");
+            writer.addHeaderAlias("categoryName", "项目种类");
+            writer.addHeaderAlias("examProjectName", "考试项目");
+            writer.addHeaderAlias("examPlanName", "考试计划名称");
+            writer.addHeaderAlias("examStartTime", "考试开始时间");
+
+
+            // 自动调整列宽
+            writer.setOnlyAlias(true);
+            writer.write(exportList, true);
+            // 自动计算列宽
+            Sheet sheet = writer.getSheet();
+
+            for (int col = 0; col < 12; col++) {
+
+                int maxLength = 0;
+
+                for (int row = 0; row <= sheet.getLastRowNum(); row++) {
+
+                    Row currentRow = sheet.getRow(row);
+                    if (currentRow == null) continue;
+
+                    Cell cell = currentRow.getCell(col);
+                    if (cell == null) continue;
+
+                    String value = cell.toString();
+                    maxLength = Math.max(maxLength, value.length());
+                }
+
+                sheet.setColumnWidth(col, (int) ((maxLength + 4) * 256 * 1.7));
+            }
+            String date = LocalDate.now().toString();
+            String fileName;
+
+            if (planId != null) {
+                String planName = planMap.get(planId).getExamPlanName();
+                fileName = planName + "_" + date + "_考生信息.xlsx";
+            } else {
+                String projectName = projectMap.get(projectId).getProjectName();
+                fileName = projectName + "_" + date + "_考生信息.xlsx";
+            }
+
+            fileName = URLEncoder.encode(fileName, "UTF-8");
+
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8");
+            response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
+
+            writer.flush(response.getOutputStream(), true);
+
+        } catch (Exception e) {
+            throw new RuntimeException("导出 Excel 失败", e);
+        }
+    }
+    /**
+     * 解密敏感字段
+     */
+    private void verifyAndDecryptField(EnrollStatisticsResp resp) {
+        resp.setExamNumber(aesWithHMAC.verifyAndDecrypt(resp.getExamNumber()));
+        resp.setUsername(aesWithHMAC.verifyAndDecrypt(resp.getUsername()));
+        resp.setPhone(aesWithHMAC.verifyAndDecrypt(resp.getPhone()));
     }
 
     /**
