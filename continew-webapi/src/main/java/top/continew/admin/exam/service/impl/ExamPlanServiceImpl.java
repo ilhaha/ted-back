@@ -1136,6 +1136,12 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 考试开始时间不能早于当前时间
         //        ValidationUtils.throwIf(req.getStartTime().isBefore(LocalDateTime.now().minusSeconds(2)), "考试开始时间不能早于当前时间");
+
+        // 如果考试没人报名则不能确认
+        Long enrollCount = enrollMapper.selectCount(new LambdaQueryWrapper<EnrollDO>()
+                .eq(EnrollDO::getExamPlanId, examPlanDO.getId())
+                .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.SIGNED_UP));
+        ValidationUtils.throwIf(enrollCount <= 0, "暂无考生报名，无法确认考试计划");
         Integer invigilatorCount = req.getInvigilatorCount();
         List<Long> classroomIds = new ArrayList<>();
         List<Long> theoryIds = req.getTheoryClassroomId();
@@ -1522,18 +1528,25 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     public Boolean centerDirectorConform(Long planId, Integer isFinalConfirmed) {
         // 查询计划
         ExamPlanDO examPlanDO = baseMapper.selectById(planId);
-        ValidationUtils.throwIfNull(examPlanDO, "未查询到考试计划信息");
+        ValidationUtils.throwIfNull(examPlanDO, "ID【"+planId+"】 考试计划信息不存在");
+
+        String examPlanName = examPlanDO.getExamPlanName();
+        ValidationUtils.throwIf(!ExamPlanStatusEnum.IN_FORCE.getValue().equals(examPlanDO.getStatus()),
+                examPlanName + " 考试计划尚未处于未生效状态，无法操作");
+
+        ValidationUtils.throwIf(!PlanFinalConfirmedStatus.DIRECTOR_PENDING.getValue().equals(examPlanDO.getIsFinalConfirmed()),
+                examPlanName + " 考试计划尚未处于未待中心主任确认状态，无法操作");
 
         // 查询理论考场
         List<Long> classroomIds = examPlanMapper.getPlanExamTheoryClassroom(planId);
-        ValidationUtils.throwIfEmpty(classroomIds, "考试计划未分配理论考场");
+        ValidationUtils.throwIfEmpty(classroomIds, examPlanName + " 考试计划未分配理论考场");
 
         // 查询报名记录
         boolean isConfirmed = PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue().equals(isFinalConfirmed);
         List<EnrollDO> enrollList = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
             .eq(EnrollDO::getExamPlanId, planId)
             .orderByAsc(EnrollDO::getId));
-        ValidationUtils.throwIf(ObjectUtil.isEmpty(enrollList) && isConfirmed, "未查询到考生报名信息");
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(enrollList) && isConfirmed, examPlanName + " 未查询到考生报名信息");
 
         // 增加考试计划和班级关联表
         planApplyClassMapper.insertBatch(enrollList.stream().map(EnrollDO::getClassId).distinct().map(classId -> {
@@ -1545,7 +1558,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 查询监考员列表
         List<InvigilatorAssignResp> invigilatorList = planInvigilateMapper.getListByPlanId(planId);
-        ValidationUtils.throwIfEmpty(invigilatorList, "未选择监考员");
+        ValidationUtils.throwIfEmpty(invigilatorList, examPlanName + " 未选择监考员");
 
         // 查询项目信息
         ProjectDO projectDO = projectMapper.selectById(examPlanDO.getExamProjectId());

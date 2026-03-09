@@ -89,6 +89,12 @@ public class ExamPlanQuery implements Serializable {
     private Integer status;
 
     /**
+     * 最终确认时间地点（0：待管理员确定 1：待中心主任确定 2：中心主任确定 3：中心主任驳回）
+     */
+    @Query(type = QueryType.EQ, columns = "tep.is_final_confirmed")
+    private Integer isFinalConfirmed;
+
+    /**
      * 监考状态
      */
     //    @Query(type = QueryType.EQ, columns = "tpi.invigilate_status")
