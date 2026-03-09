@@ -229,16 +229,14 @@ public class EnrollController extends BaseController<EnrollService, EnrollResp, 
         return enrollService.getExamCandidatesByPlanOrProject(planId, projectId, pageQuery);
     }
 
-
     /**
      * 通过考试项目id或者是考试计划导出考试报名成功的考生列表Excel（已生成准考证且能正常考试）
      *
      */
     @GetMapping("/exportExamCandidatesByPlanOrProject")
-    public void exportExamCandidatesByPlanOrProject(
-            @RequestParam(required = false) Long planId,
-            @RequestParam(required = false) Long projectId,
-            HttpServletResponse response) {
+    public void exportExamCandidatesByPlanOrProject(@RequestParam(required = false) Long planId,
+                                                    @RequestParam(required = false) Long projectId,
+                                                    HttpServletResponse response) {
 
         enrollService.exportExamCandidatesByPlanOrProject(planId, projectId, response);
     }

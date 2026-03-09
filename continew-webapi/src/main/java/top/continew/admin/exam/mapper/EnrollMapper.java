@@ -132,10 +132,11 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
 
     /**
      * 通过考试项目id或者是考试计划id获取考试报名成功的考生列表（已生成准考证且能正常考试）
+     * 
      * @return
      */
     Page<EnrollStatisticsResp> selectExamCandidates(Page<EnrollStatisticsResp> page,
-                                          @Param("planId") Long planId,
-                                          @Param("projectId") Long projectId);
+                                                    @Param("planId") Long planId,
+                                                    @Param("projectId") Long projectId);
 
 }

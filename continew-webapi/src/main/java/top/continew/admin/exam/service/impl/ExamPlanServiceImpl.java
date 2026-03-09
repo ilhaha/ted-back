@@ -1139,8 +1139,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 如果考试没人报名则不能确认
         Long enrollCount = enrollMapper.selectCount(new LambdaQueryWrapper<EnrollDO>()
-                .eq(EnrollDO::getExamPlanId, examPlanDO.getId())
-                .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.SIGNED_UP));
+            .eq(EnrollDO::getExamPlanId, examPlanDO.getId())
+            .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.SIGNED_UP));
         ValidationUtils.throwIf(enrollCount <= 0, "暂无考生报名，无法确认考试计划");
         Integer invigilatorCount = req.getInvigilatorCount();
         List<Long> classroomIds = new ArrayList<>();
@@ -1528,14 +1528,14 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     public Boolean centerDirectorConform(Long planId, Integer isFinalConfirmed) {
         // 查询计划
         ExamPlanDO examPlanDO = baseMapper.selectById(planId);
-        ValidationUtils.throwIfNull(examPlanDO, "ID【"+planId+"】 考试计划信息不存在");
+        ValidationUtils.throwIfNull(examPlanDO, "ID【" + planId + "】 考试计划信息不存在");
 
         String examPlanName = examPlanDO.getExamPlanName();
-        ValidationUtils.throwIf(!ExamPlanStatusEnum.IN_FORCE.getValue().equals(examPlanDO.getStatus()),
-                examPlanName + " 考试计划尚未处于未生效状态，无法操作");
+        ValidationUtils.throwIf(!ExamPlanStatusEnum.IN_FORCE.getValue()
+            .equals(examPlanDO.getStatus()), examPlanName + " 考试计划尚未处于未生效状态，无法操作");
 
-        ValidationUtils.throwIf(!PlanFinalConfirmedStatus.DIRECTOR_PENDING.getValue().equals(examPlanDO.getIsFinalConfirmed()),
-                examPlanName + " 考试计划尚未处于未待中心主任确认状态，无法操作");
+        ValidationUtils.throwIf(!PlanFinalConfirmedStatus.DIRECTOR_PENDING.getValue()
+            .equals(examPlanDO.getIsFinalConfirmed()), examPlanName + " 考试计划尚未处于未待中心主任确认状态，无法操作");
 
         // 查询理论考场
         List<Long> classroomIds = examPlanMapper.getPlanExamTheoryClassroom(planId);

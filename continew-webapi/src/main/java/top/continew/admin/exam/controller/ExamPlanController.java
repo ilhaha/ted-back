@@ -131,7 +131,6 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
         return baseService.getCascaderPlanByProjectId(projectId);
     }
 
-
     /**
      * 根据考生身份证获取考生的所有考试准考证号
      *

@@ -18,7 +18,6 @@ package top.continew.admin.exam.service.impl;
 
 import cn.crane4j.core.util.CollectionUtils;
 import cn.crane4j.core.util.StringUtils;
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.poi.excel.ExcelUtil;
@@ -27,7 +26,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
@@ -50,7 +48,6 @@ import top.continew.admin.common.constant.ExamRecordConstants;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
-import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.*;
@@ -139,8 +136,6 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     private final UserMapper userMapper;
 
     private final CategoryMapper categoryMapper;
-
-
 
     /**
      * 获取报名相关所有信息
@@ -327,7 +322,6 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         enrollInfoResp.setPhoneNumber(aesWithHMAC.verifyAndDecrypt(enrollInfoResp.getPhoneNumber()));
         return enrollInfoResp;
     }
-
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -913,7 +907,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     }
 
     @Override
-    public PageResp<EnrollStatisticsResp> getExamCandidatesByPlanOrProject(Long planId, Long projectId, PageQuery pageQuery) {
+    public PageResp<EnrollStatisticsResp> getExamCandidatesByPlanOrProject(Long planId,
+                                                                           Long projectId,
+                                                                           PageQuery pageQuery) {
 
         Page<EnrollStatisticsResp> page = new Page<>(pageQuery.getPage(), pageQuery.getSize());
 
@@ -934,18 +930,17 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
         LambdaQueryWrapper<EnrollDO> wrapper = new LambdaQueryWrapper<>();
 
-        wrapper.in(EnrollDO::getEnrollStatus, 1, 2)
-                .isNull(EnrollDO::getClassId)
-                .isNotNull(EnrollDO::getExamNumber);
+        wrapper.in(EnrollDO::getEnrollStatus, 1, 2).isNull(EnrollDO::getClassId).isNotNull(EnrollDO::getExamNumber);
 
         if (planId != null) {
             wrapper.eq(EnrollDO::getExamPlanId, planId);
         } else {
 
-            List<Long> planIds = examPlanMapper.selectList(
-                    new LambdaQueryWrapper<ExamPlanDO>()
-                            .eq(ExamPlanDO::getExamProjectId, projectId)
-            ).stream().map(ExamPlanDO::getId).collect(Collectors.toList());
+            List<Long> planIds = examPlanMapper.selectList(new LambdaQueryWrapper<ExamPlanDO>()
+                .eq(ExamPlanDO::getExamProjectId, projectId))
+                .stream()
+                .map(ExamPlanDO::getId)
+                .collect(Collectors.toList());
 
             if (planIds.isEmpty()) {
                 throw new BusinessException("该考试项目下没有考试计划");
@@ -960,71 +955,59 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             throw new BusinessException("没有符合条件的报名记录");
         }
 
-    /*
+        /*
         =============================
         查询用户
         =============================
-     */
+         */
 
-        Set<Long> userIds = enrollList.stream()
-                .map(EnrollDO::getUserId)
-                .collect(Collectors.toSet());
+        Set<Long> userIds = enrollList.stream().map(EnrollDO::getUserId).collect(Collectors.toSet());
 
         Map<Long, UserDO> userMap = userMapper.selectBatchIds(userIds)
-                .stream()
-                .collect(Collectors.toMap(UserDO::getId, u -> u));
+            .stream()
+            .collect(Collectors.toMap(UserDO::getId, u -> u));
 
-
-    /*
+        /*
         =============================
         查询考试计划
         =============================
-     */
+         */
 
-        Set<Long> planIds = enrollList.stream()
-                .map(EnrollDO::getExamPlanId)
-                .collect(Collectors.toSet());
+        Set<Long> planIds = enrollList.stream().map(EnrollDO::getExamPlanId).collect(Collectors.toSet());
 
         Map<Long, ExamPlanDO> planMap = examPlanMapper.selectBatchIds(planIds)
-                .stream()
-                .collect(Collectors.toMap(ExamPlanDO::getId, p -> p));
+            .stream()
+            .collect(Collectors.toMap(ExamPlanDO::getId, p -> p));
 
-
-    /*
+        /*
         =============================
         查询考试项目
         =============================
-     */
+         */
 
-        Set<Long> projectIds = planMap.values().stream()
-                .map(ExamPlanDO::getExamProjectId)
-                .collect(Collectors.toSet());
+        Set<Long> projectIds = planMap.values().stream().map(ExamPlanDO::getExamProjectId).collect(Collectors.toSet());
 
         Map<Long, ProjectDO> projectMap = projectMapper.selectBatchIds(projectIds)
-                .stream()
-                .collect(Collectors.toMap(ProjectDO::getId, p -> p));
+            .stream()
+            .collect(Collectors.toMap(ProjectDO::getId, p -> p));
 
-
-    /*
+        /*
         =============================
         查询项目类别
         =============================
-     */
+         */
 
-        Set<Long> categoryIds = projectMap.values().stream()
-                .map(ProjectDO::getCategoryId)
-                .collect(Collectors.toSet());
+        Set<Long> categoryIds = projectMap.values().stream().map(ProjectDO::getCategoryId).collect(Collectors.toSet());
 
         Map<Long, CategoryDO> categoryMap = categoryMapper.selectBatchIds(categoryIds)
-                .stream()
-                .collect(Collectors.toMap(CategoryDO::getId, c -> c));
+            .stream()
+            .collect(Collectors.toMap(CategoryDO::getId, c -> c));
 
-
-    /*
+        /*
         =============================
         构造导出 DTO
         =============================
-     */
+         */
 
         List<EnrollStatisticsResp> exportList = new ArrayList<>();
 
@@ -1033,7 +1016,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             EnrollDO enroll = enrollList.get(i);
             EnrollStatisticsResp dto = new EnrollStatisticsResp();
 
-            dto.setId((long) (i + 1));
+            dto.setId((long)(i + 1));
             dto.setExamNumber(enroll.getExamNumber());
 
             ExamPlanDO plan = planMap.get(enroll.getExamPlanId());
@@ -1070,11 +1053,11 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             exportList.add(dto);
         }
 
-    /*
+        /*
         =============================
         导出 Excel
         =============================
-     */
+         */
 
         try (ExcelWriter writer = ExcelUtil.getWriter(true)) {
 
@@ -1089,7 +1072,6 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             writer.addHeaderAlias("examPlanName", "考试计划名称");
             writer.addHeaderAlias("examStartTime", "考试开始时间");
 
-
             // 自动调整列宽
             writer.setOnlyAlias(true);
             writer.write(exportList, true);
@@ -1103,16 +1085,18 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
                 for (int row = 0; row <= sheet.getLastRowNum(); row++) {
 
                     Row currentRow = sheet.getRow(row);
-                    if (currentRow == null) continue;
+                    if (currentRow == null)
+                        continue;
 
                     Cell cell = currentRow.getCell(col);
-                    if (cell == null) continue;
+                    if (cell == null)
+                        continue;
 
                     String value = cell.toString();
                     maxLength = Math.max(maxLength, value.length());
                 }
 
-                sheet.setColumnWidth(col, (int) ((maxLength + 4) * 256 * 1.7));
+                sheet.setColumnWidth(col, (int)((maxLength + 4) * 256 * 1.7));
             }
             String date = LocalDate.now().toString();
             String fileName;
@@ -1136,6 +1120,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             throw new RuntimeException("导出 Excel 失败", e);
         }
     }
+
     /**
      * 解密敏感字段
      */

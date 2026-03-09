@@ -113,7 +113,6 @@ public class ExamPlanReq implements Serializable {
     //    @NotNull(message = "准考证下载截至时间不能为空")
     private LocalDateTime admitCardEndTime;
 
-
     /**
      * 考试计划备注说明
      */
