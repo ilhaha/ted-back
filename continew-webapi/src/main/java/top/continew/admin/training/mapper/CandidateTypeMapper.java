@@ -22,6 +22,8 @@ import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 import top.continew.admin.training.model.resp.CandidateTypeDetailResp;
+import top.continew.admin.training.model.resp.InspectionCandidateTypeDetailResp;
+import top.continew.admin.training.model.resp.InspectionCandidateTypeResp;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.training.model.entity.CandidateTypeDO;
 
@@ -38,5 +40,8 @@ public interface CandidateTypeMapper extends BaseMapper<CandidateTypeDO> {
 
     IPage<CandidateTypeDetailResp> getWorkerPage(@Param("page") Page<Object> objectPage,
                                                  @Param(Constants.WRAPPER) QueryWrapper<CandidateTypeDO> queryWrapper);
+
+    IPage<InspectionCandidateTypeDetailResp> getInspectionPage(@Param("page") Page<Object> objectPage,
+                                                               @Param(Constants.WRAPPER) QueryWrapper<CandidateTypeDO> queryWrapper);
 
 }

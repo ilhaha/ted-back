@@ -72,4 +72,54 @@ LEFT JOIN (
             tct.id DESC
     </select>
 
+
+
+    <select id="getInspectionPage" resultType="top.continew.admin.training.model.resp.InspectionCandidateTypeDetailResp">
+        SELECT tct.id,
+               tct.candidate_id,
+               tct.is_blacklist,
+               tct.blacklist_reason,
+               tct.blacklist_duration_type,
+               tct.blacklist_time,
+               tct.blacklist_end_time,
+               su.nickname,
+               su.username,
+               su.phone,
+               su.avatar,
+               su.related_education,
+               su.region,
+               su.company_name,
+
+               COUNT(ter.id)                                          AS exam_total_count,
+               COUNT(CASE WHEN ter.exam_result_status = 1 THEN 1 END) AS pass_count,
+               COUNT(CASE WHEN ter.exam_result_status = 0 THEN 1 END) AS fail_count
+
+        FROM ted_candidate_type tct
+                 JOIN sys_user su
+                      ON tct.candidate_id = su.id
+
+                 LEFT JOIN ted_exam_records ter
+                           ON su.id = ter.candidate_id
+                               AND ter.is_deleted = 0
+                               AND ter.exam_result_status != 2
+
+            ${ew.customSqlSegment}
+        GROUP BY
+            tct.id,
+            tct.candidate_id,
+            tct.is_blacklist,
+            tct.blacklist_reason,
+            tct.blacklist_duration_type,
+            tct.blacklist_time,
+            tct.blacklist_end_time,
+            su.nickname,
+            su.username,
+            su.phone,
+            su.avatar,
+            su.related_education,
+            su.contact_address,
+            su.landline,
+            su.company_name
+        </select>
+
 </mapper>

@@ -16,6 +16,7 @@
 
 package top.continew.admin.training.controller;
 
+import top.continew.admin.training.model.resp.InspectionCandidateTypeResp;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +30,9 @@ import top.continew.admin.training.model.req.CandidateTypeReq;
 import top.continew.admin.training.model.resp.CandidateTypeDetailResp;
 import top.continew.admin.training.model.resp.CandidateTypeResp;
 import top.continew.admin.training.service.CandidateTypeService;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.BasePageResp;
+import top.continew.starter.web.model.R;
 
 /**
  * 考生类型管理 API
@@ -51,5 +55,28 @@ public class CandidateTypeController extends BaseController<CandidateTypeService
     @PostMapping("/blacklist/switch")
     public Boolean blacklistSwitch(@RequestBody CandidateTypeReq req) {
         return baseService.blacklistSwitch(req);
+    }
+
+    /**
+     * 重写page 查询检验人员信息
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @GetMapping("/inspection")
+    public BasePageResp<InspectionCandidateTypeResp> inspectionPage(CandidateTypeQuery query, PageQuery pageQuery) {
+        return baseService.inspectionPage(query, pageQuery);
+    }
+
+    /**
+     * 重置检验人员密码
+     *
+     * @param query
+     * @return
+     */
+    @PostMapping("/inspection/password/reset")
+    public R<Boolean> resetInspectionPassword(@RequestBody CandidateTypeQuery query){
+        return R.ok(baseService.resetInspectionPassword(query));
     }
 }

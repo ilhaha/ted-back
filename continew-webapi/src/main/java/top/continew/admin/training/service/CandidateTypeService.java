@@ -16,6 +16,9 @@
 
 package top.continew.admin.training.service;
 
+import top.continew.admin.training.model.resp.InspectionCandidateTypeResp;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.training.model.query.CandidateTypeQuery;
 import top.continew.admin.training.model.req.CandidateTypeReq;
@@ -30,6 +33,16 @@ import top.continew.admin.training.model.resp.CandidateTypeResp;
  */
 public interface CandidateTypeService extends BaseService<CandidateTypeResp, CandidateTypeDetailResp, CandidateTypeQuery, CandidateTypeReq> {
 
+
+    /**
+     * 重写page 查询检验人员信息
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    PageResp<InspectionCandidateTypeResp> inspectionPage(CandidateTypeQuery query, PageQuery pageQuery);
+
     /**
      * 切换黑名单状态
      * 
@@ -37,4 +50,13 @@ public interface CandidateTypeService extends BaseService<CandidateTypeResp, Can
      * @return
      */
     Boolean blacklistSwitch(CandidateTypeReq req);
+
+
+    /**
+     * 重置检验人员密码
+     *
+     * @param query
+     * @return
+     */
+    Boolean resetInspectionPassword(CandidateTypeQuery query);
 }

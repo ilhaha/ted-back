@@ -16,6 +16,7 @@
 
 package top.continew.admin.training.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.crypto.CryptoException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -27,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 
 import net.dreamlu.mica.core.utils.StringUtil;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -43,12 +45,16 @@ import top.continew.admin.exam.model.entity.ProjectDO;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.dto.UserDetailDTO;
 import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.system.service.UserPasswordHistoryService;
 import top.continew.admin.system.service.UserService;
 import top.continew.admin.training.mapper.CandidateTypeDisableProjectMapper;
 import top.continew.admin.training.model.entity.CandidateTypeDisableProjectDO;
+import top.continew.admin.training.model.resp.InspectionCandidateTypeDetailResp;
+import top.continew.admin.training.model.resp.InspectionCandidateTypeResp;
 import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.starter.core.exception.BusinessException;
+import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -90,6 +96,9 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
     private final CandidateTypeDisableProjectMapper candidateTypeDisableProjectMapper;
 
     private final ProjectMapper projectMapper;
+
+    private final UserPasswordHistoryService userPasswordHistoryService;
+
 
     /**
      * 重写page 查询作业人员信息
@@ -166,6 +175,51 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         return build;
     }
 
+
+
+
+
+    /**
+     * 重写page 查询检验人员信息
+     *
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @Override
+    public PageResp<InspectionCandidateTypeResp> inspectionPage(CandidateTypeQuery query, PageQuery pageQuery) {
+        QueryWrapper<CandidateTypeDO> queryWrapper = this.buildQueryWrapper(query);
+        queryWrapper.eq("tct.type", CandidateTypeEnum.INSPECTION.getValue()).eq("tct.is_deleted", 0);
+        String candidateName = query.getCandidateName();
+        if (StringUtil.isNotBlank(candidateName)) {
+            queryWrapper.like("su.nickname", candidateName);
+        }
+        String idNumber = query.getIdNumber();
+        if (StringUtil.isNotBlank(idNumber)) {
+            queryWrapper.eq("su.username", aesWithHMAC.encryptAndSign(idNumber));
+        }
+
+        String phone = query.getPhone();
+        if (StringUtil.isNotBlank(phone)) {
+            queryWrapper.eq("su.phone", aesWithHMAC.encryptAndSign(phone));
+        }
+        IPage<InspectionCandidateTypeDetailResp> page = baseMapper.getInspectionPage(new Page<>(pageQuery.getPage(), pageQuery
+                .getSize()), queryWrapper);
+        List<InspectionCandidateTypeDetailResp> records = page.getRecords();
+        if (ObjectUtil.isNotEmpty(records)) {
+                page.setRecords(records.stream().map(item -> {
+                item.setUsername(aesWithHMAC.verifyAndDecrypt(item.getUsername()));
+                item.setPhone(aesWithHMAC.verifyAndDecrypt(item.getPhone()));
+
+                return item;
+            }).toList());
+        }
+        PageResp<InspectionCandidateTypeResp> build = PageResp.build(page, InspectionCandidateTypeResp.class);
+        build.getList().forEach(this::fill);
+        return build;
+    }
+
+
     /**
      * 切换黑名单状态
      *
@@ -224,6 +278,34 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         }
 
         return baseMapper.update(null, updateWrapper) > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean resetInspectionPassword(CandidateTypeQuery query) {
+
+        // 查询用户
+        UserDO user = userService.getById(query.getCandidateId());
+        ValidationUtils.throwIfNull(user, "用户不存在");
+
+        // 旧密码（用于历史记录）
+        String oldPassword = user.getPassword();
+
+        // 默认密码
+        String newPassword = "Abc@123456";
+
+        // 更新密码
+        boolean updated = userMapper.lambdaUpdate()
+                .set(UserDO::getPassword, newPassword)
+                .set(UserDO::getPwdResetTime, LocalDateTime.now())
+                .eq(UserDO::getId, user.getId())
+                .update();
+
+        // 保存历史密码
+        userPasswordHistoryService.add(user.getId(), oldPassword, 5);
+        //踢掉用户
+        StpUtil.kickout(query.getCandidateId());
+        return updated;
     }
 
     /**

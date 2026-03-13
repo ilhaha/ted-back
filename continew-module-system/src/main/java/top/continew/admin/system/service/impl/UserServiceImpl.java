@@ -536,18 +536,18 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, UserDO, UserRes
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void updatePassword(String oldPassword, String newPassword, Long id) {
-        CheckUtils.throwIfEqual(newPassword, oldPassword, "新密码不能与当前密码相同");
+    public void updatePassword(String rawOldPassword, String rawNewPassword, Long id) {
+        CheckUtils.throwIfEqual(rawNewPassword, rawOldPassword, "新密码不能与当前密码相同");
         UserDO user = super.getById(id);
         String password = user.getPassword();
         if (StrUtil.isNotBlank(password)) {
-            CheckUtils.throwIf(!passwordEncoder.matches(oldPassword, password), "当前密码错误");
+            CheckUtils.throwIf(!passwordEncoder.matches(rawOldPassword, password), "当前密码错误");
         }
         // 校验密码合法性
-        int passwordRepetitionTimes = this.checkPassword(newPassword, user);
+        int passwordRepetitionTimes = this.checkPassword(rawNewPassword, user);
         // 更新密码和密码重置时间
         baseMapper.lambdaUpdate()
-            .set(UserDO::getPassword, newPassword)
+            .set(UserDO::getPassword, rawNewPassword)
             .set(UserDO::getPwdResetTime, LocalDateTime.now())
             .eq(UserDO::getId, id)
             .update();
