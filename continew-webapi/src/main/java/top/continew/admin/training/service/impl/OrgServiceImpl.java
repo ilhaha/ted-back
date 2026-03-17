@@ -102,7 +102,6 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
@@ -288,17 +287,14 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Transactional(rollbackFor = Exception.class) // 添加事务保证原子性
     public Long add(OrgReq req) {
         // 社会代号、机构名称、机构信用代码不可重复
-        List<OrgDO> orgDOList = baseMapper.selectList(new LambdaQueryWrapper<OrgDO>().eq(OrgDO::getName, req.getName())
-            .or()
-            .eq(OrgDO::getCode, req.getCode())
-            .or()
-            .eq(OrgDO::getSocialCode, req.getSocialCode()));
+        List<OrgDO> orgDOList = baseMapper.selectList(new LambdaQueryWrapper<OrgDO>().eq(StrUtil.isNotBlank(req
+            .getCode()), OrgDO::getCode, req.getCode()));
         boolean orgNotEmpty = ObjectUtil.isNotEmpty(orgDOList);
         if (orgNotEmpty) {
             // 删除账号
             userService.deleteOrgUser(Arrays.asList(req.getUserId()));
         }
-        ValidationUtils.throwIf(orgNotEmpty, "机构代号、机构名称、机构信用代码已存在");
+        ValidationUtils.throwIf(orgNotEmpty, "机构代号已存在");
         Long orgId = super.add(req);
         List<Long> categoryIds = req.getCategoryIds();
 
@@ -327,17 +323,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Transactional // 确保事务性
     public void update(OrgReq req, Long id) {
         List<OrgDO> orgDOList = baseMapper.selectList(new LambdaQueryWrapper<OrgDO>().ne(OrgDO::getId, id)
-            .and(new Consumer<LambdaQueryWrapper<OrgDO>>() {
-                @Override
-                public void accept(LambdaQueryWrapper<OrgDO> orgDOLambdaQueryWrapper) {
-                    orgDOLambdaQueryWrapper.eq(OrgDO::getName, req.getName())
-                        .or()
-                        .eq(OrgDO::getCode, req.getCode())
-                        .or()
-                        .eq(OrgDO::getSocialCode, req.getSocialCode());
-                }
-            }));
-        ValidationUtils.throwIfNotEmpty(orgDOList, "机构代号、机构名称、机构信用代码已存在");
+            .eq(StrUtil.isNotBlank(req.getCode()), OrgDO::getCode, req.getCode()));
+        ValidationUtils.throwIfNotEmpty(orgDOList, "机构代号已存在");
 
         super.update(req, id);
         List<Long> newCategoryIds = req.getCategoryIds();
