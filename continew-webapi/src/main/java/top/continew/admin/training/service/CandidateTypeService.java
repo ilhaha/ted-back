@@ -33,7 +33,6 @@ import top.continew.admin.training.model.resp.CandidateTypeResp;
  */
 public interface CandidateTypeService extends BaseService<CandidateTypeResp, CandidateTypeDetailResp, CandidateTypeQuery, CandidateTypeReq> {
 
-
     /**
      * 重写page 查询检验人员信息
      *
@@ -50,7 +49,6 @@ public interface CandidateTypeService extends BaseService<CandidateTypeResp, Can
      * @return
      */
     Boolean blacklistSwitch(CandidateTypeReq req);
-
 
     /**
      * 重置检验人员密码

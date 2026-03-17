@@ -142,4 +142,12 @@ public interface WorkerApplyService extends BaseService<WorkerApplyResp, WorkerA
      * @return
      */
     Boolean revokeApply(Integer id);
+
+    /**
+     * 判断二维码是否过期
+     *
+     * @param verifyQrValidateReq
+     * @return
+     */
+    Boolean qrValidate(VerifyQrValidateReq verifyQrValidateReq);
 }

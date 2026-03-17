@@ -27,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 
 import net.dreamlu.mica.core.utils.StringUtil;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -36,12 +37,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.OrgClassType;
+import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.constant.SelectClassConstants;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.DownloadOSSFileUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.config.Q2Config;
 import top.continew.admin.exam.mapper.ProjectMapper;
 import top.continew.admin.exam.mapper.WeldingExamApplicationMapper;
 import top.continew.admin.exam.model.entity.ProjectDO;
@@ -84,6 +87,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 培训机构班级业务实现
@@ -101,6 +105,9 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
     @Value("${qrcode.worker.upload.apply-doc.url}")
     private String qrcodeUrl;
 
+    @Value("${qrcode.worker.upload.apply-doc.expire-time}")
+    private Integer qrcodeExpireTime;
+
     @Resource
     private AESWithHMAC aesWithHMAC;
 
@@ -114,6 +121,11 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
     private final OrgClassCandidateMapper orgClassCandidateMapper;
 
     private final WeldingExamApplicationMapper weldingExamApplicationMapper;
+
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
+
+    private final Q2Config q2Config;
 
     @Value("${welding.metal-project-id}")
     private Long metalProjectId;
@@ -270,8 +282,10 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
         Long sequence = count + 1;
         String sequenceStr = String.format("%03d", sequence);
+        String projectCode = projectDO.getProjectCode();
+        String q2Value = q2Config.getTypeMap().getOrDefault(projectCode, projectCode);
 
-        return examType + year + orgCode + projectDO.getProjectCode() + sequenceStr;
+        return examType + year + orgCode + q2Value + sequenceStr;
     }
 
     @Override
@@ -304,18 +318,20 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
     /**
      * 生成二维码并上传，返回 URL
      */
-    private String generateAndUploadQr(Long candidateId, String qrContent) throws IOException {
+    private String generateAndUploadQr(Long classId, String qrContent) throws IOException {
         BufferedImage image = QrCodeUtil.generate(qrContent, 300, 300);
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             ImageIO.write(image, "png", baos);
             byte[] bytes = baos.toByteArray();
 
-            MultipartFile file = new InMemoryMultipartFile("file", candidateId + ".png", "image/png", bytes);
+            MultipartFile file = new InMemoryMultipartFile("file", classId + ".png", "image/png", bytes);
 
             GeneralFileReq fileReq = new GeneralFileReq();
             fileReq.setType("pic");
 
             FileInfoResp fileInfo = uploadService.upload(file, fileReq);
+            redisTemplate.opsForValue()
+                .set(RedisConstant.CLASS_APPLY_KEY + classId, Boolean.TRUE, qrcodeExpireTime, TimeUnit.MINUTES);
             return fileInfo.getUrl();
         }
     }
@@ -466,4 +482,28 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         return page(query, pageQuery);
     }
 
+    /**
+     * 刷新班级报考二维码
+     *
+     * @param classId
+     * @return
+     */
+    @Override
+    public Boolean qrRefresh(Long classId) {
+        OrgClassDO orgClassDO = baseMapper.selectById(classId);
+        ValidationUtils.throwIfNull(orgClassDO, "班级信息不存在");
+        if (OrgClassType.WORKER_TYPE.getClassType().equals(orgClassDO.getClassType())) {
+            try {
+                String qrContent = buildQrContent(classId);
+                String qrUrl = generateAndUploadQr(classId, qrContent);
+
+                // 更新二维码地址
+                baseMapper.update(new LambdaUpdateWrapper<OrgClassDO>().eq(OrgClassDO::getId, classId)
+                    .set(OrgClassDO::getQrcodeApplyUrl, qrUrl));
+            } catch (Exception e) {
+                throw new BusinessException("二维码生成失败，请稍后重试");
+            }
+        }
+        return null;
+    }
 }

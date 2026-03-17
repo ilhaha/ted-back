@@ -2232,9 +2232,18 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 ExcelUploadFileResultDTO idBack = ExcelMediaUtils
                     .excelUploadFile(workbook, sheet, rowIndex, 3, uploadService, WorkerPictureTypeEnum.ID_CARD_BACK
                         .getValue());
-                if (LocalDateTime.now().isAfter(idBack.getValidEndDate().atTime(LocalTime.MAX))) {
-                    throw new BusinessException("身份证已过期");
+                String validEndDate = idBack.getValidEndDate();
+
+                if (validEndDate != null && !"长期".equals(validEndDate)) {
+
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+                    LocalDate endDate = LocalDate.parse(validEndDate, formatter);
+
+                    if (endDate.isBefore(LocalDate.now())) {
+                        throw new BusinessException("身份证已过期");
+                    }
                 }
+
                 worker.setIdCardPhotoBack(idBack.getIdCardPhotoBack());
                 // 上传一寸免冠照
                 ExcelUploadFileResultDTO face = ExcelMediaUtils
@@ -2567,25 +2576,47 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     private void removeDuplicateIdCard(List<ExcelRowSuccessVO> successList, List<ExcelRowErrorVO> failedList) {
 
         Map<String, List<ExcelRowSuccessVO>> idCardMap = new HashMap<>();
-        for (ExcelRowSuccessVO worker : successList) {
+
+        Iterator<ExcelRowSuccessVO> iterator = successList.iterator();
+        while (iterator.hasNext()) {
+            ExcelRowSuccessVO worker = iterator.next();
             String idCard = worker.getIdCardNumber();
-            if (StrUtil.isBlank(idCard))
+
+            if (StrUtil.isBlank(idCard)) {
                 continue;
+            }
+
+            // ===== 1 判断年龄 =====
+            if (!isAgeValid(idCard)) {
+                ExcelRowErrorVO error = new ExcelRowErrorVO();
+                BeanUtils.copyProperties(worker, error);
+                error.setErrorMessage("身份证出生日期不符合18至60周岁要求");
+                failedList.add(error);
+                iterator.remove();
+                continue;
+            }
+
             idCardMap.computeIfAbsent(idCard, k -> new ArrayList<>()).add(worker);
         }
 
+        // ===== 2 判断重复身份证 =====
         for (Map.Entry<String, List<ExcelRowSuccessVO>> entry : idCardMap.entrySet()) {
+
             List<ExcelRowSuccessVO> list = entry.getValue();
+
             if (list.size() > 1) {
+
                 List<Integer> rowNums = list.stream().map(ExcelRowSuccessVO::getRowNum).collect(Collectors.toList());
 
                 for (ExcelRowSuccessVO duplicateWorker : list) {
+
                     ExcelRowErrorVO errorDTO = new ExcelRowErrorVO();
                     BeanUtils.copyProperties(duplicateWorker, errorDTO);
 
                     List<Integer> otherRows = rowNums.stream()
                         .filter(r -> !r.equals(duplicateWorker.getRowNum()))
                         .collect(Collectors.toList());
+
                     errorDTO.setErrorMessage("所上传身份证与第 " + otherRows.stream()
                         .map(String::valueOf)
                         .collect(Collectors.joining("、")) + " 行一致");
@@ -2595,6 +2626,27 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
                 successList.removeAll(list);
             }
+        }
+    }
+
+    private boolean isAgeValid(String idCard) {
+
+        try {
+
+            if (idCard.length() != 18) {
+                return false;
+            }
+
+            String birthStr = idCard.substring(6, 14);
+
+            LocalDate birthDate = LocalDate.parse(birthStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+            int age = Period.between(birthDate, LocalDate.now()).getYears();
+
+            return age >= 18 && age <= 60;
+
+        } catch (Exception e) {
+            return false;
         }
     }
 

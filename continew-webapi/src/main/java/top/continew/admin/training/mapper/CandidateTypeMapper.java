@@ -23,7 +23,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 import top.continew.admin.training.model.resp.CandidateTypeDetailResp;
 import top.continew.admin.training.model.resp.InspectionCandidateTypeDetailResp;
-import top.continew.admin.training.model.resp.InspectionCandidateTypeResp;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.training.model.entity.CandidateTypeDO;
 

@@ -61,23 +61,15 @@ public class OrgReq implements Serializable {
     private List<Long> categoryIds;
 
     @Schema(description = "社会统一代码")
-    @NotBlank(message = "社会统一代码不能为空")
-    @Length(max = 50, message = "社会统一代码长度不能超过 {max} 个字符")
     private String socialCode;
 
     @Schema(description = "地点")
-    @NotBlank(message = "地点不能为空")
-    @Length(max = 255, message = "地点长度不能超过 {max} 个字符")
     private String location;
 
     @Schema(description = "法人")
-    @NotBlank(message = "法人不能为空")
-    @Length(max = 100, message = "法人长度不能超过 {max} 个字符")
     private String legalPerson;
 
     @Schema(description = "公司规模大小")
-    @NotBlank(message = "公司规模大小不能为空")
-    @Length(max = 50, message = "公司规模大小长度不能超过 {max} 个字符")
     private String scale;
 
     @Schema(description = "营业执照路径")

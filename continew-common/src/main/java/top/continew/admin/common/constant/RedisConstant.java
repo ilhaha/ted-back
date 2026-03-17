@@ -38,6 +38,11 @@ public class RedisConstant {
     public static final String EXAM_PLAN_COUNT_KEY = "exam:plan:count:";
 
     /**
+     * 记录班级报考二维码
+     */
+    public static final String CLASS_APPLY_KEY = "class:apply:qr:";
+
+    /**
      * 准考证号 Redis Key 过期时间（单位：天）
      */
     public static final long EXAM_NUMBER_KEY_EXPIRE_DAYS = 2L;

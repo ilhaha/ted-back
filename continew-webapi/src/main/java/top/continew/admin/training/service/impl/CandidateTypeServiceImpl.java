@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import net.dreamlu.mica.core.utils.StringUtil;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +53,6 @@ import top.continew.admin.training.model.resp.InspectionCandidateTypeResp;
 import top.continew.admin.worker.mapper.WorkerApplyMapper;
 import top.continew.admin.worker.model.entity.WorkerApplyDO;
 import top.continew.starter.core.exception.BusinessException;
-import top.continew.starter.core.util.ExceptionUtils;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -98,7 +96,6 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
     private final ProjectMapper projectMapper;
 
     private final UserPasswordHistoryService userPasswordHistoryService;
-
 
     /**
      * 重写page 查询作业人员信息
@@ -175,10 +172,6 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         return build;
     }
 
-
-
-
-
     /**
      * 重写page 查询检验人员信息
      *
@@ -203,11 +196,11 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         if (StringUtil.isNotBlank(phone)) {
             queryWrapper.eq("su.phone", aesWithHMAC.encryptAndSign(phone));
         }
-        IPage<InspectionCandidateTypeDetailResp> page = baseMapper.getInspectionPage(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+        IPage<InspectionCandidateTypeDetailResp> page = baseMapper.getInspectionPage(new Page<>(pageQuery
+            .getPage(), pageQuery.getSize()), queryWrapper);
         List<InspectionCandidateTypeDetailResp> records = page.getRecords();
         if (ObjectUtil.isNotEmpty(records)) {
-                page.setRecords(records.stream().map(item -> {
+            page.setRecords(records.stream().map(item -> {
                 item.setUsername(aesWithHMAC.verifyAndDecrypt(item.getUsername()));
                 item.setPhone(aesWithHMAC.verifyAndDecrypt(item.getPhone()));
 
@@ -218,7 +211,6 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
         build.getList().forEach(this::fill);
         return build;
     }
-
 
     /**
      * 切换黑名单状态
@@ -296,10 +288,10 @@ public class CandidateTypeServiceImpl extends BaseServiceImpl<CandidateTypeMappe
 
         // 更新密码
         boolean updated = userMapper.lambdaUpdate()
-                .set(UserDO::getPassword, newPassword)
-                .set(UserDO::getPwdResetTime, LocalDateTime.now())
-                .eq(UserDO::getId, user.getId())
-                .update();
+            .set(UserDO::getPassword, newPassword)
+            .set(UserDO::getPwdResetTime, LocalDateTime.now())
+            .eq(UserDO::getId, user.getId())
+            .update();
 
         // 保存历史密码
         userPasswordHistoryService.add(user.getId(), oldPassword, 5);

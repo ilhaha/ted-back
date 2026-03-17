@@ -398,10 +398,19 @@ qrcode:
   worker:
     upload:
       apply-doc:
-        url: http://${qrcode.base-ip}:5173/worker/apply/upload
+        url: http://${qrcode.base-ip}:5174/worker/apply/upload
+        # 二维码过期时间/分钟
+        expire-time: 1
       payment-voucher:
         url: http://${qrcode.base-ip}:5174/worker/payment-voucher/upload
   training:
     checkin:
       # 培训签到二维码页面 URL
       url: http://${qrcode.base-ip}:5174/h5/checkin
+
+q2:
+  type-map:
+    "[Q2(限门式起重机)]": Q2M
+    "[Q2(限桥式起重机)]": Q2Q
+    "[Q2(限流动式起重机)]": Q2L
+    "[Q2(限升降机)]": Q2S

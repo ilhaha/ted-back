@@ -179,7 +179,7 @@ public class IdCardRecognition {
                 idCardDo.setIssueAuthority(issueAuthority);
                 String[] split = validPeriod.split("-");
                 idCardDo.setSetValidPeriodStart(DateUtil.getLocalDate(split[0], "yyyy.MM.dd"));
-                idCardDo.setSetValidPeriodEnd(DateUtil.getLocalDate(split[1], "yyyy.MM.dd"));
+                idCardDo.setSetValidPeriodEnd(split[1]);
             }
             return idCardDo;
         } catch (Exception e) {

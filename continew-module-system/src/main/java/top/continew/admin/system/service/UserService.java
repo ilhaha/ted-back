@@ -115,7 +115,7 @@ public interface UserService extends BaseService<UserResp, UserDetailResp, UserQ
      *
      * @param rawOldPassword 当前密码
      * @param rawNewPassword 新密码
-     * @param id          ID
+     * @param id             ID
      */
     void updatePassword(String rawOldPassword, String rawNewPassword, Long id);
 

@@ -72,6 +72,6 @@ public class IdCardDo {
     /**
      * 证件有效期结束时间
      */
-    private LocalDate setValidPeriodEnd;
+    private String setValidPeriodEnd;
 
 }

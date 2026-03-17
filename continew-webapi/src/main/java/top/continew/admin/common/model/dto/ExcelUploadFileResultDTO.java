@@ -20,8 +20,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
-
 /**
  * @author ilhaha
  * @Create 2025/11/5 13:57
@@ -55,6 +53,6 @@ public class ExcelUploadFileResultDTO {
     /**
      * 有效期截止日期
      */
-    private LocalDate validEndDate;
+    private String validEndDate;
 
 }

@@ -72,7 +72,7 @@ public class IdCardFileInfoResp extends FileInfo {
     /**
      * 有效期截止日期
      */
-    private LocalDate validEndDate;
+    private String validEndDate;
 
     /**
      * 身份证正面照片路径

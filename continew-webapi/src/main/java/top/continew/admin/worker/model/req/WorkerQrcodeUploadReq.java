@@ -22,6 +22,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import top.continew.admin.document.model.dto.DocFileDTO;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -44,6 +45,12 @@ public class WorkerQrcodeUploadReq {
      */
     @NotBlank(message = "手机号未填写")
     private String phone;
+
+    /**
+     * 出生日期
+     */
+    @NotNull(message = "未上传身份证")
+    private LocalDate birthDate;
 
     /**
      * 资料申请表文件集合

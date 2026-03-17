@@ -31,6 +31,7 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,7 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.common.constant.DocumentConstant;
 import top.continew.admin.common.constant.EnrollStatusConstant;
+import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.constant.WorkerApplyCheckConstants;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
@@ -86,6 +88,7 @@ import top.continew.admin.worker.service.WorkerApplyService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -143,6 +146,8 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     private final OrgMapper orgMapper;
 
     private final WeldingExamApplicationMapper weldingExamApplicationMapper;
+
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Value("${welding.metal-project-id}")
     private Long metalProjectId;
@@ -320,6 +325,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         apply.setClassId(classId);
         apply.setCandidateName(req.getRealName());
         apply.setGender(req.getGender());
+        apply.setBirthDate(req.getBirthDate());
         apply.setPhone(aesWithHMAC.encryptAndSign(phone));
         apply.setQualificationPath(req.getQualificationFileUrl());
         apply.setQualificationName(req.getQualificationName());
@@ -1003,6 +1009,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             try {
                 // 6 身份证正反面识别
                 IdCardFileInfoResp frontResp = uploadAndCheckIdCard(group.getIdCardFront(), 1, idCard, result, "正面");
+                System.out.println(frontResp);
                 if (frontResp == null)
                     continue;
                 if (!workerApplyDO.getCandidateName().equals(frontResp.getRealName())) {
@@ -1023,9 +1030,17 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 if (backResp == null)
                     continue;
 
-                if (backResp.getValidEndDate() != null && backResp.getValidEndDate().isBefore(LocalDate.now())) {
-                    result.getFailedList().add(new FailedUploadResp(idCard, "身份证已过期"));
-                    continue;
+                String validEndDate = backResp.getValidEndDate();
+
+                if (validEndDate != null && !"长期".equals(validEndDate)) {
+
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+                    LocalDate endDate = LocalDate.parse(validEndDate, formatter);
+
+                    if (endDate.isBefore(LocalDate.now())) {
+                        result.getFailedList().add(new FailedUploadResp(idCard, "身份证已过期"));
+                        continue;
+                    }
                 }
 
                 // 7 判断是否京籍
@@ -1062,6 +1077,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 WorkerApplyDO update = new WorkerApplyDO();
                 update.setId(workerApplyDO.getId());
                 update.setIdCardPhotoFront(frontResp.getUrl());
+                update.setBirthDate(frontResp.getBirthDate());
                 update.setIdCardAddress(frontResp.getAddress());
                 update.setIdCardPhotoBack(backResp.getUrl());
                 update.setFacePhoto(faceResp.getFacePhoto());
@@ -1244,6 +1260,23 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         baseMapper.update(new LambdaUpdateWrapper<WorkerApplyDO>().eq(WorkerApplyDO::getId, id)
             .set(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue()));
         return Boolean.TRUE;
+    }
+
+    /**
+     * 判断二维码是否过期
+     *
+     * @param verifyQrValidateReq
+     * @return
+     */
+    @Override
+    public Boolean qrValidate(VerifyQrValidateReq verifyQrValidateReq) {
+        String decryptedClassId = aesWithHMAC.verifyAndDecrypt(verifyQrValidateReq.getClassId());
+        if (ObjectUtil.isNull(decryptedClassId)) {
+            return Boolean.FALSE;
+        }
+        Boolean isExistClassQr = (Boolean)redisTemplate.opsForValue()
+            .get(RedisConstant.CLASS_APPLY_KEY + decryptedClassId);
+        return Boolean.TRUE.equals(isExistClassQr);
     }
 
     private Map<String, UploadGroupDTO> groupFilesByIdCard(List<MultipartFile> idCardFiles,

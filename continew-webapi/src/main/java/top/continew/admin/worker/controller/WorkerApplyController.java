@@ -190,6 +190,18 @@ public class WorkerApplyController extends BaseController<WorkerApplyService, Wo
     }
 
     /**
+     * 判断二维码是否过期
+     *
+     * @param verifyQrValidateReq
+     * @return
+     */
+    @SaIgnore
+    @PostMapping("/qr/validate")
+    public Boolean qrValidate(@Validated @RequestBody VerifyQrValidateReq verifyQrValidateReq) {
+        return baseService.qrValidate(verifyQrValidateReq);
+    }
+
+    /**
      * 机构根据作业人员报考id获取需要上传的资料信息
      *
      * @return

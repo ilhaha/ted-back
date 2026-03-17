@@ -97,4 +97,12 @@ public interface OrgClassService extends BaseService<OrgClassResp, OrgClassDetai
      * @return
      */
     PageResp<OrgClassResp> adminQueryPayAuditPage(OrgClassQuery query, PageQuery pageQuery);
+
+    /**
+     * 刷新班级报考二维码
+     *
+     * @param classId
+     * @return
+     */
+    Boolean qrRefresh(Long classId);
 }

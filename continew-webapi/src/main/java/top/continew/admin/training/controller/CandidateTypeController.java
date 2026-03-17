@@ -76,7 +76,7 @@ public class CandidateTypeController extends BaseController<CandidateTypeService
      * @return
      */
     @PostMapping("/inspection/password/reset")
-    public R<Boolean> resetInspectionPassword(@RequestBody CandidateTypeQuery query){
+    public R<Boolean> resetInspectionPassword(@RequestBody CandidateTypeQuery query) {
         return R.ok(baseService.resetInspectionPassword(query));
     }
 }

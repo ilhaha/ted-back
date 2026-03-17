@@ -16,6 +16,7 @@
 
 package top.continew.admin.training.controller;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
 import org.springframework.http.ResponseEntity;
 import top.continew.admin.exam.model.req.ReviewPaymentReq;
 import top.continew.admin.training.model.req.OrgClassPaymentUpdateReq;
@@ -49,6 +50,18 @@ import java.util.List;
 @CrudRequestMapping(value = "/training/orgClass", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
     Api.EXPORT})
 public class OrgClassController extends BaseController<OrgClassService, OrgClassResp, OrgClassDetailResp, OrgClassQuery, OrgClassReq> {
+
+    /**
+     * 刷新班级报考二维码
+     *
+     * @param classId
+     * @return
+     */
+    @SaCheckPermission("training:orgClass:qrRefresh")
+    @GetMapping("/qr/refresh/{classId}")
+    public Boolean qrRefresh(@PathVariable("classId") Long classId) {
+        return baseService.qrRefresh(classId);
+    }
 
     /**
      * 后台根据作业人员班级查询班级缴费信息
