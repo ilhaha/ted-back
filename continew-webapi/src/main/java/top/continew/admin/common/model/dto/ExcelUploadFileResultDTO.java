@@ -47,7 +47,7 @@ public class ExcelUploadFileResultDTO {
     /** 身份证反面照 URL */
     private String idCardPhotoBack;
 
-    /** 一寸照或人脸照 URL */
+    /** 二寸照或人脸照 URL */
     private String facePhoto;
 
     /**

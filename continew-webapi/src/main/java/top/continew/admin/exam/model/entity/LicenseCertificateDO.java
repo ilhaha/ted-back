@@ -79,7 +79,7 @@ public class LicenseCertificateDO extends BaseDO {
     private String originalComName;
 
     /**
-     * 一寸免冠照
+     * 二寸免冠照
      */
     private String facePhoto;
 

@@ -70,7 +70,7 @@ public class DocDetailResp implements Serializable {
     private LocalDate birthDate;
 
     /**
-     * 一寸免冠照存储地址
+     * 二寸免冠照存储地址
      */
     private String facePhoto;
 

@@ -141,9 +141,9 @@ public class CandidateTypeResp extends BaseResp {
     private String phone;
 
     /**
-     * 一寸照
+     * 二寸照
      */
-    @Schema(description = "一寸照")
+    @Schema(description = "二寸照")
     private String avatar;
 
     /**

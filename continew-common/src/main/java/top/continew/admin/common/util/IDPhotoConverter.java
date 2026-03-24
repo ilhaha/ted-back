@@ -24,13 +24,13 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 
 public class IDPhotoConverter {
-    private static final int TARGET_WIDTH = 295;
-    private static final int TARGET_HEIGHT = 413;
+    private static final int TARGET_WIDTH = 413;
+    private static final int TARGET_HEIGHT = 626;
 
     public static MultipartFile convertToOneInchPhoto(MultipartFile file) throws IOException {
         BufferedImage originalImage = ImageIO.read(file.getInputStream());
         if (originalImage == null) {
-            throw new RuntimeException("无法读取一寸照图片");
+            throw new RuntimeException("无法读取二寸照图片");
         }
 
         BufferedImage targetImage = new BufferedImage(TARGET_WIDTH, TARGET_HEIGHT, BufferedImage.TYPE_INT_RGB);

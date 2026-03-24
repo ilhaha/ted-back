@@ -63,12 +63,12 @@ public class LicenseCertificateConstant {
     public static final String PATH_SEPARATOR = "/";
 
     /**
-     * 存放一寸照的文件夹
+     * 存放二寸照的文件夹
      */
     public static final String FACE_PHOTO_FOLDER = "pics/";
 
     /**
-     * 一寸照后缀
+     * 二寸照后缀
      */
     public static final String FACE_PHOTO_SUFFIX = ".jpg";
 

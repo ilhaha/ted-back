@@ -253,12 +253,12 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
         if (frontOrBack != null && frontOrBack == 2) {
             try {
                 if (file.getSize() > 2 * 1024 * 1024) {
-                    throw new BusinessException("一寸免冠照大小不能超过 2MB");
+                    throw new BusinessException("二寸免冠照大小不能超过 2MB");
                 }
                 file = IDPhotoConverter.convertToOneInchPhoto(file);
 
             } catch (Exception e) {
-                throw new BusinessException("一寸免冠照裁剪失败");
+                throw new BusinessException("二寸免冠照裁剪失败");
             }
         }
         UploadPretreatment uploadPretreatment = fileStorageService.of(file)
@@ -307,7 +307,7 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
             IdCardDo idCardDo = idCardRecognition.uploadIdCard(file.getInputStream(), flag);
             ValidationUtils.throwIf(ObjectUtils.isEmpty(idCardDo), flag
                 ? "身份证正面信息识别失败"
-                : (frontOrBack == 2) ? "一寸免冠照上传失败" : "身份证反面信息识别失败");
+                : (frontOrBack == 2) ? "二寸免冠照上传失败" : "身份证反面信息识别失败");
             if (flag) {
                 fileInfoResp.setRealName(idCardDo.getName());
                 fileInfoResp.setGender(idCardDo.getSex() ? "女" : "男");

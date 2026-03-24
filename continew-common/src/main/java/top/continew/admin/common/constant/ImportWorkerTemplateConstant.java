@@ -35,7 +35,7 @@ public class ImportWorkerTemplateConstant {
             add("联系方式");
             add("身份证人像面");
             add("身份证国徽面");
-            add("一寸免冠照");
+            add("二寸免冠照");
             add("报名资格申请表");
         }
     };

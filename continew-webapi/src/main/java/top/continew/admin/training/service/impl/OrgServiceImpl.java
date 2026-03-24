@@ -1641,7 +1641,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             String tipText = """
                 温馨提示：
                 1. 请完整填写所有必填项，表头对应的内容不得为空；
-                2. 上传的图片（身份证正反面、一寸照等）请确保大小适配单元格，不可超出边界；
+                2. 上传的图片（身份证正反面、二寸照等）请确保大小适配单元格，不可超出边界；
                 3. 报名资格申请表请以 PDF 格式插入，并选择“文件附件”方式；
                 4. 请从第 3 行开始填写数据，确保中间无空行或空白记录；
                 5. 建议每次导入数据不超过 50 条，以提升导入效率。
@@ -1833,7 +1833,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
             List<ExcelRowErrorVO> failedList = excelParseResultVO.getFailedList();
 
             // 检查成功列表中的重复身份证号，将重复条目移到失败列表，并记录重复行号
-            removeDuplicateIdCard(successList, failedList);
+            removeDuplicateIdCard(successList, failedList, isWelding);
 
             // 删除数据库已存在身份证，将已存在的移到失败列表
             removeExistingIdCard(successList, failedList, classId);
@@ -2232,7 +2232,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 }
 
                 worker.setIdCardPhotoBack(idBack.getIdCardPhotoBack());
-                // 上传一寸免冠照
+                // 上传二寸免冠照
                 ExcelUploadFileResultDTO face = ExcelMediaUtils
                     .excelUploadFile(workbook, sheet, rowIndex, 4, uploadService, WorkerPictureTypeEnum.PASSPORT_PHOTO
                         .getValue());
@@ -2560,7 +2560,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
      * @param successList 成功导入列表
      * @param failedList  失败导入列表
      */
-    private void removeDuplicateIdCard(List<ExcelRowSuccessVO> successList, List<ExcelRowErrorVO> failedList) {
+    private void removeDuplicateIdCard(List<ExcelRowSuccessVO> successList,
+                                       List<ExcelRowErrorVO> failedList,
+                                       Boolean isWelding) {
 
         Map<String, List<ExcelRowSuccessVO>> idCardMap = new HashMap<>();
 
@@ -2573,11 +2575,14 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 continue;
             }
 
-            // ===== 1 判断年龄 =====
-            if (!isAgeValid(idCard)) {
+            // 2. 年龄校验
+            // 焊接是18-63 其他18-60
+            boolean valid = isWelding ? isWeldingAgeValid(idCard) : isAgeValid(idCard);
+            if (!valid) {
+                String msg = isWelding ? "身份证出生日期不符合18至63周岁要求" : "身份证出生日期不符合18至60周岁要求";
                 ExcelRowErrorVO error = new ExcelRowErrorVO();
                 BeanUtils.copyProperties(worker, error);
-                error.setErrorMessage("身份证出生日期不符合18至60周岁要求");
+                error.setErrorMessage(msg);
                 failedList.add(error);
                 iterator.remove();
                 continue;
@@ -2620,17 +2625,52 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         try {
 
-            if (idCard.length() != 18) {
+            if (idCard == null || idCard.length() != 18) {
                 return false;
             }
 
             String birthStr = idCard.substring(6, 14);
-
             LocalDate birthDate = LocalDate.parse(birthStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-            int age = Period.between(birthDate, LocalDate.now()).getYears();
+            LocalDate now = LocalDate.now();
 
-            return age >= 18 && age <= 60;
+            // 满18岁日期
+            LocalDate minDate = birthDate.plusYears(18);
+            // 满60岁日期（当天就算超龄）
+            LocalDate maxDate = birthDate.plusYears(60);
+
+            // 条件：
+            // 1. 已满18岁（今天 >= 18岁生日）
+            // 2. 未满60岁（今天 < 60岁生日）
+            return (!now.isBefore(minDate)) && now.isBefore(maxDate);
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isWeldingAgeValid(String idCard) {
+
+        try {
+
+            if (idCard == null || idCard.length() != 18) {
+                return false;
+            }
+
+            String birthStr = idCard.substring(6, 14);
+            LocalDate birthDate = LocalDate.parse(birthStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+            LocalDate now = LocalDate.now();
+
+            // 满18岁日期
+            LocalDate minDate = birthDate.plusYears(18);
+            // 满63岁日期（当天就算超龄）
+            LocalDate maxDate = birthDate.plusYears(63);
+
+            // 条件：
+            // 1. 已满18岁（今天 >= 18岁生日）
+            // 2. 未满63岁（今天 < 63岁生日）
+            return (!now.isBefore(minDate)) && now.isBefore(maxDate);
 
         } catch (Exception e) {
             return false;
@@ -2932,7 +2972,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                 throw new BusinessException(String.format("第 %d 行【身份证国徽面】不能为空", rowIndex + 1));
             }
             if (!ExcelMediaUtils.hasPicture(workbook, sheet, rowIndex, 4)) {
-                throw new BusinessException(String.format("第 %d 行【一寸免冠照】不能为空", rowIndex + 1));
+                throw new BusinessException(String.format("第 %d 行【二寸免冠照】不能为空", rowIndex + 1));
             }
 
             for (int col = 5; col < expectedHeaders.size(); col++) {

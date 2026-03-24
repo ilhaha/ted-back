@@ -343,7 +343,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     @Override
     public String valid(Long examPlanId, Integer status) {
 
-        ValidationUtils.throwIfNull(examPlanId, "考试计划字段为空");
+        ValidationUtils.throwIfNull(examPlanId, "考试计划为空");
 
         Long userId = TokenLocalThreadUtil.get().getUserId();
 
@@ -751,11 +751,11 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
                 if (examStartTime.isBefore(LocalDateTime.now())) {
                     throw new BusinessException("第" + rowIndex + "行：考试开始时间不能早于当前时间");
                 }
-                // 报名开始时间：考试前 7 天 09:00
-                LocalDateTime signupStartTime = examStartTime.minusDays(7).toLocalDate().atTime(9, 0);
+                // 报名开始时间：考试前 14 天 09:00
+                LocalDateTime signupStartTime = examStartTime.minusDays(14).toLocalDate().atTime(9, 0);
 
-                // 报名结束时间：考试前 1 天 17:00
-                LocalDateTime signupEndTime = examStartTime.minusDays(1).toLocalDate().atTime(17, 0);
+                // 报名结束时间：考试前 7 天 17:00
+                LocalDateTime signupEndTime = examStartTime.minusDays(7).toLocalDate().atTime(17, 0);
 
                 rowList.add(new ExamPlanExcelRowDTO(planName, projectDO
                     .getId(), signupStartTime, signupEndTime, examStartTime, maxCandidates, projectDO

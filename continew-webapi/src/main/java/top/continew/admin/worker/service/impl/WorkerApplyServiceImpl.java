@@ -1057,10 +1057,10 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
                 boolean isIncomplete = !missingDocs.isEmpty();
 
-                // 10 一寸照上传
+                // 10 二寸照上传
                 MultipartFile photoOneInch = group.getPhotoOneInch();
                 if (ObjectUtil.isNull(photoOneInch)) {
-                    result.getFailedList().add(new FailedUploadResp(idCard, "未上传一寸照"));
+                    result.getFailedList().add(new FailedUploadResp(idCard, "未上传二寸照"));
                     continue;
                 }
                 IdCardFileInfoResp faceResp = uploadService.uploadIdCard(photoOneInch, 2);
@@ -1286,7 +1286,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
         Map<String, UploadGroupDTO> grouped = new HashMap<>();
 
-        // 1 身份证 / 一寸照
+        // 1 身份证 / 二寸照
         for (MultipartFile file : idCardFiles) {
             if (file == null || file.getOriginalFilename() == null) {
                 continue;
@@ -1347,7 +1347,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         if (g.getIdCardBack() == null)
             missing.add("身份证反面");
         if (g.getPhotoOneInch() == null)
-            missing.add("一寸免冠照");
+            missing.add("二寸免冠照");
         if (g.getApplyForm() == null)
             missing.add("资格申请表");
 
@@ -1397,7 +1397,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     }
 
     private boolean isPhotoOneInch(String name) {
-        // 不含“正”或“反”就是一寸照（默认规则）
+        // 不含“正”或“反”就是二寸照（默认规则）
         return name != null && !name.contains("正") && !name.contains("反");
     }
 

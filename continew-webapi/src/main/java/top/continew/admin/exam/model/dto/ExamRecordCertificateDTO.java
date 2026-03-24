@@ -57,7 +57,7 @@ public class ExamRecordCertificateDTO {
     private String workUnit;
 
     /**
-     * 一寸免冠照
+     * 二寸免冠照
      */
     private String facePhoto;
 

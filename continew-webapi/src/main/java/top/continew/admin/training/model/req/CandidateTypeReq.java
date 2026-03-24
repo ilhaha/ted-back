@@ -78,7 +78,7 @@ public class CandidateTypeReq implements Serializable {
     private String phone;
 
     /**
-     * 一寸照
+     * 二寸照
      */
     private String avatar;
 

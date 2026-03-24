@@ -108,7 +108,7 @@ public class WorkerQrcodeUploadReq {
     /**
      * 作业人员正脸照地址
      */
-    @NotBlank(message = "一寸免冠照未上传")
+    @NotBlank(message = "二寸免冠照未上传")
     private String facePhoto;
 
     /**

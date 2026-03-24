@@ -84,8 +84,8 @@ public class ExamCandidateInfoVO implements Serializable {
     private Integer examDuration;
 
     /**
-     * 一寸照
+     * 二寸照
      */
-    @Schema(description = "一寸照", example = "一寸照")
+    @Schema(description = "二寸照", example = "二寸照")
     private String facePhoto;
 }

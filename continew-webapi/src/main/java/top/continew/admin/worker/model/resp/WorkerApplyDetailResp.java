@@ -114,10 +114,10 @@ public class WorkerApplyDetailResp extends BaseDetailResp {
     private String idCardPhotoBack;
 
     /**
-     * 一寸免冠照存储地址
+     * 二寸免冠照存储地址
      */
-    @Schema(description = "一寸免冠照存储地址")
-    @ExcelProperty(value = "一寸免冠照存储地址")
+    @Schema(description = "二寸免冠照存储地址")
+    @ExcelProperty(value = "二寸免冠照存储地址")
     private String facePhoto;
 
     /**

@@ -147,7 +147,7 @@ public class ExcelMediaUtils {
                         dto.setIdCardPhotoBack(idCardFileInfoResp.getUrl());
                         dto.setValidEndDate(idCardFileInfoResp.getValidEndDate());
                     } else if (WorkerPictureTypeEnum.PASSPORT_PHOTO.getValue().equals(type)) {
-                        // 如果是一寸照类型，先转换为标准一寸照片
+                        // 如果是二寸照类型，先转换为标准二寸照片
                         //                        file = IDPhotoConverter.convertToOneInchPhoto(file);
                         IdCardFileInfoResp idCardFileInfoResp = uploadService.uploadIdCard(file, type);
                         dto.setFacePhoto(idCardFileInfoResp.getFacePhoto());

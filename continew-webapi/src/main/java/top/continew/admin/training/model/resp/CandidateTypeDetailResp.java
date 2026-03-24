@@ -148,10 +148,10 @@ public class CandidateTypeDetailResp extends BaseDetailResp {
     private String phone;
 
     /**
-     * 一寸照
+     * 二寸照
      */
-    @Schema(description = "一寸照")
-    @ExcelProperty(value = "一寸照")
+    @Schema(description = "二寸照")
+    @ExcelProperty(value = "二寸照")
     private String avatar;
 
     /**

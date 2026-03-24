@@ -105,10 +105,10 @@ public class WorkerApplyReq implements Serializable {
     private String idCardPhotoBack;
 
     /**
-     * 一寸免冠照存储地址
+     * 二寸免冠照存储地址
      */
-    @Schema(description = "一寸免冠照存储地址")
-    @NotBlank(message = "一寸免冠照存储地址不能为空")
-    @Length(max = 255, message = "一寸免冠照存储地址长度不能超过 {max} 个字符")
+    @Schema(description = "二寸免冠照存储地址")
+    @NotBlank(message = "二寸免冠照存储地址不能为空")
+    @Length(max = 255, message = "二寸免冠照存储地址长度不能超过 {max} 个字符")
     private String facePhoto;
 }

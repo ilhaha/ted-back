@@ -173,7 +173,7 @@
           AND tep.is_deleted = 0
           AND tou.user_id = #{userId}
         GROUP BY tep.id
-        ORDER BY tep.id DESC;
+        ORDER BY tep.is_final_confirmed , tep.id DESC;
     </select>
     <select id="listConflictClassrooms" resultType="java.lang.String">
         SELECT DISTINCT tc.classroom_name
