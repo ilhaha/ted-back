@@ -19,6 +19,7 @@ package top.continew.admin.user;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.system.mapper.UserMapper;
 
 @SpringBootTest
@@ -27,8 +28,12 @@ public class UserTest {
     @Resource
     private UserMapper userMapper;
 
+    @Resource
+    private AESWithHMAC aesWithHMAC;
+
     @Test
     public void test() {
+        System.out.println(aesWithHMAC.encryptAndSign(("232302198002206628")));
     }
 
 }
