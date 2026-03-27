@@ -84,9 +84,15 @@ public class OrgClassQuery implements Serializable {
     private Boolean isOrgQuery;
 
     /**
-     * 查询标志 1-报名资料审核 2-缴费审核
+     * 查询标志 1-报名资料审核 2-缴费审核 3-班级管理
      */
     @Schema(description = "查询标志")
     @QueryIgnore
     private Integer flag;
+
+    /**
+     * 所属机构
+     */
+    @Query(type = QueryType.LIKE, columns = "org.name")
+    private String orgName;
 }

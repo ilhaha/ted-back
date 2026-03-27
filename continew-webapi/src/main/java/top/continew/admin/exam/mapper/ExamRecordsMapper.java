@@ -97,4 +97,12 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
                                               @Param("roadExamTypeId") Long roadExamTypeId,
                                               @Param("metalProjectId") Long metalProjectId,
                                               @Param("nonmetalProjectId") Long nonmetalProjectId);
+
+    /**
+     * 获取考试计划的考题数
+     * 
+     * @param planId
+     * @return
+     */
+    Long getTopicNumber(@Param("planId") Long planId);
 }

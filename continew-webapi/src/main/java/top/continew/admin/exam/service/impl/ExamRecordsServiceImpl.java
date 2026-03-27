@@ -309,9 +309,17 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
 
             examRecordsDO.setRoadInputStatus(ExamScoreEntryStatusEnum.ENTERED.getValue());
 
-            examRecordsDO.setExamResultStatus(examRecordsDO.getExamScores() >= ExamRecordConstants.PASSING_SCORE
+            // 获取这场考试考题数
+            Long topicNumber = baseMapper.getTopicNumber(examRecordsDO.getPlanId());
+
+            double ratio = (topicNumber != null && topicNumber > 0 && examRecordsDO.getExamScores() != null)
+                ? examRecordsDO.getExamScores() * 1.0 / topicNumber
+                : 0;
+
+            examRecordsDO.setExamResultStatus(ratio >= ExamRecordConstants.PASSING_RATIO
                 ? ExamResultStatusEnum.PASSED.getValue()
                 : ExamResultStatusEnum.FAILED.getValue());
+
         } else {
             // 如果任意一个存在，则成绩未录入
             if (!hasOper) {
@@ -394,6 +402,7 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
 
         // 去重计划id
         List<Long> distinctPlanIds = examRecordsDOS.stream().map(ExamRecordsDO::getPlanId).distinct().toList();
+        Long topicNumber = baseMapper.getTopicNumber(distinctPlanIds.get(0));
 
         // 查询计划支持的考试类型
         List<CheckPlanHasExamTypeDTO> planExamTypes = baseMapper.checkPlanHasExamType(distinctPlanIds, roadExamTypeId);
@@ -446,8 +455,15 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
 
             // 判断是否合格
             boolean passed = true;
-            if (record.getExamScores() == null || record.getExamScores() < ExamRecordConstants.PASSING_SCORE)
+            Integer score = record.getExamScores();
+            if (score == null || topicNumber == null || topicNumber == 0) {
                 passed = false;
+            } else {
+                double ratio = score * 1.0 / topicNumber;
+                if (ratio < ExamRecordConstants.PASSING_RATIO) {
+                    passed = false;
+                }
+            }
             if (isOperRequired && (record.getOperScores() == null || record
                 .getOperScores() < ExamRecordConstants.PASSING_SCORE))
                 passed = false;
@@ -514,10 +530,16 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
 
         // 5 成绩是否达标（≥70）
         List<Long> notPassList = examRecordsDOS.stream().filter(record -> {
-            CheckPlanHasExamTypeDTO plan = planExamTypeMap.get(record.getPlanId());
-            if (record.getExamScores() < ExamRecordConstants.PASSING_SCORE) {
+            Long topicNumber = baseMapper.getTopicNumber(record.getPlanId());
+            Integer score = record.getExamScores();
+            if (score == null || topicNumber == null || topicNumber == 0) {
                 return true;
             }
+            double ratio = score * 1.0 / topicNumber;
+            if (ratio < ExamRecordConstants.PASSING_RATIO) {
+                return true;
+            }
+            CheckPlanHasExamTypeDTO plan = planExamTypeMap.get(record.getPlanId());
             if (plan != null && ProjectHasExamTypeEnum.YES.getValue().equals(plan.getIsOperation()) && record
                 .getOperScores() < ExamRecordConstants.PASSING_SCORE) {
                 return true;
@@ -841,7 +863,15 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
             update.setId(record.getId());
             update.setOperInputStatus(ExamScoreEntryStatusEnum.ENTERED.getValue());
             update.setOperScores(operPassed ? ExamRecordConstants.PASSING_SCORE : 0);
-            if (operPassed && record.getExamScores() >= ExamRecordConstants.PASSING_SCORE) {
+            Long topicNumber = baseMapper.getTopicNumber(record.getPlanId());
+            Integer score = record.getExamScores();
+            boolean isPassed = false;
+            if (score != null && topicNumber != null && topicNumber > 0) {
+                double ratio = score * 1.0 / topicNumber;
+                isPassed = ratio >= ExamRecordConstants.PASSING_RATIO;
+            }
+
+            if (operPassed && isPassed) {
                 update.setExamResultStatus(ExamResultStatusEnum.PASSED.getValue());
             } else {
                 update.setExamResultStatus(ExamResultStatusEnum.FAILED.getValue());
@@ -931,8 +961,16 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
 
             // 判断是否合格
             boolean passed = true;
-            if (record.getExamScores() == null || record.getExamScores() < ExamRecordConstants.PASSING_SCORE)
+            Long topicNumber = baseMapper.getTopicNumber(record.getPlanId());
+            Integer score = record.getExamScores();
+            if (score == null || topicNumber == null || topicNumber == 0) {
                 passed = false;
+            } else {
+                double ratio = score * 1.0 / topicNumber;
+                if (ratio < ExamRecordConstants.PASSING_RATIO) {
+                    passed = false;
+                }
+            }
             if (isOperRequired && (record.getOperScores() == null || record
                 .getOperScores() < ExamRecordConstants.PASSING_SCORE))
                 passed = false;

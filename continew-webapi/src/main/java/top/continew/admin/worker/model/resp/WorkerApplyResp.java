@@ -182,4 +182,16 @@ public class WorkerApplyResp extends BaseResp {
      */
     @Schema(description = "焊接资格项目,非焊接项目可为空")
     private String weldingProjectCode;
+
+    /**
+     * 排序
+     */
+    @Schema(description = "排序")
+    private Integer sort;
+
+    /**
+     * 上传异常
+     */
+    @Schema(description = "上传异常")
+    private String uploadException;
 }

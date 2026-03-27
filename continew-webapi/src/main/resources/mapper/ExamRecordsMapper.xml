@@ -332,5 +332,16 @@
         ORDER BY te.seat_id
     </select>
 
+    <select id="getTopicNumber" resultType="java.lang.Long">
+        SELECT tc.topic_number
+        FROM ted_exam_plan tep
+                 LEFT JOIN ted_project tp
+                           ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                 LEFT JOIN ted_category tc
+                           ON tp.category_id = tc.id AND tc.is_deleted = 0
+        WHERE tep.id = #{planId}
+          AND tep.is_deleted = 0
+    </select>
+
 
 </mapper>

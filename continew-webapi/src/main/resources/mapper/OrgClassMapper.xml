@@ -11,6 +11,7 @@
     </select>
     <select id="workerClassPage" resultType="top.continew.admin.training.model.resp.OrgClassDetailResp">
         SELECT toc.*,
+               org.name AS org_name,
                tp.project_name,
                COUNT(twa.id)                                   AS worker_count,
                SUM(CASE WHEN twa.status = 0 THEN 1 ELSE 0 END) AS pending_review_count,
@@ -24,6 +25,8 @@
                            ON toc.project_id = tp.id AND tp.is_deleted = 0
                  LEFT JOIN ted_worker_apply twa
                            ON toc.id = twa.class_id AND twa.is_deleted = 0
+                LEFT JOIN ted_org org
+                    ON toc.org_id = org.id AND org.is_deleted = 0
             ${ew.customSqlSegment}
         GROUP BY toc.id
         ORDER BY toc.id DESC

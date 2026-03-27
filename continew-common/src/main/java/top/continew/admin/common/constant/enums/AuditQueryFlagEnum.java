@@ -23,7 +23,7 @@ package top.continew.admin.common.constant.enums;
  */
 public enum AuditQueryFlagEnum {
 
-    APPLY_AUDIT(1, "报名资料审核"), PAY_AUDIT(2, "缴费审核");
+    APPLY_AUDIT(1, "报名资料审核"), PAY_AUDIT(2, "缴费审核"), CLASS_QUERY(3, "班级管理");
 
     private final Integer code;
     private final String desc;

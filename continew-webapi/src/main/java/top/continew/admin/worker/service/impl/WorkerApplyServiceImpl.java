@@ -37,10 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.multipart.MultipartFile;
-import top.continew.admin.common.constant.DocumentConstant;
-import top.continew.admin.common.constant.EnrollStatusConstant;
-import top.continew.admin.common.constant.RedisConstant;
-import top.continew.admin.common.constant.WorkerApplyCheckConstants;
+import top.continew.admin.common.constant.*;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.enums.DisEnableStatusEnum;
 import top.continew.admin.common.enums.GenderEnum;
@@ -90,6 +87,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -470,9 +468,12 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         }
         // 9. 批量更新审核状态
         String remark = req.getRemark();
+
         int updateRow = baseMapper.update(new LambdaUpdateWrapper<WorkerApplyDO>().set(!ObjectUtils
             .isEmpty(remark), WorkerApplyDO::getRemark, remark)
             .set(WorkerApplyDO::getStatus, req.getStatus())
+            .set(WorkerApplyReviewStatusEnum.APPROVED.getValue()
+                .equals(status), WorkerApplyDO::getUploadException, WorkerUploadException.NORMAL)
             .in(WorkerApplyDO::getId, req.getReviewIds()));
 
         // 如果审核状态是虚假材料，那么给机构扣分
@@ -606,14 +607,27 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             .map(WorkerApplyDO::getCandidateName)
             .collect(Collectors.joining(", ")));
 
+        OrgClassDO orgClassDO = orgClassMapper.selectById(classId);
+        ValidationUtils.throwIfNull(orgClassDO, "班级信息不存在");
+        // 查出当前班级最大的那个序号
+        WorkerApplyDO maxSortWorker = baseMapper.selectOne(new LambdaQueryWrapper<WorkerApplyDO>()
+            .eq(WorkerApplyDO::getClassId, classId)
+            .orderByDesc(WorkerApplyDO::getSort)
+            .last("LIMIT 1"));
+        Integer maxSort = ObjectUtil.isNull(maxSortWorker) ? 0 : maxSortWorker.getSort();
+
+        AtomicInteger sort = new AtomicInteger(maxSort);
+
         // 4. 构造导入数据
         List<WorkerApplyDO> toImport = workerOrgImportReqs.stream().map(item -> {
             WorkerApplyDO workerApplyDO = new WorkerApplyDO();
+            int currentSort = sort.incrementAndGet();
             BeanUtil.copyProperties(item, workerApplyDO);
             workerApplyDO.setPhone(aesWithHMAC.encryptAndSign(item.getPhone()));
             String encryptIdCardNo = aesWithHMAC.encryptAndSign(item.getIdCardNumber());
             workerApplyDO.setIdCardNumber(encryptIdCardNo);
             workerApplyDO.setUpdateTime(LocalDateTime.now());
+            workerApplyDO.setSort(currentSort);
             return workerApplyDO;
         }).toList();
 
@@ -622,8 +636,6 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
         baseMapper.insertBatch(toImport);
 
-        OrgClassDO orgClassDO = orgClassMapper.selectById(classId);
-        ValidationUtils.throwIfNull(orgClassDO, "班级信息不存在");
         // 判断是否是焊接班级
         Long projectId = orgClassDO.getProjectId();
         Boolean isWelding = metalProjectId.equals(projectId) || nonmetalProjectId.equals(projectId);
@@ -868,7 +880,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         // 2. 校验身份证号是否一致（数据库中是加密存储）
         String encryptedReqIdCard = aesWithHMAC.encryptAndSign(req.getIdCardNumber());
         ValidationUtils.throwIf(!encryptedReqIdCard.equals(workerApply.getIdCardNumber()), "所上传的身份证照片与报考记录对应的身份证号不一致");
-        ValidationUtils.throwIf(!workerApply.getCandidateName().equals(req.getCandidateName()), "上传的身份证图片姓名与作业人员姓名不匹配");
+
         // 校验身份证是否满18到60周岁
         LocalDate birth = req.getBirthDate();
         if (birth == null) {
@@ -884,6 +896,9 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
         // 3. 更新信息
         WorkerApplyDO update = new WorkerApplyDO();
+        if (!workerApply.getCandidateName().equals(req.getCandidateName())) {
+            update.setUploadException(WorkerUploadException.NAME_ID_MISMATCH);
+        }
         update.setId(req.getWorkerId());
         update.setQualificationPath(req.getQualificationFileUrl());
         update.setQualificationName(req.getQualificationName());
@@ -1009,13 +1024,12 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             try {
                 // 6 身份证正反面识别
                 IdCardFileInfoResp frontResp = uploadAndCheckIdCard(group.getIdCardFront(), 1, idCard, result, "正面");
-                System.out.println(frontResp);
                 if (frontResp == null)
                     continue;
-                if (!workerApplyDO.getCandidateName().equals(frontResp.getRealName())) {
-                    result.getFailedList().add(new FailedUploadResp(idCard, "上传的身份证图片姓名与作业人员姓名不匹配"));
-                    continue;
+                if (!workerApplyDO.getIdCardNumber().equals(aesWithHMAC.encryptAndSign(frontResp.getIdCardNumber()))) {
+                    result.getFailedList().add(new FailedUploadResp(idCard, "上传的身份证图片身份证号与作业人员身份证号不匹配"));
                 }
+
                 LocalDate birth = frontResp.getBirthDate();
                 LocalDate now = LocalDate.now();
                 LocalDate minDate = now.minusYears(60);
@@ -1083,10 +1097,12 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 update.setFacePhoto(faceResp.getFacePhoto());
                 update.setQualificationPath(applyResp.getUrl());
                 update.setQualificationName(group.getApplyForm().getOriginalFilename());
+                if (!workerApplyDO.getCandidateName().equals(frontResp.getRealName())) {
+                    update.setUploadException(WorkerUploadException.NAME_ID_MISMATCH);
+                }
                 update.setStatus(isIncomplete
                     ? WorkerApplyReviewStatusEnum.DOC_COMPLETE.getValue()
                     : WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue());
-                update.setRemark("");
                 updateList.add(update);
 
                 // 项目资料上传
@@ -1204,8 +1220,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         baseMapper.update(new LambdaUpdateWrapper<WorkerApplyDO>().eq(WorkerApplyDO::getClassId, classId)
             .eq(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.DOC_UPLOADED.getValue())
             .set(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.PENDING_REVIEW.getValue())
-            .set(WorkerApplyDO::getUpdateTime, LocalDateTime.now())
-            .set(WorkerApplyDO::getRemark, null));
+            .set(WorkerApplyDO::getUpdateTime, LocalDateTime.now()));
 
         return Boolean.TRUE;
     }
@@ -1415,7 +1430,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
     @Override
     public PageResp<WorkerApplyResp> page(WorkerApplyQuery query, PageQuery pageQuery) {
         QueryWrapper<WorkerApplyDO> queryWrapper = this.buildQueryWrapper(query);
-        queryWrapper.eq("twa.is_deleted", 0).orderByAsc("twa.update_time");
+        queryWrapper.eq("twa.is_deleted", 0).orderByAsc("twa.sort");
         Boolean isOrgQuery = query.getIsOrgQuery();
         if (!isOrgQuery) {
             queryWrapper.eq("twa.status", WorkerApplyReviewStatusEnum.PENDING_REVIEW.getValue());
@@ -1445,11 +1460,11 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
                 // 报名ID → (资料名称 → URL)
                 Map<Long, Map<String, String>> workerDocMap = docList.stream()
-                    .collect(Collectors.groupingBy(WorkerApplyDocAndNameDTO::getWorkerApplyId, // 按 worker_apply_id 分组
-                        LinkedHashMap::new, // 保持顺序
-                        Collectors.toMap(WorkerApplyDocAndNameDTO::getTypeName, WorkerApplyDocAndNameDTO::getDocPath, (
-                                                                                                                       a,
-                                                                                                                       b) -> a + "," + b, LinkedHashMap::new)));
+                    .filter(e -> e.getTypeName() != null)
+                    .collect(Collectors
+                        .groupingBy(WorkerApplyDocAndNameDTO::getWorkerApplyId, LinkedHashMap::new, Collectors
+                            .toMap(WorkerApplyDocAndNameDTO::getTypeName, WorkerApplyDocAndNameDTO::getDocPath, (a,
+                                                                                                                 b) -> a + "," + b, LinkedHashMap::new)));
 
                 // 注入到响应对象
                 records.forEach(item -> {

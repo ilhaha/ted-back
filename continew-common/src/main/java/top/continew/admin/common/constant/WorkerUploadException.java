@@ -18,11 +18,17 @@ package top.continew.admin.common.constant;
 
 /**
  * @author ilhaha
- * @Create 2025/12/24 14:44
+ * @Create 2026/3/27 9:40
  */
-public class ExamRecordConstants {
+public class WorkerUploadException {
 
-    public static final Integer PASSING_SCORE = 70;
+    /**
+     * 无异常
+     */
+    public static final String NORMAL = "0";
 
-    public static final double PASSING_RATIO = 0.7;
+    /**
+     * 姓名与身份证姓名不匹配
+     */
+    public static final String NAME_ID_MISMATCH = "1";
 }

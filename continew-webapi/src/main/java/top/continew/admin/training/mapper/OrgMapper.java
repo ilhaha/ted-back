@@ -135,4 +135,7 @@ public interface OrgMapper extends BaseMapper<OrgDO> {
 
     List<Long> selectAlterReusedCandidates(@Param("candidateIds") Set<Long> allCandidateIds,
                                            @Param("planIds") List<Long> planIds);
+
+    List<ProjectCategoryVO> getAllWorkerCatergory();
+
 }

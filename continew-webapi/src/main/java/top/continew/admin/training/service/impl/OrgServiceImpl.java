@@ -978,8 +978,16 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         if (ObjectUtil.isEmpty(orgId)) {
             // 获取当前登录的用户信息
             UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
+            Long userId = userTokenDo.getUserId();
+            Long count = orgUserMapper.selectCount(new LambdaQueryWrapper<TedOrgUser>()
+                .eq(TedOrgUser::getUserId, userId));
             // 查询所有父级分类
-            parentList = baseMapper.getSelectCategoryProject(userTokenDo.getUserId());
+            if (count > 0) {
+                parentList = baseMapper.getSelectCategoryProject(userId);
+            } else {
+                parentList = baseMapper.getAllWorkerCatergory();
+            }
+
         } else {
             // 查询所有父级分类
             parentList = baseMapper.getSelectCategoryProjectByOrgId(orgId);
@@ -1062,6 +1070,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         if (ObjectUtil.isEmpty(orgId)) {
             UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
             parentList = baseMapper.getSelectCategoryProject(userTokenDo.getUserId());
+
         } else {
             parentList = baseMapper.getSelectCategoryProjectByOrgId(orgId);
         }

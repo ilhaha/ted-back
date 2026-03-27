@@ -170,14 +170,27 @@
                tev.violation_desc,
                tev.illegal_url,
                ter.exam_scores,
-               ter.attempt_type
+               ter.attempt_type,
+               tp_info.topic_number,
+               twa.face_photo
         FROM ted_enroll te
                  LEFT JOIN sys_user
                            ON te.user_id = sys_user.id
+                 LEFT JOIN ted_worker_apply twa
+                           ON te.class_id = twa.class_id  AND sys_user.username = twa.id_card_number AND twa.is_deleted = 0
                  LEFT JOIN ted_exam_violation tev
                            ON te.user_id = tev.candidate_id AND tev.plan_id = #{planId} AND tev.is_deleted = 0
                  LEFT JOIN ted_exam_records ter
                            ON te.user_id = ter.candidate_id AND ter.plan_id = #{planId} AND ter.is_deleted = 0
+                 CROSS JOIN (
+            SELECT tc.topic_number
+            FROM ted_exam_plan tep
+                     LEFT JOIN ted_project tp
+                               ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                     LEFT JOIN ted_category tc
+                               ON tp.category_id = tc.id AND tc.is_deleted = 0
+            WHERE tep.id = #{planId} AND tep.is_deleted = 0
+        ) tp_info
             ${ew.customSqlSegment}
     </select>
     <select id="getWorkerApplyList" resultType="top.continew.admin.exam.model.resp.EnrollResp">

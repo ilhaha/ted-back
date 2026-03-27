@@ -34,11 +34,13 @@
                twa.id_card_photo_back,
                twa.face_photo,
                twa.`status`,
+               twa.upload_exception,
                twa.political_status,
                twa.education,
                twa.work_unit,
                twa.address,
                twa.welding_project_code,
+               twa.sort,
                toc.class_name,
                tp.project_name,
                tc.`name` AS category_name

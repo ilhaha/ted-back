@@ -72,4 +72,14 @@ public class ExamCandidateVO implements Serializable {
      * 考试类型（0首考、1补考）
      */
     private Integer attemptType;
+
+    /**
+     * 考试题目数
+     */
+    private Long topicNumber;
+
+    /**
+     * 头像
+     */
+    private String facePhoto;
 }

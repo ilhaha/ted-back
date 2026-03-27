@@ -163,9 +163,11 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
                 page = baseMapper.adminQueryWorkerClassPage(new Page<>(pageQuery.getPage(), pageQuery
                     .getSize()), queryWrapper);
 
-            } else {
+            } else if (AuditQueryFlagEnum.PAY_AUDIT.getCode().equals(flag)) {
                 page = baseMapper.adminQueryPayAuditPage(new Page<>(pageQuery.getPage(), pageQuery
                     .getSize()), queryWrapper);
+            } else {
+                page = baseMapper.workerClassPage(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
             }
         }
         PageResp<OrgClassResp> build = PageResp.build(page, super.getListClass());
@@ -222,9 +224,8 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         final int maxRetry = 5;
         while (retry < maxRetry) {
             retry++;
-
             // 生成班级编号
-            String className = generateClassCode(req, orgDO.getCode(), orgId);
+            String className = generateClassCode(req, orgDO.getCode(), orgId, retry);
             req.setClassName(className);
 
             try {
@@ -260,7 +261,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
      * 生成班级编号
      * 规则：考试类型 + 年份(两位) + 学校代号 + 项目编码 + 班级序号(三位)
      */
-    private String generateClassCode(OrgClassReq req, String orgCode, Long orgId) {
+    private String generateClassCode(OrgClassReq req, String orgCode, Long orgId, int retry) {
         // 考试类型
         String examType = OrgClassType.WORKER_TYPE.getClassType().equals(req.getClassType()) ? "K" : "P";
 
@@ -280,7 +281,7 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         Long count = baseMapper.selectCount(new LambdaQueryWrapper<OrgClassDO>().eq(OrgClassDO::getClassType, req
             .getClassType()).eq(OrgClassDO::getProjectId, projectDO.getId()).eq(OrgClassDO::getOrgId, orgId));
 
-        Long sequence = count + 1;
+        Long sequence = count + retry;
         String sequenceStr = String.format("%03d", sequence);
         String projectCode = projectDO.getProjectCode();
         String q2Value = q2Config.getTypeMap().getOrDefault(projectCode, projectCode);

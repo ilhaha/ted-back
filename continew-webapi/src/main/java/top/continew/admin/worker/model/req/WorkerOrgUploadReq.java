@@ -98,4 +98,9 @@ public class WorkerOrgUploadReq {
     @NotBlank(message = "考生姓名")
     private String candidateName;
 
+    /**
+     * 上传异常
+     */
+    private String uploadException;
+
 }

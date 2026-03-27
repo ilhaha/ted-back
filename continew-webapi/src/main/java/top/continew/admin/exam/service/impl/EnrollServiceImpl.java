@@ -868,7 +868,17 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             .eq(ExamRecordsDO::getPlanId, planId)
             .last("limit 1"));
         ValidationUtils.throwIfNull(examRecordsDO, "未查询到该考生的考试记录");
-        ValidationUtils.throwIf(examRecordsDO.getExamScores() >= ExamRecordConstants.PASSING_SCORE, "考生成绩及格，无需补考");
+        Long topicNumber = examRecordsMapper.getTopicNumber(examRecordsDO.getPlanId());
+        Integer score = examRecordsDO.getExamScores();
+
+        boolean isPassed = false;
+
+        if (topicNumber != null && topicNumber > 0 && score != null) {
+            double ratio = score * 1.0 / topicNumber;
+            isPassed = ratio >= ExamRecordConstants.PASSING_RATIO;
+        }
+
+        ValidationUtils.throwIf(isPassed, "考生成绩及格，无需补考");
 
         ValidationUtils.throwIf(!ExamRecordAttemptEnum.FIRST.getValue()
             .equals(examRecordsDO.getAttemptType()), "补考次数已用完，无法再次补考");

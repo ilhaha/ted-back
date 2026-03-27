@@ -296,8 +296,9 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
             .eq(EnrollDO::getExamPlanId, restPaperReq.getPlanId());
         EnrollDO enrollDO = enrollMapper.selectOne(enrollDOLambdaQueryWrapper);
         ValidationUtils.throwIfNull(enrollDO, "未查询到该考生报名信息");
-        ValidationUtils.throwIf(!EnrollStatusConstant.SIGNED_IN.equals(enrollDO.getExamStatus()) && !restPaperReq
-            .getIsMakeUp(), "当前考生考试状态不允许重置试卷，仅【已签到、补考】状态可重置");
+        ValidationUtils.throwIf(!EnrollStatusConstant.SIGNED_IN.equals(enrollDO
+            .getExamStatus()) && !EnrollStatusConstant.RETAKE.equals(enrollDO.getExamStatus()) && !restPaperReq
+                .getIsMakeUp(), "当前考生考试状态不允许重置试卷，仅【已签到、补考】状态可重置");
         // 删除之前的试卷
         Long enrollId = enrollDO.getId();
         candidateExamPaperMapper.delete(new LambdaQueryWrapper<CandidateExamPaperDO>()
