@@ -127,12 +127,6 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
 
     private final Q2Config q2Config;
 
-    @Value("${welding.metal-project-id}")
-    private Long metalProjectId;
-
-    @Value("${welding.nonmetal-project-id}")
-    private Long nonmetalProjectId;
-
     /**
      * 重写分页查询
      *
@@ -201,22 +195,6 @@ public class OrgClassServiceImpl extends BaseServiceImpl<OrgClassMapper, OrgClas
         // 设置机构ID
         Long orgId = orgDO.getId();
         req.setOrgId(orgId);
-        // 判断是否添加的是焊接项目的班级
-        //        boolean isWelding = Objects.equals(projectId, metalProjectId) || Objects.equals(projectId, nonmetalProjectId);
-        //
-        //        if (isWelding) {
-        //            // 判断焊接类型
-        //            WeldingTypeEnum weldingTypeEnum = Objects.equals(projectId, metalProjectId)
-        //                ? WeldingTypeEnum.METAL
-        //                : WeldingTypeEnum.NON_METAL;
-        //
-        //            Long count = weldingExamApplicationMapper.selectCount(new LambdaQueryWrapper<WeldingExamApplicationDO>()
-        //                .eq(WeldingExamApplicationDO::getOrgId, orgId)
-        //                .eq(WeldingExamApplicationDO::getStatus, WeldingExamApplicationStatusEnum.PASS_REVIEW.getValue())
-        //                .eq(WeldingExamApplicationDO::getWeldingType, weldingTypeEnum.getValue()));
-        //
-        //            ValidationUtils.throwIf(count == null || count == 0, "机构下未有申报通过的" + weldingTypeEnum.getDesc() + "项目");
-        //        }
 
         // 循环重试生成班级编号并插入
         Long classId = null;

@@ -33,7 +33,9 @@ public class UserTest {
 
     @Test
     public void test() {
-        System.out.println(aesWithHMAC.encryptAndSign(("19893874060")));
+//        System.out.println(aesWithHMAC.encryptAndSign(("11011119910630571X")));
+        // jWjEcIeCpsaXz9k1fuFerEUnk3I69wFmeo2LwVqy0uc=:1F7mUAXdAaGGUm2RbADRrMYwzEqUOUhtwyxPp15YLBs=
+        System.out.println(aesWithHMAC.encryptAndSign(("41302619840123721X")));
     }
 
 }

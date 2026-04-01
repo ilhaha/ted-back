@@ -75,7 +75,7 @@ public class ExamPlanReq implements Serializable {
      * 理论考场
      */
     @Schema(description = "理论考场")
-    @NotNull(message = "理论考场未选择")
+//    @NotNull(message = "理论考场未选择")
     private List<Long> theoryClassroomId;
     /**
      * 实操考场

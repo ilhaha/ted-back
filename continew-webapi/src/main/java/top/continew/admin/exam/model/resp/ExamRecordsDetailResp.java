@@ -82,6 +82,14 @@ public class ExamRecordsDetailResp extends BaseDetailResp {
     private Integer reviewStatus;
 
     /**
+     * 理论是否免考（0不免，1免考）
+     */
+    @Schema(description = "理论是否免考（0不免，1免考）")
+    @ExcelProperty(value = "理论是否免考（0不免，1免考）")
+    private Integer isTheoryExempt;
+
+
+    /**
      * 考试得分，(项目id_得分#项目id_得分#)
      */
     @Schema(description = "考试得分，(项目id_得分#项目id_得分#)")

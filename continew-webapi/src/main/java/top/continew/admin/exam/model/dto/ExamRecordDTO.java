@@ -147,4 +147,9 @@ public class ExamRecordDTO {
      */
     private Integer seatId;
 
+    /**
+     * 是否免考理论考试
+     */
+    private Integer isTheoryExempt;
+
 }

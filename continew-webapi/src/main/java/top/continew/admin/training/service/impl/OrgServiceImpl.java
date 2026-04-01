@@ -56,6 +56,7 @@ import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.DownloadOSSFileUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.config.WeldingConfig;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.ExamPresenceDTO;
 import top.continew.admin.exam.model.entity.*;
@@ -204,11 +205,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     private final AESWithHMAC aesWithHMAC;
 
-    @Value("${welding.metal-project-id}")
-    private Long metalProjectId;
+    private final WeldingConfig weldingConfig;
 
-    @Value("${welding.nonmetal-project-id}")
-    private Long nonmetalProjectId;
 
     @Value("${certificate.road-exam-type-id}")
     private Long roadExamTypeId;
@@ -218,6 +216,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Value("${excel.template.summary-table.forklift_performance.url}")
     private String forkliftTemplateUrl;
+
 
     @Override
     public PageResp<OrgResp> page(OrgQuery query, PageQuery pageQuery) {
@@ -1802,14 +1801,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         ValidationUtils.throwIfNull(orgClassDO, "所选班级信息不存在");
         Long projectId = orgClassDO.getProjectId();
         // 属于焊接项目
-        Boolean isWelding = metalProjectId.equals(projectId) || nonmetalProjectId.equals(projectId);
-        // 判断焊接类型
-        //        Integer weldingType = null;
-        //        if (Objects.equals(projectId, metalProjectId)) {
-        //            weldingType = WeldingTypeEnum.METAL.getValue();
-        //        } else if (Objects.equals(projectId, nonmetalProjectId)) {
-        //            weldingType = WeldingTypeEnum.NON_METAL.getValue();
-        //        }
+        Boolean isWelding = weldingConfig.getProjectIdList().contains(projectId);
 
         if (file.isEmpty()) {
             throw new BusinessException("文件不能为空");

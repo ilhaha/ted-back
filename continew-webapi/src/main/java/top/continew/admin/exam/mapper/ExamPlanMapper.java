@@ -136,4 +136,6 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
      * @param projectId
      */
     List<Map<String, Object>> selectPlanByProjectId(@Param("projectId") Long projectId);
+
+    List<Long> getPlanExamOperClassroom(@Param("planId") Long planId);
 }

@@ -75,7 +75,10 @@
                       FROM ted_user_qualification tuq
                       WHERE tuq.user_id = su.id
                         AND tuq.category_id = cur_tp.category_id
-                        AND tuq.is_deleted = 0);
+                        AND tuq.is_deleted = 0)
+        <if test="isTheory == 0">
+            AND su.exam_supervision_type = 1
+        </if>
     </select>
 
     <select id="selectAvailableInvigilatorsExcludingAssigned"

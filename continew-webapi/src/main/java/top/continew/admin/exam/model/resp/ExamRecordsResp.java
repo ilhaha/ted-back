@@ -54,6 +54,12 @@ public class ExamRecordsResp extends BaseResp {
     private String planName;
 
     /**
+     * 理论是否免考（0不免，1免考）
+     */
+    @Schema(description = "理论是否免考（0不免，1免考）")
+    private Integer isTheoryExempt;
+
+    /**
      * 考生ID
      */
     @Schema(description = "考生ID")

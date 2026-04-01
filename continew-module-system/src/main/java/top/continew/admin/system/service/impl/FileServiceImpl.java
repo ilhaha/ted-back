@@ -301,6 +301,11 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
             return fileInfoResp;
         }
 
+        if (frontOrBack != null && frontOrBack == 0) {
+            fileInfoResp.setIdCardPhotoBack(fileInfo.getUrl());
+            return fileInfoResp;
+        }
+
         // 身份证识别逻辑
         try {
             boolean flag = frontOrBack == 1;

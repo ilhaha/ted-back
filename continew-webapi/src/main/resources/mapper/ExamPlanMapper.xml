@@ -462,6 +462,14 @@
         ORDER BY
             create_time DESC
     </select>
+    <select id="getPlanExamOperClassroom" resultType="java.lang.Long">
+        SELECT tc.id
+        FROM ted_plan_classroom tpc
+                 LEFT JOIN ted_classroom tc
+                           ON tpc.classroom_id = tc.id AND tc.is_deleted = 0
+        WHERE tpc.plan_id = #{planId}
+          AND tc.exam_type = 1
+    </select>
 
 
 </mapper>

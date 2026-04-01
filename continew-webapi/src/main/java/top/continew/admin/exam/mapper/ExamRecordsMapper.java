@@ -38,8 +38,7 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
     IPage<ExamRecordDTO> getExamRecords(@Param("page") Page<ExamRecordsDO> page,
                                         @Param(Constants.WRAPPER) QueryWrapper<ExamRecordsDO> queryWrapper,
                                         @Param("roadExamTypeId") Long roadExamTypeId,
-                                        @Param("metalProjectId") Long metalProjectId,
-                                        @Param("nonmetalProjectId") Long nonmetalProjectId);
+                                        @Param("weldingProjectIds") List<Long> weldingProjectIds);
 
     ExamRecordsDO getRecordsById(Long id);
 
@@ -89,14 +88,11 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
      * 
      * @param planId
      * @param roadExamTypeId
-     * @param metalProjectId
-     * @param nonmetalProjectId
      * @return
      */
     List<ExamRecordDTO> getClassExamTableList(@Param("planId") Long planId,
                                               @Param("roadExamTypeId") Long roadExamTypeId,
-                                              @Param("metalProjectId") Long metalProjectId,
-                                              @Param("nonmetalProjectId") Long nonmetalProjectId);
+                                              @Param("weldingProjectIds") List<Long> weldingProjectIds);
 
     /**
      * 获取考试计划的考题数

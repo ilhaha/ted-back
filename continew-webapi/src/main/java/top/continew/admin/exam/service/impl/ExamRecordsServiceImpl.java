@@ -45,6 +45,7 @@ import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.config.WeldingConfig;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.*;
 import top.continew.admin.exam.model.entity.*;
@@ -126,11 +127,7 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
     @Value("${certificate.road-exam-type-id}")
     public Long roadExamTypeId;
 
-    @Value("${welding.metal-project-id}")
-    private Long metalProjectId;
-
-    @Value("${welding.nonmetal-project-id}")
-    private Long nonmetalProjectId;
+    private final WeldingConfig weldingConfig;
 
     @Override
     public PageResp<ExamRecordsResp> page(ExamRecordsQuery query, PageQuery pageQuery) {
@@ -155,15 +152,16 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
             queryWrapper.eq("toc.org_id", tedOrgUser.getOrgId());
         }
         // 查询
+        List<Long> projectIdList = weldingConfig.getProjectIdList();
         IPage<ExamRecordDTO> page = baseMapper.getExamRecords(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper, roadExamTypeId, metalProjectId, nonmetalProjectId);
+            .getSize()), queryWrapper, roadExamTypeId, projectIdList);
         // 将查询结果转换成 PageResp 对象
         PageResp<ExamRecordsResp> pageResp = PageResp.build(page, super.getListClass());
         List<ExamRecordsResp> list = pageResp.getList();
         if (!ObjectUtils.isEmpty(list)) {
             ExamPlanDO examPlanDO = examPlanMapper.selectById(query.getPlanId());
             Long examProjectId = examPlanDO.getExamProjectId();
-            boolean isWeldingProject = metalProjectId.equals(examProjectId) || nonmetalProjectId.equals(examProjectId);
+            boolean isWeldingProject = projectIdList.contains(examProjectId);
 
             pageResp.setList(list.stream().map(item -> {
                 // 解密身份证号
@@ -339,8 +337,9 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
 
         // 如果是焊接项目，还需要插入焊接项目的实操成绩关联表
         ExamPlanDO examPlanDO = examPlanMapper.selectById(examRecordsDO.getPlanId());
+        List<Long> projectIdList = weldingConfig.getProjectIdList();
         Long examProjectId = examPlanDO.getExamProjectId();
-        if (insert > 0 && (metalProjectId.equals(examProjectId) || nonmetalProjectId.equals(examProjectId))) {
+        if (insert > 0 && projectIdList.contains(examProjectId)) {
 
             String weldingProjectCodeStr = baseMapper.selectWeldingProjectCodeByRecordId(examRecordsDO.getId());
 
@@ -646,7 +645,7 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
     }
 
     private boolean isWeldingProject(Long projectId) {
-        return metalProjectId.equals(projectId) || nonmetalProjectId.equals(projectId);
+        return weldingConfig.getProjectIdList().contains(projectId);
     }
 
     private LambdaQueryWrapper<LicenseCertificateDO> buildDeleteWrapper(List<ExamRecordCertificateDTO> dtoList) {
@@ -998,11 +997,12 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
      */
     @Override
     public List<ClassExamTableResp> getClassExamTableList(Long planId) {
+        List<Long> projectIdList = weldingConfig.getProjectIdList();
         List<ExamRecordDTO> list = baseMapper
-            .getClassExamTableList(planId, roadExamTypeId, metalProjectId, nonmetalProjectId);
+            .getClassExamTableList(planId, roadExamTypeId, projectIdList);
         ExamPlanDO examPlanDO = examPlanMapper.selectById(planId);
         Long examProjectId = examPlanDO.getExamProjectId();
-        boolean isWeldingProject = metalProjectId.equals(examProjectId) || nonmetalProjectId.equals(examProjectId);
+        boolean isWeldingProject = projectIdList.contains(examProjectId);
 
         if (CollUtil.isEmpty(list)) {
             return Collections.emptyList();

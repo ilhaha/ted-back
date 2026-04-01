@@ -123,10 +123,17 @@ public class ExamRecordsDO extends BaseDO {
     private String examPaper;
 
     /**
+     * 理论是否免考（0不免，1免考）
+     */
+    @Schema(description = "理论是否免考（0不免，1免考）")
+    private Integer isTheoryExempt;
+
+    /**
      * 违规类型
      */
     @TableField(exist = false)
     private Integer violationType;
+
 
     /**
      * 违规图片集合
