@@ -74,6 +74,16 @@ public class DocDetailResp implements Serializable {
      */
     private String facePhoto;
 
+    /**
+     * 学历
+     */
+    private String education;
+
+    /**
+     * 工作单位
+     */
+    private String workUnit;
+
     // 资料集合
     private List<ProjectNeedUploadDocVO> uploadedDocs;
 }

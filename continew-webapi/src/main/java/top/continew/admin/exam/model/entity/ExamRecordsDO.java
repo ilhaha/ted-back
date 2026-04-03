@@ -134,7 +134,6 @@ public class ExamRecordsDO extends BaseDO {
     @TableField(exist = false)
     private Integer violationType;
 
-
     /**
      * 违规图片集合
      */

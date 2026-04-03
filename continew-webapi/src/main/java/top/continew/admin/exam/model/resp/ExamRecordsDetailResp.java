@@ -88,7 +88,6 @@ public class ExamRecordsDetailResp extends BaseDetailResp {
     @ExcelProperty(value = "理论是否免考（0不免，1免考）")
     private Integer isTheoryExempt;
 
-
     /**
      * 考试得分，(项目id_得分#项目id_得分#)
      */

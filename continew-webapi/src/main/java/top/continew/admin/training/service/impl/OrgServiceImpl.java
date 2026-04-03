@@ -207,7 +207,6 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     private final WeldingConfig weldingConfig;
 
-
     @Value("${certificate.road-exam-type-id}")
     private Long roadExamTypeId;
 
@@ -216,7 +215,6 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
     @Value("${excel.template.summary-table.forklift_performance.url}")
     private String forkliftTemplateUrl;
-
 
     @Override
     public PageResp<OrgResp> page(OrgQuery query, PageQuery pageQuery) {

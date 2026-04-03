@@ -103,4 +103,14 @@ public class WorkerOrgUploadReq {
      */
     private String uploadException;
 
+    /**
+     * 学历
+     */
+    private String education;
+
+    /**
+     * 工作单位
+     */
+    private String workUnit;
+
 }

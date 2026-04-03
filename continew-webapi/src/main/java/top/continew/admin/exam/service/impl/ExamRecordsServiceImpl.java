@@ -998,8 +998,7 @@ public class ExamRecordsServiceImpl extends BaseServiceImpl<ExamRecordsMapper, E
     @Override
     public List<ClassExamTableResp> getClassExamTableList(Long planId) {
         List<Long> projectIdList = weldingConfig.getProjectIdList();
-        List<ExamRecordDTO> list = baseMapper
-            .getClassExamTableList(planId, roadExamTypeId, projectIdList);
+        List<ExamRecordDTO> list = baseMapper.getClassExamTableList(planId, roadExamTypeId, projectIdList);
         ExamPlanDO examPlanDO = examPlanMapper.selectById(planId);
         Long examProjectId = examPlanDO.getExamProjectId();
         boolean isWeldingProject = projectIdList.contains(examProjectId);
