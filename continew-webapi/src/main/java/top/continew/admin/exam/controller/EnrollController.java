@@ -23,6 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.exam.model.query.Base64Req;
 import top.continew.admin.exam.model.req.MakeUpExamReq;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
@@ -55,6 +56,17 @@ import java.util.Map;
 public class EnrollController extends BaseController<EnrollService, EnrollResp, EnrollDetailResp, EnrollQuery, EnrollReq> {
     @Resource
     private EnrollService enrollService;
+
+    /**
+     * 将准考证头像转成base64
+     * @param req
+     * @return
+     */
+    @PostMapping("/ticket/base64")
+    @SaIgnore
+    public String getBase64(@RequestBody Base64Req req) {
+        return baseService.getBase64(req);
+    }
 
     /**
      * 获取准考证信息

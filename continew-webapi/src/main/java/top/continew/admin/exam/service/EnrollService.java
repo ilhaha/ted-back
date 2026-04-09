@@ -18,6 +18,7 @@ package top.continew.admin.exam.service;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
+import top.continew.admin.exam.model.query.Base64Req;
 import top.continew.admin.exam.model.req.MakeUpExamReq;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
@@ -194,4 +195,11 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      * @return
      */
     TicketInfoResp getTicketInfo(Long enrollId);
+
+    /**
+     * 将准考证头像转成base64
+     * @param req
+     * @return
+     */
+    String getBase64(Base64Req req);
 }

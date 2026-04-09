@@ -40,6 +40,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 import top.continew.admin.auth.model.resp.ExamCandidateInfoVO;
@@ -179,6 +181,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     private final PlanApplyClassMapper planApplyClassMapper;
 
     private final ExamRecordsService examRecordsService;
+
+    private final ExamAsyncService examAsyncService;
 
     @Value("${certificate.road-exam-type-id}")
     private Long roadExamTypeId;
@@ -1566,19 +1570,41 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         if (isTheory(project)) {
             generateExamPassword(invigilatorList);
         }
-
-        // 9. 核心：安排考试
-        if (success && isConfirmed && isWorker(plan)) {
-            handleExamArrangement(plan, project, enrollList, classroomIds, isTheory);
-        }
-
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMdd");
         String examDate = plan.getStartTime().format(formatter);
         ProjectDO projectDO = projectMapper.selectById(plan.getExamProjectId());
         String redisKey = RedisConstant.EXAM_NUMBER_KEY + projectDO.getProjectCode() + ":" + examDate + ":" + plan
-            .getId();
+                .getId();
         redisTemplate.delete(redisKey);
+
+
+        // 9. 核心：安排考试 同步
+//        if (success && isConfirmed && isWorker(plan)) {
+//            handleExamArrangement(plan, project, enrollList, classroomIds, isTheory);
+//        }
+        // 异步
+        if (success && isConfirmed && isWorker(plan)) {
+            registerAsyncAfterCommit(plan, project, enrollList, classroomIds, isTheory);
+        }
+
+
         return success;
+    }
+
+    private void registerAsyncAfterCommit(ExamPlanDO plan,
+                                          ProjectDO project,
+                                          List<EnrollDO> enrollList,
+                                          List<Long> classroomIds,
+                                          Boolean isTheory) {
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                examAsyncService.handleExamArrangementAsync(
+                        plan, project, enrollList, classroomIds, isTheory
+                );
+            }
+        });
     }
 
     private ExamPlanDO getAndValidatePlan(Long planId) {

@@ -50,9 +50,11 @@ import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
+import top.continew.admin.common.util.DownloadOSSFileUtil;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.entity.*;
+import top.continew.admin.exam.model.query.Base64Req;
 import top.continew.admin.exam.model.req.MakeUpExamReq;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.ExamCandidateVO;
@@ -1150,6 +1152,30 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
         ticketInfoResp.setExamNumber(aesWithHMAC.verifyAndDecrypt(ticketInfoResp.getExamNumber()));
         ticketInfoResp.setUsername(aesWithHMAC.verifyAndDecrypt(ticketInfoResp.getUsername()));
         return ticketInfoResp;
+    }
+
+    /**
+     * 将准考证头像转成base64
+     * @param req
+     * @return
+     */
+    @Override
+    public String getBase64(Base64Req req) {
+        byte[] bytes = DownloadOSSFileUtil.downloadUrlToBytes(req.getUrl());
+
+        String base64 = Base64.getEncoder().encodeToString(bytes);
+
+        // 简单根据 URL 判断类型
+        String url = req.getUrl().toLowerCase();
+        String type = "jpeg";
+
+        if (url.endsWith(".png")) {
+            type = "png";
+        } else if (url.endsWith(".webp")) {
+            type = "webp";
+        }
+
+        return "data:image/" + type + ";base64," + base64;
     }
 
     /**

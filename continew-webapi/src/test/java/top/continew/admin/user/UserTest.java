@@ -43,7 +43,7 @@ public class UserTest {
         //        System.out.println(aesWithHMAC.encryptAndSign(("11011119910630571X")));
         // jWjEcIeCpsaXz9k1fuFerEUnk3I69wFmeo2LwVqy0uc=:1F7mUAXdAaGGUm2RbADRrMYwzEqUOUhtwyxPp15YLBs=
         System.out.println(aesWithHMAC
-            .verifyAndDecrypt(("Y+AsRNc9x6kHameGclJg/A==:Z+pY/EbMcBIZkfdTjcUIaaWeatzxQW/E8/wYoF+/jyk=")));
+            .verifyAndDecrypt(("IRLuZNzMINOuFvgxTBpWww==:eaXY9VcJlzNoH+Z2dSghLOxn7sLdez9An7N/aS0Mpbc=")));
     }
 
 }
