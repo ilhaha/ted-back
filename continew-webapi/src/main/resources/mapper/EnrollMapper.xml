@@ -201,7 +201,6 @@
                te.enroll_status,
                toc.class_name,
                su.nickname AS nick_name,
-               twet.ticket_url,
                twa.face_photo,
                org.name    AS org_name
         FROM ted_enroll te
@@ -211,8 +210,6 @@
                            ON toc.org_id = org.id AND org.is_deleted = 0
                  LEFT JOIN sys_user su
                            ON te.user_id = su.id
-                 LEFT JOIN ted_worker_exam_ticket twet
-                           ON te.id = twet.enroll_id AND twet.is_deleted = 0
                  LEFT JOIN ted_worker_apply twa
                            ON su.username = twa.id_card_number AND twa.class_id = te.class_id AND
                               twa.is_deleted = 0 ${ew.customSqlSegment}
@@ -273,8 +270,6 @@
                            ON toc.org_id = org.id AND org.is_deleted = 0
                  LEFT JOIN sys_user su
                            ON te.user_id = su.id
-                 LEFT JOIN ted_worker_exam_ticket twet
-                           ON te.id = twet.enroll_id AND twet.is_deleted = 0
                  LEFT JOIN ted_worker_apply twa
                            ON su.username = twa.id_card_number AND twa.class_id = te.class_id AND
                               twa.is_deleted = 0
@@ -345,5 +340,25 @@
         ORDER BY e.create_time DESC
 
     </select>
-
+    <select id="getTicketInfo" resultType="top.continew.admin.exam.model.resp.TicketInfoResp">
+        SELECT su.nickname,su.username, te.exam_number, toc.class_name,tc.`name` AS category_name,tp.project_name,cls.classroom_name,tep.start_time,twa.face_photo
+        FROM ted_enroll te
+                 JOIN sys_user su
+                      ON te.user_id = su.id
+                 JOIN ted_org_class toc
+                      ON te.class_id = toc.id AND toc.is_deleted = 0
+                 JOIN ted_exam_plan tep
+                      ON te.exam_plan_id = tep.id AND tep.is_deleted = 0
+                 JOIN ted_project tp
+                      ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                 JOIN ted_category tc
+                      ON tp.category_id = tc.id AND tc.is_deleted = 0
+                 JOIN ted_plan_classroom tpc
+                      ON tep.id = tpc.plan_id
+                 JOIN ted_classroom cls
+                      ON tpc.classroom_id = cls.id AND cls.is_deleted = 0 AND cls.exam_type = 0
+                 JOIN ted_worker_apply twa
+                      ON su.username = twa.id_card_number AND toc.id = twa.class_id AND twa.is_deleted = 0
+        WHERE te.id = #{enrollId}
+    </select>
 </mapper>

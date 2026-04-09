@@ -145,4 +145,9 @@ public class OrgExamPlanVO {
      */
     private Integer isFinalConfirmed;
 
+    /**
+     * 已报名人数
+     */
+    private Integer applyCount;
+
 }

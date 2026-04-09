@@ -35,6 +35,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -45,6 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.ExamRecordConstants;
+import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
@@ -80,6 +82,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
@@ -136,6 +139,9 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     private final UserMapper userMapper;
 
     private final CategoryMapper categoryMapper;
+
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 获取报名相关所有信息
@@ -1132,6 +1138,21 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
     }
 
     /**
+     * 获取准考证信息
+     * 
+     * @param enrollId
+     * @return
+     */
+    @Override
+    public TicketInfoResp getTicketInfo(Long enrollId) {
+        TicketInfoResp ticketInfoResp = baseMapper.getTicketInfo(enrollId);
+        ValidationUtils.throwIfNull(ticketInfoResp, "未查询到准考证信息");
+        ticketInfoResp.setExamNumber(aesWithHMAC.verifyAndDecrypt(ticketInfoResp.getExamNumber()));
+        ticketInfoResp.setUsername(aesWithHMAC.verifyAndDecrypt(ticketInfoResp.getUsername()));
+        return ticketInfoResp;
+    }
+
+    /**
      * 解密敏感字段
      */
     private void verifyAndDecryptField(EnrollStatisticsResp resp) {
@@ -1165,16 +1186,16 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             .collect(Collectors.toMap(ExamPlanDO::getId, Function.identity()));
 
         // 4 考试时间校验
-        LocalDateTime now = LocalDateTime.now();
+        //        LocalDateTime now = LocalDateTime.now();
         // 复用理论成绩的删除掉
         List<EnrollDO> reuseList = new ArrayList<>();
 
         for (EnrollDO enroll : enrollDOList) {
             ExamPlanDO plan = planMap.get(enroll.getExamPlanId());
             ValidationUtils.throwIfNull(plan, "找不到对应的考试计划：" + enroll.getExamPlanId());
-            LocalDateTime examStartTime = plan.getStartTime();
-            ValidationUtils.throwIfNull(examStartTime, "考试开始时间为空，无法取消报名");
-            boolean canCancel = ChronoUnit.DAYS.between(now, examStartTime) >= 5;
+            //            LocalDateTime examStartTime = plan.getStartTime();
+            //            ValidationUtils.throwIfNull(examStartTime, "考试开始时间为空，无法取消报名");
+            //            boolean canCancel = ChronoUnit.DAYS.between(now, examStartTime) >= 5;
             //            ValidationUtils.throwIf(!canCancel, "距离考试不足5天，无法取消报名");
             if (TheoryScoreReuseEnum.YES.getValue().equals(enroll.getTheoryScoreReused())) {
                 reuseList.add(enroll);
@@ -1190,6 +1211,19 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
             });
 
             examRecordsMapper.delete(deleteWrapper);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMdd");
+
+            for (ExamPlanDO examPlanDO : examPlanList) {
+                ProjectDO projectDO = projectMapper.selectById(examPlanDO.getExamProjectId());
+                if (ObjectUtil.isNull(projectDO))
+                    continue;
+                String examDate = examPlanDO.getStartTime().format(formatter);
+                String redisKey = RedisConstant.EXAM_NUMBER_KEY + projectDO
+                    .getProjectCode() + ":" + examDate + ":" + examPlanDO.getId();
+                // 减少序号
+                redisTemplate.opsForValue().decrement(redisKey);
+            }
+
         }
 
         // 5️ 批量删除缴费审核记录

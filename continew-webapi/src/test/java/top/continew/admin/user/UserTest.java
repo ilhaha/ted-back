@@ -20,7 +20,9 @@ import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import top.continew.admin.common.util.AESWithHMAC;
+import top.continew.admin.exam.service.CandidateTicketService;
 import top.continew.admin.system.mapper.UserMapper;
+import top.continew.admin.worker.mapper.WorkerExamTicketMapper;
 
 @SpringBootTest
 public class UserTest {
@@ -31,11 +33,17 @@ public class UserTest {
     @Resource
     private AESWithHMAC aesWithHMAC;
 
+    @Resource
+    private CandidateTicketService candidateTicketReactiveService;
+    @Resource
+    private WorkerExamTicketMapper workerExamTicketMapper;
+
     @Test
     public void test() {
         //        System.out.println(aesWithHMAC.encryptAndSign(("11011119910630571X")));
         // jWjEcIeCpsaXz9k1fuFerEUnk3I69wFmeo2LwVqy0uc=:1F7mUAXdAaGGUm2RbADRrMYwzEqUOUhtwyxPp15YLBs=
-        System.out.println(aesWithHMAC.encryptAndSign(("41302619840123721X")));
+        System.out.println(aesWithHMAC
+            .verifyAndDecrypt(("Y+AsRNc9x6kHameGclJg/A==:Z+pY/EbMcBIZkfdTjcUIaaWeatzxQW/E8/wYoF+/jyk=")));
     }
 
 }

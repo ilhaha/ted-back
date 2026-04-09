@@ -141,7 +141,7 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @param planId
      * @return
      */
-    List<AvailableInvigilatorResp> getAvailableInvigilator(Long planId, Long rejectedInvigilatorId);
+    List<AvailableInvigilatorResp> getAvailableInvigilator(Long planId, Integer examType);
 
     /**
      * 中心主任确认考试

@@ -17,6 +17,7 @@
 package top.continew.admin.exam.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaIgnore;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +55,18 @@ import java.util.Map;
 public class EnrollController extends BaseController<EnrollService, EnrollResp, EnrollDetailResp, EnrollQuery, EnrollReq> {
     @Resource
     private EnrollService enrollService;
+
+    /**
+     * 获取准考证信息
+     * 
+     * @param enrollId
+     * @return
+     */
+    @GetMapping("/ticket/info/{enrollId}")
+    @SaIgnore
+    public TicketInfoResp getTicketInfo(@PathVariable("enrollId") Long enrollId) {
+        return baseService.getTicketInfo(enrollId);
+    }
 
     /**
      * 后台查询考试计划报考人员

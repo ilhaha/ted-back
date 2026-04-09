@@ -1926,12 +1926,12 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         // 3查询报名信息
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         OrgDTO orgDTO = baseMapper.getOrgId(userTokenDo.getUserId());
-        ValidationUtils.throwIfNull(orgDTO, "当前信息已过期");
-
+        boolean isOrgUser = ObjectUtil.isNotNull(orgDTO);
+        Long orgId = isOrgUser ? orgDTO.getId() : null;
         List<EnrollResp> enrollList = enrollMapper.downloadSummaryList(new QueryWrapper<EnrollDO>()
             .eq("te.exam_plan_id", planId)
             .eq("te.is_deleted", 0)
-            .eq("toc.org_id", orgDTO.getId())
+            .eq(isOrgUser, "toc.org_id", orgId)
 
         );
         ValidationUtils.throwIfEmpty(enrollList, "暂无报考信息");
@@ -1946,11 +1946,16 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         int writeEndCell = DownloadSummaryConstants.WRITE_END_CEL;
         int writeRowNumber = DownloadSummaryConstants.WRITE_ROW_NUMBER;
         // 5填充 Excel
-        byte[] resultBytes = fillExamSummary(templateBytes, enrollList, writeStartRow, writeEndCell, writeRowNumber);
+        byte[] resultBytes = fillExamSummary(templateBytes, enrollList, writeStartRow, writeEndCell, writeRowNumber, isOrgUser, hasRoad);
 
         // 6构建返回 ResponseEntity
         boolean isZip = enrollList.size() > writeRowNumber;
-        String fileName = isZip ? (hasRoad ? "叉车成绩汇总表.zip" : "成绩汇总表.zip") : (hasRoad ? "叉车成绩汇总表.xls" : "成绩汇总表.xls");
+        String fileName;
+        if (Boolean.TRUE.equals(isOrgUser)) {
+            fileName = isZip ? (hasRoad ? "叉车成绩汇总表.zip" : "成绩汇总表.zip") : (hasRoad ? "叉车成绩汇总表.xls" : "成绩汇总表.xls");
+        } else {
+            fileName = hasRoad ? "叉车成绩汇总表.xls" : "成绩汇总表.xls";
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
@@ -1976,37 +1981,180 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                                   List<EnrollResp> enrollList,
                                   int startRow,
                                   int endCell,
-                                  int rowNumber) {
+                                  int rowNumber,
+                                  Boolean isOrgUser,
+                                  Boolean hasRoad) {
+
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
-            if (enrollList.size() <= rowNumber) {
-                // 直接生成一个 Excel 文件
-                byte[] excelBytes = createSingleExcel(templateBytes, enrollList, startRow, endCell, rowNumber);
-                return excelBytes;
-            } else {
-                // 超过行数限制 → 分成多张表，打包成 ZIP
+            int dataSize = enrollList == null ? 0 : enrollList.size();
+
+            // 小数据：直接一个 Excel
+            if (dataSize <= rowNumber) {
+                return createSingleExcel(templateBytes, enrollList, startRow, endCell, rowNumber);
+            }
+
+            // 大数据 + 机构用户 → ZIP
+            if (Boolean.TRUE.equals(isOrgUser)) {
+
                 try (ZipOutputStream zos = new ZipOutputStream(baos)) {
-                    int sheetCount = (int)Math.ceil((double)enrollList.size() / rowNumber);
+
+                    int sheetCount = (int)Math.ceil((double)dataSize / rowNumber);
+
                     for (int i = 0; i < sheetCount; i++) {
                         int fromIndex = i * rowNumber;
-                        int toIndex = Math.min(fromIndex + rowNumber, enrollList.size());
+                        int toIndex = Math.min(fromIndex + rowNumber, dataSize);
+
                         List<EnrollResp> subList = enrollList.subList(fromIndex, toIndex);
 
                         byte[] excelBytes = createSingleExcel(templateBytes, subList, startRow, endCell, rowNumber);
 
                         String fileName = "成绩汇总表_" + (i + 1) + ".xls";
+
                         ZipEntry entry = new ZipEntry(fileName);
                         zos.putNextEntry(entry);
                         zos.write(excelBytes);
                         zos.closeEntry();
                     }
+
                     zos.finish();
                 }
+
                 return baos.toByteArray();
             }
 
-        } catch (IOException e) {
+            //  大数据 + 非机构用户 → 一个 Excel（动态扩展行）
+            return createSingleExcelDynamic(templateBytes, enrollList, startRow, endCell, rowNumber, hasRoad);
+
+        } catch (Exception e) {
             throw new RuntimeException("填充 Excel 汇总表失败", e);
+        }
+    }
+
+    private byte[] createSingleExcelDynamic(byte[] templateBytes,
+                                            List<EnrollResp> enrollList,
+                                            int startRow,
+                                            int endCell,
+                                            int rowNumber,
+                                            Boolean hasRoad) throws IOException {
+
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(templateBytes);
+            Workbook workbook = new HSSFWorkbook(bais); ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+
+            int dataSize = enrollList.size();
+
+            // 👉 需要插入的行数
+            int needInsert = dataSize - rowNumber;
+
+            // 👉 模板最后一行（用于复制样式）
+            Row templateRow = sheet.getRow(startRow);
+
+            // =========================
+            // 1️⃣ 插入行（关键🔥）
+            // =========================
+            if (needInsert > 0) {
+                int lastRowNum = sheet.getLastRowNum();
+
+                // 从模板数据结束行开始整体下移
+                sheet.shiftRows(startRow + rowNumber,   // 起始行（模板数据结束）
+                    lastRowNum,             // 最后一行
+                    needInsert,             // 下移行数
+                    true,                   // 复制行高
+                    false                   // 不复制合并（后面手动处理）
+                );
+
+                // 👉 给新插入的行复制样式
+                for (int i = 0; i < needInsert; i++) {
+                    int rowIndex = startRow + rowNumber + i;
+
+                    Row newRow = sheet.createRow(rowIndex);
+
+                    if (templateRow != null) {
+                        // 填充成绩单元格
+                        copyRowStyle(sheet, templateRow, newRow, endCell + (hasRoad ? 6 : 4));
+                    }
+                }
+            }
+
+            // =========================
+            // 2️⃣ 填充数据
+            // =========================
+            for (int i = 0; i < dataSize; i++) {
+
+                EnrollResp enroll = enrollList.get(i);
+                int currentRowIndex = startRow + i;
+
+                Row row = sheet.getRow(currentRowIndex);
+                if (row == null) {
+                    row = sheet.createRow(currentRowIndex);
+                }
+
+                for (int cellIndex = 0; cellIndex <= endCell; cellIndex++) {
+
+                    Cell cell = row.getCell(cellIndex);
+                    if (cell == null) {
+                        cell = row.createCell(cellIndex);
+                    }
+
+                    switch (cellIndex) {
+                        case 0:
+                            cell.setCellValue(enroll.getClassName());
+                            break;
+                        case 1:
+                            cell.setCellValue(enroll.getSeatId());
+                            break;
+                        case 2:
+                            cell.setCellValue(enroll.getNickName());
+                            break;
+                        case 3:
+                            cell.setCellValue(enroll.getGender().getDescription());
+                            break;
+                        case 4:
+                            cell.setCellValue(aesWithHMAC.verifyAndDecrypt(enroll.getUsername()));
+                            break;
+                        case 5:
+                            cell.setCellValue("");
+                            break;
+                        case 6:
+                            cell.setCellValue(enroll.getCategoryName());
+                            break;
+                        case 7:
+                            cell.setCellValue(enroll.getProjectCode());
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            workbook.write(baos);
+            return baos.toByteArray();
+        }
+    }
+
+    private void copyRowStyle(Sheet sheet, Row sourceRow, Row targetRow, int endCell) {
+
+        // 1️⃣ 行高
+        targetRow.setHeight(sourceRow.getHeight());
+
+        for (int i = 0; i <= endCell; i++) {
+
+            Cell sourceCell = sourceRow.getCell(i);
+            Cell targetCell = targetRow.createCell(i);
+
+            if (sourceCell != null) {
+
+                // 2️⃣ 单元格样式（包含边框、字体、对齐等）
+                CellStyle newStyle = sheet.getWorkbook().createCellStyle();
+                newStyle.cloneStyleFrom(sourceCell.getCellStyle());
+
+                targetCell.setCellStyle(newStyle);
+
+                // 3️⃣ 列宽（只需要设置一次即可）
+                sheet.setColumnWidth(i, sheet.getColumnWidth(i));
+            }
         }
     }
 

@@ -186,4 +186,12 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
      *
      */
     void exportExamCandidatesByPlanOrProject(Long planId, Long projectId, HttpServletResponse response);
+
+    /**
+     * 获取准考证信息
+     * 
+     * @param enrollId
+     * @return
+     */
+    TicketInfoResp getTicketInfo(Long enrollId);
 }

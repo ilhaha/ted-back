@@ -139,4 +139,11 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
                                                     @Param("planId") Long planId,
                                                     @Param("projectId") Long projectId);
 
+    /**
+     * 获取准考证信息
+     * 
+     * @param enrollId
+     * @return
+     */
+    TicketInfoResp getTicketInfo(@Param("enrollId") Long enrollId);
 }

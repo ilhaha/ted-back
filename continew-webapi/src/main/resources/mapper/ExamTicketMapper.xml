@@ -51,14 +51,12 @@
         e.id AS enroll_id,
         p.exam_plan_name AS exam_plan_name
         FROM ted_enroll e
-        LEFT JOIN ted_exam_plan p ON e.exam_plan_id = p.id
+        LEFT JOIN ted_exam_plan p ON e.exam_plan_id = p.id  AND p.is_deleted = 0
         WHERE e.id IN
         <foreach collection="enrollIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
         AND e.exam_number IS NOT NULL
-        AND p.admit_card_end_time > NOW()
-        AND p.is_deleted = 0
         AND e.is_deleted = 0
     </select>
 </mapper>

@@ -186,10 +186,10 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
      * @param planId
      * @return
      */
-    @GetMapping("/available/invigilator/{planId}/{rejectedInvigilatorId}")
+    @GetMapping("/available/invigilator/{planId}/{examType}")
     public List<AvailableInvigilatorResp> getAvailableInvigilator(@PathVariable("planId") Long planId,
-                                                                  @PathVariable("rejectedInvigilatorId") Long rejectedInvigilatorId) {
-        return baseService.getAvailableInvigilator(planId, rejectedInvigilatorId);
+                                                                  @PathVariable("examType") Integer examType) {
+        return baseService.getAvailableInvigilator(planId, examType);
     }
 
     /**

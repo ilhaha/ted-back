@@ -17,7 +17,6 @@
 package top.continew.admin.util;
 
 import com.alibaba.excel.EasyExcel;
-import com.aspose.cells.PdfSaveOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -189,31 +188,36 @@ public class ExcelUtilReactive {
 
     // Excel转PDF（同步 + 裁剪）
     public byte[] convertExcelBytesToPdfBytesSync(byte[] excelBytes) {
-        try {
-            //            log.info("开始Excel转PDF，输入大小={}KB", excelBytes.length / 1024);
+        try (ByteArrayInputStream in = new ByteArrayInputStream(excelBytes);
+            ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-            try (ByteArrayInputStream in = new ByteArrayInputStream(excelBytes);
-                ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            String suffix = detectExcelSuffix(excelBytes);
 
-                // Excel -> PDF
-                com.aspose.cells.Workbook workbook = new com.aspose.cells.Workbook(in);
-                PdfSaveOptions options = new PdfSaveOptions();
-                options.setCompliance(com.aspose.cells.PdfCompliance.PDF_A_1_B);
-                //                options.setAllColumnsInOnePagePerSheet(true);
-                //                options.setOnePagePerSheet(true);
+            //            ExcelToPdfUtil.excelToPdf(in, out, suffix);
 
-                workbook.save(out, options);
+            return out.toByteArray();
 
-                byte[] pdfBytes = out.toByteArray();
-                //                log.info("Excel转PDF完成，大小={}KB", pdfBytes.length / 1024);
-
-                // 裁掉顶部，按你实际水印高度调
-                return cropPdfTopWithPdfBox(pdfBytes, 15);
-            }
         } catch (Exception e) {
-            //            log.error("Excel转PDF失败", e);
-            throw new RuntimeException("PDF转换失败：" + e.getMessage(), e);
+            throw new RuntimeException("PDF转换失败", e);
         }
+    }
+
+    private String detectExcelSuffix(byte[] bytes) {
+        if (bytes == null || bytes.length < 4) {
+            throw new RuntimeException("无法识别Excel类型");
+        }
+
+        // xlsx：PK 开头（zip格式）
+        if (bytes[0] == 'P' && bytes[1] == 'K') {
+            return ".xlsx";
+        }
+
+        // xls：D0 CF 11 E0 开头（OLE2）
+        if ((bytes[0] & 0xFF) == 0xD0 && (bytes[1] & 0xFF) == 0xCF) {
+            return ".xls";
+        }
+
+        throw new RuntimeException("不支持的Excel格式");
     }
 
     //切割pdf

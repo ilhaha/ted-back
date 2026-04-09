@@ -28,6 +28,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import top.continew.admin.common.constant.EnrollStatusConstant;
 import top.continew.admin.common.constant.enums.ExamPlanTypeEnum;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
@@ -106,11 +107,11 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
         String photoUrl = workerApplyDO != null ? workerApplyDO.getFacePhoto() : null;
 
         // 3. 解密并组装数据
+
         dto.setTicketId(aesWithHMAC.verifyAndDecrypt(examNumber));
         dto.setIdCard(aesWithHMAC.verifyAndDecrypt(dto.getIdCard()));
         dto.setClassCode(className);
         Map<String, Object> dataMap = assembleData(dto);
-
         // 4. 同步下载照片
         byte[] photoBytes = loadPhotoSync(photoUrl);
 
@@ -119,9 +120,9 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
 
         ResponseEntity<byte[]> responseEntity = excelUtilReactive
             .generatePdfResponseEntitySync(dataMap, excelTemplateUrl, photoBytes, fileName);
-
         MultipartFile pdfFile = new InMemoryMultipartFile("file", idCard + "_WORKER_准考证.pdf", "application/pdf", responseEntity
             .getBody());
+
         // 上传 OSS
         FileInfoResp fileInfoResp = fileService.upload(pdfFile, new GeneralFileReq());
         return fileInfoResp.getUrl();
@@ -149,7 +150,7 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
         // 查询报名记录
         List<Long> enrollIds = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
             .eq(EnrollDO::getUserId, userId)
-            .eq(EnrollDO::getEnrollStatus, 1)
+            .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.SIGNED_UP)
             .select(EnrollDO::getId)).stream().map(EnrollDO::getId).toList();
 
         if (enrollIds.isEmpty()) {
@@ -294,7 +295,9 @@ public class CandidateTicketReactiveServiceImpl implements CandidateTicketServic
 
         // ========= 8. 返回 PDF =========
         String fileName = "准考证_" + examNumber + ".pdf";
-        return excelUtilReactive.generatePdfResponseEntitySync(dataMap, excelTemplateUrl, photoBytes, fileName);
+        synchronized (this) {
+            return excelUtilReactive.generatePdfResponseEntitySync(dataMap, excelTemplateUrl, photoBytes, fileName);
+        }
     }
 
     @Async

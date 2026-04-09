@@ -20,6 +20,7 @@ import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import top.continew.admin.common.constant.enums.PlanEndApplyEnum;
 import top.continew.starter.data.core.annotation.Query;
 import top.continew.starter.data.core.annotation.QueryIgnore;
 import top.continew.starter.data.core.enums.QueryType;
@@ -106,5 +107,11 @@ public class ExamPlanQuery implements Serializable {
      */
     @Query(type = QueryType.LIKE, columns = "toc.class_name")
     private String className;
+
+    /**
+     * 是否停止报名 0否，1是
+     */
+    @QueryIgnore
+    private Integer isEndApply = PlanEndApplyEnum.NO.getValue();
 
 }

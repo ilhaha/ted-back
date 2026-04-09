@@ -53,6 +53,7 @@
                 <version>${revision}</version>
             </dependency>
 
+
             <!-- 公共模块（存放公共工具类，公共配置等） -->
             <dependency>
                 <groupId>top.continew</groupId>

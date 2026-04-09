@@ -158,7 +158,8 @@
                tp.exam_duration,
                tp.exam_fee                                  AS project_exam_fee,
                tc.`name`                                    AS category_name,
-               (tep.max_candidates - COUNT(DISTINCT te.id)) AS remaining_slots
+               (tep.max_candidates - COUNT(DISTINCT te.id)) AS remaining_slots,
+               COUNT(DISTINCT te.id) AS apply_count
         FROM ted_exam_plan tep
                  LEFT JOIN ted_project tp
                            ON tep.exam_project_id = tp.id AND tp.is_deleted = 0

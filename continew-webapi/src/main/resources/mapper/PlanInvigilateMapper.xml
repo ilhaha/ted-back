@@ -66,8 +66,6 @@
                                         ON tep.id = tpi.exam_plan_id
                                             AND tep.id != #{planId}
         AND tep.is_final_confirmed IN (1, 2)
-        AND tep.start_time &gt;= DATE(#{startTime})
-        AND tep.start_time &lt;  DATE_ADD(DATE(#{startTime}), INTERVAL 1 DAY)
         WHERE tpi.invigilator_id = su.id
         AND tpi.invigilate_status = 0
             AND tpi.is_deleted = 0)
@@ -76,9 +74,7 @@
                       WHERE tuq.user_id = su.id
                         AND tuq.category_id = cur_tp.category_id
                         AND tuq.is_deleted = 0)
-        <if test="isTheory == 0">
-            AND su.exam_supervision_type = 1
-        </if>
+          AND su.exam_supervision_type = #{examType}
     </select>
 
     <select id="selectAvailableInvigilatorsExcludingAssigned"
