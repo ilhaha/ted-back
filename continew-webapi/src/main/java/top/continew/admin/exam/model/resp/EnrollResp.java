@@ -191,4 +191,9 @@ public class EnrollResp extends BaseResp {
      * 报名状态（0：未报名，1：已报名：2：已完成，3：已过期）
      */
     private Integer enrollStatus;
+
+    /**
+     * 焊接项目实操项目代码
+     */
+    private String weldingProjectCode;
 }

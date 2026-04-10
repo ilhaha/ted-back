@@ -177,20 +177,20 @@
                  LEFT JOIN sys_user
                            ON te.user_id = sys_user.id
                  LEFT JOIN ted_worker_apply twa
-                           ON te.class_id = twa.class_id  AND sys_user.username = twa.id_card_number AND twa.is_deleted = 0
+                           ON te.class_id = twa.class_id AND sys_user.username = twa.id_card_number AND
+                              twa.is_deleted = 0
                  LEFT JOIN ted_exam_violation tev
                            ON te.user_id = tev.candidate_id AND tev.plan_id = #{planId} AND tev.is_deleted = 0
                  LEFT JOIN ted_exam_records ter
                            ON te.user_id = ter.candidate_id AND ter.plan_id = #{planId} AND ter.is_deleted = 0
-                 CROSS JOIN (
-            SELECT tc.topic_number
-            FROM ted_exam_plan tep
-                     LEFT JOIN ted_project tp
-                               ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
-                     LEFT JOIN ted_category tc
-                               ON tp.category_id = tc.id AND tc.is_deleted = 0
-            WHERE tep.id = #{planId} AND tep.is_deleted = 0
-        ) tp_info
+                 CROSS JOIN (SELECT tc.topic_number
+                             FROM ted_exam_plan tep
+                                      LEFT JOIN ted_project tp
+                                                ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
+                                      LEFT JOIN ted_category tc
+                                                ON tp.category_id = tc.id AND tc.is_deleted = 0
+                             WHERE tep.id = #{planId}
+                               AND tep.is_deleted = 0) tp_info
             ${ew.customSqlSegment}
     </select>
     <select id="getWorkerApplyList" resultType="top.continew.admin.exam.model.resp.EnrollResp">
@@ -262,7 +262,8 @@
                su.username AS user_name,
                su.gender,
                tp.project_code,
-               tc.`name`   AS category_name
+               tc.`name`   AS category_name,
+               twa.welding_project_code
         FROM ted_enroll te
                  LEFT JOIN ted_org_class toc
                            ON te.class_id = toc.id AND toc.is_deleted = 0
@@ -341,7 +342,15 @@
 
     </select>
     <select id="getTicketInfo" resultType="top.continew.admin.exam.model.resp.TicketInfoResp">
-        SELECT su.nickname,su.username, te.exam_number, toc.class_name,tc.`name` AS category_name,tp.project_name,cls.classroom_name,tep.start_time,twa.face_photo
+        SELECT su.nickname,
+               su.username,
+               te.exam_number,
+               toc.class_name,
+               tc.`name` AS category_name,
+               tp.project_name,
+               cls.classroom_name,
+               tep.start_time,
+               twa.face_photo
         FROM ted_enroll te
                  JOIN sys_user su
                       ON te.user_id = su.id

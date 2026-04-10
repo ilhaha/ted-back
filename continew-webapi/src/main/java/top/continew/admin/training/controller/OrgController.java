@@ -137,7 +137,7 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     }
 
     /**
-     * 根据报考状态获取机构对应的项目-班级-考生级联选择 （预报名）
+     * 根据报考状态获取机构对应的项目-班级-考生级联选择
      * 
      * @param projectId 项目id
      * @param planType  计划考试人员类型

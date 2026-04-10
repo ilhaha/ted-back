@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2022-present Charles7c Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package top.continew.admin.exam.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
@@ -106,24 +122,19 @@ public class ExamTxService {
         Long planCount = redisTemplate.opsForValue().increment(planCountKey);
 
         if (planCount != null && planCount == 1L) {
-            redisTemplate.expire(planCountKey,
-                    RedisConstant.EXAM_NUMBER_KEY_EXPIRE_DAYS,
-                    TimeUnit.DAYS);
+            redisTemplate.expire(planCountKey, RedisConstant.EXAM_NUMBER_KEY_EXPIRE_DAYS, TimeUnit.DAYS);
         }
 
         for (EnrollDO enroll : enrollList) {
 
             Long classroomId = classroomIds.get(random.nextInt(classroomIds.size()));
 
-            String examNumber = projectCode
-                    + planCount
-                    + examDate
-                    + String.format("%04d", enroll.getSeatId());
+            String examNumber = projectCode + planCount + examDate + String.format("%04d", enroll.getSeatId());
 
             try {
                 enroll.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));
             } catch (Exception e) {
-                examAsyncErrorLogService.recordError(plan.getId(),enroll.getId(),"准考证级别错误",e);
+                examAsyncErrorLogService.recordError(plan.getId(), enroll.getId(), "准考证级别错误", e);
                 return;
             }
             enroll.setClassroomId(classroomId);
@@ -132,74 +143,69 @@ public class ExamTxService {
         enrollMapper.updateBatchById(enrollList);
     }
 
-    private void savePapers(ExamPlanDO plan,
-                            List<EnrollDO> enrollList,
-                            Map<Long, UserDO> userMap,
-                            Boolean isTheory) {
+    private void savePapers(ExamPlanDO plan, List<EnrollDO> enrollList, Map<Long, UserDO> userMap, Boolean isTheory) {
 
         if (isTheory) {
             exemptTheory(plan.getId(), enrollList);
             return;
         }
 
-        List<CandidateExamPaperDO> papers = enrollList.parallelStream()
-                .map(enroll -> {
-                    UserDO user = userMap.get(enroll.getUserId());
-                    if (user == null) return null;
+        List<CandidateExamPaperDO> papers = enrollList.parallelStream().map(enroll -> {
+            UserDO user = userMap.get(enroll.getUserId());
+            if (user == null)
+                return null;
 
-                    try {
-                        ExamPaperVO vo = questionBankService.generateExamQuestionBank(plan.getId());
+            try {
+                ExamPaperVO vo = questionBankService.generateExamQuestionBank(plan.getId());
 
-                        CandidateExamPaperDO paper = new CandidateExamPaperDO();
-                        paper.setEnrollId(enroll.getId());
-                        paper.setPaperJson(objectMapper.writeValueAsString(vo));
-                        return paper;
+                CandidateExamPaperDO paper = new CandidateExamPaperDO();
+                paper.setEnrollId(enroll.getId());
+                paper.setPaperJson(objectMapper.writeValueAsString(vo));
+                return paper;
 
-                    } catch (Exception e) {
-                        examAsyncErrorLogService.recordError(plan.getId(),enroll.getId(),"试卷级别错误",e);
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .toList();
+            } catch (Exception e) {
+                examAsyncErrorLogService.recordError(plan.getId(), enroll.getId(), "试卷级别错误", e);
+                return null;
+            }
+        }).filter(Objects::nonNull).toList();
 
         if (!papers.isEmpty()) {
             candidateExamPaperMapper.insertBatch(papers);
         }
     }
 
-//    private void savePapers(ExamPlanDO plan,
-//                            List<EnrollDO> enrollList,
-//                            Map<Long, UserDO> userMap,
-//                            Boolean isTheory) {
-//        // 只有实操考试
-//        if (isTheory) {
-//            exemptTheory(plan.getId(), enrollList);
-//            return;
-//        }
-//        // 理论考试：生成试卷
-//        List<CandidateExamPaperDO> papers = new ArrayList<>();
-//        for (EnrollDO enroll : enrollList) {
-//            UserDO user = userMap.get(enroll.getUserId());
-//            if (user == null) continue;
-//            try {
-//                ExamPaperVO vo = questionBankService.generateExamQuestionBank(plan.getId());
-//
-//                CandidateExamPaperDO paper = new CandidateExamPaperDO();
-//                paper.setEnrollId(enroll.getId());
-//                paper.setPaperJson(objectMapper.writeValueAsString(vo));
-//
-//                papers.add(paper);
-//
-//            } catch (Exception e) {
-//                continue;
-//            }
-//        }
-//
-//        if (!papers.isEmpty()) {
-//            candidateExamPaperMapper.insertBatch(papers);
-//        }
-//    }
+    //    private void savePapers(ExamPlanDO plan,
+    //                            List<EnrollDO> enrollList,
+    //                            Map<Long, UserDO> userMap,
+    //                            Boolean isTheory) {
+    //        // 只有实操考试
+    //        if (isTheory) {
+    //            exemptTheory(plan.getId(), enrollList);
+    //            return;
+    //        }
+    //        // 理论考试：生成试卷
+    //        List<CandidateExamPaperDO> papers = new ArrayList<>();
+    //        for (EnrollDO enroll : enrollList) {
+    //            UserDO user = userMap.get(enroll.getUserId());
+    //            if (user == null) continue;
+    //            try {
+    //                ExamPaperVO vo = questionBankService.generateExamQuestionBank(plan.getId());
+    //
+    //                CandidateExamPaperDO paper = new CandidateExamPaperDO();
+    //                paper.setEnrollId(enroll.getId());
+    //                paper.setPaperJson(objectMapper.writeValueAsString(vo));
+    //
+    //                papers.add(paper);
+    //
+    //            } catch (Exception e) {
+    //                continue;
+    //            }
+    //        }
+    //
+    //        if (!papers.isEmpty()) {
+    //            candidateExamPaperMapper.insertBatch(papers);
+    //        }
+    //    }
 
     private Map<Long, UserDO> getUserMap(List<EnrollDO> list) {
         List<Long> userIds = list.stream().map(EnrollDO::getUserId).distinct().toList();
@@ -222,16 +228,16 @@ public class ExamTxService {
             examRecordsDO.setExamScores(ExamRecordConstants.PASSING_SCORE);
             examRecordsDO.setOperScores(hasOper ? 0 : ExamRecordConstants.PASSING_SCORE);
             examRecordsDO.setOperInputStatus(hasOper
-                    ? ExamScoreEntryStatusEnum.NO_ENTRY.getValue()
-                    : ExamScoreEntryStatusEnum.ENTERED.getValue());
+                ? ExamScoreEntryStatusEnum.NO_ENTRY.getValue()
+                : ExamScoreEntryStatusEnum.ENTERED.getValue());
             examRecordsDO.setRoadScores(0);
             examRecordsDO.setRoadInputStatus(hasRoad
-                    ? ExamScoreEntryStatusEnum.NO_ENTRY.getValue()
-                    : ExamScoreEntryStatusEnum.ENTERED.getValue());
+                ? ExamScoreEntryStatusEnum.NO_ENTRY.getValue()
+                : ExamScoreEntryStatusEnum.ENTERED.getValue());
             examRecordsDO.setAttemptType(ExamRecordAttemptEnum.FIRST.getValue());
             examRecordsDO.setExamResultStatus((hasOper || hasRoad)
-                    ? ExamResultStatusEnum.NOT_ENTERED.getValue()
-                    : ExamResultStatusEnum.PASSED.getValue());
+                ? ExamResultStatusEnum.NOT_ENTERED.getValue()
+                : ExamResultStatusEnum.PASSED.getValue());
             return examRecordsDO;
         }).toList();
 
@@ -251,13 +257,13 @@ public class ExamTxService {
         List<UserDO> userList = userMapper.selectByIds(userIds);
 
         Map<Long, String> userIdToUsername = userList.stream()
-                .collect(Collectors.toMap(UserDO::getId, UserDO::getUsername));
+            .collect(Collectors.toMap(UserDO::getId, UserDO::getUsername));
 
         // 3. 按班级分组 enroll
         Map<Long, List<String>> classIdToIdCards = enrollList.stream()
-                .filter(enroll -> StrUtil.isNotBlank(userIdToUsername.get(enroll.getUserId())))
-                .collect(Collectors.groupingBy(EnrollDO::getClassId, Collectors.mapping(enroll -> userIdToUsername
-                        .get(enroll.getUserId()), Collectors.toList())));
+            .filter(enroll -> StrUtil.isNotBlank(userIdToUsername.get(enroll.getUserId())))
+            .collect(Collectors.groupingBy(EnrollDO::getClassId, Collectors.mapping(enroll -> userIdToUsername
+                .get(enroll.getUserId()), Collectors.toList())));
 
         // 4. 批量更新 WorkerApplyDO
         for (Map.Entry<Long, List<String>> entry : classIdToIdCards.entrySet()) {
@@ -267,16 +273,16 @@ public class ExamTxService {
             if (CollUtil.isNotEmpty(idCards)) {
                 LambdaUpdateWrapper<WorkerApplyDO> updateWrapper = new LambdaUpdateWrapper<>();
                 updateWrapper.eq(WorkerApplyDO::getClassId, classId)
-                        .in(WorkerApplyDO::getIdCardNumber, idCards)
-                        .set(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.ALTER_EXAM.getValue());
+                    .in(WorkerApplyDO::getIdCardNumber, idCards)
+                    .set(WorkerApplyDO::getStatus, WorkerApplyReviewStatusEnum.ALTER_EXAM.getValue());
                 workerApplyMapper.update(null, updateWrapper);
             }
         }
 
         // 4. 按班级分组 candidateId（用于更新 ted_org_class_candidate）
         Map<Long, List<Long>> classIdToCandidateIds = enrollList.stream()
-                .collect(Collectors.groupingBy(EnrollDO::getClassId, Collectors.mapping(EnrollDO::getUserId, Collectors
-                        .toList())));
+            .collect(Collectors.groupingBy(EnrollDO::getClassId, Collectors.mapping(EnrollDO::getUserId, Collectors
+                .toList())));
 
         // 5. 批量更新 ted_org_class_candidate → 已考试
         for (Map.Entry<Long, List<Long>> entry : classIdToCandidateIds.entrySet()) {
@@ -287,15 +293,14 @@ public class ExamTxService {
                 LambdaUpdateWrapper<OrgClassCandidateDO> updateWrapper = new LambdaUpdateWrapper<>();
 
                 updateWrapper.eq(OrgClassCandidateDO::getClassId, classId)
-                        .in(OrgClassCandidateDO::getCandidateId, candidateIds)
-                        .set(OrgClassCandidateDO::getStatus, OrgClassCandidateStatusEnum.EXAMINED.getValue());
+                    .in(OrgClassCandidateDO::getCandidateId, candidateIds)
+                    .set(OrgClassCandidateDO::getStatus, OrgClassCandidateStatusEnum.EXAMINED.getValue());
 
                 orgClassCandidateMapper.update(null, updateWrapper);
             }
 
         }
     }
-
 
     /**
      * 批量插入焊接实操成绩（适用于正常考生和缺考考生）
@@ -312,8 +317,8 @@ public class ExamTxService {
 
         // 转成 Map<recordId, weldingProjectCodes>
         Map<Long, String> recordWeldingMap = resultList.stream()
-                .collect(Collectors.toMap(map -> ((Number) map.get("record_id")).longValue(), map -> (String) map
-                        .get("welding_project_codes")));
+            .collect(Collectors.toMap(map -> ((Number)map.get("record_id")).longValue(), map -> (String)map
+                .get("welding_project_codes")));
 
         List<WeldingOperScoreDO> weldingScoreBatch = new ArrayList<>();
         for (ExamRecordsDO record : examRecordsList) {

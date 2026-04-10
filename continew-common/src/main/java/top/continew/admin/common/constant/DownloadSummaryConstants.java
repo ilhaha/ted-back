@@ -35,7 +35,7 @@ public class DownloadSummaryConstants {
     /**
      * 一行写8个单元格
      */
-    public static final int WRITE_END_CEL = 7;
+    public static final int WRITE_END_CEL = 11;
 
     /**
      * 一张汇总表写15行

@@ -1509,7 +1509,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
 
         // 2. 查询空闲监考员
         List<AvailableInvigilatorResp> availableInvigilatorResps = planInvigilateMapper
-            .selectAvailableInvigilators(examPlanDO.getStartTime(), planId, invigilatorId,examType);
+            .selectAvailableInvigilators(examPlanDO.getStartTime(), planId, invigilatorId, examType);
 
         // 3. 查询已经安排的监考员
         List<Long> assignedInvigilatorIds = planInvigilateMapper.selectList(new LambdaQueryWrapper<PlanInvigilateDO>()
@@ -1574,19 +1574,17 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         String examDate = plan.getStartTime().format(formatter);
         ProjectDO projectDO = projectMapper.selectById(plan.getExamProjectId());
         String redisKey = RedisConstant.EXAM_NUMBER_KEY + projectDO.getProjectCode() + ":" + examDate + ":" + plan
-                .getId();
+            .getId();
         redisTemplate.delete(redisKey);
 
-
         // 9. 核心：安排考试 同步
-//        if (success && isConfirmed && isWorker(plan)) {
-//            handleExamArrangement(plan, project, enrollList, classroomIds, isTheory);
-//        }
+        //        if (success && isConfirmed && isWorker(plan)) {
+        //            handleExamArrangement(plan, project, enrollList, classroomIds, isTheory);
+        //        }
         // 异步
         if (success && isConfirmed && isWorker(plan)) {
             registerAsyncAfterCommit(plan, project, enrollList, classroomIds, isTheory);
         }
-
 
         return success;
     }
@@ -1600,9 +1598,7 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                examAsyncService.handleExamArrangementAsync(
-                        plan, project, enrollList, classroomIds, isTheory
-                );
+                examAsyncService.handleExamArrangementAsync(plan, project, enrollList, classroomIds, isTheory);
             }
         });
     }

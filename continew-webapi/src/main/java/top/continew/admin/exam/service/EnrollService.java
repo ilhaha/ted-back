@@ -198,6 +198,7 @@ public interface EnrollService extends BaseService<EnrollResp, EnrollDetailResp,
 
     /**
      * 将准考证头像转成base64
+     * 
      * @param req
      * @return
      */

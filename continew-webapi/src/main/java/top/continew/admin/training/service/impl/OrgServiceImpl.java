@@ -61,7 +61,6 @@ import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.ExamPresenceDTO;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.resp.EnrollResp;
-import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.req.file.GeneralFileReq;
@@ -105,8 +104,6 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 /**
  * 机构信息业务实现
@@ -165,9 +162,6 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     private ExamPlanMapper examPlanMapper;
 
     @Resource
-    private ClassroomMapper classroomMapper;
-
-    @Resource
     private EnrollMapper enrollMapper;
 
     @Resource
@@ -177,14 +171,14 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     private UserMapper userMapper;
 
     @Resource
-    private ExamineePaymentAuditService examineePaymentAuditService;
-
-    @Resource
     private OrgTrainingPriceMapper orgTrainingPriceMapper;
+
     @Resource
     private OrgTrainingPaymentAuditMapper orgTrainingPaymentAuditMapper;
 
     private final UserService userService;
+
+    private final WeldingConfig weldingConfig;
 
     @Resource
     private final ExcelUtilReactive excelUtilReactive;
@@ -204,8 +198,6 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     private final OrgClassCandidateMapper orgClassCandidateMapper;
 
     private final AESWithHMAC aesWithHMAC;
-
-    private final WeldingConfig weldingConfig;
 
     @Value("${certificate.road-exam-type-id}")
     private Long roadExamTypeId;
@@ -1144,7 +1136,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     }
 
     /**
-     * 根据报考状态获取机构对应的项目-班级-考生级联选择 （预报名）
+     * 根据报考状态获取机构对应的项目-班级-考生级联选择
      *
      * @param projectId 项目id
      * @return
@@ -1155,6 +1147,115 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         OrgDTO orgDTO = orgMapper.getOrgId(userTokenDo.getUserId());
         List<OrgProjectClassCandidateVO> flatList = baseMapper.getSelectProjectClassCandidate(orgDTO
             .getId(), projectId, planType, planId);
+        if (ObjectUtil.isEmpty(flatList))
+            return Collections.emptyList();
+
+        List<Long> allCandidateIds = flatList.stream().map(OrgProjectClassCandidateVO::getCandidateId).toList();
+
+        // 过滤在黑名单中的考生
+        // 查询在黑名单中的考生
+        List<CandidateTypeDO> candidateTypeDOS = candidateTypeMapper
+            .selectList(new LambdaQueryWrapper<CandidateTypeDO>().in(CandidateTypeDO::getCandidateId, allCandidateIds)
+                .eq(CandidateTypeDO::getType, CandidateTypeEnum.WORKER.getValue())
+                .eq(CandidateTypeDO::getIsBlacklist, BlacklistConstants.IS_BLACKLIST)
+                .select(CandidateTypeDO::getCandidateId, CandidateTypeDO::getId));
+
+        if (ObjectUtil.isNotEmpty(candidateTypeDOS)) {
+
+            // candidateTypeId 列表
+            List<Long> candidateTypeIds = candidateTypeDOS.stream().map(CandidateTypeDO::getId).toList();
+
+            // 查询禁考项目
+            List<CandidateTypeDisableProjectDO> disableProjects = candidateTypeDisableProjectMapper
+                .selectList(new LambdaQueryWrapper<CandidateTypeDisableProjectDO>()
+                    .in(CandidateTypeDisableProjectDO::getCandidateTypeId, candidateTypeIds)
+                    .eq(CandidateTypeDisableProjectDO::getDisableProjectId, projectId));
+            if (ObjectUtil.isNotEmpty(disableProjects)) {
+
+                // 找到真正被禁止报考当前项目的 candidateTypeId
+                Set<Long> forbiddenTypeIds = disableProjects.stream()
+                    .map(CandidateTypeDisableProjectDO::getCandidateTypeId)
+                    .collect(Collectors.toSet());
+
+                // 找到对应的 candidateId
+                Set<Long> forbiddenCandidateIds = candidateTypeDOS.stream()
+                    .filter(ct -> forbiddenTypeIds.contains(ct.getId()))
+                    .map(CandidateTypeDO::getCandidateId)
+                    .collect(Collectors.toSet());
+
+                flatList = flatList.stream()
+                    .filter(item -> !forbiddenCandidateIds.contains(item.getCandidateId()))
+                    .toList();
+
+            }
+        }
+        // 过滤未完成的项目考试的考生
+        LambdaQueryWrapper<EnrollDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(EnrollDO::getUserId, allCandidateIds)
+            .ne(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
+            .notIn(EnrollDO::getExamStatus, EnrollStatusConstant.SUBMITTED, EnrollStatusConstant.ABSENT)
+            .select(EnrollDO::getExamPlanId, EnrollDO::getUserId);
+
+        List<EnrollDO> enrollDOS = enrollMapper.selectList(wrapper);
+
+        if (ObjectUtil.isNotEmpty(enrollDOS)) {
+
+            // 查出未完成记录对应的计划
+            List<Long> planIds = enrollDOS.stream().map(EnrollDO::getExamPlanId).toList();
+
+            // 查计划对应项目
+            Map<Long, Long> planProjectMap = examPlanMapper.selectByIds(planIds)
+                .stream()
+                .collect(Collectors.toMap(ExamPlanDO::getId, ExamPlanDO::getExamProjectId));
+
+            // 找出同项目未完成考试的考生
+            Set<Long> conflictUserIds = enrollDOS.stream()
+                .filter(e -> projectId.equals(planProjectMap.get(e.getExamPlanId())))
+                .map(EnrollDO::getUserId)
+                .collect(Collectors.toSet());
+
+            if (!conflictUserIds.isEmpty()) {
+                flatList = flatList.stream().filter(item -> !conflictUserIds.contains(item.getCandidateId())).toList();
+            }
+        }
+
+        // 过滤已合格但未生成证书 或 成绩未录入的考生 → 直接转 Set
+        Set<Long> forbiddenCandidateSet = new HashSet<>(CollectionUtil.emptyIfNull(baseMapper
+            .getPassedButUncertifiedCandidateIds(projectId)));
+        // 直接过滤（O(1) 判断）
+        if (!forbiddenCandidateSet.isEmpty()) {
+            flatList = flatList.stream()
+                .filter(item -> !forbiddenCandidateSet.contains(item.getCandidateId()))
+                .toList();
+        }
+
+        // 证书未过期过滤
+        // 查询项目
+        ProjectDO projectDO = projectMapper.selectById(projectId);
+        String projectCode = projectDO.getProjectCode();
+        // 查询证书
+        List<LicenseCertificateDO> licenseCertificateDOS = licenseCertificateMapper
+            .selectList(new LambdaQueryWrapper<LicenseCertificateDO>()
+                .in(LicenseCertificateDO::getCandidateId, allCandidateIds)
+                .eq(LicenseCertificateDO::getPsnlcnsItemCode, projectCode));
+        // 过滤“证书未过期”的考生（直接转 Set）
+        if (CollUtil.isNotEmpty(licenseCertificateDOS)) {
+
+            YearMonth currentMonth = YearMonth.now();
+
+            Set<Long> blockedCandidateSet = licenseCertificateDOS.stream().filter(item -> {
+                LocalDate endDate = item.getEndDate();
+                return endDate != null && !YearMonth.from(endDate).isBefore(currentMonth);
+            }).map(LicenseCertificateDO::getCandidateId).collect(Collectors.toSet());
+
+            // 4. 过滤 flatList（O(1)）
+            if (!blockedCandidateSet.isEmpty()) {
+                flatList = flatList.stream()
+                    .filter(item -> !blockedCandidateSet.contains(item.getCandidateId()))
+                    .toList();
+            }
+        }
+
         // 组装层级结构
         Map<Long, ProjectCategoryVO> projectMap = new LinkedHashMap<>();
 
@@ -1655,6 +1756,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
             // 合并提示单元格（例如 A2 ~ 最后一列）
             sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, headers.size() - 1));
+
             Cell tipCell = tipRow.createCell(0);
             tipCell.setCellValue(tipText);
             tipCell.setCellStyle(tipStyle);
@@ -1918,6 +2020,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         ValidationUtils.throwIfNull(examPlanDO, "考试计划信息不存在");
         ValidationUtils.throwIf(!PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue()
             .equals(examPlanDO.getIsFinalConfirmed()), "考试未确认，暂无法下载");
+        // 判断是否是焊接项目
+        boolean isWelding = weldingConfig.getProjectIdList().contains(examPlanDO.getExamProjectId());
 
         // 2判断是否有道路成绩
         ExamPresenceDTO examPlanOperAndRoadDTO = examRecordsMapper.hasOperationOrRoadExam(planId, roadExamTypeId);
@@ -1938,7 +2042,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
         // 4下载模板和获取写入参数
         byte[] templateBytes = DownloadOSSFileUtil.downloadUrlToBytes(hasRoad ? forkliftTemplateUrl : gradeTemplateUrl);
-        ValidationUtils.throwIf(templateBytes == null || templateBytes.length == 0, "系统繁忙");
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(templateBytes) || templateBytes.length == 0, "系统繁忙");
 
         int writeStartRow = hasRoad
             ? DownloadSummaryConstants.WRITE_START_ROW_FORKLIFT
@@ -1946,16 +2050,11 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         int writeEndCell = DownloadSummaryConstants.WRITE_END_CEL;
         int writeRowNumber = DownloadSummaryConstants.WRITE_ROW_NUMBER;
         // 5填充 Excel
-        byte[] resultBytes = fillExamSummary(templateBytes, enrollList, writeStartRow, writeEndCell, writeRowNumber, isOrgUser, hasRoad);
+        byte[] resultBytes = fillExamSummary(templateBytes, enrollList, writeStartRow, writeEndCell, writeRowNumber, hasRoad, isWelding);
 
         // 6构建返回 ResponseEntity
-        boolean isZip = enrollList.size() > writeRowNumber;
-        String fileName;
-        if (Boolean.TRUE.equals(isOrgUser)) {
-            fileName = isZip ? (hasRoad ? "叉车成绩汇总表.zip" : "成绩汇总表.zip") : (hasRoad ? "叉车成绩汇总表.xls" : "成绩汇总表.xls");
-        } else {
-            fileName = hasRoad ? "叉车成绩汇总表.xls" : "成绩汇总表.xls";
-        }
+        String fileName = hasRoad ? "叉车成绩汇总表.xls" : "成绩汇总表.xls";
+        ;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
@@ -1982,49 +2081,13 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                                   int startRow,
                                   int endCell,
                                   int rowNumber,
-                                  Boolean isOrgUser,
-                                  Boolean hasRoad) {
+                                  Boolean hasRoad,
+                                  Boolean isWelding) {
 
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        try {
 
-            int dataSize = enrollList == null ? 0 : enrollList.size();
-
-            // 小数据：直接一个 Excel
-            if (dataSize <= rowNumber) {
-                return createSingleExcel(templateBytes, enrollList, startRow, endCell, rowNumber);
-            }
-
-            // 大数据 + 机构用户 → ZIP
-            if (Boolean.TRUE.equals(isOrgUser)) {
-
-                try (ZipOutputStream zos = new ZipOutputStream(baos)) {
-
-                    int sheetCount = (int)Math.ceil((double)dataSize / rowNumber);
-
-                    for (int i = 0; i < sheetCount; i++) {
-                        int fromIndex = i * rowNumber;
-                        int toIndex = Math.min(fromIndex + rowNumber, dataSize);
-
-                        List<EnrollResp> subList = enrollList.subList(fromIndex, toIndex);
-
-                        byte[] excelBytes = createSingleExcel(templateBytes, subList, startRow, endCell, rowNumber);
-
-                        String fileName = "成绩汇总表_" + (i + 1) + ".xls";
-
-                        ZipEntry entry = new ZipEntry(fileName);
-                        zos.putNextEntry(entry);
-                        zos.write(excelBytes);
-                        zos.closeEntry();
-                    }
-
-                    zos.finish();
-                }
-
-                return baos.toByteArray();
-            }
-
-            //  大数据 + 非机构用户 → 一个 Excel（动态扩展行）
-            return createSingleExcelDynamic(templateBytes, enrollList, startRow, endCell, rowNumber, hasRoad);
+            // 一个 Excel（动态扩展行）
+            return createSingleExcelDynamic(templateBytes, enrollList, startRow, endCell, rowNumber, hasRoad, isWelding);
 
         } catch (Exception e) {
             throw new RuntimeException("填充 Excel 汇总表失败", e);
@@ -2036,95 +2099,143 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                                             int startRow,
                                             int endCell,
                                             int rowNumber,
-                                            Boolean hasRoad) throws IOException {
+                                            Boolean hasRoad,
+                                            Boolean isWelding) throws IOException {
 
         try (ByteArrayInputStream bais = new ByteArrayInputStream(templateBytes);
             Workbook workbook = new HSSFWorkbook(bais); ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             Sheet sheet = workbook.getSheetAt(0);
 
-            int dataSize = enrollList.size();
+            // =========================
+            // 1. 计算真实行数（支持焊接拆行）
+            // =========================
+            int dataSize;
 
-            // 👉 需要插入的行数
+            if (Boolean.TRUE.equals(isWelding)) {
+                dataSize = enrollList.stream().mapToInt(e -> {
+                    String code = e.getWeldingProjectCode();
+                    if (code == null || code.trim().isEmpty()) {
+                        return 1;
+                    }
+                    return code.split(",").length;
+                }).sum();
+            } else {
+                dataSize = enrollList.size();
+            }
+
+            // =========================
+            // 2. 计算需要插入的行数
+            // =========================
             int needInsert = dataSize - rowNumber;
 
-            // 👉 模板最后一行（用于复制样式）
             Row templateRow = sheet.getRow(startRow);
 
             // =========================
-            // 1️⃣ 插入行（关键🔥）
+            // 3. 插入行 + 样式复制
             // =========================
             if (needInsert > 0) {
+
                 int lastRowNum = sheet.getLastRowNum();
 
-                // 从模板数据结束行开始整体下移
-                sheet.shiftRows(startRow + rowNumber,   // 起始行（模板数据结束）
-                    lastRowNum,             // 最后一行
-                    needInsert,             // 下移行数
-                    true,                   // 复制行高
-                    false                   // 不复制合并（后面手动处理）
-                );
+                sheet.shiftRows(startRow + rowNumber, lastRowNum, needInsert, true, false);
 
-                // 👉 给新插入的行复制样式
                 for (int i = 0; i < needInsert; i++) {
                     int rowIndex = startRow + rowNumber + i;
-
                     Row newRow = sheet.createRow(rowIndex);
 
                     if (templateRow != null) {
-                        // 填充成绩单元格
                         copyRowStyle(sheet, templateRow, newRow, endCell + (hasRoad ? 6 : 4));
                     }
                 }
             }
 
             // =========================
-            // 2️⃣ 填充数据
+            // 4. 填充数据（支持拆行）
             // =========================
-            for (int i = 0; i < dataSize; i++) {
+            int currentRowIndex = startRow;
 
-                EnrollResp enroll = enrollList.get(i);
-                int currentRowIndex = startRow + i;
+            for (EnrollResp enroll : enrollList) {
 
-                Row row = sheet.getRow(currentRowIndex);
-                if (row == null) {
-                    row = sheet.createRow(currentRowIndex);
+                String[] projects;
+
+                if (Boolean.TRUE.equals(isWelding) && enroll.getWeldingProjectCode() != null && !enroll
+                    .getWeldingProjectCode()
+                    .trim()
+                    .isEmpty()) {
+
+                    projects = enroll.getWeldingProjectCode().split(",");
+                } else {
+                    projects = new String[] {enroll.getProjectCode()};
                 }
 
-                for (int cellIndex = 0; cellIndex <= endCell; cellIndex++) {
+                int rowSpan = projects.length;
+                int mergeStartRow = currentRowIndex;
 
-                    Cell cell = row.getCell(cellIndex);
-                    if (cell == null) {
-                        cell = row.createCell(cellIndex);
+                for (int i = 0; i < rowSpan; i++) {
+
+                    Row row = sheet.getRow(currentRowIndex);
+                    if (row == null) {
+                        row = sheet.createRow(currentRowIndex);
                     }
 
-                    switch (cellIndex) {
-                        case 0:
-                            cell.setCellValue(enroll.getClassName());
-                            break;
-                        case 1:
-                            cell.setCellValue(enroll.getSeatId());
-                            break;
-                        case 2:
-                            cell.setCellValue(enroll.getNickName());
-                            break;
-                        case 3:
-                            cell.setCellValue(enroll.getGender().getDescription());
-                            break;
-                        case 4:
-                            cell.setCellValue(aesWithHMAC.verifyAndDecrypt(enroll.getUsername()));
-                            break;
-                        case 5:
-                            cell.setCellValue("");
-                            break;
-                        case 6:
-                            cell.setCellValue(enroll.getCategoryName());
-                            break;
-                        case 7:
-                            cell.setCellValue(enroll.getProjectCode());
-                            break;
-                        default:
-                            break;
+                    for (int cellIndex = 0; cellIndex <= endCell; cellIndex++) {
+
+                        Cell cell = row.getCell(cellIndex);
+                        if (cell == null) {
+                            cell = row.createCell(cellIndex);
+                        }
+
+                        switch (cellIndex) {
+                            case 0:
+                                if (i == 0)
+                                    cell.setCellValue(enroll.getClassName());
+                                break;
+                            case 1:
+                                if (i == 0)
+                                    cell.setCellValue(enroll.getSeatId());
+                                break;
+                            case 2:
+                                if (i == 0)
+                                    cell.setCellValue(enroll.getNickName());
+                                break;
+                            case 3:
+                                if (i == 0)
+                                    cell.setCellValue(enroll.getGender().getDescription());
+                                break;
+                            case 4:
+                                if (i == 0)
+                                    cell.setCellValue(aesWithHMAC.verifyAndDecrypt(enroll.getUsername()));
+                                break;
+                            case 5:
+                                break;
+                            case 6:
+                                if (i == 0)
+                                    cell.setCellValue(enroll.getCategoryName());
+                                break;
+                            case 7:
+                                cell.setCellValue(projects[i]);
+                                break;
+                            default:
+                                cell.setCellValue("");
+                                break;
+                        }
+                    }
+
+                    currentRowIndex++;
+                }
+
+                // =========================
+                // 5. 合并行（关键）
+                // =========================
+                if (rowSpan > 1) {
+                    for (int col = 0; col <= endCell; col++) {
+
+                        // 项目列及后不合并
+                        if (col >= 7)
+                            continue;
+
+                        mergeAndCenter(sheet, mergeStartRow, mergeStartRow + rowSpan - 1, col, workbook);
                     }
                 }
             }
@@ -2134,9 +2245,55 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         }
     }
 
+    private void mergeAndCenter(Sheet sheet, int startRow, int endRow, int col, Workbook workbook) {
+
+        sheet.addMergedRegion(new CellRangeAddress(startRow, endRow, col, col));
+
+        // 取第一行作为基准样式
+        Row firstRow = sheet.getRow(startRow);
+        Cell firstCell = firstRow != null ? firstRow.getCell(col) : null;
+
+        CellStyle baseStyle = firstCell != null ? firstCell.getCellStyle() : null;
+
+        CellStyle finalStyle = createCenterBorderStyle(workbook, baseStyle);
+
+        for (int i = startRow; i <= endRow; i++) {
+
+            Row row = sheet.getRow(i);
+            if (row == null)
+                continue;
+
+            Cell cell = row.getCell(col);
+            if (cell == null) {
+                cell = row.createCell(col);
+            }
+
+            cell.setCellStyle(finalStyle);
+        }
+    }
+
+    private CellStyle createCenterBorderStyle(Workbook workbook, CellStyle baseStyle) {
+
+        CellStyle style = workbook.createCellStyle();
+
+        if (baseStyle != null) {
+            style.cloneStyleFrom(baseStyle);
+        }
+
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+
+        return style;
+    }
+
     private void copyRowStyle(Sheet sheet, Row sourceRow, Row targetRow, int endCell) {
 
-        // 1️⃣ 行高
+        // 1 行高
         targetRow.setHeight(sourceRow.getHeight());
 
         for (int i = 0; i <= endCell; i++) {
@@ -2146,13 +2303,13 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
 
             if (sourceCell != null) {
 
-                // 2️⃣ 单元格样式（包含边框、字体、对齐等）
+                // 2 单元格样式（包含边框、字体、对齐等）
                 CellStyle newStyle = sheet.getWorkbook().createCellStyle();
                 newStyle.cloneStyleFrom(sourceCell.getCellStyle());
 
                 targetCell.setCellStyle(newStyle);
 
-                // 3️⃣ 列宽（只需要设置一次即可）
+                // 3 列宽（只需要设置一次即可）
                 sheet.setColumnWidth(i, sheet.getColumnWidth(i));
             }
         }
@@ -2164,8 +2321,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     private byte[] createSingleExcel(byte[] templateBytes,
                                      List<EnrollResp> enrollList,
                                      int startRow,
-                                     int endCell,
-                                     int rowNumber) throws IOException {
+                                     int endCell) throws IOException {
 
         try (ByteArrayInputStream bais = new ByteArrayInputStream(templateBytes);
             Workbook workbook = new HSSFWorkbook(bais); ByteArrayOutputStream baos = new ByteArrayOutputStream()) {

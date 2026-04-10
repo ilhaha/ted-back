@@ -1156,6 +1156,7 @@ public class EnrollServiceImpl extends BaseServiceImpl<EnrollMapper, EnrollDO, E
 
     /**
      * 将准考证头像转成base64
+     * 
      * @param req
      * @return
      */
