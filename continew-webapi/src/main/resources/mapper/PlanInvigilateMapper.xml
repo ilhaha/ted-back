@@ -60,15 +60,6 @@
                       ON cur_tep.id = #{planId}
                  JOIN ted_project cur_tp
                       ON cur_tp.id = cur_tep.exam_project_id
-        WHERE NOT EXISTS (SELECT 1
-                          FROM ted_plan_invigilate tpi
-                                   JOIN ted_exam_plan tep
-                                        ON tep.id = tpi.exam_plan_id
-                                            AND tep.id != #{planId}
-        AND tep.is_final_confirmed IN (1, 2)
-        WHERE tpi.invigilator_id = su.id
-        AND tpi.invigilate_status = 0
-            AND tpi.is_deleted = 0)
           AND EXISTS (SELECT 1
                       FROM ted_user_qualification tuq
                       WHERE tuq.user_id = su.id

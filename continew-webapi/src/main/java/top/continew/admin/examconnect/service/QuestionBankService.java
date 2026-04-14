@@ -82,4 +82,13 @@ public interface QuestionBankService extends BaseService<QuestionBankResp, Quest
      * @return
      */
     Boolean deleteByProjectIds(List<Long> projectIds);
+
+    /**
+     * 题库出错，换题库
+     * 
+     * @param planId
+     * @return
+     */
+    Boolean saIgnoreRestPaper(Long planId);
+
 }

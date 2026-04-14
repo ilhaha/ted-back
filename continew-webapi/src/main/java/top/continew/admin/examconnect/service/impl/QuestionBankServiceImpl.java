@@ -242,7 +242,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
     /**
      * 考生获取试卷
-     * 
+     *
      * @param planId
      * @param userId
      * @return
@@ -282,7 +282,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
     /**
      * 监考员重新生成考试试卷
-     * 
+     *
      * @param restPaperReq
      * @return
      */
@@ -319,7 +319,7 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
 
     /**
      * 根据项目id删除题目
-     * 
+     *
      * @param projectIds
      * @return
      */
@@ -339,6 +339,43 @@ public class QuestionBankServiceImpl extends BaseServiceImpl<QuestionBankMapper,
         stepMapper.delete(new LambdaQueryWrapper<StepDO>().in(StepDO::getQuestionBankId, questionBankIds));
         // 在删除题目
         baseMapper.deleteByIds(questionBankIds);
+        return Boolean.TRUE;
+    }
+
+    /**
+     * 题库出错，换题库
+     *
+     * @param planId
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean saIgnoreRestPaper(Long planId) {
+        List<EnrollDO> enrollDOS = enrollMapper.selectList(new LambdaQueryWrapper<EnrollDO>()
+            .eq(EnrollDO::getExamPlanId, planId));
+        ValidationUtils.throwIfEmpty(enrollDOS, "该计划下无报名信息");
+
+        // 删除之前的试卷
+        List<Long> enrollIds = enrollDOS.stream().map(EnrollDO::getId).collect(Collectors.toList());
+
+        candidateExamPaperMapper.delete(new LambdaQueryWrapper<CandidateExamPaperDO>()
+            .in(CandidateExamPaperDO::getEnrollId, enrollIds));
+        ObjectMapper objectMapper = new ObjectMapper();
+        for (EnrollDO enrollDO : enrollDOS) {
+            // 生成新的试卷
+            ExamPaperVO examPaperVO = generateExamQuestionBank(enrollDO.getExamPlanId());
+            // 保存新的试卷
+
+            CandidateExamPaperDO candidateExamPaperDO = new CandidateExamPaperDO();
+            try {
+                candidateExamPaperDO.setPaperJson(objectMapper.writeValueAsString(examPaperVO));
+            } catch (JsonProcessingException e) {
+                throw new BusinessException("系统错误");
+            }
+            candidateExamPaperDO.setEnrollId(enrollDO.getId());
+            candidateExamPaperMapper.insert(candidateExamPaperDO);
+        }
+
         return Boolean.TRUE;
     }
 

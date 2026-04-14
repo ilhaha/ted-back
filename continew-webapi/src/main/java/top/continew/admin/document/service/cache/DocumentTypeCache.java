@@ -25,7 +25,6 @@ import top.continew.admin.document.mapper.DocumentTypeMapper;
 import top.continew.admin.document.model.dto.DocumentTypeDTO;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Component
 @RequiredArgsConstructor
@@ -38,19 +37,19 @@ public class DocumentTypeCache {
     /**
      * 获取资料种类缓存方法
      */
-    public List<DocumentTypeDTO> getDocumentTypeCache() {
+    public List<DocumentTypeDTO> getDocumentTypeCache(Integer personnelType) {
         //查询缓存
-        List<DocumentTypeDTO> rDto = (List<DocumentTypeDTO>)redisTemplate.opsForValue()
-            .get(RedisConstant.ALL_DOCUMENT_TYPE_KEY);
-        //缓存命中直接返回
-        if (rDto != null) {
-            return rDto;
-        }
+        //        List<DocumentTypeDTO> rDto = (List<DocumentTypeDTO>)redisTemplate.opsForValue()
+        //            .get(RedisConstant.ALL_DOCUMENT_TYPE_KEY);
+        //        //缓存命中直接返回
+        //        if (rDto != null) {
+        //            return rDto;
+        //        }
         //缓存未命中，查询数据库
-        rDto = documentTypeMapper.selectAllDocumentType();
-        //存入新缓存中
-        redisTemplate.opsForValue()
-            .set(RedisConstant.ALL_DOCUMENT_TYPE_KEY, rDto, RedisConstant.FIFTEEN_DAYS, TimeUnit.SECONDS);
+        List<DocumentTypeDTO> rDto = documentTypeMapper.selectAllDocumentType(personnelType);
+        //        //存入新缓存中
+        //        redisTemplate.opsForValue()
+        //            .set(RedisConstant.ALL_DOCUMENT_TYPE_KEY, rDto, RedisConstant.FIFTEEN_DAYS, TimeUnit.SECONDS);
         return rDto;
     }
 

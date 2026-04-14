@@ -54,7 +54,7 @@ public class ExamIdcardReq implements Serializable {
      */
     @Schema(description = "身份证号码")
     @NotBlank(message = "身份证号码不能为空")
-    @Length(max = 32, message = "身份证号码长度不能超过 {max} 个字符")
+    @Length(max = 18, message = "身份证号码长度不能超过 {max} 个字符")
     private String idCardNumber;
 
     /**
@@ -75,36 +75,106 @@ public class ExamIdcardReq implements Serializable {
     /**
      * 住址
      */
+    @Schema(description = "联系地址")
+    @NotBlank(message = "联系地址不能为空")
+    @Length(max = 255, message = "联系地址长度不能超过 {max} 个字符")
     private String address;
-
-    /**
-     * 签发机关
-     */
-    private String issuingAuthority;
-
-    /**
-     * 有效期开始日期
-     */
-    private LocalDate validStartDate;
-
-    /**
-     * 有效期截止日期
-     */
-    private LocalDate validEndDate;
 
     /**
      * 身份证正面照片路径
      */
+    @Schema(description = "身份证正面照片路径")
+    @NotBlank(message = "未上传身份证正面照片")
     private String idCardPhotoFront;
 
     /**
      * 身份证反面照片路径
      */
+    @Schema(description = "身份证反面照片路径")
+    @NotBlank(message = "未上传身份证反面照片")
     private String idCardPhotoBack;
 
     /**
      * 人像面照片路径
      */
+    @Schema(description = "人脸证件照")
+    @NotBlank(message = "未上传2寸人脸证件照")
     private String facePhoto;
+
+    /**
+     * 专业类型
+     */
+    @Schema(description = "专业类型")
+    @NotBlank(message = "专业类型不能为空")
+    private String majorType;
+
+    /**
+     * 相关学历
+     */
+    @Schema(description = "相关学历")
+    @NotBlank(message = "相关学历不能为空")
+    private String education;
+
+    /**
+     * 毕业院校
+     */
+    @Schema(description = "毕业院校")
+    @NotBlank(message = "毕业院校不能为空")
+    @Length(max = 128, message = "毕业院校长度不能超过 {max} 个字符")
+    private String graduatedSchool;
+
+    /**
+     * 相关专业
+     */
+    @Schema(description = "相关专业")
+    @NotBlank(message = "相关专业不能为空")
+    @Length(max = 128, message = "相关专业长度不能超过 {max} 个字符")
+    private String relatedMajor;
+
+    /**
+     * 单位名称
+     */
+    @Schema(description = "单位名称")
+    @NotBlank(message = "单位名称不能为空")
+    @Length(max = 128, message = "单位名称长度不能超过 {max} 个字符")
+    private String companyName;
+
+    /**
+     * 任职资格
+     */
+    @Schema(description = "任职资格")
+    @NotBlank(message = "任职资格不能为空")
+    private String qualification;
+
+    /**
+     * 相关工作年限
+     */
+    @Schema(description = "相关工作年限")
+    @NotNull(message = "相关工作年限不能为空")
+    @Min(value = 0, message = "工作年限不能小于 {value}")
+    @Max(value = 50, message = "工作年限不能超过 {value}")
+    private Integer workYears;
+
+    /**
+     * 所属地区
+     */
+    @Schema(description = "所属地区")
+    @NotBlank(message = "所属地区不能为空")
+    private String region;
+
+    /**
+     * 邮政编码
+     */
+    @Schema(description = "邮政编码")
+    @NotBlank(message = "邮政编码不能为空")
+    @Pattern(regexp = "^\\d{6}$", message = "邮政编码必须为6位数字")
+    private String postalCode;
+
+    /**
+     * 电子邮箱
+     */
+    @Schema(description = "电子邮箱")
+    @Email(message = "邮箱格式不正确")
+    private String email;
 
 }

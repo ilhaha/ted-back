@@ -56,12 +56,10 @@ public class DocumentTypeServiceImpl extends BaseServiceImpl<DocumentTypeMapper,
 
     public Long add(DocumentTypeReq req) {
 
-        List<DocumentTypeDTO> documentTypeCache1 = documentTypeCache.getDocumentTypeCache();
+        List<DocumentTypeDTO> documentTypeCache1 = documentTypeCache.getDocumentTypeCache(req.getPersonnelType());
         //判断数据库是否已存在
         for (DocumentTypeDTO documentTypeDTO : documentTypeCache1) {
             if (documentTypeDTO.getTypeName().equals(req.getTypeName())) {
-                //throw new RuntimeException("已存在该类型");
-                //ValidationUtils.throwIf(true, "已存在该类型");
                 throw new BusinessException("已存在该类型");
             }
         }
@@ -90,9 +88,9 @@ public class DocumentTypeServiceImpl extends BaseServiceImpl<DocumentTypeMapper,
      * @return
      */
     @Override
-    public List<DocumentTypeNameVO> getDocumentTypeName() {
+    public List<DocumentTypeNameVO> getDocumentTypeName(Integer personnelType) {
         //查询缓存
-        List<DocumentTypeDTO> rDto = documentTypeCache.getDocumentTypeCache();
+        List<DocumentTypeDTO> rDto = documentTypeCache.getDocumentTypeCache(personnelType);
         return rDto.stream()
             .map(dto -> new DocumentTypeNameVO(dto.getId(), dto.getTypeName()))
             .collect(Collectors.toList());

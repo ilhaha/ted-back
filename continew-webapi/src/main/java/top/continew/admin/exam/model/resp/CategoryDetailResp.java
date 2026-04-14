@@ -86,4 +86,11 @@ public class CategoryDetailResp extends BaseDetailResp {
     @Schema(description = "是否开启电子监考违规行为提醒功能（1开启，0未开启）")
     @ExcelProperty(value = "是否开启电子监考违规行为提醒功能（1开启，0未开启）")
     private Boolean enableProctorWarning;
+
+    /**
+     * 考试办理类型（0无，1取证考试、2换证考试、3免考换证）
+     */
+    @Schema(description = "考试办理类型（0无，1取证考试、2换证考试、3免考换证）")
+    @ExcelProperty(value = "考试办理类型（0无，1取证考试、2换证考试、3免考换证）")
+    private Integer examType;
 }

@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.document.model.resp.DocumentTypeResp;
 import top.continew.admin.exam.model.req.ExamLocationReqStr;
+import top.continew.admin.exam.model.resp.InspectionProjectResp;
 import top.continew.admin.exam.model.resp.StudentProjectDetailResp;
 import top.continew.admin.exam.model.vo.ProjectVo;
 import top.continew.admin.exam.model.vo.ProjectWithClassroomVO;
@@ -54,6 +55,18 @@ import java.util.Map;
 @CrudRequestMapping(value = "/exam/project", api = {Api.PAGE, Api.LIST, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
     Api.EXPORT})
 public class ProjectController extends BaseController<ProjectService, ProjectResp, ProjectDetailResp, ProjectQuery, ProjectReq> {
+
+    /**
+     * 无损检验、作业人员根据种类类型和考试级别，获取出对应的项目
+     *
+     * @return
+     */
+    @Operation(summary = "无损检验、作业人员根据种类类型和考试级别，获取出对应的项目")
+    @GetMapping("/inspection/list/{categoryId}/{examLevel}")
+    public List<InspectionProjectResp> getInspectionProjectList(@PathVariable("categoryId") Long categoryId,
+                                                                @PathVariable("examLevel") Integer examLevel) {
+        return baseService.getInspectionProjectList(categoryId, examLevel);
+    }
 
     /**
      * 根据项目的考试人员类型和是否有实操考试获取地点-考场级联选择器
@@ -116,9 +129,10 @@ public class ProjectController extends BaseController<ProjectService, ProjectRes
     }
 
     @Operation(summary = "根据projectid获取没有关联的document")
-    @PostMapping("/document/notBinding/{id}")
-    public List<ProjectVo> getNotBindDocument(@PathVariable("id") Long id) {
-        return baseService.notBindDocument(id);
+    @PostMapping("/document/notBinding/{id}/{personnelType}")
+    public List<ProjectVo> getNotBindDocument(@PathVariable("id") Long id,
+                                              @PathVariable("personnelType") Integer personnelType) {
+        return baseService.notBindDocument(id, personnelType);
     }
 
     @Operation(summary = "根据projectid获取关联的localtion")

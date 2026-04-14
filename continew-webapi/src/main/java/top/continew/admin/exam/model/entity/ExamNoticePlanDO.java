@@ -25,50 +25,30 @@ import top.continew.admin.common.model.entity.BaseDO;
 import java.io.Serial;
 
 /**
- * 八大类，存储题目分类信息实体
+ * 考试通知与考试计划关联实体
  *
- * @author Anton
- * @since 2025/04/07 10:43
+ * @author ilhaha
+ * @since 2026/04/14 15:21
  */
 @Data
-@TableName("ted_category")
-public class CategoryDO extends BaseDO {
+@TableName("ted_exam_notice_plan")
+public class ExamNoticePlanDO extends BaseDO {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 种类名称
+     * 考试通知ID
      */
-    private String name;
+    private Long noticeId;
 
     /**
-     * 类别代号
+     * 考试计划ID
      */
-    private String code;
-
-    private Long topicNumber;
-
-    private String videoUrl;
+    private Long planId;
 
     /**
-     * 是否删除（0-未删除，1-已删除）
+     * 删除标记
      */
     private Boolean isDeleted;
-
-    /**
-     * 是否开启电子监考违规行为提醒功能（1开启，0未开启）
-     */
-    private Boolean enableProctorWarning;
-
-    /**
-     * 种类类型（1=普通八大类，2=焊接，3=无损检测，4=检验人员）
-     */
-    private Integer categoryType;
-
-    /**
-     * 考试办理类型（0无，1取证考试、2换证考试、3免考换证）
-     */
-    private Integer examType;
-
 }

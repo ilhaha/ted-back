@@ -13,6 +13,9 @@ server:
 spring.datasource:
   type: com.zaxxer.hikari.HikariDataSource
   # 请务必提前创建好名为 continew_admin 的数据库，如果使用其他数据库名请注意同步修改 DB_NAME 配置
+#  url: jdbc:p6spy:mysql://${DB_HOST:210.73.73.205}:${DB_PORT:3306}/${DB_NAME:ted}?serverTimezone=Asia/Shanghai&useSSL=true&useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&autoReconnect=true&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
+#  username: ${DB_USER:proUser}
+#  password: ${DB_PWD:26@KszxtZ}
   url: jdbc:p6spy:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ted}?serverTimezone=Asia/Shanghai&useSSL=true&useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&autoReconnect=true&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
   username: ${DB_USER:root}
   password: ${DB_PWD:123456}
@@ -43,9 +46,12 @@ spring.data:
   ## Redis 配置（单机模式）
   redis:
     # 地址
+#    host: ${REDIS_HOST:210.73.73.205}
     host: ${REDIS_HOST:localhost}
     # 端口（默认 6379）
     port: ${REDIS_PORT:6379}
+    # 密码（未设置密码时请注释掉）
+#    password: ${REDIS_PASSWORD:TzKSZX@2026}
     # 数据库索引
     database: ${REDIS_DB:0}
     # 连接超时时间
@@ -346,11 +352,37 @@ certificate:
 category:
   special-equipment-manage-type-id: 34
 
+# 无损检测和检验人员特殊的种类
+exam:
+  special:
+    # 免考换证id
+    exemptRenewIds:
+      - 42
+      - 45
+
+    # 具有特殊实操考试项目代码
+    specialPracticalCodes:
+      - RT
+
+
 # 焊接分类id
 welding:
   category-id: 27
-  metal-project-id: 110
-  nonmetal-project-id: 111
+  project-id-list:
+    - 110
+    - 111
+    - 173
+    - 174
+    - 175
+    - 177
+  metal-project-id-list:
+    - 110
+    - 173
+    - 174
+  no-metal-project-id-list:
+    - 111
+    - 175
+    - 177
 
 
 aes:
@@ -371,10 +403,10 @@ excel:
     summary-table:
       # 成绩汇总表模板
       grade:
-        url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2026/1/26/grade_summary_table.xls
+        url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2026/4/10/grade_summary_table.xls
       # 叉车成绩汇总表
       forklift_performance:
-        url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2026/1/26/forklift_performance_summary_table.xls
+        url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2026/4/10/forklift_performance_summary_table.xls
     # 准考证模板
     admission-ticket:
       url: https://onedt-exam-system.oss-cn-shenzhen.aliyuncs.com/2025/10/22/68f8c4095814e0d894c63935.xlsx

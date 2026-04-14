@@ -16,6 +16,7 @@
 
 package top.continew.admin.examconnect.controller;
 
+import cn.dev33.satoken.annotation.SaIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.validation.annotation.Validated;
@@ -63,6 +64,13 @@ public class QuestionBankController extends BaseController<QuestionBankService, 
     @PostMapping("/rest/paper")
     public Boolean restPaper(@Validated @RequestBody RestPaperReq restPaperReq) {
         return baseService.restPaper(restPaperReq);
+    }
+
+    @Operation(summary = "题库出错，换题库")
+    @GetMapping("/saIgnore/rest/paper/{planId}")
+    @SaIgnore
+    public Boolean saIgnoreRestPaper(@PathVariable Long planId) {
+        return baseService.saIgnoreRestPaper(planId);
     }
 
     @Operation(summary = "考生获取试卷")

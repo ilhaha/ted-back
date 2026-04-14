@@ -70,10 +70,10 @@ public class DocumentController extends BaseController<DocumentService, Document
         return baseService.qrcodeUpload(qrcodeUploadReq);
     }
 
-    @GetMapping("/typeName")
+    @GetMapping("/typeName/{personnelType}")
     @Operation(summary = "获取资料种类名称列表")
-    public List<DocumentTypeNameVO> getTypeNameList() {
-        return documentTypeService.getDocumentTypeName();
+    public List<DocumentTypeNameVO> getTypeNameList(Integer personnelType) {
+        return documentTypeService.getDocumentTypeName(personnelType);
     }
 
     @GetMapping("/getType")

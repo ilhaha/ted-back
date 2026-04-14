@@ -51,6 +51,12 @@ public class DocumentTypeResp extends BaseResp {
     private Integer needUploadPerson;
 
     /**
+     * 人员类型（0作业人员，1检验人员）
+     */
+    @Schema(description = "人员类型（0作业人员，1检验人员）")
+    private Integer personnelType;
+
+    /**
      * 更新人ID
      */
     @Schema(description = "更新人ID")

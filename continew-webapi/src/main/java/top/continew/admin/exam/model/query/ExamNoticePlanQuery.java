@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package top.continew.admin.document.model.query;
+package top.continew.admin.exam.model.query;
 
 import lombok.Data;
 
@@ -28,36 +28,29 @@ import java.io.Serializable;
 import java.time.*;
 
 /**
- * 资料核心存储查询条件
+ * 考试通知与考试计划关联查询条件
  *
- * @author Anton
- * @since 2025/03/12 15:29
+ * @author ilhaha
+ * @since 2026/04/14 15:21
  */
 @Data
-@Schema(description = "资料核心存储查询条件")
-public class DocumentQuery implements Serializable {
+@Schema(description = "考试通知与考试计划关联查询条件")
+public class ExamNoticePlanQuery implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
-    /**
-     * 资料审核状态
-     */
-
-    @Schema(description = "资料审核状态")
-    @Query(type = QueryType.EQ)
-    private Integer status;
-    /**
-     * 资料种类id
-     */
-    @Schema(description = "资料种类id")
-    @Query(type = QueryType.EQ)
-    private Long typeId;
 
     /**
-     * 资料类型
+     * 考试通知ID
      */
-    @Schema(description = "资料类型")
+    @Schema(description = "考试通知ID")
     @Query(type = QueryType.EQ)
-    private String typeName;
+    private Long noticeId;
 
+    /**
+     * 考试计划ID
+     */
+    @Schema(description = "考试计划ID")
+    @Query(type = QueryType.EQ)
+    private Long planId;
 }

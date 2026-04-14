@@ -100,7 +100,6 @@ import top.continew.admin.exam.service.ExamPlanService;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -2060,8 +2059,13 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             if (InvigilateStatusEnum.FINISHED.getValue().equals(invigilateStatus)) {
                 queryWrapper.eq("tpi.invigilate_status", InvigilateStatusEnum.FINISHED.getValue());
             } else {
+                LocalDate today = LocalDate.now();
+                LocalDateTime startOfDay = today.atStartOfDay();
+                LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
                 queryWrapper.in("tpi.invigilate_status", InvigilateStatusEnum.NOT_START
-                    .getValue(), InvigilateStatusEnum.DURING_NVIGILATION.getValue());
+                    .getValue(), InvigilateStatusEnum.DURING_NVIGILATION.getValue())
+                    .ge("tep.start_time", startOfDay)
+                    .lt("tep.start_time", endOfDay);
             }
         }
 
@@ -2112,9 +2116,9 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
             .equals(planInvigilateDO.getExamPassword()), "开考密码错误，请核对后重试");
         LocalDateTime startTime = examPlanDO.getStartTime();
         if (statusIsSuccess) {
-            LocalDateTime now = LocalDateTime.now();
+            //            LocalDateTime now = LocalDateTime.now();
             // 开始时间 - 当前时间 > 15分钟： 考前45分钟才可以进去
-            ValidationUtils.throwIf(Duration.between(now, startTime).toMinutes() > 15, "请于考前15分钟内进入");
+            //            ValidationUtils.throwIf(Duration.between(now, startTime).toMinutes() > 15, "请于考前15分钟内进入");
             // 修改考试计划状态
             baseMapper.update(new LambdaUpdateWrapper<ExamPlanDO>().set(ExamPlanDO::getStatus, PlanConstant.EXAM_BEGUN
                 .getStatus()).eq(ExamPlanDO::getId, planId));

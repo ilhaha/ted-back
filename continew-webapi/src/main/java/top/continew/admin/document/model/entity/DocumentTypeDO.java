@@ -49,6 +49,11 @@ public class DocumentTypeDO extends BaseDO {
     private Integer needUploadPerson;
 
     /**
+     * 人员类型（0作业人员，1检验人员）
+     */
+    private Integer personnelType;
+
+    /**
      * 更新人ID
      */
     private Long updateUser;

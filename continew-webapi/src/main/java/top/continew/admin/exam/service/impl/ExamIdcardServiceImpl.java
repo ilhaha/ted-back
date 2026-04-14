@@ -16,12 +16,15 @@
 
 package top.continew.admin.exam.service.impl;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.system.model.entity.UserDO;
@@ -36,8 +39,6 @@ import top.continew.admin.exam.model.req.ExamIdcardReq;
 import top.continew.admin.exam.model.resp.ExamIdcardDetailResp;
 import top.continew.admin.exam.model.resp.ExamIdcardResp;
 import top.continew.admin.exam.service.ExamIdcardService;
-
-import java.time.LocalDate;
 
 /**
  * 考生身份证信息业务实现
@@ -74,24 +75,28 @@ public class ExamIdcardServiceImpl extends BaseServiceImpl<ExamIdcardMapper, Exa
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Long saveRealName(ExamIdcardReq examIdcardReq) {
-        // 校验有效期是否过期
-        LocalDate validEndDate = examIdcardReq.getValidEndDate();
-        LocalDate today = LocalDate.now();
-        ValidationUtils.throwIf(validEndDate != null && today.isAfter(validEndDate), "身份证已过期");
-
         //加密身份证号
         String encryptedIdCardNumber = aesWithHMAC.encryptAndSign(examIdcardReq.getIdCardNumber());
 
+        //先查用户表判断是否已经注册过
+        UserDO userDO = userService.getByUsername(encryptedIdCardNumber);
+        ValidationUtils.throwIfNull(userDO, "该身份证未注册,无法进行实名操作");
+
         // 校验身份证号是否已实名
         LambdaQueryWrapper<ExamIdcardDO> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ExamIdcardDO::getIdCardNumber, encryptedIdCardNumber)
-            .eq(ExamIdcardDO::getIsDeleted, 0)
-            .select(ExamIdcardDO::getIdCardNumber);
+        queryWrapper.eq(ExamIdcardDO::getIdCardNumber, encryptedIdCardNumber).select(ExamIdcardDO::getIdCardNumber);
         Long count = baseMapper.selectCount(queryWrapper);
         ValidationUtils.throwIf(count > 0, "该身份证号码已实名，不能重复认证");
         //加密再保存
         examIdcardReq.setIdCardNumber(encryptedIdCardNumber);
+        // 如果有新的邮箱,更新用户表的邮箱
+        String email = examIdcardReq.getEmail();
+        if (StrUtil.isNotBlank(email)) {
+            userService.update(new LambdaUpdateWrapper<UserDO>().eq(UserDO::getId, userDO.getId())
+                .set(UserDO::getEmail, email));
+        }
         return super.add(examIdcardReq);
     }
 }

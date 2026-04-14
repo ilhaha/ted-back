@@ -105,6 +105,51 @@ public class ExamIdcardResp extends BaseResp {
     private String idCardPhotoBack;
 
     /**
+     * 专业类型
+     */
+    private String majorType;
+
+    /**
+     * 相关学历
+     */
+    private String education;
+
+    /**
+     * 毕业院校
+     */
+    private String graduatedSchool;
+
+    /**
+     * 相关专业
+     */
+    private String relatedMajor;
+
+    /**
+     * 单位名称
+     */
+    private String companyName;
+
+    /**
+     * 任职资格
+     */
+    private String qualification;
+
+    /**
+     * 相关工作年限
+     */
+    private Integer workYears;
+
+    /**
+     * 所属地区
+     */
+    private String region;
+
+    /**
+     * 邮政编码
+     */
+    private String postalCode;
+
+    /**
      * 更新人
      */
     @Schema(description = "更新人")

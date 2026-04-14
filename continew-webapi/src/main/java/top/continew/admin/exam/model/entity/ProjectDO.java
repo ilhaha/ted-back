@@ -88,6 +88,11 @@ public class ProjectDO extends BaseDO {
     private Integer projectLevel;
 
     /**
+     * 禁止考年龄
+     */
+    private Integer examEndAge;
+
+    /**
      * 是否有实操考试（0无，1有）
      */
     private Integer isOperation;
@@ -101,4 +106,14 @@ public class ProjectDO extends BaseDO {
      * 项目收费标准
      */
     private Long examFee;
+
+    /**
+     * 考试场次类型（0既包含初试也包含补考，1只有初试，2只有补考，3无）
+     */
+    private Integer examAttemptType;
+
+    /**
+     * 实操类型（0默认实操，1拍片，2评片，3拍片+评片，4无）
+     */
+    private Integer practicalType;
 }

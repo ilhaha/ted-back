@@ -14,50 +14,62 @@
  * limitations under the License.
  */
 
-package top.continew.admin.document.model.query;
+package top.continew.admin.exam.model.entity;
 
 import lombok.Data;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.baomidou.mybatisplus.annotation.TableName;
 
-import top.continew.starter.data.core.annotation.Query;
-import top.continew.starter.data.core.enums.QueryType;
+import top.continew.admin.common.model.entity.BaseDO;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.time.*;
 
 /**
- * 资料核心存储查询条件
+ * 无损检测、检验人员考试通知实体
  *
- * @author Anton
- * @since 2025/03/12 15:29
+ * @author ilhaha
+ * @since 2026/04/14 15:20
  */
 @Data
-@Schema(description = "资料核心存储查询条件")
-public class DocumentQuery implements Serializable {
+@TableName("ted_exam_notice")
+public class ExamNoticeDO extends BaseDO {
 
     @Serial
     private static final long serialVersionUID = 1L;
-    /**
-     * 资料审核状态
-     */
 
-    @Schema(description = "资料审核状态")
-    @Query(type = QueryType.EQ)
+    /**
+     * 标题
+     */
+    private String title;
+
+    /**
+     * 报名截止时间
+     */
+    private LocalDate applyDeadline;
+
+    /**
+     * 所属类别
+     */
+    private Long categoryId;
+
+    /**
+     * 考试等级 0-无 1一级 2 二级
+     */
+    private Integer examLevel;
+
+    /**
+     * 状态（0待审核、1审核通过、2审核未通过）
+     */
     private Integer status;
-    /**
-     * 资料种类id
-     */
-    @Schema(description = "资料种类id")
-    @Query(type = QueryType.EQ)
-    private Long typeId;
 
     /**
-     * 资料类型
+     * 备注
      */
-    @Schema(description = "资料类型")
-    @Query(type = QueryType.EQ)
-    private String typeName;
+    private String remark;
 
+    /**
+     * 删除标记
+     */
+    private Boolean isDeleted;
 }

@@ -14,25 +14,18 @@
  * limitations under the License.
  */
 
-package top.continew.admin.document.service;
+package top.continew.admin.exam.service;
 
-import top.continew.admin.document.model.vo.DocumentTypeNameVO;
 import top.continew.starter.extension.crud.service.BaseService;
-import top.continew.admin.document.model.query.DocumentTypeQuery;
-import top.continew.admin.document.model.req.DocumentTypeReq;
-import top.continew.admin.document.model.resp.DocumentTypeDetailResp;
-import top.continew.admin.document.model.resp.DocumentTypeResp;
-
-import java.util.List;
+import top.continew.admin.exam.model.query.ExamNoticePlanQuery;
+import top.continew.admin.exam.model.req.ExamNoticePlanReq;
+import top.continew.admin.exam.model.resp.ExamNoticePlanDetailResp;
+import top.continew.admin.exam.model.resp.ExamNoticePlanResp;
 
 /**
- * 资料类型主业务接口
+ * 考试通知与考试计划关联业务接口
  *
- * @author Anton
- * @since 2025/03/12 15:29
+ * @author ilhaha
+ * @since 2026/04/14 15:21
  */
-public interface DocumentTypeService extends BaseService<DocumentTypeResp, DocumentTypeDetailResp, DocumentTypeQuery, DocumentTypeReq> {
-
-    List<DocumentTypeNameVO> getDocumentTypeName(Integer personnelType);
-
-}
+public interface ExamNoticePlanService extends BaseService<ExamNoticePlanResp, ExamNoticePlanDetailResp, ExamNoticePlanQuery, ExamNoticePlanReq> {}

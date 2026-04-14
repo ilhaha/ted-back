@@ -60,6 +60,12 @@ public class CategoryReq implements Serializable {
     @Max(value = 4, message = "种类类型值必须为1-4（1=普通八大类，2=焊接，3=无损检测，4=检验人员）")
     private Integer categoryType;
 
+    @Schema(description = "考试办理类型（0无，1取证考试、2换证考试、3免考换证）")
+    @NotNull(message = "考试办理类型不能为空")
+    @Min(value = 0, message = "考试办理类型值必须为0-3（0=无，1=取证考试，2=换证考试，3=免考换证）")
+    @Max(value = 3, message = "考试办理类型值必须为0-3（0=无，1=取证考试，2=换证考试，3=免考换证）")
+    private Integer examType;
+
     private Long topicNumber;
     private String videoUrl;
 

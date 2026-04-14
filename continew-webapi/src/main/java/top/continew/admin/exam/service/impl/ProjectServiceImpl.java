@@ -17,6 +17,7 @@
 package top.continew.admin.exam.service.impl;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -29,10 +30,15 @@ import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.constant.ErrorMessageConstant;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.constant.UserConstant;
+import top.continew.admin.common.constant.enums.ExamSessionTypeEnum;
+import top.continew.admin.common.constant.enums.PracticalTypeEnum;
+import top.continew.admin.common.constant.enums.ProjectLevelEnum;
+import top.continew.admin.common.constant.enums.ProjectTypeEnum;
 import top.continew.admin.common.enums.LocationStatusEnum;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.model.resp.AddressInfoResp;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
+import top.continew.admin.config.ExamSpecialConfig;
 import top.continew.admin.document.mapper.DocumentTypeMapper;
 import top.continew.admin.document.model.entity.DocumentTypeDO;
 import top.continew.admin.document.model.resp.DocumentTypeResp;
@@ -94,8 +100,11 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
 
     @Resource
     private RedisUtil redisUtil;
+
     @Resource
     private DocumentTypeCache documentTypeCache;
+
+    private final ExamSpecialConfig examSpecialConfig;
 
     /**
      * 重写新增方法
@@ -109,17 +118,34 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     @Transactional
     public Long add(ProjectReq req) {
 
-        // ① 校验项目编码唯一
-        ValidationUtils.throwIf(baseMapper.selectCount(new QueryWrapper<ProjectDO>().eq("project_code", req
-            .getProjectCode()).eq("is_deleted", 0)) > 0, "项目代码已存在");
+        // ① 校验项目编码唯一（分类 + 等级 维度）
+        boolean codeExists = baseMapper.exists(new QueryWrapper<ProjectDO>().eq("project_code", req.getProjectCode())
+                .eq("category_id", req.getCategoryId())
+                .eq("project_level", req.getProjectLevel())
+                .eq("is_deleted", 0));
 
-        // ② 校验项目名称 + 八大类唯一（你原来的逻辑）
-        QueryWrapper<ProjectDO> queryWrapper = new QueryWrapper<ProjectDO>().eq("project_name", req.getProjectName())
-            .eq("category_id", req.getCategoryId())
-            .eq("is_deleted", 0);
+        ValidationUtils.throwIf(codeExists, "该分类下该等级的项目代码已存在");
 
-        ProjectDO projectDO = baseMapper.selectOne(queryWrapper);
-        ValidationUtils.throwIfNotNull(projectDO, "项目名称已存在");
+        // ② 校验项目名称唯一（分类 + 等级 维度）
+        boolean nameExists = baseMapper.exists(new QueryWrapper<ProjectDO>().eq("project_name", req.getProjectName())
+                .eq("category_id", req.getCategoryId())
+                .eq("project_level", req.getProjectLevel())
+                .eq("is_deleted", 0));
+
+        ValidationUtils.throwIf(nameExists, "该分类下该等级的项目名称已存在");
+
+        // 如果是免考类型
+        if (examSpecialConfig.getExemptRenewIds().contains(req.getCategoryId())) {
+            req.setExamAttemptType(ExamSessionTypeEnum.NO_HAS.getValue());
+            req.setPracticalType(PracticalTypeEnum.NO_HAS.getValue());
+        } else {
+            // 不是免考，但如果是有特殊实操考试的项目
+            if (examSpecialConfig.getSpecialPracticalCodes().contains(req.getProjectCode())) {
+                req.setPracticalType(ProjectLevelEnum.LEVEL_ONE.getValue().equals(req.getProjectLevel())
+                        ? PracticalTypeEnum.SHOOT.getValue()
+                        : PracticalTypeEnum.SHOOT_AND_REVIEW.getValue());
+            }
+        }
 
         // ③ Anton 原逻辑
         UserTokenDo userInfo = TokenLocalThreadUtil.get();
@@ -165,7 +191,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
         super.sort(queryWrapper, pageQuery);
 
         IPage<ProjectDetailResp> page = baseMapper.selectProjectPage(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper);
+                .getSize()), queryWrapper);
 
         PageResp<ProjectResp> pageResp = PageResp.build(page, super.getListClass());
         pageResp.getList().forEach(item -> {
@@ -221,7 +247,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             examLocationReqStr.setOperationalStatus(examLocationDO.getOperationalStatus());
 
             AddressInfoResp ids = addressUtil.getIds(examLocationDO.getProvinceId(), examLocationDO
-                .getCityId(), examLocationDO.getStreetId());
+                    .getCityId(), examLocationDO.getStreetId());
 
             examLocationReqStr.setCity(ids.getCityName());
             examLocationReqStr.setProvince(ids.getProvinceName());
@@ -307,7 +333,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             return;
 
         projLocAssocMapper.delete(new QueryWrapper<ProjLocAssocDO>().eq("project_id", projectId)
-            .in("location_id", locationIds));
+                .in("location_id", locationIds));
 
     }
 
@@ -318,7 +344,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     }
 
     @Override
-    public List<ProjectVo> notBindDocument(Long id) {
+    public List<ProjectVo> notBindDocument(Long id, Integer personnelType) {
         ValidationUtils.throwIfEmpty(id, "请求id为空");
 
         // 获取已经绑定了的资料id
@@ -327,9 +353,11 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
         List<DocumentTypeDO> lists = null;
         // 有绑定与一个没有绑定
         if (documentIds == null || documentIds.isEmpty()) {
-            lists = documentTypeMapper.selectList(null);
+            lists = documentTypeMapper.selectList(new LambdaQueryWrapper<DocumentTypeDO>()
+                    .eq(DocumentTypeDO::getPersonnelType, personnelType));
         } else {
-            lists = documentTypeMapper.selectList(new QueryWrapper<DocumentTypeDO>().notIn("id", documentIds));
+            lists = documentTypeMapper.selectList(new QueryWrapper<DocumentTypeDO>().notIn("id", documentIds)
+                    .eq("personnel_type", personnelType));
         }
 
         ArrayList<ProjectVo> vos = new ArrayList<>();
@@ -387,7 +415,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             return;
 
         projectDocumentTypeMapper.delete(new QueryWrapper<ProjectDocumentTypeDO>().eq("project_id", projectId)
-            .in("document_type_id", documentIds));
+                .in("document_type_id", documentIds));
     }
 
     @Override
@@ -400,8 +428,8 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
 
         // 执行分页查询，获取 TrainingResp 类型的分页数据
         IPage<ProjectResp> page = baseMapper.getAllProject(new Page<ProjectDO>(pageQuery.getPage(), pageQuery
-            .getSize()), // 创建分页对象，指定当前页和每页大小
-            queryWrapper// 查询条件
+                        .getSize()), // 创建分页对象，指定当前页和每页大小
+                queryWrapper// 查询条件
         );
         // 将查询结果转换成 PageResp 对象，方便前端处理
         PageResp<ProjectResp> pageResp = PageResp.build(page, super.getListClass());
@@ -422,8 +450,8 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
 
         // 执行分页查询，获取 TrainingResp 类型的分页数据
         IPage<ProjectResp> page = baseMapper.getAllProject(new Page<ProjectDO>(pageQuery.getPage(), pageQuery
-            .getSize()), // 创建分页对象，指定当前页和每页大小
-            queryWrapper// 查询条件
+                        .getSize()), // 创建分页对象，指定当前页和每页大小
+                queryWrapper// 查询条件
         );
         // 将查询结果转换成 PageResp 对象，方便前端处理
         PageResp<ProjectResp> pageResp = PageResp.build(page, super.getListClass());
@@ -450,8 +478,8 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
         Map<Long, Map<String, Object>> locationMap = new LinkedHashMap<>();
 
         for (Map<String, Object> row : rows) {
-            Long locationId = ((Number)row.get("location_id")).longValue();
-            String locationName = (String)row.get("location_name");
+            Long locationId = ((Number) row.get("location_id")).longValue();
+            String locationName = (String) row.get("location_name");
 
             // 一级节点（考点）
             locationMap.putIfAbsent(locationId, new HashMap<>() {
@@ -463,7 +491,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             });
 
             // 子节点（考场）
-            List<Map<String, Object>> children = (List<Map<String, Object>>)locationMap.get(locationId).get("children");
+            List<Map<String, Object>> children = (List<Map<String, Object>>) locationMap.get(locationId).get("children");
             children.add(Map.of("value", row.get("value"), "label", row.get("label")));
         }
         return new ArrayList<>(locationMap.values());
@@ -515,7 +543,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
 
             // ===== level = 1 / 2 → 中间层 =====
             Map<Integer, ProjectTreeNodeVO> levelMap = levelCache.computeIfAbsent(flat
-                .getCategoryId(), k -> new HashMap<>());
+                    .getCategoryId(), k -> new HashMap<>());
 
             ProjectTreeNodeVO levelVo = levelMap.computeIfAbsent(level, lv -> {
                 ProjectTreeNodeVO vo = new ProjectTreeNodeVO();
@@ -535,31 +563,46 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(ProjectReq req, Long id) {
-        // 1. 查询原数据
+        //  查询原数据
         ProjectDO oldProject = baseMapper.selectById(id);
         ValidationUtils.throwIfNull(oldProject, "项目不存在");
 
-        // 2. 校验 projectCode 唯一（排除自身）
+        //  校验 projectCode 唯一（分类 + 等级 + 排除自身）
         ValidationUtils.throwIf(lambdaQuery().eq(ProjectDO::getProjectCode, req.getProjectCode())
-            .eq(ProjectDO::getIsDeleted, 0)
-            .ne(ProjectDO::getId, id)
-            .exists(), "项目编码已存在");
+                .eq(ProjectDO::getCategoryId, req.getCategoryId())
+                .eq(ProjectDO::getProjectLevel, req.getProjectLevel())
+                .eq(ProjectDO::getIsDeleted, 0)
+                .ne(ProjectDO::getId, id)
+                .exists(), "该分类下该等级的项目编码已存在");
 
-        // 3. 校验 名称 + 分类 唯一（排除自身）
+        //  校验 项目名称 唯一（分类 + 等级 + 排除自身）
         ValidationUtils.throwIf(lambdaQuery().eq(ProjectDO::getProjectName, req.getProjectName())
-            .eq(ProjectDO::getCategoryId, req.getCategoryId())
-            .eq(ProjectDO::getIsDeleted, 0)
-            .ne(ProjectDO::getId, id)
-            .exists(), "项目名称已存在");
+                .eq(ProjectDO::getCategoryId, req.getCategoryId())
+                .eq(ProjectDO::getProjectLevel, req.getProjectLevel())
+                .eq(ProjectDO::getIsDeleted, 0)
+                .ne(ProjectDO::getId, id)
+                .exists(), "该分类下该等级的项目名称已存在");
 
         // 4. 项目状态变更权限校验
         if (!Objects.equals(req.getProjectStatus(), oldProject.getProjectStatus())) {
             UserTokenDo userInfo = TokenLocalThreadUtil.get();
             ValidationUtils.throwIfNull(userInfo, ErrorMessageConstant.USER_AUTHENTICATION_FAILED);
-            // TODO 权限校验
         }
         // 5. 清缓存
         redisUtil.delete(RedisConstant.EXAM_PROJECT_SELECT);
+
+        // 如果是免考类型
+        if (examSpecialConfig.getExemptRenewIds().contains(req.getCategoryId())) {
+            req.setExamAttemptType(ExamSessionTypeEnum.NO_HAS.getValue());
+            req.setPracticalType(PracticalTypeEnum.NO_HAS.getValue());
+        } else {
+            // 不是免考，但如果是有特殊实操考试的项目
+            if (examSpecialConfig.getSpecialPracticalCodes().contains(req.getProjectCode())) {
+                req.setPracticalType(ProjectLevelEnum.LEVEL_ONE.getValue().equals(req.getProjectLevel())
+                        ? PracticalTypeEnum.SHOOT.getValue()
+                        : PracticalTypeEnum.SHOOT_AND_REVIEW.getValue());
+            }
+        }
 
         // 6. 更新
         super.update(req, id);
@@ -595,8 +638,8 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
      * 获取项目下拉框（现在是项目id->项目名称===改计划id->项目名称）
      */
     public List<ProjectVo> selectOptions() {
-        List<ProjectVo> vo = (List<ProjectVo>)redisUtil
-            .getStringToClass(RedisConstant.EXAM_PROJECT_SELECT, ProjectVo.class);
+        List<ProjectVo> vo = (List<ProjectVo>) redisUtil
+                .getStringToClass(RedisConstant.EXAM_PROJECT_SELECT, ProjectVo.class);
         if (ObjectUtil.isEmpty(vo)) {
             vo = baseMapper.selectOptions();
             redisUtil.setString(RedisConstant.EXAM_PROJECT_SELECT, vo);
@@ -606,7 +649,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
 
     /**
      * 查询所有有考场的考试项目
-     * 
+     *
      * @return
      */
     @Override
@@ -630,15 +673,15 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             // 2️ 在该项目下查找地点
             List<LocationVO> locations = projectVO.getLocations();
             LocationVO locationVO = locations.stream()
-                .filter(l -> Objects.equals(l.getLocationName(), flat.getLocationName()))
-                .findFirst()
-                .orElseGet(() -> {
-                    LocationVO newLoc = new LocationVO();
-                    newLoc.setLocationName(flat.getLocationName());
-                    newLoc.setClassrooms(new ArrayList<>());
-                    locations.add(newLoc);
-                    return newLoc;
-                });
+                    .filter(l -> Objects.equals(l.getLocationName(), flat.getLocationName()))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        LocationVO newLoc = new LocationVO();
+                        newLoc.setLocationName(flat.getLocationName());
+                        newLoc.setClassrooms(new ArrayList<>());
+                        locations.add(newLoc);
+                        return newLoc;
+                    });
             // 3️ 添加考场
             ClassroomVO classroomVO = new ClassroomVO();
             classroomVO.setClassroomId(flat.getClassroomId());
@@ -650,7 +693,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
 
     /**
      * 机构获取所属全部项目
-     * 
+     *
      * @param query
      * @param pageQuery
      * @return
@@ -665,9 +708,9 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
 
         // 执行分页查询，获取 TrainingResp 类型的分页数据
         IPage<ProjectResp> page = baseMapper.orgGetAllProject(new Page<ProjectDO>(pageQuery.getPage(), pageQuery
-            .getSize()), // 创建分页对象，指定当前页和每页大小
-            queryWrapper,// 查询条件
-            TokenLocalThreadUtil.get().getUserId());
+                        .getSize()), // 创建分页对象，指定当前页和每页大小
+                queryWrapper,// 查询条件
+                TokenLocalThreadUtil.get().getUserId());
         // 将查询结果转换成 PageResp 对象，方便前端处理
         PageResp<ProjectResp> pageResp = PageResp.build(page, super.getListClass());
         // 遍历查询结果列表，调用 fill 方法填充额外字段或处理数据
@@ -702,7 +745,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
             });
 
             if (item.getClassroomId() != null) {
-                ((List<Object>)map.get(item.getLocationId()).get("children")).add(new HashMap<String, Object>() {
+                ((List<Object>) map.get(item.getLocationId()).get("children")).add(new HashMap<String, Object>() {
                     {
                         put("label", item.getClassroomName());
                         put("value", item.getClassroomId());
@@ -712,6 +755,32 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
         }
 
         return new ArrayList<>(map.values());
+    }
+
+    /**
+     * 无损检验、作业人员根据种类类型和考试级别，获取出对应的项目
+     *
+     * @return
+     */
+    @Override
+    public List<InspectionProjectResp> getInspectionProjectList(Long categoryId, Integer examLevel) {
+        LambdaQueryWrapper<ProjectDO> projectDOLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        projectDOLambdaQueryWrapper.eq(ProjectDO::getCategoryId, categoryId)
+                .eq(ProjectDO::getProjectLevel, examLevel)
+                .eq(ProjectDO::getProjectType, ProjectTypeEnum.INSPECTION.getValue())
+                .select(ProjectDO::getId,ProjectDO::getProjectCode,ProjectDO::getExamAttemptType,ProjectDO::getPracticalType);
+        List<ProjectDO> projectDOS = baseMapper.selectList(projectDOLambdaQueryWrapper);
+        if (ObjectUtil.isEmpty(projectDOS)) {
+            return Collections.emptyList();
+        }
+        return projectDOS.stream().map(item -> {
+            InspectionProjectResp inspectionProjectResp = new InspectionProjectResp();
+            inspectionProjectResp.setProjectCode(item.getProjectCode());
+            inspectionProjectResp.setProjectId(item.getId());
+            inspectionProjectResp.setPracticalType(item.getPracticalType());
+            inspectionProjectResp.setExamAttemptType(item.getExamAttemptType());
+            return inspectionProjectResp;
+        }).toList();
     }
 
     /**
@@ -737,7 +806,7 @@ public class ProjectServiceImpl extends BaseServiceImpl<ProjectMapper, ProjectDO
         // 检查父部门链中是否有北京市场监管局
         Long parentDeptId = userInfo.getParentDeptId();
         while (parentDeptId != null && !Objects
-            .equals(parentDeptId, BEIJING_MARKET_SUPERVISION_AND_ADMINISTRATION_ID)) {
+                .equals(parentDeptId, BEIJING_MARKET_SUPERVISION_AND_ADMINISTRATION_ID)) {
             if (Objects.equals(parentDeptId, BEIJING_MARKET_SUPERVISION_AND_ADMINISTRATION_ID)) {
                 return true;
             }

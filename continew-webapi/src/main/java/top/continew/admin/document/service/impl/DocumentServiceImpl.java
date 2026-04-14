@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import top.continew.admin.common.constant.enums.DocumentPersonnelTypeEnum;
 import top.continew.admin.common.model.entity.UserTokenDo;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -100,7 +101,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         PageResp<DocumentResp> result = PageResp.build(page, super.getListClass());
 
         //2. 缓存获取所有的资料类型
-        List<DocumentTypeDTO> documentTypeDOS = documentTypeCache.getDocumentTypeCache();
+        List<DocumentTypeDTO> documentTypeDOS = documentTypeCache.getDocumentTypeCache(null);
         //2.1 将documentTypeDOS转换为Map<ID, TypeName>，提升查找效率
         Map<Long, String> typeIdToNameMap = documentTypeDOS.stream()
             .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
@@ -148,7 +149,7 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         PageResp<DocumentResp> temp = PageResp.build(page, super.getListClass());
 
         // 2. 查询资料分类缓存
-        Map<Long, String> typeIdToNameMap = documentTypeCache.getDocumentTypeCache()
+        Map<Long, String> typeIdToNameMap = documentTypeCache.getDocumentTypeCache(1)
             .stream()
             .collect(Collectors.toMap(DocumentTypeDTO::getId, DocumentTypeDTO::getTypeName));
 
@@ -201,7 +202,8 @@ public class DocumentServiceImpl extends BaseServiceImpl<DocumentMapper, Documen
         DocumentDO entity = super.getById(id, false);
         DocumentDetailResp detail = BeanUtil.toBean(entity, this.getDetailClass());
         // 填充其他字段
-        List<DocumentTypeDTO> dtos = documentTypeCache.getDocumentTypeCache();
+        List<DocumentTypeDTO> dtos = documentTypeCache.getDocumentTypeCache(DocumentPersonnelTypeEnum.WORKER
+            .getValue());
         UserDTO userDTO = documentMapper.getUserInfo(id);
         if (dtos != null) {
             //2.1 将documentTypeDOS转换为Map<ID, TypeName>，提升查找效率

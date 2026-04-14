@@ -92,6 +92,27 @@ public class ProjectDetailResp extends BaseDetailResp {
     private Long projectStatus;
 
     /**
+     * 禁止考年龄
+     */
+    @Schema(description = "禁止考年龄")
+    @ExcelProperty(value = "禁止考年龄")
+    private Integer examEndAge;
+
+    /**
+     * 考试场次类型（0既包含初试也包含补考，1只有初试，2只有补考，3无）
+     */
+    @Schema(description = "考试场次类型（0既包含初试也包含补考，1只有初试，2只有补考，3无）")
+    @ExcelProperty(value = "考试场次类型（0既包含初试也包含补考，1只有初试，2只有补考，3无）")
+    private Integer examAttemptType;
+
+    /**
+     * 实操类型（0默认实操，1拍片，2评片，3拍片+评片，4无）
+     */
+    @Schema(description = "实操类型（0默认实操，1拍片，2评片，3拍片+评片，4无）")
+    @ExcelProperty(value = "实操类型（0默认实操，1拍片，2评片，3拍片+评片，4无）")
+    private Integer practicalType;
+
+    /**
      * 项目类型（0-作业人员 1-检验人员）
      */
     @Schema(description = "项目类型（0-作业人员 1-检验人员）")

@@ -14,25 +14,15 @@
  * limitations under the License.
  */
 
-package top.continew.admin.document.mapper;
+package top.continew.admin.exam.mapper;
 
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import top.continew.admin.document.model.dto.DocumentTypeDTO;
 import top.continew.starter.data.mp.base.BaseMapper;
-import top.continew.admin.document.model.entity.DocumentTypeDO;
-
-import java.util.List;
+import top.continew.admin.exam.model.entity.ExamNoticePlanDO;
 
 /**
- * 资料类型主 Mapper
+ * 考试通知与考试计划关联 Mapper
  *
- * @author Anton
- * @since 2025/03/12 15:29
+ * @author ilhaha
+ * @since 2026/04/14 15:21
  */
-public interface DocumentTypeMapper extends BaseMapper<DocumentTypeDO> {
-
-    @Select("select id,type_name as typeName from ted.ted_document_type where is_deleted = 0 AND personnel_type = #{personnelType}")
-    List<DocumentTypeDTO> selectAllDocumentType(@Param("personnelType") Integer personnelType);
-
-}
+public interface ExamNoticePlanMapper extends BaseMapper<ExamNoticePlanDO> {}

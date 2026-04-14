@@ -49,8 +49,14 @@ public class DocumentTypeReq implements Serializable {
     /**
      * 必须上传人员（0全部都需要上传，1京籍上传、2非京籍上传）
      */
-    @NotNull(message = "资料上传适用人员")
+    @NotNull(message = "未选择资料上传适用人员")
     private Integer needUploadPerson;
+
+    /**
+     * 人员类型（0作业人员，1检验人员）
+     */
+    @NotNull(message = "未选择人员上传类型")
+    private Integer personnelType;
 
     /**
      * 创建人ID

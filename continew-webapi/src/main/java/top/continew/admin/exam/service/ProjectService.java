@@ -18,6 +18,7 @@ package top.continew.admin.exam.service;
 
 import top.continew.admin.document.model.resp.DocumentTypeResp;
 import top.continew.admin.exam.model.req.ExamLocationReqStr;
+import top.continew.admin.exam.model.resp.InspectionProjectResp;
 import top.continew.admin.exam.model.resp.StudentProjectDetailResp;
 import top.continew.admin.exam.model.vo.ProjectTreeNodeVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -76,7 +77,7 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
      * @param id
      * @return
      */
-    List<ProjectVo> notBindDocument(Long id);
+    List<ProjectVo> notBindDocument(Long id, Integer personnelType);
 
     /**
      * 根据项目id与资料id集合插入关联表
@@ -145,4 +146,11 @@ public interface ProjectService extends BaseService<ProjectResp, ProjectDetailRe
      * @return
      */
     List<Map<String, Object>> getLocalClassroomChoose(Long projectId, Integer isOperation);
+
+    /**
+     * 无损检验、作业人员根据种类类型和考试级别，获取出对应的项目
+     *
+     * @return
+     */
+    List<InspectionProjectResp> getInspectionProjectList(Long categoryId, Integer examLevel);
 }
