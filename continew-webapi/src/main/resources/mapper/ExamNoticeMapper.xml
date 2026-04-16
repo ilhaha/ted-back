@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="top.continew.admin.exam.mapper.ExamNoticeMapper">
+    <select id="page" resultType="top.continew.admin.exam.model.resp.ExamNoticeDetailResp">
+        SELECT ten.*,
+               tc.`name`                                                            AS category_name,
+               GROUP_CONCAT(tp.project_code ORDER BY tp.project_code SEPARATOR '、') AS project_codes
+        FROM ted_exam_notice ten
+                 LEFT JOIN ted_category tc
+                           ON ten.category_id = tc.id
+                               AND tc.is_deleted = 0
+                 LEFT JOIN ted_project tp
+                           ON tc.id = tp.category_id
+                               AND tp.is_deleted = 0
+                               AND tp.project_level = ten.exam_level
+            ${ew.customSqlSegment}
+        GROUP BY ten.id
+        ORDER BY ten.id DESC
+    </select>
 </mapper>

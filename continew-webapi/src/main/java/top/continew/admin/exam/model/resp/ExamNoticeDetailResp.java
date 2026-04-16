@@ -27,6 +27,7 @@ import top.continew.admin.common.model.resp.BaseDetailResp;
 
 import java.io.Serial;
 import java.time.*;
+import java.util.List;
 
 /**
  * 无损检测、检验人员考试通知详情信息
@@ -90,4 +91,19 @@ public class ExamNoticeDetailResp extends BaseDetailResp {
     @Schema(description = "删除标记")
     @ExcelProperty(value = "删除标记")
     private Boolean isDeleted;
+
+    /**
+     * 报考项目
+     */
+    private List<ExamNoticeExamProjectResp> projectList;
+
+    /**
+     * 所属种类
+     */
+    private String categoryName;
+
+    /**
+     * 报考项目代码
+     */
+    private String projectCodes;
 }

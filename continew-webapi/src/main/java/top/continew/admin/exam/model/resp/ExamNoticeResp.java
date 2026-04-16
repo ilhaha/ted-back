@@ -91,4 +91,14 @@ public class ExamNoticeResp extends BaseResp {
      */
     @Schema(description = "删除标记")
     private Boolean isDeleted;
+
+    /**
+     * 所属种类
+     */
+    private String categoryName;
+
+    /**
+     * 报考项目代码
+     */
+    private String projectCodes;
 }

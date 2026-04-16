@@ -27,6 +27,7 @@ import org.hibernate.validator.constraints.Length;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.*;
+import java.util.List;
 
 /**
  * 创建或修改无损检测、检验人员考试通知参数
@@ -74,7 +75,7 @@ public class ExamNoticeReq implements Serializable {
      * 状态（0待审核、1审核通过、2审核未通过）
      */
     @Schema(description = "状态（0待审核、1审核通过、2审核未通过）")
-    @NotNull(message = "状态（0待审核、1审核通过、2审核未通过）不能为空")
+//    @NotNull(message = "状态（0待审核、1审核通过、2审核未通过）不能为空")
     private Integer status;
 
     /**
@@ -83,4 +84,10 @@ public class ExamNoticeReq implements Serializable {
     @Schema(description = "备注")
     @Length(max = 1000, message = "备注长度不能超过 {max} 个字符")
     private String remark;
+
+    /**
+     * 报考项目
+     */
+    @Schema(description = "报考项目")
+    private List<ExamNoticeExamProjectReq> projectList;
 }

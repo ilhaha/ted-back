@@ -16,6 +16,12 @@
 
 package top.continew.admin.exam.mapper;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.apache.ibatis.annotations.Param;
+import top.continew.admin.exam.model.resp.ExamNoticeDetailResp;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamNoticeDO;
 
@@ -25,4 +31,10 @@ import top.continew.admin.exam.model.entity.ExamNoticeDO;
  * @author ilhaha
  * @since 2026/04/14 15:20
  */
-public interface ExamNoticeMapper extends BaseMapper<ExamNoticeDO> {}
+public interface ExamNoticeMapper extends BaseMapper<ExamNoticeDO> {
+
+    IPage<ExamNoticeDetailResp> page(@Param("page") Page<Object> objectPage,
+                                     @Param(Constants.WRAPPER) QueryWrapper<ExamNoticeDO> queryWrapper);
+
+
+}

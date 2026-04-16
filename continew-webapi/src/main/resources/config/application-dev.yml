@@ -342,7 +342,7 @@ document:
   id-card-id: 19
   # 资料类型居住证id
   residence-permit-id: 29
-  # 资料类型居住证id
+  # 资料类型社保证明id
   social-security-id: 35
 
 # 有道路考试的八大类ID
