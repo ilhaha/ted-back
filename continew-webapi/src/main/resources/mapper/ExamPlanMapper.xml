@@ -84,7 +84,7 @@
                tep.max_candidates,
                tep.actual_candidates,
                tep.enroll_start_time,
-                tep.admit_card_end_time,
+               tep.admit_card_end_time,
                tep.enroll_end_time,
                tep.plan_type,
                tep.status,
@@ -101,7 +101,7 @@
                tep.description,
                tp.exam_duration,
                tp.is_operation AS hasOper,
-               tp.is_theory AS hasTheory
+               tp.is_theory    AS hasTheory
         FROM ted_exam_plan tep
                  LEFT JOIN ted_exam_location as tel ON tel.id = tep.location_id
                  LEFT JOIN ted_project as tp ON tp.id = tep.exam_project_id
@@ -159,7 +159,7 @@
                tp.exam_fee                                  AS project_exam_fee,
                tc.`name`                                    AS category_name,
                (tep.max_candidates - COUNT(DISTINCT te.id)) AS remaining_slots,
-               COUNT(DISTINCT te.id) AS apply_count
+               COUNT(DISTINCT te.id)                        AS apply_count
         FROM ted_exam_plan tep
                  LEFT JOIN ted_project tp
                            ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
@@ -249,7 +249,8 @@
                                AND tep.is_deleted = 0
                                AND tep.plan_type = #{planType}
                                AND tep.status = 6
-        WHERE tp.is_deleted = 0 AND tp.project_type = 0
+        WHERE tp.is_deleted = 0
+          AND tp.project_type = 0
     </select>
     <select id="selectOrgBindProjectId" resultType="java.lang.Long">
         SELECT tp.id
@@ -451,17 +452,13 @@
 
     <!-- 根据考试项目id查询考试计划（选择器） -->
     <select id="selectPlanByProjectId" parameterType="java.lang.Long" resultType="java.util.Map">
-        SELECT
-            id AS plan_id,
-            exam_plan_name
-        FROM
-            ted_exam_plan
-        WHERE
-            exam_project_id = #{projectId}
+        SELECT id AS plan_id,
+               exam_plan_name
+        FROM ted_exam_plan
+        WHERE exam_project_id = #{projectId}
           AND is_deleted = 0
           AND is_final_confirmed = 2
-        ORDER BY
-            create_time DESC
+        ORDER BY create_time DESC
     </select>
     <select id="getPlanExamOperClassroom" resultType="java.lang.Long">
         SELECT tc.id
@@ -471,6 +468,83 @@
         WHERE tpc.plan_id = #{planId}
           AND tc.exam_type = 1
     </select>
-
+    <select id="statisticsExamCompleted"
+            resultType="top.continew.admin.exam.model.resp.StatisticsExamResp">
+        SELECT
+        tp.project_name,
+        tp.project_code,
+        COUNT(ter.id) AS record_count,
+        SUM(COUNT(ter.id)) OVER () AS total_count
+        FROM ted_project tp
+        LEFT JOIN ted_exam_plan tep
+        ON tp.id = tep.exam_project_id
+        AND tep.is_deleted = 0
+        AND tep.`status` = 6
+        LEFT JOIN ted_exam_records ter
+        ON tep.id = ter.plan_id
+        AND ter.is_deleted = 0
+        WHERE tp.is_deleted = 0
+        AND tp.project_type = 0
+        <if test="startTime != null">
+            AND tep.start_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND tep.start_time &lt; #{endTime}
+        </if>
+        GROUP BY tp.project_name, tp.project_code
+    </select>
+    <select id="statisticsExamEnrolled" resultType="top.continew.admin.exam.model.resp.StatisticsExamResp">
+        SELECT tp.project_code,
+               tp.project_name,
+               COUNT(te.id) AS   record_count,
+               SUM(COUNT(te.id)) OVER () AS total_count
+        FROM ted_project tp
+                 LEFT JOIN ted_exam_plan tep
+                           ON tp.id = tep.exam_project_id
+                               AND tep.is_deleted = 0
+                 LEFT JOIN ted_enroll te
+                           ON tep.id = te.exam_plan_id
+                               AND te.enroll_status = 1
+                               AND te.is_deleted = 0
+        WHERE tp.is_deleted = 0
+          AND tp.project_type = 0
+        GROUP BY tp.project_code, tp.project_name
+    </select>
+    <select id="orgGetConfirmPlanList" resultType="top.continew.admin.exam.model.vo.OrgExamPlanVO">
+        SELECT tep.id                     AS exam_plan_id,
+               tep.*,
+               tp.id AS project_id,
+               tp.project_name,
+               tp.project_code,
+               tp.exam_duration,
+               tp.exam_fee                AS project_exam_fee,
+               tc.`name`                  AS category_name,
+               COUNT(DISTINCT te.user_id) AS apply_count
+        FROM ted_enroll te
+                 JOIN ted_worker_apply twa
+                      ON te.class_id = twa.class_id
+                          AND twa.is_deleted = 0
+                 JOIN ted_org_class toc
+                      ON twa.class_id = toc.id
+                          AND toc.is_deleted = 0
+                 JOIN ted_org org
+                      ON toc.org_id = org.id
+                          AND org.is_deleted = 0
+                 JOIN ted_org_user tou
+                      ON org.id = tou.org_id
+                          AND tou.is_deleted = 0
+                 JOIN ted_exam_plan tep
+                      ON te.exam_plan_id = tep.id
+                          AND tep.is_deleted = 0
+                          AND tep.is_final_confirmed = 2
+                          AND tep.STATUS = 3
+                 JOIN ted_project tp ON tep.exam_project_id = tp.id
+            AND tp.is_deleted = 0
+                 JOIN ted_category tc ON tp.category_id = tc.id
+            AND tc.is_deleted = 0
+            ${ew.customSqlSegment}
+        GROUP BY tep.id
+        ORDER BY tep.start_time
+    </select>
 
 </mapper>

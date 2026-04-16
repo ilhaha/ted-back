@@ -60,8 +60,7 @@ import top.continew.admin.exam.model.dto.ExamPlanExcelRowDTO;
 import top.continew.admin.exam.model.dto.ExamPresenceDTO;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.*;
-import top.continew.admin.exam.model.resp.CascaderOptionResp;
-import top.continew.admin.exam.model.resp.CascaderPlanResp;
+import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -94,8 +93,6 @@ import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.exam.model.query.ExamPlanQuery;
-import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
-import top.continew.admin.exam.model.resp.ExamPlanResp;
 import top.continew.admin.exam.service.ExamPlanService;
 
 import java.io.IOException;
@@ -800,18 +797,20 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     public PageResp<OrgExamPlanVO> orgGetPlanList(ExamPlanQuery examPlanQuery, PageQuery pageQuery) {
         UserTokenDo userTokenDo = TokenLocalThreadUtil.get();
         QueryWrapper<ExamPlanDO> queryWrapper = this.buildQueryWrapper(examPlanQuery);
-        queryWrapper.eq("tep.is_deleted", 0)
-            .eq(PlanEndApplyEnum.YES.getValue()
-                .equals(examPlanQuery
-                    .getIsEndApply()), "tep.is_final_confirmed", PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue())
-            .ne(PlanEndApplyEnum.NO.getValue()
-                .equals(examPlanQuery
-                    .getIsEndApply()), "tep.is_final_confirmed", PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED
-                        .getValue());
-
-        // 执行分页查询
-        IPage<OrgExamPlanVO> page = baseMapper.orgGetPlanList(new Page<>(pageQuery.getPage(), pageQuery
-            .getSize()), queryWrapper, userTokenDo.getUserId());
+        Integer isEndApply = examPlanQuery.getIsEndApply();
+        IPage<OrgExamPlanVO> page;
+        if (PlanEndApplyEnum.NO.getValue().equals(isEndApply)) {
+            queryWrapper.eq("tep.is_deleted", 0)
+                .ne("tep.is_final_confirmed", PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue());
+            // 执行分页查询
+            page = baseMapper.orgGetPlanList(new Page<>(pageQuery.getPage(), pageQuery
+                .getSize()), queryWrapper, userTokenDo.getUserId());
+        } else {
+            queryWrapper.eq("tou.user_id", userTokenDo.getUserId())
+                .eq("te.is_deleted", 0)
+                .in("te.enroll_status", EnrollStatusConstant.SIGNED_UP, EnrollStatusConstant.IN_PROGRESS);
+            page = baseMapper.orgGetConfirmPlanList(new Page<>(pageQuery.getPage(), pageQuery.getSize()), queryWrapper);
+        }
 
         // 将查询结果转换成 PageResp 对象
         PageResp<OrgExamPlanVO> pageResp = PageResp.build(page, OrgExamPlanVO.class);
@@ -2381,6 +2380,40 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         ValidationUtils.throwIf(updated == 0, "成绩确认失败，请刷新后重试");
 
         return Boolean.TRUE;
+    }
+
+    /**
+     * 根据月份统计每个项目已经考试的人数（作业人员）
+     * 
+     * @return
+     */
+    @Override
+    public List<StatisticsExamResp> statisticsExamCompleted(LocalDate startTime, LocalDate endTime) {
+
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+
+        // 开始时间：当天 00:00:00
+        if (startTime != null) {
+            start = startTime.atStartOfDay();
+        }
+
+        // 结束时间：第二天 00:00:00
+        if (endTime != null) {
+            end = endTime.plusDays(1).atStartOfDay();
+        }
+
+        return baseMapper.statisticsExamCompleted(start, end);
+    }
+
+    /**
+     * 统计当前系统每个项目已报名但未考试的人数（作业人员）
+     * 
+     * @return
+     */
+    @Override
+    public List<StatisticsExamResp> statisticsExamEnrolled() {
+        return baseMapper.statisticsExamEnrolled();
     }
 
     /**

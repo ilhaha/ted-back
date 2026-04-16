@@ -263,7 +263,10 @@
                su.gender,
                tp.project_code,
                tc.`name`   AS category_name,
-               twa.welding_project_code
+               twa.welding_project_code,
+               twa.work_unit,
+               twa.phone,
+               twad.type_id
         FROM ted_enroll te
                  LEFT JOIN ted_org_class toc
                            ON te.class_id = toc.id AND toc.is_deleted = 0
@@ -274,6 +277,8 @@
                  LEFT JOIN ted_worker_apply twa
                            ON su.username = twa.id_card_number AND twa.class_id = te.class_id AND
                               twa.is_deleted = 0
+                 LEFT JOIN ted_worker_apply_document twad
+                           ON twa.id = twad.worker_apply_id AND twad.is_deleted = 0 AND  twad.type_id = #{residencePermitId}
                  LEFT JOIN ted_exam_plan tep
                            ON te.exam_plan_id = tep.id AND tep.is_deleted = 0
                  LEFT JOIN ted_project tp

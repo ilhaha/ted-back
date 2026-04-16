@@ -51,6 +51,7 @@ import top.continew.admin.exam.mapper.EnrollMapper;
 import top.continew.admin.exam.mapper.WeldingExamApplicationMapper;
 import top.continew.admin.exam.model.entity.EnrollDO;
 import top.continew.admin.exam.model.entity.WeldingExamApplicationDO;
+import top.continew.admin.exam.model.resp.ClassBingDocResp;
 import top.continew.admin.exam.service.ExamineePaymentAuditService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.mapper.UserRoleMapper;
@@ -157,6 +158,12 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
     @Value("${document.id-card-id}")
     private Long documentIdCardId;
+
+    @Value("${document.residence-permit-id}")
+    private Long residencePermitId;
+
+    @Value("${document.social-security-id}")
+    private Long socialSecurityId;
 
     /**
      * 根据身份证后六位、和班级id查询当前身份证报名信息
@@ -710,9 +717,10 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
             return Boolean.TRUE;
 
         // 8. 查询班级必填资料
-        List<Long> classBingDocIds = baseMapper.selectClassBingDocIds(classId);
-        classBingDocIds.remove(documentIdCardId);
-        Set<Long> classBingDocIdSet = new HashSet<>(classBingDocIds);
+        List<ClassBingDocResp> classBingDocRespList = baseMapper.selectClassBingDocIds(classId);
+        classBingDocRespList = classBingDocRespList.stream().filter(item -> {
+            return !documentIdCardId.equals(item.getDocumentTypeId());
+        }).toList();
 
         // 9. 批量查询所有复用文档（避免 N+1）
         List<Long> approvedIds = latestApprovedMap.values().stream().map(WorkerApplyDO::getId).toList();
@@ -733,7 +741,8 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                 item.setIdCardPhotoFront(latest.getIdCardPhotoFront());
                 item.setIdCardPhotoBack(latest.getIdCardPhotoBack());
                 item.setFacePhoto(latest.getFacePhoto());
-                if (ObjectUtil.isEmpty(classBingDocIds)) {
+                item.setBirthDate(latest.getBirthDate());
+                if (ObjectUtil.isEmpty(classBingDocRespList)) {
                     item.setStatus(WorkerApplyReviewStatusEnum.APPROVED.getValue());
                 } else {
                     // 判断文档是否齐全
@@ -745,28 +754,77 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                             item.setStatus(WorkerApplyReviewStatusEnum.DOC_COMPLETE.getValue());
                         }
                     } else {
+                        // 是否京籍
+                        Boolean isBeijing = latest.getIdCardAddress()
+                            .startsWith(WorkerApplyCheckConstants.BEIJING_RESIDENT);
+
+                        // 已提交资料
                         Set<Long> submittedDocIds = docs.stream()
                             .map(WorkerApplyDocumentDO::getTypeId)
                             .collect(Collectors.toSet());
-                        if (submittedDocIds.containsAll(classBingDocIdSet)) {
+
+                        // ================== ① 过滤出当前人“真正需要上传”的资料 ==================
+                        Set<Long> requiredDocIds = classBingDocRespList.stream().filter(doc -> {
+                            Integer type = doc.getNeedUploadPerson();
+
+                            if (type == DocumentConstant.ALL) {
+                                return true;
+                            }
+                            if (type == DocumentConstant.BEIJING_ONLY) {
+                                return Boolean.TRUE.equals(isBeijing);
+                            }
+                            if (type == DocumentConstant.NON_BEIJING_ONLY) {
+                                return Boolean.FALSE.equals(isBeijing);
+                            }
+                            return false;
+                        }).map(ClassBingDocResp::getDocumentTypeId).collect(Collectors.toSet());
+
+                        // ================== ② 特殊规则：居住证 / 社保（二选一） ==================
+                        boolean hasResidencePermit = submittedDocIds.contains(residencePermitId);
+                        boolean hasSocialSecurity = submittedDocIds.contains(socialSecurityId);
+
+                        // 是否包含这两个材料（说明规则存在）
+                        boolean containsOptionalGroup = requiredDocIds.contains(residencePermitId) || requiredDocIds
+                            .contains(socialSecurityId);
+
+                        // 普通必传（排除二选一）
+                        Set<Long> normalRequiredDocs = requiredDocIds.stream()
+                            .filter(id -> !id.equals(residencePermitId) && !id.equals(socialSecurityId))
+                            .collect(Collectors.toSet());
+
+                        // 普通资料是否OK
+                        boolean normalOk = submittedDocIds.containsAll(normalRequiredDocs);
+
+                        // 二选一是否OK（仅非京籍 + 存在该规则时才判断）
+                        boolean optionalOk = true;
+                        if (Boolean.FALSE.equals(isBeijing) && containsOptionalGroup) {
+                            optionalOk = hasResidencePermit || hasSocialSecurity;
+                        }
+
+                        // ================== ③ 最终状态 ==================
+                        if (normalOk && optionalOk) {
                             item.setStatus(WorkerApplyReviewStatusEnum.APPROVED.getValue());
                         } else {
                             item.setStatus(WorkerApplyReviewStatusEnum.DOC_COMPLETE.getValue());
                         }
-                        // 复用文档
-                        List<WorkerApplyDocumentDO> reuseDocs = docs.stream().filter(doc -> {
-                            return classBingDocIdSet.contains(doc.getTypeId());
-                        }).map(doc -> {
-                            WorkerApplyDocumentDO copy = new WorkerApplyDocumentDO();
-                            BeanUtil.copyProperties(doc, copy);
-                            copy.setId(null);
-                            copy.setWorkerApplyId(item.getId());
-                            return copy;
-                        }).toList();
+
+                        // ================== ④ 复用文档（⚠也要用过滤后的 requiredDocIds） ==================
+                        List<WorkerApplyDocumentDO> reuseDocs = docs.stream()
+                            .filter(doc -> requiredDocIds.contains(doc.getTypeId()))
+                            .map(doc -> {
+                                WorkerApplyDocumentDO copy = new WorkerApplyDocumentDO();
+                                BeanUtil.copyProperties(doc, copy);
+                                copy.setId(null);
+                                copy.setWorkerApplyId(item.getId());
+                                return copy;
+                            })
+                            .toList();
+
                         if (!reuseDocs.isEmpty()) {
                             workerApplyDocumentMapper.insertBatch(reuseDocs);
                         }
                     }
+
                 }
 
             } else {
@@ -1070,7 +1128,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
                     .collect(Collectors.toList());
 
                 // 9 校验资料是否齐全
-                List<String> missingDocs = checkMissingProjectDocs(group, mustUploadDocs);
+                List<String> missingDocs = checkMissingProjectDocs(group, isBeijing, mustUploadDocs);
 
                 boolean isIncomplete = !missingDocs.isEmpty();
 
@@ -1164,17 +1222,39 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         };
     }
 
-    private List<String> checkMissingProjectDocs(UploadGroupDTO group, List<ProjectNeedUploadDocVO> mustUploadDocs) {
+    private List<String> checkMissingProjectDocs(UploadGroupDTO group,
+                                                 Boolean isBeijing,
+                                                 List<ProjectNeedUploadDocVO> mustUploadDocs) {
 
         List<String> missing = new ArrayList<>();
 
         Map<Long, UploadGroupDTO.ProjectDocItem> uploaded = group.getProjectDocs();
 
+        // 是否已上传居住证或社保
+        boolean hasResidencePermit = uploaded != null && uploaded.containsKey(residencePermitId);
+        boolean hasSocialSecurity = uploaded != null && uploaded.containsKey(socialSecurityId);
+
         for (ProjectNeedUploadDocVO doc : mustUploadDocs) {
-            if (uploaded == null || !uploaded.containsKey(doc.getId())) {
+
+            Long docId = doc.getId();
+
+            // 非京籍：居住证 & 社保 二选一
+            if (Boolean.FALSE.equals(isBeijing) && (docId.equals(residencePermitId) || docId
+                .equals(socialSecurityId))) {
+
+                // 两个都没上传，才算缺失（只提示一次即可）
+                if (!hasResidencePermit && !hasSocialSecurity) {
+                    missing.add(doc.getTypeName());
+                }
+                continue;
+            }
+
+            // 其他材料正常校验
+            if (uploaded == null || !uploaded.containsKey(docId)) {
                 missing.add(doc.getTypeName());
             }
         }
+
         return missing;
     }
 
@@ -1215,7 +1295,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
 
         OrgClassDO update = new OrgClassDO();
         update.setId(orgClassDO.getId());
-        update.setDocSubmitTime(LocalDateTime.now());
+        update.setDocSubmitTime(ObjectUtil.isNull(orgClassDO.getDocSubmitTime()) ? LocalDateTime.now() : null);
         update.setDocSubmitStatus(OrgClassDocSubmitStatusEnum.SUBMITTED.getCode());
         orgClassMapper.updateById(update);
 

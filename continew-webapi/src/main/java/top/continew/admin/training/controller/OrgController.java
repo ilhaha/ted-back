@@ -71,12 +71,21 @@ public class OrgController extends BaseController<OrgService, OrgResp, OrgDetail
     private SaPathCheckFilterForJakartaServlet saPathCheckFilterForJakartaServlet;
 
     /**
-     * 下载成绩汇总表
+     * 机构下载成绩汇总表
      */
     @SaCheckPermission("download:summary:table")
     @GetMapping("/download/summary/{planId}")
     public ResponseEntity<byte[]> downloadSummary(@PathVariable("planId") Long planId) {
         return baseService.downloadSummary(planId);
+    }
+
+    /**
+     * 后台下载成绩汇总表
+     */
+    @SaCheckPermission("download:summary:table")
+    @GetMapping("/back/download/summary/{planId}")
+    public ResponseEntity<byte[]> backDownloadSummary(@PathVariable("planId") Long planId) {
+        return baseService.backDownloadSummary(planId);
     }
 
     /**

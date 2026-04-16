@@ -26,6 +26,7 @@ import top.continew.admin.exam.model.dto.ClassroomInvigilatorDTO;
 import top.continew.admin.exam.model.dto.ExamPlanDTO;
 import top.continew.admin.exam.model.entity.UserNamesDO;
 import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
+import top.continew.admin.exam.model.resp.StatisticsExamResp;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -138,4 +139,13 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
     List<Map<String, Object>> selectPlanByProjectId(@Param("projectId") Long projectId);
 
     List<Long> getPlanExamOperClassroom(@Param("planId") Long planId);
+
+    List<StatisticsExamResp> statisticsExamCompleted(@Param("startTime") LocalDateTime startTime,
+                                                     @Param("endTime") LocalDateTime endTime);
+
+    List<StatisticsExamResp> statisticsExamEnrolled();
+
+    IPage<OrgExamPlanVO> orgGetConfirmPlanList(@Param("page") Page<Object> objectPage,
+                                               @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper);
+
 }

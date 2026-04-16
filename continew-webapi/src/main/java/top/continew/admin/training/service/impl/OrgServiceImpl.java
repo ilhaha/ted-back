@@ -152,6 +152,9 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Value("${qrcode.worker.upload.apply-doc.url}")
     private String qrcodeUrl;
 
+    @Value("${document.residence-permit-id}")
+    private Long residencePermitId;
+
     @Resource
     private UploadService uploadService;
 
@@ -202,11 +205,20 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
     @Value("${certificate.road-exam-type-id}")
     private Long roadExamTypeId;
 
-    @Value("${excel.template.summary-table.grade.url}")
+    @Value("${excel.template.summary-table.org.url.grade}")
     private String gradeTemplateUrl;
 
-    @Value("${excel.template.summary-table.forklift_performance.url}")
+    @Value("${excel.template.summary-table.org.url.forklift_performance}")
     private String forkliftTemplateUrl;
+
+    @Value("${excel.template.summary-table.admin.url.grade}")
+    private String adminGradeTemplateUrl;
+
+    @Value("${excel.template.summary-table.admin.url.welding}")
+    private String adminWeldingTemplateUrl;
+
+    @Value("${excel.template.summary-table.admin.url.forklift_performance}")
+    private String adminForkliftTemplateUrl;
 
     @Override
     public PageResp<OrgResp> page(OrgQuery query, PageQuery pageQuery) {
@@ -2035,9 +2047,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         List<EnrollResp> enrollList = enrollMapper.downloadSummaryList(new QueryWrapper<EnrollDO>()
             .eq("te.exam_plan_id", planId)
             .eq("te.is_deleted", 0)
-            .eq(isOrgUser, "toc.org_id", orgId)
-
-        );
+            .eq(isOrgUser, "toc.org_id", orgId), residencePermitId);
         ValidationUtils.throwIfEmpty(enrollList, "暂无报考信息");
 
         // 4下载模板和获取写入参数
@@ -2050,7 +2060,60 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
         int writeEndCell = DownloadSummaryConstants.WRITE_END_CEL;
         int writeRowNumber = DownloadSummaryConstants.WRITE_ROW_NUMBER;
         // 5填充 Excel
-        byte[] resultBytes = fillExamSummary(templateBytes, enrollList, writeStartRow, writeEndCell, writeRowNumber, hasRoad, isWelding);
+        byte[] resultBytes = fillExamSummary(templateBytes, enrollList, writeStartRow, writeEndCell, writeRowNumber, hasRoad, isWelding, Boolean.TRUE);
+
+        // 6构建返回 ResponseEntity
+        String fileName = hasRoad ? "叉车成绩汇总表.xls" : "成绩汇总表.xls";
+        ;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDisposition(ContentDisposition.attachment()
+            .filename(fileName, StandardCharsets.UTF_8)
+            .build());
+        headers.add("Access-Control-Expose-Headers", "Content-Disposition");
+
+        return new ResponseEntity<>(resultBytes, headers, HttpStatus.OK);
+    }
+
+    /**
+     * 后台下载成绩汇总表
+     */
+    @Override
+    public ResponseEntity<byte[]> backDownloadSummary(Long planId) {
+        // 1校验考试计划
+        ExamPlanDO examPlanDO = examPlanMapper.selectById(planId);
+        ValidationUtils.throwIfNull(examPlanDO, "考试计划信息不存在");
+        ValidationUtils.throwIf(!PlanFinalConfirmedStatus.DIRECTOR_CONFIRMED.getValue()
+            .equals(examPlanDO.getIsFinalConfirmed()), "考试未确认，暂无法下载");
+        // 判断是否是焊接项目
+        boolean isWelding = weldingConfig.getProjectIdList().contains(examPlanDO.getExamProjectId());
+
+        // 2判断是否有道路成绩
+        ExamPresenceDTO examPlanOperAndRoadDTO = examRecordsMapper.hasOperationOrRoadExam(planId, roadExamTypeId);
+        boolean hasRoad = ProjectHasExamTypeEnum.YES.getValue().equals(examPlanOperAndRoadDTO.getIsRoad());
+
+        // 3查询报名信息
+        List<EnrollResp> enrollList = enrollMapper.downloadSummaryList(new QueryWrapper<EnrollDO>()
+            .eq("te.exam_plan_id", planId)
+            .eq("te.is_deleted", 0), residencePermitId);
+        ValidationUtils.throwIfEmpty(enrollList, "暂无报考信息");
+
+        // 4下载模板和获取写入参数
+        byte[] templateBytes = DownloadOSSFileUtil.downloadUrlToBytes(hasRoad
+            ? adminForkliftTemplateUrl
+            : isWelding ? adminWeldingTemplateUrl : adminGradeTemplateUrl);
+        ValidationUtils.throwIf(ObjectUtil.isEmpty(templateBytes) || templateBytes.length == 0, "系统繁忙");
+
+        int writeStartRow = hasRoad
+            ? DownloadSummaryConstants.BACK_WRITE_START_ROW_FORKLIFT
+            : DownloadSummaryConstants.WRITE_START_ROW_GRADE;
+        int writeEndCell = hasRoad
+            ? DownloadSummaryConstants.BACK_FORKLIFT_PERFORMANCE_WRITE_END_CEL
+            : DownloadSummaryConstants.BACK_COMMON_WRITE_END_CEL;
+        int writeRowNumber = DownloadSummaryConstants.WRITE_ROW_NUMBER;
+        // 5填充 Excel
+        byte[] resultBytes = fillExamSummary(templateBytes, enrollList, writeStartRow, writeEndCell, writeRowNumber, hasRoad, isWelding, Boolean.FALSE);
 
         // 6构建返回 ResponseEntity
         String fileName = hasRoad ? "叉车成绩汇总表.xls" : "成绩汇总表.xls";
@@ -2082,12 +2145,13 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                                   int endCell,
                                   int rowNumber,
                                   Boolean hasRoad,
-                                  Boolean isWelding) {
+                                  Boolean isWelding,
+                                  Boolean isOrg) {
 
         try {
 
             // 一个 Excel（动态扩展行）
-            return createSingleExcelDynamic(templateBytes, enrollList, startRow, endCell, rowNumber, hasRoad, isWelding);
+            return createSingleExcelDynamic(templateBytes, enrollList, startRow, endCell, rowNumber, hasRoad, isWelding, isOrg);
 
         } catch (Exception e) {
             throw new RuntimeException("填充 Excel 汇总表失败", e);
@@ -2100,7 +2164,8 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                                             int endCell,
                                             int rowNumber,
                                             Boolean hasRoad,
-                                            Boolean isWelding) throws IOException {
+                                            Boolean isWelding,
+                                            Boolean isOrg) throws IOException {
 
         try (ByteArrayInputStream bais = new ByteArrayInputStream(templateBytes);
             Workbook workbook = new HSSFWorkbook(bais); ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -2208,13 +2273,28 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                                     cell.setCellValue(aesWithHMAC.verifyAndDecrypt(enroll.getUsername()));
                                 break;
                             case 5:
+                                if (isOrg) {
+                                    if (i == 0 && residencePermitId.equals(enroll.getTypeId()))
+                                        cell.setCellValue("√");
+                                } else {
+                                    if (i == 0)
+                                        cell.setCellValue(aesWithHMAC.verifyAndDecrypt(enroll.getPhone()));
+                                }
                                 break;
                             case 6:
-                                if (i == 0)
-                                    cell.setCellValue(enroll.getCategoryName());
+                                if (isOrg) {
+                                    if (i == 0)
+                                        cell.setCellValue(enroll.getCategoryName());
+                                } else {
+                                    if (i == 0 && residencePermitId.equals(enroll.getTypeId()))
+                                        cell.setCellValue("√");
+                                }
                                 break;
                             case 7:
-                                cell.setCellValue(projects[i]);
+                                cell.setCellValue(isOrg ? projects[i] : enroll.getWorkUnit());
+                                break;
+                            case 8:
+                                cell.setCellValue(isOrg ? "" : projects[i]);
                                 break;
                             default:
                                 cell.setCellValue("");
@@ -2232,7 +2312,7 @@ public class OrgServiceImpl extends BaseServiceImpl<OrgMapper, OrgDO, OrgResp, O
                     for (int col = 0; col <= endCell; col++) {
 
                         // 项目列及后不合并
-                        if (col >= 7)
+                        if (col >= (isOrg ? 7 : 8))
                             continue;
 
                         mergeAndCenter(sheet, mergeStartRow, mergeStartRow + rowSpan - 1, col, workbook);

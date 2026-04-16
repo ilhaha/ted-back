@@ -23,17 +23,17 @@ package top.continew.admin.common.constant;
 public class DownloadSummaryConstants {
 
     /**
-     * 成绩汇总表从第5行开始写
+     * 通用成绩汇总表从第5行开始写
      */
     public static final int WRITE_START_ROW_GRADE = 4;
 
     /**
-     * 叉车成绩汇总表从第5行开始写
+     * 机构叉车成绩汇总表从第7行开始写
      */
     public static final int WRITE_START_ROW_FORKLIFT = 6;
 
     /**
-     * 一行写8个单元格
+     * 机构一行写12个单元格
      */
     public static final int WRITE_END_CEL = 11;
 
@@ -41,5 +41,20 @@ public class DownloadSummaryConstants {
      * 一张汇总表写15行
      */
     public static final int WRITE_ROW_NUMBER = 15;
+
+    /**
+     * 后台通用、焊接模板一行写13个单元格
+     */
+    public static final int BACK_COMMON_WRITE_END_CEL = 12;
+
+    /**
+     * 后台叉车模板一行写15个单元格
+     */
+    public static final int BACK_FORKLIFT_PERFORMANCE_WRITE_END_CEL = 14;
+
+    /**
+     * 后台叉车成绩汇总表从第6行开始写
+     */
+    public static final int BACK_WRITE_START_ROW_FORKLIFT = 5;
 
 }

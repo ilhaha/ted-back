@@ -205,6 +205,8 @@
                ter.is_theory_exempt,
                tep.exam_plan_name AS plan_name,
                tp.project_name,
+               toc.class_name,
+               org.`name` AS org_name,
                CASE
                    WHEN tp.category_id = #{roadExamTypeId} THEN 1
                    ELSE 0
@@ -212,6 +214,12 @@
         FROM ted_exam_records ter
                  JOIN ted_exam_plan tep
                       ON ter.plan_id = tep.id AND tep.is_deleted = 0
+                 JOIN ted_enroll te
+                      ON ter.plan_id = te.exam_plan_id AND ter.candidate_id = te.user_id AND te.is_deleted = 0
+                 JOIN ted_org_class toc
+                      ON te.class_id = toc.id AND toc.is_deleted = 0
+                 JOIN ted_org org
+                      ON toc.org_id = org.id AND org.is_deleted = 0
                  JOIN ted_project tp
                       ON tep.exam_project_id = tp.id AND tp.is_deleted = 0
                  JOIN ted_category tc

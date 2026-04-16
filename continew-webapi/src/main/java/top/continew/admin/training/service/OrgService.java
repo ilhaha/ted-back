@@ -247,4 +247,8 @@ public interface OrgService extends BaseService<OrgResp, OrgDetailResp, OrgQuery
      */
     ResponseEntity<byte[]> downloadSummary(Long planId);
 
+    /**
+     * 后台下载成绩汇总表
+     */
+    ResponseEntity<byte[]> backDownloadSummary(Long planId);
 }

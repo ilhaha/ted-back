@@ -28,8 +28,7 @@ import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
-import top.continew.admin.exam.model.resp.CascaderOptionResp;
-import top.continew.admin.exam.model.resp.CascaderPlanResp;
+import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectTreeNodeVO;
@@ -46,13 +45,12 @@ import top.continew.starter.extension.crud.annotation.CrudRequestMapping;
 import top.continew.admin.common.controller.BaseController;
 import top.continew.admin.exam.model.query.ExamPlanQuery;
 import top.continew.admin.exam.model.req.ExamPlanReq;
-import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
-import top.continew.admin.exam.model.resp.ExamPlanResp;
 import top.continew.admin.exam.service.ExamPlanService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.web.model.R;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -71,6 +69,27 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
 
     @Resource
     private ExamPlanService examPlanService;
+
+    /**
+     * 根据时间范围统计每个项目已经考试的人数（作业人员）
+     * 
+     * @return
+     */
+    @GetMapping("/statistics/exam/completed")
+    public List<StatisticsExamResp> statisticsExamCompleted(@RequestParam(name = "startTime", required = false) LocalDate startTime,
+                                                            @RequestParam(name = "endTime", required = false) LocalDate endTime) {
+        return baseService.statisticsExamCompleted(startTime, endTime);
+    }
+
+    /**
+     * 统计当前系统每个项目已报名但未考试的人数（作业人员）
+     * 
+     * @return
+     */
+    @GetMapping("/statistics/exam/enrolled")
+    public List<StatisticsExamResp> statisticsExamEnrolled() {
+        return baseService.statisticsExamEnrolled();
+    }
 
     /**
      * 确认考试成绩

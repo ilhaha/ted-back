@@ -229,7 +229,7 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
 
     /**
      * 上传身份证或人脸证件照（用于登录实名验证）
-     * 
+     *
      * @param file        文件
      * @param frontOrBack 1=身份证正面，0=身份证反面，2=人脸证件照
      */
@@ -257,6 +257,8 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
                 }
                 file = IDPhotoConverter.convertToOneInchPhoto(file);
 
+            } catch (BusinessException e) {
+                throw e;
             } catch (Exception e) {
                 throw new BusinessException("二寸免冠照裁剪失败");
             }
@@ -333,7 +335,7 @@ public class FileServiceImpl extends BaseServiceImpl<FileMapper, FileDO, FileRes
 
     /**
      * 上传文件（用于机构报名考试补充报考资料）
-     * 
+     *
      * @param file
      * @return
      */

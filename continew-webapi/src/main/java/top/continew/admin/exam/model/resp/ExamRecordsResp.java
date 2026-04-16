@@ -180,6 +180,11 @@ public class ExamRecordsResp extends BaseResp {
     private String className;
 
     /**
+     * 所属班级
+     */
+    private String orgName;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

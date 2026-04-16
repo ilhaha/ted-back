@@ -196,4 +196,19 @@ public class EnrollResp extends BaseResp {
      * 焊接项目实操项目代码
      */
     private String weldingProjectCode;
+
+    /**
+     * 上传资料id
+     */
+    private Long typeId;
+
+    /**
+     * 工作单位
+     */
+    private String workUnit;
+
+    /**
+     * 联系电话
+     */
+    private String phone;
 }

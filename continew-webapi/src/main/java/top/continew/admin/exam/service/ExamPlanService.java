@@ -24,8 +24,7 @@ import top.continew.admin.exam.model.entity.ExamPlanDO;
 import top.continew.admin.exam.model.req.AdjustPlanTimeReq;
 import top.continew.admin.exam.model.req.ExamPlanSaveReq;
 import top.continew.admin.exam.model.req.ExamPlanStartReq;
-import top.continew.admin.exam.model.resp.CascaderOptionResp;
-import top.continew.admin.exam.model.resp.CascaderPlanResp;
+import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.InvigilateExamPlanVO;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.model.vo.ProjectVo;
@@ -35,9 +34,8 @@ import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.ExamPlanQuery;
 import top.continew.admin.exam.model.req.ExamPlanReq;
-import top.continew.admin.exam.model.resp.ExamPlanDetailResp;
-import top.continew.admin.exam.model.resp.ExamPlanResp;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -236,5 +234,19 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      * @return
      */
     Boolean scoreConfirmed(Long planId, Long classId);
+
+    /**
+     * 根据月份统计每个项目已经考试的人数（作业人员）
+     * 
+     * @return
+     */
+    List<StatisticsExamResp> statisticsExamCompleted(LocalDate startTime, LocalDate endTime);
+
+    /**
+     * 统计当前系统每个项目已报名但未考试的人数（作业人员）
+     * 
+     * @return
+     */
+    List<StatisticsExamResp> statisticsExamEnrolled();
 
 }

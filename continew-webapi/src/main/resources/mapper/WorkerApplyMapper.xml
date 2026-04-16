@@ -106,16 +106,7 @@
             #{id}
         </foreach>
     </select>
-    <select id="selectClassBingDocIds" resultType="java.lang.Long">
-        SELECT tpdt.document_type_id
-        FROM ted_project_document_type tpdt
-                 JOIN ted_project tp
-                      ON tpdt.project_id = tp.id AND tp.is_deleted = 0
-                 JOIN ted_org_class toc
-                      ON tp.id = toc.project_id AND toc.is_deleted = 0
-        WHERE tpdt.is_deleted = 0
-          AND toc.id = #{classId}
-    </select>
+
     <select id="selectWorkerApplyByProjectAndIdCards"
             resultType="top.continew.admin.worker.model.entity.WorkerApplyDO">
         SELECT
@@ -135,6 +126,7 @@
         twa.id_card_address,
         twa.id_card_photo_front,
         twa.id_card_photo_back,
+        twa.birth_date,
         twa.remark,
         twa.face_photo,
         twa.apply_type,
@@ -169,8 +161,18 @@
 
         ORDER BY twa.create_time DESC
     </select>
-
-
+    <select id="selectClassBingDocIds" resultType="top.continew.admin.exam.model.resp.ClassBingDocResp">
+        SELECT tpdt.document_type_id, tdt.need_upload_person
+        FROM ted_project_document_type tpdt
+                 JOIN ted_project tp
+                      ON tpdt.project_id = tp.id AND tp.is_deleted = 0
+                 JOIN ted_org_class toc
+                      ON tp.id = toc.project_id AND toc.is_deleted = 0
+                 JOIN ted_document_type tdt
+                      ON tpdt.document_type_id = tdt.id AND tdt.is_deleted = 0
+        WHERE tpdt.is_deleted = 0
+          AND toc.id = #{classId}
+    </select>
 
 
 </mapper>

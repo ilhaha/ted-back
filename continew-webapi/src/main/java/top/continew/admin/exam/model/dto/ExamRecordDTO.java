@@ -133,6 +133,11 @@ public class ExamRecordDTO {
     private String className;
 
     /**
+     * 所属机构
+     */
+    private String orgName;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

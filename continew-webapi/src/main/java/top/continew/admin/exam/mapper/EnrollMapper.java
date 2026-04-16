@@ -121,7 +121,8 @@ public interface EnrollMapper extends BaseMapper<EnrollDO> {
     IPage<EnrollResp> getWorkerApplyList(@Param("page") Page<EnrollDO> page,
                                          @Param(Constants.WRAPPER) QueryWrapper<EnrollDO> queryWrapper);
 
-    List<EnrollResp> downloadSummaryList(@Param(Constants.WRAPPER) QueryWrapper<EnrollDO> queryWrapper);
+    List<EnrollResp> downloadSummaryList(@Param(Constants.WRAPPER) QueryWrapper<EnrollDO> queryWrapper,
+                                         @Param("residencePermitId") Long residencePermitId);
 
     List<WorkerAuditNoticeResp> selectAuditNoticeToClass(@Param("classId") Long classId, @Param("planId") Long planId);
 
