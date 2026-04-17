@@ -37,6 +37,7 @@ import top.continew.admin.exam.mapper.ExamNoticePlanMapper;
 import top.continew.admin.exam.mapper.ExamPlanMapper;
 import top.continew.admin.exam.model.entity.ExamNoticePlanDO;
 import top.continew.admin.exam.model.entity.ExamPlanDO;
+import top.continew.admin.exam.model.req.ExamNoticeAuditReq;
 import top.continew.admin.exam.model.req.ExamNoticeExamProjectReq;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.starter.core.validation.ValidationUtils;
@@ -221,5 +222,24 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
             return examNoticePlanDO;
         }).toList();
         examNoticePlanMapper.insertBatch(noticePlanInsertList);
+    }
+
+    /**
+     * 审核
+     * @param req
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean auditExamNotice(ExamNoticeAuditReq req) {
+        List<ExamNoticeDO> examNoticeDOS = baseMapper.selectByIds(req.getIds());
+        ValidationUtils.throwIfEmpty(examNoticeDOS,"所选审核数据不存在");
+        List<ExamNoticeDO> updateList = examNoticeDOS.stream().map(item -> {
+            ExamNoticeDO examNoticeDO = new ExamNoticeDO();
+            examNoticeDO.setId(item.getId());
+            examNoticeDO.setStatus(req.getStatus());
+            return examNoticeDO;
+        }).toList();
+        return baseMapper.updateBatchById(updateList);
     }
 }

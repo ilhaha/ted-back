@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service;
 
+import top.continew.admin.exam.model.req.ExamNoticeAuditReq;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.ExamNoticeQuery;
 import top.continew.admin.exam.model.req.ExamNoticeReq;
@@ -28,4 +29,12 @@ import top.continew.admin.exam.model.resp.ExamNoticeResp;
  * @author ilhaha
  * @since 2026/04/14 15:20
  */
-public interface ExamNoticeService extends BaseService<ExamNoticeResp, ExamNoticeDetailResp, ExamNoticeQuery, ExamNoticeReq> {}
+public interface ExamNoticeService extends BaseService<ExamNoticeResp, ExamNoticeDetailResp, ExamNoticeQuery, ExamNoticeReq> {
+
+    /**
+     * 审核
+     * @param req
+     * @return
+     */
+    Boolean auditExamNotice(ExamNoticeAuditReq req);
+}

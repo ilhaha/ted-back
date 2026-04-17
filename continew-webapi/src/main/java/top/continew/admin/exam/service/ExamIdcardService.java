@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.service;
 
+import top.continew.admin.exam.model.req.AuditExamIdCardReq;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.ExamIdcardQuery;
 import top.continew.admin.exam.model.req.ExamIdcardReq;
@@ -45,4 +46,24 @@ public interface ExamIdcardService extends BaseService<ExamIdcardResp, ExamIdcar
      * @return
      */
     Long saveRealName(ExamIdcardReq examIdcardReq);
+
+    /**
+     * 获取当前人员的实名信息
+     * @return
+     */
+    ExamIdcardResp getRealNameInfo();
+
+    /**
+     * 提交学历认证
+     * @param examIdcardReq
+     * @return
+     */
+    Boolean submitVerify(ExamIdcardReq examIdcardReq);
+
+    /**
+     * 审核
+     * @param
+     * @return
+     */
+    Boolean auditExamIdCard(AuditExamIdCardReq req);
 }

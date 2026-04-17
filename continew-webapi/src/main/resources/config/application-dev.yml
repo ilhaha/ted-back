@@ -364,7 +364,13 @@ exam:
     # 具有特殊实操考试项目代码
     specialPracticalCodes:
       - RT
-
+      -
+# 不需要学历认证的学历
+education:
+  no-verify-list:
+    - 初中
+    - 中专
+    - 高中
 
 # 焊接分类id
 welding:

@@ -92,6 +92,34 @@ public class ExamIdcardDetailResp extends BaseDetailResp {
     private String issuingAuthority;
 
     /**
+     * 学历认证状态（0待审、1已认证、2认证未通过）
+     */
+    @Schema(description = "学历认证状态（0待审、1已认证、2认证未通过）")
+    @ExcelProperty(value = "学历认证状态（0待审、1已认证、2认证未通过）")
+    private Integer educationVerifyStatus;
+
+    /**
+     *学历认证审核备注
+     */
+    @Schema(description = "学历认证审核备注")
+    @ExcelProperty(value = "学历认证审核备注")
+    private String educationVerifyRemark;
+
+    /**
+     *学信网学历验证报告
+     */
+    @Schema(description = "学信网学历验证报告")
+    @ExcelProperty(value = "学信网学历验证报告")
+    private String educationCertificate;
+
+    /**
+     *提交学历认证时间
+     */
+    @Schema(description = "提交学历认证时间")
+    @ExcelProperty(value = "提交学历认证时间")
+    private LocalDateTime educationVerifyTime;
+
+    /**
      * 有效期开始日期
      */
     @Schema(description = "有效期开始日期")

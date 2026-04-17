@@ -20,6 +20,7 @@ import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import top.continew.admin.common.constant.enums.EducationVerifyStatusEnum;
 import top.continew.starter.data.core.annotation.Query;
 import top.continew.starter.data.core.enums.QueryType;
 
@@ -41,10 +42,17 @@ public class ExamIdcardQuery implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
+     * 认证状态
+     */
+    @Schema(description = "认证状态")
+    @Query(type = QueryType.EQ)
+    private Integer educationVerifyStatus = EducationVerifyStatusEnum.PENDING.getValue();
+
+    /**
      * 姓名
      */
     @Schema(description = "姓名")
-    @Query(type = QueryType.EQ)
+    @Query(type = QueryType.LIKE)
     private String realName;
 
     /**

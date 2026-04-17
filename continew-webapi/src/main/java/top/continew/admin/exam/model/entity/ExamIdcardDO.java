@@ -16,6 +16,8 @@
 
 package top.continew.admin.exam.model.entity;
 
+import com.alibaba.excel.annotation.ExcelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -65,6 +67,11 @@ public class ExamIdcardDO extends BaseDO {
     private String address;
 
     /**
+     * 身份证地址
+     */
+    private String idCardAddress;
+
+    /**
      * 身份证号码
      */
     private String idCardNumber;
@@ -78,6 +85,26 @@ public class ExamIdcardDO extends BaseDO {
      * 有效期开始日期
      */
     private LocalDate validStartDate;
+
+    /**
+     * 学历认证状态（0待审、1已认证、2认证未通过、3待认证）
+     */
+    private Integer educationVerifyStatus;
+
+    /**
+     *学历认证审核备注
+     */
+    private String educationVerifyRemark;
+
+    /**
+     *学信网学历验证报告
+     */
+    private String educationCertificate;
+
+    /**
+     *提交学历认证时间
+     */
+    private LocalDateTime educationVerifyTime;
 
     /**
      * 有效期截止日期

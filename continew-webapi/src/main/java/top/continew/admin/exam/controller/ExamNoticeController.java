@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.controller;
 
+import top.continew.admin.exam.model.req.ExamNoticeAuditReq;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,4 +41,15 @@ import top.continew.admin.exam.service.ExamNoticeService;
 @RestController
 @CrudRequestMapping(value = "/exam/examNotice", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
     Api.EXPORT})
-public class ExamNoticeController extends BaseController<ExamNoticeService, ExamNoticeResp, ExamNoticeDetailResp, ExamNoticeQuery, ExamNoticeReq> {}
+public class ExamNoticeController extends BaseController<ExamNoticeService, ExamNoticeResp, ExamNoticeDetailResp, ExamNoticeQuery, ExamNoticeReq> {
+
+    /**
+     * 审核
+     * @param req
+     * @return
+     */
+    @PutMapping("/audit")
+    public Boolean auditExamNotice(@RequestBody ExamNoticeAuditReq req) {
+        return baseService.auditExamNotice(req);
+    }
+}

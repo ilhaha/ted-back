@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.model.req;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import jakarta.validation.constraints.*;
 
 import lombok.Data;
@@ -40,6 +41,8 @@ public class ExamIdcardReq implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
+
+    private Long id;
 
     /**
      * 姓名
@@ -79,6 +82,12 @@ public class ExamIdcardReq implements Serializable {
     @NotBlank(message = "联系地址不能为空")
     @Length(max = 255, message = "联系地址长度不能超过 {max} 个字符")
     private String address;
+
+    /**
+     * 身份证地址
+     */
+    @Schema(description = "身份证地址")
+    private String idCardAddress;
 
     /**
      * 身份证正面照片路径
@@ -145,6 +154,30 @@ public class ExamIdcardReq implements Serializable {
     @Schema(description = "任职资格")
     @NotBlank(message = "任职资格不能为空")
     private String qualification;
+
+    /**
+     * 学历认证状态（0待审、1已认证、2认证未通过、3待认证）
+     */
+    @Schema(description = "学历认证状态（0待审、1已认证、2认证未通过、3待认证）")
+    private Integer educationVerifyStatus;
+
+    /**
+     *学历认证审核备注
+     */
+    @Schema(description = "学历认证审核备注")
+    private String educationVerifyRemark;
+
+    /**
+     *学信网学历验证报告
+     */
+    @Schema(description = "学信网学历验证报告")
+    private String educationCertificate;
+
+    /**
+     *提交学历认证时间
+     */
+    @Schema(description = "提交学历认证时间")
+    private LocalDateTime educationVerifyTime;
 
     /**
      * 相关工作年限

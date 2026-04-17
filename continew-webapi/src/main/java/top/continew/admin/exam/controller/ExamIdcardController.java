@@ -17,6 +17,8 @@
 package top.continew.admin.exam.controller;
 
 import cn.dev33.satoken.annotation.SaIgnore;
+import top.continew.admin.exam.model.req.AuditExamIdCardReq;
+import top.continew.admin.exam.model.req.ExamNoticeAuditReq;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,6 +44,35 @@ import top.continew.admin.exam.service.ExamIdcardService;
 @CrudRequestMapping(value = "/exam/examIdcard", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
     Api.EXPORT})
 public class ExamIdcardController extends BaseController<ExamIdcardService, ExamIdcardResp, ExamIdcardDetailResp, ExamIdcardQuery, ExamIdcardReq> {
+
+    /**
+     * 审核
+     * @param
+     * @return
+     */
+    @PutMapping("/audit")
+    public Boolean auditExamIdCard(@RequestBody AuditExamIdCardReq req) {
+        return baseService.auditExamIdCard(req);
+    }
+
+    /**
+     * 提交学历认证
+     * @param examIdcardReq
+     * @return
+     */
+    @PutMapping("/submit/verify")
+    public Boolean submitVerify(@RequestBody ExamIdcardReq examIdcardReq) {
+        return baseService.submitVerify(examIdcardReq);
+    }
+
+    /**
+     * 获取当前人员的实名信息
+     * @return
+     */
+    @GetMapping("/realName/info")
+    public ExamIdcardResp getRealNameInfo(){
+        return baseService.getRealNameInfo();
+    }
 
     /**
      * 考生根据身份证号查看是否已实名
