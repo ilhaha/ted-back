@@ -36,5 +36,4 @@ public interface ExamNoticeMapper extends BaseMapper<ExamNoticeDO> {
     IPage<ExamNoticeDetailResp> page(@Param("page") Page<Object> objectPage,
                                      @Param(Constants.WRAPPER) QueryWrapper<ExamNoticeDO> queryWrapper);
 
-
 }

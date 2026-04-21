@@ -44,7 +44,7 @@ public class ExamNoticeQuery implements Serializable {
      * 标题
      */
     @Schema(description = "标题")
-    @Query(type = QueryType.LIKE,columns = "ten.title")
+    @Query(type = QueryType.LIKE, columns = "ten.title")
     private String title;
 
     /**
@@ -58,13 +58,13 @@ public class ExamNoticeQuery implements Serializable {
      * 考试等级 0-无 1一级 2 二级
      */
     @Schema(description = "考试等级  0-无 1一级 2 二级")
-    @Query(type = QueryType.EQ,columns = "ten.exam_level")
+    @Query(type = QueryType.EQ, columns = "ten.exam_level")
     private Integer examLevel;
 
     /**
      * 状态（0待审核、1审核通过、2审核未通过）
      */
     @Schema(description = "状态（0待审核、1审核通过、2审核未通过）")
-    @Query(type = QueryType.EQ,columns = "ten.status")
+    @Query(type = QueryType.EQ, columns = "ten.status")
     private Integer status;
 }

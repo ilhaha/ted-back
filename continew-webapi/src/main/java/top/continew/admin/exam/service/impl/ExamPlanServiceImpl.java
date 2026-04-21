@@ -2417,6 +2417,16 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
     }
 
     /**
+     * 统计当前系统每个项目资料通过审核但未报名人数（作业人员）
+     *
+     * @return
+     */
+    @Override
+    public List<StatisticsExamResp> statisticsExamNoEnroll() {
+        return baseMapper.statisticsExamNoEnroll();
+    }
+
+    /**
      * 随机生成监考员开考密码
      *
      * @return

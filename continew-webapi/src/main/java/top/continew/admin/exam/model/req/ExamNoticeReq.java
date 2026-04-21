@@ -75,7 +75,7 @@ public class ExamNoticeReq implements Serializable {
      * 状态（0待审核、1审核通过、2审核未通过）
      */
     @Schema(description = "状态（0待审核、1审核通过、2审核未通过）")
-//    @NotNull(message = "状态（0待审核、1审核通过、2审核未通过）不能为空")
+    //    @NotNull(message = "状态（0待审核、1审核通过、2审核未通过）不能为空")
     private Integer status;
 
     /**

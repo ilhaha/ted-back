@@ -249,4 +249,11 @@ public interface ExamPlanService extends BaseService<ExamPlanResp, ExamPlanDetai
      */
     List<StatisticsExamResp> statisticsExamEnrolled();
 
+    /**
+     * 统计当前系统每个项目资料通过审核但未报名人数（作业人员）
+     *
+     * @return
+     */
+    List<StatisticsExamResp> statisticsExamNoEnroll();
+
 }

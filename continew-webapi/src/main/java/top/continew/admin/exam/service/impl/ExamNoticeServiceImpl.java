@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
-import top.continew.admin.common.constant.PlanConstant;
 import top.continew.admin.common.constant.enums.ExamPlanStatusEnum;
 import top.continew.admin.common.constant.enums.ExamPlanTypeEnum;
 import top.continew.admin.common.constant.enums.NoticeAuditStatusEnum;
@@ -51,9 +50,6 @@ import top.continew.admin.exam.model.req.ExamNoticeReq;
 import top.continew.admin.exam.service.ExamNoticeService;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -74,6 +70,7 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
 
     /**
      * 重写page
+     * 
      * @param query
      * @param pageQuery
      * @return
@@ -85,7 +82,7 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
         super.sort(queryWrapper, pageQuery);
 
         IPage<ExamNoticeDetailResp> page = baseMapper.page(new Page<>(pageQuery.getPage(), pageQuery
-                .getSize()), queryWrapper);
+            .getSize()), queryWrapper);
 
         PageResp<ExamNoticeResp> build = PageResp.build(page, super.getListClass());
         build.getList().forEach(this::fill);
@@ -102,14 +99,15 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
     public void update(ExamNoticeReq req, Long id) {
         // 判断标题是否存在
         ValidationUtils.throwIf(baseMapper.selectCount(new LambdaQueryWrapper<ExamNoticeDO>()
-                .eq(ExamNoticeDO::getTitle, req.getTitle()).ne(ExamNoticeDO::getId, id)) > 0, "标题已存在");
+            .eq(ExamNoticeDO::getTitle, req.getTitle())
+            .ne(ExamNoticeDO::getId, id)) > 0, "标题已存在");
         Long categoryId = req.getCategoryId();
         List<ExamNoticeExamProjectReq> projectList = req.getProjectList();
         ValidationUtils.throwIf(ObjectUtil.isEmpty(projectList), "未选择报考项目");
         // 先删除之前的关系
         deleteNoticeAndPlan(CollectionUtil.toList(id));
         boolean isExamptRenew = examSpecialConfig.getExemptRenewIds().contains(categoryId);
-        addExamNoticeAndPlan(req,projectList,isExamptRenew,id);
+        addExamNoticeAndPlan(req, projectList, isExamptRenew, id);
         req.setStatus(NoticeAuditStatusEnum.PENDING.getValue());
         super.update(req, id);
     }
@@ -130,22 +128,15 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
     }
 
     private void deleteNoticeAndPlan(List<Long> ids) {
-        List<ExamNoticePlanDO> relations = examNoticePlanMapper.selectList(
-                new LambdaQueryWrapper<ExamNoticePlanDO>()
-                        .in(ExamNoticePlanDO::getNoticeId, ids)
-        );
+        List<ExamNoticePlanDO> relations = examNoticePlanMapper.selectList(new LambdaQueryWrapper<ExamNoticePlanDO>()
+            .in(ExamNoticePlanDO::getNoticeId, ids));
 
         if (CollUtil.isNotEmpty(relations)) {
 
-            List<Long> planIds = relations.stream()
-                    .map(ExamNoticePlanDO::getPlanId)
-                    .distinct()
-                    .toList();
+            List<Long> planIds = relations.stream().map(ExamNoticePlanDO::getPlanId).distinct().toList();
 
             // 1 先删关联表
-            examNoticePlanMapper.deleteByIds(
-                    relations.stream().map(ExamNoticePlanDO::getId).toList()
-            );
+            examNoticePlanMapper.deleteByIds(relations.stream().map(ExamNoticePlanDO::getId).toList());
 
             // 2 再删计划
             if (CollUtil.isNotEmpty(planIds)) {
@@ -164,8 +155,8 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
     public ExamNoticeDetailResp get(Long id) {
         ExamNoticeDetailResp examNoticeDetailResp = super.get(id);
         // 查询当前通知对应的计划信息
-        List<ExamNoticePlanDO> examNoticePlanDOS = examNoticePlanMapper.selectList(new LambdaQueryWrapper<ExamNoticePlanDO>()
-                .eq(ExamNoticePlanDO::getNoticeId, id));
+        List<ExamNoticePlanDO> examNoticePlanDOS = examNoticePlanMapper
+            .selectList(new LambdaQueryWrapper<ExamNoticePlanDO>().eq(ExamNoticePlanDO::getNoticeId, id));
         List<Long> planId = examNoticePlanDOS.stream().map(ExamNoticePlanDO::getPlanId).toList();
         List<ExamPlanDO> examPlanDOS = examPlanMapper.selectByIds(planId);
         List<ExamNoticeExamProjectResp> projectList = examPlanDOS.stream().map(item -> {
@@ -189,7 +180,7 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
     @Transactional(rollbackFor = Exception.class)
     public Long add(ExamNoticeReq req) {
         ValidationUtils.throwIf(baseMapper.selectCount(new LambdaQueryWrapper<ExamNoticeDO>()
-                .eq(ExamNoticeDO::getTitle, req.getTitle())) > 0, "标题已存在");
+            .eq(ExamNoticeDO::getTitle, req.getTitle())) > 0, "标题已存在");
         Long categoryId = req.getCategoryId();
         List<ExamNoticeExamProjectReq> projectList = req.getProjectList();
         ValidationUtils.throwIf(ObjectUtil.isEmpty(projectList), "未选择报考项目");
@@ -199,7 +190,10 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
         return reqId;
     }
 
-    private void addExamNoticeAndPlan(ExamNoticeReq req, List<ExamNoticeExamProjectReq> projectList, boolean isExamptRenew, Long noticeId) {
+    private void addExamNoticeAndPlan(ExamNoticeReq req,
+                                      List<ExamNoticeExamProjectReq> projectList,
+                                      boolean isExamptRenew,
+                                      Long noticeId) {
         // 添加计划
         List<ExamPlanDO> planInsertList = projectList.stream().map(item -> {
             ExamPlanDO examPlanDO = new ExamPlanDO();
@@ -226,6 +220,7 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
 
     /**
      * 审核
+     * 
      * @param req
      * @return
      */
@@ -233,7 +228,7 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
     @Transactional(rollbackFor = Exception.class)
     public Boolean auditExamNotice(ExamNoticeAuditReq req) {
         List<ExamNoticeDO> examNoticeDOS = baseMapper.selectByIds(req.getIds());
-        ValidationUtils.throwIfEmpty(examNoticeDOS,"所选审核数据不存在");
+        ValidationUtils.throwIfEmpty(examNoticeDOS, "所选审核数据不存在");
         List<ExamNoticeDO> updateList = examNoticeDOS.stream().map(item -> {
             ExamNoticeDO examNoticeDO = new ExamNoticeDO();
             examNoticeDO.setId(item.getId());

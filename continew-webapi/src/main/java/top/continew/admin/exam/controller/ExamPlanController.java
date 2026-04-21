@@ -92,6 +92,16 @@ public class ExamPlanController extends BaseController<ExamPlanService, ExamPlan
     }
 
     /**
+     * 统计当前系统每个项目资料通过审核但未报名人数（作业人员）
+     *
+     * @return
+     */
+    @GetMapping("/statistics/exam/no/enroll")
+    public List<StatisticsExamResp> statisticsExamNoEnroll() {
+        return baseService.statisticsExamNoEnroll();
+    }
+
+    /**
      * 确认考试成绩
      * 
      * @return

@@ -48,6 +48,12 @@ public class ExamPlanQuery implements Serializable {
     private String examPlanName;
 
     /**
+     * 考试开始时间
+     */
+    @Query(type = QueryType.LIKE_RIGHT, columns = "tep.start_time")
+    private String startTime;
+
+    /**
      * 项目名称
      */
     @Query(type = QueryType.LIKE, columns = "tp.project_name")

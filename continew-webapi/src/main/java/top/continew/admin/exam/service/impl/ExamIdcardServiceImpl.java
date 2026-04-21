@@ -32,7 +32,6 @@ import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.SecureUtils;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.config.EducationConfig;
-import top.continew.admin.exam.model.entity.ExamNoticeDO;
 import top.continew.admin.exam.model.req.AuditExamIdCardReq;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.resp.user.UserDetailResp;
@@ -73,6 +72,7 @@ public class ExamIdcardServiceImpl extends BaseServiceImpl<ExamIdcardMapper, Exa
 
     /**
      * 重写page
+     * 
      * @param query
      * @param pageQuery
      * @return
@@ -135,29 +135,31 @@ public class ExamIdcardServiceImpl extends BaseServiceImpl<ExamIdcardMapper, Exa
             userService.update(new LambdaUpdateWrapper<UserDO>().eq(UserDO::getId, userDO.getId())
                 .set(UserDO::getEmail, email));
         }
-        examIdcardReq.setEducationVerifyStatus(educationConfig.getNoVerifyList().contains(examIdcardReq.getEducation()) ?
-                EducationVerifyStatusEnum.PASSED.getValue()
-                : EducationVerifyStatusEnum.WAIT.getValue());
+        examIdcardReq.setEducationVerifyStatus(educationConfig.getNoVerifyList().contains(examIdcardReq.getEducation())
+            ? EducationVerifyStatusEnum.PASSED.getValue()
+            : EducationVerifyStatusEnum.WAIT.getValue());
         return super.add(examIdcardReq);
     }
 
     /**
      * 获取当前人员的实名信息
+     * 
      * @return
      */
     @Override
     public ExamIdcardResp getRealNameInfo() {
         UserDetailResp userDetailResp = userService.get(TokenLocalThreadUtil.get().getUserId());
-        ValidationUtils.throwIfNull(userDetailResp,"未登录");
+        ValidationUtils.throwIfNull(userDetailResp, "未登录");
         ExamIdcardResp examIdcardResp = new ExamIdcardResp();
         ExamIdcardDO examIdcardDO = baseMapper.selectOne(new LambdaQueryWrapper<ExamIdcardDO>()
-                .eq(ExamIdcardDO::getIdCardNumber, userDetailResp.getUsername()));
-        BeanUtil.copyProperties(examIdcardDO,examIdcardResp);
+            .eq(ExamIdcardDO::getIdCardNumber, userDetailResp.getUsername()));
+        BeanUtil.copyProperties(examIdcardDO, examIdcardResp);
         return examIdcardResp;
     }
 
     /**
      * 提交学历认证
+     * 
      * @param examIdcardReq
      * @return
      */
@@ -166,32 +168,36 @@ public class ExamIdcardServiceImpl extends BaseServiceImpl<ExamIdcardMapper, Exa
     public Boolean submitVerify(ExamIdcardReq examIdcardReq) {
         Long id = examIdcardReq.getId();
         ExamIdcardDO examIdcardDO = baseMapper.selectById(id);
-        ValidationUtils.throwIfNull(examIdcardDO,"学历信息不存在");
+        ValidationUtils.throwIfNull(examIdcardDO, "学历信息不存在");
         String education = examIdcardReq.getEducation();
         boolean isNoVerify = educationConfig.getNoVerifyList().contains(education);
         String educationCertificate = examIdcardReq.getEducationCertificate();
-        ValidationUtils.throwIf(!isNoVerify && ObjectUtil.isNull(educationCertificate),"未上传学信网学历验证报告");
+        ValidationUtils.throwIf(!isNoVerify && ObjectUtil.isNull(educationCertificate), "未上传学信网学历验证报告");
         ExamIdcardDO update = new ExamIdcardDO();
         update.setId(id);
         update.setEducation(education);
         update.setEducationCertificate(educationCertificate);
-        update.setEducationVerifyStatus(isNoVerify ? EducationVerifyStatusEnum.PASSED.getValue() : EducationVerifyStatusEnum.PENDING.getValue());
-        update.setEducationVerifyTime(EducationVerifyStatusEnum.REJECTED.getValue().equals(examIdcardDO.getEducationVerifyStatus()) ? null : LocalDateTime.now());
+        update.setEducationVerifyStatus(isNoVerify
+            ? EducationVerifyStatusEnum.PASSED.getValue()
+            : EducationVerifyStatusEnum.PENDING.getValue());
+        update.setEducationVerifyTime(EducationVerifyStatusEnum.REJECTED.getValue()
+            .equals(examIdcardDO.getEducationVerifyStatus()) ? null : LocalDateTime.now());
         return baseMapper.updateById(update) > 0;
     }
 
     /**
      * 审核
+     * 
      * @param
      * @return
      */
     @Override
     public Boolean auditExamIdCard(AuditExamIdCardReq req) {
         List<ExamIdcardDO> examIdCardDOS = baseMapper.selectByIds(req.getIds());
-        ValidationUtils.throwIfEmpty(examIdCardDOS,"所选审核数据不存在");
+        ValidationUtils.throwIfEmpty(examIdCardDOS, "所选审核数据不存在");
         Integer status = req.getStatus();
-        ValidationUtils.throwIf(EducationVerifyStatusEnum.REJECTED.getValue().equals(status)
-                && ObjectUtil.isNull(req.getRemark()),"未填写驳回理由");
+        ValidationUtils.throwIf(EducationVerifyStatusEnum.REJECTED.getValue().equals(status) && ObjectUtil.isNull(req
+            .getRemark()), "未填写驳回理由");
         List<ExamIdcardDO> updateList = examIdCardDOS.stream().map(item -> {
             ExamIdcardDO examIdcardDO = new ExamIdcardDO();
             examIdcardDO.setId(item.getId());

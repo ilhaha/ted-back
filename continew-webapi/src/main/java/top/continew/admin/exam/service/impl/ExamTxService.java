@@ -31,6 +31,7 @@ import top.continew.admin.common.constant.ExamRecordConstants;
 import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.util.AESWithHMAC;
+import top.continew.admin.config.Q2Config;
 import top.continew.admin.config.WeldingConfig;
 import top.continew.admin.exam.mapper.*;
 import top.continew.admin.exam.model.dto.ExamPresenceDTO;
@@ -87,6 +88,8 @@ public class ExamTxService {
 
     private final ExamAsyncErrorLogService examAsyncErrorLogService;
 
+    private final Q2Config q2Config;
+
     @Value("${certificate.road-exam-type-id}")
     private Long roadExamTypeId;
 
@@ -129,7 +132,9 @@ public class ExamTxService {
 
             Long classroomId = classroomIds.get(random.nextInt(classroomIds.size()));
 
-            String examNumber = projectCode + planCount + examDate + String.format("%04d", enroll.getSeatId());
+            String q2Value = q2Config.getTypeMap().getOrDefault(projectCode, projectCode);
+
+            String examNumber = q2Value + planCount + examDate + String.format("%04d", enroll.getSeatId());
 
             try {
                 enroll.setExamNumber(aesWithHMAC.encryptAndSign(examNumber));

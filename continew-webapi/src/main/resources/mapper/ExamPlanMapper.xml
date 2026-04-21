@@ -513,7 +513,7 @@
     <select id="orgGetConfirmPlanList" resultType="top.continew.admin.exam.model.vo.OrgExamPlanVO">
         SELECT tep.id                     AS exam_plan_id,
                tep.*,
-               tp.id AS project_id,
+               tp.id                      AS project_id,
                tp.project_name,
                tp.project_code,
                tp.exam_duration,
@@ -545,6 +545,36 @@
             ${ew.customSqlSegment}
         GROUP BY tep.id
         ORDER BY tep.start_time
+    </select>
+    <select id="statisticsExamNoEnroll" resultType="top.continew.admin.exam.model.resp.StatisticsExamResp">
+        SELECT t.project_id,
+               t.project_name,
+               t.project_code,
+               t.record_count,
+               SUM(t.record_count) OVER () AS total_count
+        FROM (SELECT toc.project_id,
+                     tp.project_name,
+                     tp.project_code,
+                     COUNT(DISTINCT twa.id_card_number) AS record_count
+
+              FROM ted_worker_apply twa
+                       JOIN ted_org_class toc ON twa.class_id = toc.id
+                       JOIN ted_project tp ON toc.project_id = tp.id
+
+              WHERE twa.status = 1
+                AND twa.is_deleted = 0
+
+                AND NOT EXISTS (SELECT 1
+                                FROM ted_enroll te
+                                         JOIN sys_user su ON te.user_id = su.id
+                                         JOIN ted_exam_plan ep ON te.exam_plan_id = ep.id
+                                WHERE te.is_deleted = 0
+                                  AND su.username = twa.id_card_number
+                                  AND ep.exam_project_id = toc.project_id)
+
+              GROUP BY toc.project_id,
+                       tp.project_name,
+                       tp.project_code) t
     </select>
 
 </mapper>

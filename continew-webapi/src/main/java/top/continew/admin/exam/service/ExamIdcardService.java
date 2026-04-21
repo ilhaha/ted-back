@@ -49,12 +49,14 @@ public interface ExamIdcardService extends BaseService<ExamIdcardResp, ExamIdcar
 
     /**
      * 获取当前人员的实名信息
+     * 
      * @return
      */
     ExamIdcardResp getRealNameInfo();
 
     /**
      * 提交学历认证
+     * 
      * @param examIdcardReq
      * @return
      */
@@ -62,6 +64,7 @@ public interface ExamIdcardService extends BaseService<ExamIdcardResp, ExamIdcar
 
     /**
      * 审核
+     * 
      * @param
      * @return
      */

@@ -18,7 +18,6 @@ package top.continew.admin.exam.controller;
 
 import cn.dev33.satoken.annotation.SaIgnore;
 import top.continew.admin.exam.model.req.AuditExamIdCardReq;
-import top.continew.admin.exam.model.req.ExamNoticeAuditReq;
 import top.continew.starter.extension.crud.enums.Api;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,6 +46,7 @@ public class ExamIdcardController extends BaseController<ExamIdcardService, Exam
 
     /**
      * 审核
+     * 
      * @param
      * @return
      */
@@ -57,6 +57,7 @@ public class ExamIdcardController extends BaseController<ExamIdcardService, Exam
 
     /**
      * 提交学历认证
+     * 
      * @param examIdcardReq
      * @return
      */
@@ -67,10 +68,11 @@ public class ExamIdcardController extends BaseController<ExamIdcardService, Exam
 
     /**
      * 获取当前人员的实名信息
+     * 
      * @return
      */
     @GetMapping("/realName/info")
-    public ExamIdcardResp getRealNameInfo(){
+    public ExamIdcardResp getRealNameInfo() {
         return baseService.getRealNameInfo();
     }
 

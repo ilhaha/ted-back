@@ -99,21 +99,21 @@ public class ExamIdcardDetailResp extends BaseDetailResp {
     private Integer educationVerifyStatus;
 
     /**
-     *学历认证审核备注
+     * 学历认证审核备注
      */
     @Schema(description = "学历认证审核备注")
     @ExcelProperty(value = "学历认证审核备注")
     private String educationVerifyRemark;
 
     /**
-     *学信网学历验证报告
+     * 学信网学历验证报告
      */
     @Schema(description = "学信网学历验证报告")
     @ExcelProperty(value = "学信网学历验证报告")
     private String educationCertificate;
 
     /**
-     *提交学历认证时间
+     * 提交学历认证时间
      */
     @Schema(description = "提交学历认证时间")
     @ExcelProperty(value = "提交学历认证时间")

@@ -42,8 +42,17 @@ public class UserTest {
     public void test() {
         //        System.out.println(aesWithHMAC.encryptAndSign(("11011119910630571X")));
         // jWjEcIeCpsaXz9k1fuFerEUnk3I69wFmeo2LwVqy0uc=:1F7mUAXdAaGGUm2RbADRrMYwzEqUOUhtwyxPp15YLBs=
+        //        System.out.println(aesWithHMAC
+        //            .verifyAndDecrypt(("VP6PQdUG2HAZsHXhpXqIoHgWiKkou3cxms9VmFInV6y/Sv57poieZ0+WQnvp4eA/:rSs7+WVzb8zurTTUa2Ee9neGbEZ6MqZfysvuks4a0EM=")));
         System.out.println(aesWithHMAC
-            .verifyAndDecrypt(("EjcW2B1/HDw4IOT0uIWMg70D2ZpjofNUsJyvH1c3bbY=:/j/h8bEvHqo3Rgx8D7LbKCv7SlLCgKAT8L3boS7ZFwI=")));
+            .verifyAndDecrypt("VP6PQdUG2HAZsHXhpXqIoDMZ6Y3Dn0PHKNIZBVLPkCkLahpzYn2XdVfNbPI/RVKR:R0cl6KlAv/9uFMnduVH8EzOuqRrwBmDca9Mf2bkU7uM="));
+        System.out.println(aesWithHMAC
+            .verifyAndDecrypt("nhz9I5VNZ29rroyA8qQcGg==:RpZ9H+Iwa4JHnPtBpmJzaQNUsWAR8AZWVY4enlOg5G0="));
+        System.out.println(aesWithHMAC
+            .verifyAndDecrypt("IkNSSFm07NxDNkIzUpw8Tg==:SHBqw4l8zlqWi7k2QMeqG9mgX8tXhXEoyGP04fJcSU8="));
+        System.out.println(aesWithHMAC
+            .verifyAndDecrypt("Rtxqv2RIrkD5e9YUjiye/Q==:Hc3Mm7r+3/unpCThIE4OCtQMFP69IF0YNUl9UVF9zq4="));
+        //        System.out.println(aesWithHMAC.encryptAndSign("Q212604210001"));
     }
 
 }

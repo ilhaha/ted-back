@@ -148,4 +148,6 @@ public interface ExamPlanMapper extends BaseMapper<ExamPlanDO> {
     IPage<OrgExamPlanVO> orgGetConfirmPlanList(@Param("page") Page<Object> objectPage,
                                                @Param(Constants.WRAPPER) QueryWrapper<ExamPlanDO> queryWrapper);
 
+    List<StatisticsExamResp> statisticsExamNoEnroll();
+
 }
