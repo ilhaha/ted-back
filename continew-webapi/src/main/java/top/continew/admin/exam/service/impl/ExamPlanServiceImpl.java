@@ -2361,7 +2361,8 @@ public class ExamPlanServiceImpl extends BaseServiceImpl<ExamPlanMapper, ExamPla
         planInvigilateMapper.update(invUpdate);
         // 找出成绩合格的考试记录并生成证书信息
         List<Long> passRecordIds = records.stream()
-            .filter(r -> ExamResultStatusEnum.PASSED.getValue() == r.getExamResultStatus())
+            .filter(r -> (ExamResultStatusEnum.PASSED.getValue() == r.getExamResultStatus() || ExamResultStatusEnum.ANY
+                .getValue() == r.getExamResultStatus()))
             .map(ExamRecordsDO::getId)
             .toList();
         if (ObjectUtil.isNotEmpty(passRecordIds)) {

@@ -60,4 +60,33 @@ public class LicenseCertificateQuery implements Serializable {
     @Schema(description = "身份证号")
     @Query(type = QueryType.EQ)
     private String idcardNo;
+
+    /**
+     * 申请日期
+     */
+    @Schema(description = "申请日期")
+    @Query(type = QueryType.EQ)
+    private LocalDate applyDate;
+
+    /**
+     * 是否已许可（0未许可，1已许可）
+     */
+    @Schema(description = "是否已许可（0未许可，1已许可）")
+    @Query(type = QueryType.EQ)
+    private Integer certGenerated;
+
+    /**
+     * 审批类型（0=初申，1=复审等）
+     */
+    @Schema(description = "审批类型（0=初申，1=复审等）")
+    @Query(type = QueryType.EQ)
+    private Integer approvalType;
+
+    /**
+     * 证书项目代码
+     */
+    @Schema(description = "证书项目代码")
+    @Query(type = QueryType.LIKE)
+    private String psnlcnsItemCode;
+
 }

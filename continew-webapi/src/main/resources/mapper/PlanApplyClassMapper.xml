@@ -32,7 +32,7 @@
 
                SUM(CASE
                        WHEN tpac.is_score_confirmed = 1
-                           AND ter.exam_result_status = 1
+                           AND (ter.exam_result_status = 1 OR ter.exam_result_status = 3)
                            THEN 1
                        ELSE 0
                    END)                      AS pass_count,

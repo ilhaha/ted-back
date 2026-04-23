@@ -50,7 +50,7 @@ public class LicenseCertificateConstant {
     /**
      * 证书编号前缀
      */
-    public static final String LCNS_NO_PREFIX = "TS";
+    public static final String LCNS_NO_PREFIX = "TS110";
 
     /**
      * 证书有效期年限

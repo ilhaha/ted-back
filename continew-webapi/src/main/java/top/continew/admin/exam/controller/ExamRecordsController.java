@@ -22,9 +22,7 @@ import jakarta.annotation.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
-import top.continew.admin.exam.model.req.GenerateReq;
-import top.continew.admin.exam.model.req.InputScoresReq;
-import top.continew.admin.exam.model.req.InputWeldingScoreReq;
+import top.continew.admin.exam.model.req.*;
 import top.continew.admin.exam.model.resp.ClassExamTableResp;
 import top.continew.admin.exam.model.resp.FirstScoreResp;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
@@ -37,7 +35,6 @@ import org.springframework.web.bind.annotation.*;
 import top.continew.starter.extension.crud.annotation.CrudRequestMapping;
 import top.continew.admin.common.controller.BaseController;
 import top.continew.admin.exam.model.query.ExamRecordsQuery;
-import top.continew.admin.exam.model.req.ExamRecordsReq;
 import top.continew.admin.exam.model.resp.ExamRecordsDetailResp;
 import top.continew.admin.exam.model.resp.ExamRecordsResp;
 import top.continew.admin.exam.service.ExamRecordsService;
@@ -94,10 +91,20 @@ public class ExamRecordsController extends BaseController<ExamRecordsService, Ex
      * @param recordIds
      * @return
      */
-    @PostMapping("/download/{planType}")
-    public ResponseEntity<byte[]> downloadQualificationCertificate(@RequestBody List<Long> recordIds,
-                                                                   @PathVariable("planType") Integer planType) {
-        return baseService.downloadQualificationCertificate(recordIds, planType);
+    @PostMapping("/download")
+    public ResponseEntity<byte[]> downloadQualificationCertificate(@RequestBody List<Long> recordIds) {
+        return baseService.downloadQualificationCertificate(recordIds);
+    }
+
+    /**
+     * 按照种类和申请时间下载资格证书
+     *
+     * @param req
+     * @return
+     */
+    @PostMapping("/download/cert/info")
+    public ResponseEntity<byte[]> downloadQualificationCertificateByCategory(@Validated @RequestBody DownloadCertInfoReq req) {
+        return baseService.downloadQualificationCertificateByCategory(req);
     }
 
     /**

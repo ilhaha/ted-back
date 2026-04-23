@@ -18,9 +18,7 @@ package top.continew.admin.exam.service;
 
 import org.springframework.http.ResponseEntity;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
-import top.continew.admin.exam.model.req.GenerateReq;
-import top.continew.admin.exam.model.req.InputScoresReq;
-import top.continew.admin.exam.model.req.InputWeldingScoreReq;
+import top.continew.admin.exam.model.req.*;
 import top.continew.admin.exam.model.resp.ClassExamTableResp;
 import top.continew.admin.exam.model.resp.FirstScoreResp;
 import top.continew.admin.exam.model.vo.CandidatesClassRoomVo;
@@ -28,7 +26,6 @@ import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.ExamRecordsQuery;
-import top.continew.admin.exam.model.req.ExamRecordsReq;
 import top.continew.admin.exam.model.resp.ExamRecordsDetailResp;
 import top.continew.admin.exam.model.resp.ExamRecordsResp;
 
@@ -77,7 +74,7 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
      * @param recordIds
      * @return
      */
-    ResponseEntity<byte[]> downloadQualificationCertificate(List<Long> recordIds, Integer planType);
+    ResponseEntity<byte[]> downloadQualificationCertificate(List<Long> recordIds);
 
     /**
      * 获取某个考试的所有考试计划列表
@@ -121,5 +118,13 @@ public interface ExamRecordsService extends BaseService<ExamRecordsResp, ExamRec
      *
      */
     FirstScoreResp getFirstScore(Long candidateId, Long projectId);
+
+    /**
+     * 按照种类和申请时间下载资格证书
+     *
+     * @param req
+     * @return
+     */
+    ResponseEntity<byte[]> downloadQualificationCertificateByCategory(DownloadCertInfoReq req);
 
 }

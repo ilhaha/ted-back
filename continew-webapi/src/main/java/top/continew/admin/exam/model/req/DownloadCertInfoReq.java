@@ -14,18 +14,30 @@
  * limitations under the License.
  */
 
-package top.continew.admin.common.constant.enums;
+package top.continew.admin.exam.model.req;
 
-public enum ExamResultStatusEnum {
-    FAILED(0), PASSED(1), NOT_ENTERED(2), ANY(3);
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 
-    private final int value;
+import java.io.Serial;
+import java.io.Serializable;
+import java.time.LocalDate;
 
-    ExamResultStatusEnum(int value) {
-        this.value = value;
-    }
+/**
+ * @author ilhaha
+ * @Create 2026/4/23 9:34
+ */
+@Data
+public class DownloadCertInfoReq implements Serializable {
 
-    public int getValue() {
-        return value;
-    }
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    @NotNull(message = "未选择许可种类")
+    private Long categoryId;
+
+    private LocalDate applyStartDate;
+
+    private LocalDate applyEndDate;
+
 }

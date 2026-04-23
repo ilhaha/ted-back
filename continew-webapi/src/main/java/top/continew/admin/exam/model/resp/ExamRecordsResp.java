@@ -148,10 +148,10 @@ public class ExamRecordsResp extends BaseResp {
     private Integer isCertificateGenerated;
 
     /**
-     * 考试结果（0不及格，1及格,2未录入）
+     * 考试结果（0不及格，1及格，2未录入，3实操项目部分及格）
      */
-    @Schema(description = " 考试结果（0不及格，1及格,2未录入）")
-    @ExcelProperty(value = " 考试结果（0不及格，1及格,2未录入）")
+    @Schema(description = " 考试结果（0不及格，1及格，2未录入，3实操项目部分及格）")
+    @ExcelProperty(value = " 考试结果（0不及格，1及格，2未录入，3实操项目部分及格）")
     private Integer examResultStatus;
 
     /**

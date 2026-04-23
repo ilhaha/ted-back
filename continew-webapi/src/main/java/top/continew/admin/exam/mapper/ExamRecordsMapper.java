@@ -25,6 +25,7 @@ import top.continew.admin.exam.model.dto.*;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamRecordsDO;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -101,4 +102,8 @@ public interface ExamRecordsMapper extends BaseMapper<ExamRecordsDO> {
      * @return
      */
     Long getTopicNumber(@Param("planId") Long planId);
+
+    List<Long> getRecordsByCategory(@Param("categoryId") Long categoryId,
+                                    @Param("applyStartDate") LocalDate applyStartDate,
+                                    @Param("applyEndDate") LocalDate applyEndDate);
 }

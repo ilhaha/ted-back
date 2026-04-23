@@ -206,7 +206,7 @@
                tep.exam_plan_name AS plan_name,
                tp.project_name,
                toc.class_name,
-               org.`name` AS org_name,
+               org.`name`         AS org_name,
                CASE
                    WHEN tp.category_id = #{roadExamTypeId} THEN 1
                    ELSE 0
@@ -361,6 +361,31 @@
                            ON tp.category_id = tc.id AND tc.is_deleted = 0
         WHERE tep.id = #{planId}
           AND tep.is_deleted = 0
+    </select>
+    <select id="getRecordsByCategory" resultType="java.lang.Long">
+        SELECT lc.record_id
+        FROM ted_license_certificate lc
+        JOIN ted_exam_records er
+        ON lc.record_id = er.id
+        AND er.is_deleted = 0
+        JOIN ted_exam_plan ep
+        ON er.plan_id = ep.id
+        AND ep.status = 6
+        AND ep.is_deleted = 0
+        JOIN ted_project p
+        ON ep.exam_project_id = p.id
+        AND p.is_deleted = 0
+        WHERE p.category_id = #{categoryId}
+        AND lc.is_deleted = 0
+        AND lc.cert_generated = 0
+
+        <if test="applyStartDate != null">
+            AND lc.apply_date &gt;= #{applyStartDate}
+        </if>
+
+        <if test="applyEndDate != null">
+            AND lc.apply_date &lt;= #{applyEndDate}
+        </if>
     </select>
 
 
