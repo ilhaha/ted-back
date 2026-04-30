@@ -1638,7 +1638,7 @@ public class WorkerApplyServiceImpl extends BaseServiceImpl<WorkerApplyMapper, W
         UserDO userDO = userMapper.selectByUsername(workerApplyDO.getIdCardNumber());
         if (userDO != null) {
             Long enrollCount = enrollMapper.selectCount(new LambdaQueryWrapper<EnrollDO>()
-                .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.COMPLETED)
+                .eq(EnrollDO::getEnrollStatus, EnrollStatusConstant.SIGNED_UP)
                 .eq(EnrollDO::getUserId, userDO.getId())
                 .eq(EnrollDO::getClassId, classId));
             ValidationUtils.throwIf(enrollCount > 0, "考生参加了考试计划，无法删除");
