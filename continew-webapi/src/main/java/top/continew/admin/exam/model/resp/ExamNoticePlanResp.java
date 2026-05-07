@@ -51,6 +51,12 @@ public class ExamNoticePlanResp extends BaseResp {
     private Long planId;
 
     /**
+     * 项目ID
+     */
+    @Schema(description = "项目ID")
+    private Long projectId;
+
+    /**
      * 更新人ID
      */
     @Schema(description = "更新人ID")

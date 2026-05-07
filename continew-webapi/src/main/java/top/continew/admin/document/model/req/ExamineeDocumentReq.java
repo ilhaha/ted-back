@@ -54,6 +54,13 @@ public class ExamineeDocumentReq implements Serializable {
     private Long documentId;
 
     /**
+     * 通知id
+     */
+    @Schema(description = "通知id")
+    @NotNull(message = "未选择通知")
+    private Long noticeId;
+
+    /**
      * 创建人ID
      */
     @Schema(description = "创建人ID")

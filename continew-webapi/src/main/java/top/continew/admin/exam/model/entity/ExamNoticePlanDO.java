@@ -43,6 +43,11 @@ public class ExamNoticePlanDO extends BaseDO {
     private Long noticeId;
 
     /**
+     * 项目ID
+     */
+    private Long projectId;
+
+    /**
      * 考试计划ID
      */
     private Long planId;

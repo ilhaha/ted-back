@@ -67,4 +67,11 @@ public class ExamNoticeQuery implements Serializable {
     @Schema(description = "状态（0待审核、1审核通过、2审核未通过）")
     @Query(type = QueryType.EQ, columns = "ten.status")
     private Integer status;
+
+    /**
+     * 考试办理类型（0无，1取证考试、2换证考试、3免考换证）
+     */
+    @Schema(description = "考试办理类型（0无，1取证考试、2换证考试、3免考换证）")
+    @Query(type = QueryType.EQ, columns = "tc.exam_type")
+    private String examType;
 }

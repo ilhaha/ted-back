@@ -21,9 +21,15 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
+import top.continew.admin.document.model.dto.CategoryNoticeTreeDTO;
 import top.continew.admin.exam.model.resp.ExamNoticeDetailResp;
+import top.continew.admin.exam.model.resp.ProjectResp;
+import top.continew.admin.system.model.vo.UploadedDocumentTypeVO;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamNoticeDO;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * 无损检测、检验人员考试通知 Mapper
@@ -36,4 +42,9 @@ public interface ExamNoticeMapper extends BaseMapper<ExamNoticeDO> {
     IPage<ExamNoticeDetailResp> page(@Param("page") Page<Object> objectPage,
                                      @Param(Constants.WRAPPER) QueryWrapper<ExamNoticeDO> queryWrapper);
 
+    List<CategoryNoticeTreeDTO> getCategoryNoticeTree();
+
+    List<ProjectResp> getProjectByNoticeId(Long noticeId);
+
+    Set<UploadedDocumentTypeVO> getAlreadyUploadDocList(@Param("userId") Long userId, @Param("noticeId") Long noticeId);
 }

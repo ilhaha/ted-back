@@ -16,6 +16,7 @@
 
 package top.continew.admin.document.model.resp;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -49,6 +50,13 @@ public class ExamineeDocumentResp extends BaseResp {
      */
     @Schema(description = "资料ID")
     private Long documentId;
+
+
+    /**
+     * 通知id
+     */
+    @Schema(description = "通知id")
+    private Long noticeId;
 
     /**
      * 更新人ID

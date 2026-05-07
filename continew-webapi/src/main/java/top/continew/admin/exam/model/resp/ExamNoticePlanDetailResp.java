@@ -57,6 +57,13 @@ public class ExamNoticePlanDetailResp extends BaseDetailResp {
     private Long planId;
 
     /**
+     * 项目ID
+     */
+    @Schema(description = "项目ID")
+    @ExcelProperty(value = "项目ID")
+    private Long projectId;
+
+    /**
      * 删除标记
      */
     @Schema(description = "删除标记")

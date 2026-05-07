@@ -17,4 +17,39 @@
         GROUP BY ten.id
         ORDER BY ten.id DESC
     </select>
+    <select id="getCategoryNoticeTree"
+            resultType="top.continew.admin.document.model.dto.CategoryNoticeTreeDTO">
+        SELECT tc.id AS category_id, tc.`name` AS category_name, ten.id AS notice_id, ten.title, ten.exam_level
+        FROM ted_category tc
+                 LEFT JOIN ted_exam_notice ten
+                           ON tc.id = ten.category_id AND ten.`status` = 1 AND ten.is_deleted = 0
+        WHERE tc.is_deleted = 0
+          AND tc.category_type IN (3, 4)
+    </select>
+    <select id="getProjectByNoticeId" resultType="top.continew.admin.exam.model.resp.ProjectResp">
+        SELECT DISTINCT tp.*
+        FROM ted_project tp
+                 INNER JOIN ted_exam_plan tep
+                            ON tp.id = tep.exam_project_id
+                                AND tep.is_deleted = 0
+                 INNER JOIN ted_exam_notice_plan tenp
+                            ON tep.id = tenp.plan_id
+                                AND tenp.is_deleted = 0
+        WHERE tp.is_deleted = 0
+          AND tenp.notice_id = 6;
+    </select>
+    <select id="getAlreadyUploadDocList"
+            resultType="top.continew.admin.system.model.vo.UploadedDocumentTypeVO">
+        SELECT DISTINCT tdt.id AS id,
+                        tdt.type_name,
+                        td.doc_path
+        FROM ted_examinee_document ted
+                 JOIN ted_document td ON ted.document_id = td.id
+            AND td.is_deleted = 0
+                 JOIN ted_document_type tdt ON td.type_id = tdt.id
+            AND tdt.is_deleted = 0
+        WHERE ted.examinee_id = #{userId}
+          AND ted.notice_id = #{noticeId}
+          AND ted.is_deleted = 0
+    </select>
 </mapper>

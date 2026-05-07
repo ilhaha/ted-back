@@ -16,12 +16,21 @@
 
 package top.continew.admin.exam.service;
 
+import top.continew.admin.document.model.resp.CategoryNoticeTreeVO;
+import top.continew.admin.exam.model.req.ExamApplyReq;
 import top.continew.admin.exam.model.req.ExamNoticeAuditReq;
+import top.continew.admin.exam.model.req.NoticeUploadDocReq;
+import top.continew.admin.exam.model.resp.*;
+import top.continew.admin.exam.model.vo.OrgExamPlanVO;
+import top.continew.admin.system.model.vo.UploadWhenUserInfoVO;
+import top.continew.admin.system.model.vo.UploadedDocumentTypeVO;
+import top.continew.starter.extension.crud.model.query.PageQuery;
+import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.ExamNoticeQuery;
 import top.continew.admin.exam.model.req.ExamNoticeReq;
-import top.continew.admin.exam.model.resp.ExamNoticeDetailResp;
-import top.continew.admin.exam.model.resp.ExamNoticeResp;
+
+import java.util.List;
 
 /**
  * 无损检测、检验人员考试通知业务接口
@@ -38,4 +47,54 @@ public interface ExamNoticeService extends BaseService<ExamNoticeResp, ExamNotic
      * @return
      */
     Boolean auditExamNotice(ExamNoticeAuditReq req);
+
+    /**
+     * 检验人员查看通知列表
+     *
+     * @param examNoticeQuery
+     * @param pageQuery
+     * @return 分页结果
+     */
+    PageResp<ExamNoticeResp> inspectionGetNoticeList(ExamNoticeQuery examNoticeQuery, PageQuery pageQuery);
+
+    /**
+     * 检验人员报名时查看通知的详细内容
+     * @param noticeId
+     * @return
+     */
+    NoticeApplyInfoResp getNoticeApplyInfo(Long noticeId);
+
+    /**
+     * 报考通知
+     * @param examApplyReq
+     * @return
+     */
+    Boolean apply(ExamApplyReq examApplyReq);
+
+    /**
+     * 获取已发布的分类-级别-通知级联选择器
+     * @return
+     */
+    List<CategoryNoticeTreeVO> getCategoryNoticeTree();
+
+    /**
+     * 根据通知id获取考生已上传的资料列表、未上传的资料列表
+     * @param noticeId
+     * @return
+     */
+    NoticeUploadInfoResp getNoticeAndDocInfo(Long noticeId);
+
+    /**
+     * 获取通知对应的项目
+     * @param noticeId
+     * @return
+     */
+    List<ProjectResp> getProjectByNoticeId(Long noticeId);
+
+    /**
+     * 上传通知资料
+     * @return
+     */
+    Boolean uploadSubmit(NoticeUploadDocReq noticeUploadDocReq);
+
 }

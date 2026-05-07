@@ -49,6 +49,11 @@ public class ExamineeDocumentDO extends BaseDO {
     private Long documentId;
 
     /**
+     * 通知id
+     */
+    private Long noticeId;
+
+    /**
      * 更新人ID
      */
     private Long updateUser;

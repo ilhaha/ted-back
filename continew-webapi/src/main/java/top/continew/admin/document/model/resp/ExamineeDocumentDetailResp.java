@@ -57,6 +57,13 @@ public class ExamineeDocumentDetailResp extends BaseDetailResp {
     private Long documentId;
 
     /**
+     * 通知id
+     */
+    @Schema(description = "通知id")
+    @ExcelProperty(value = "通知id")
+    private Long noticeId;
+
+    /**
      * 更新人ID
      */
     @Schema(description = "更新人ID")
