@@ -36,7 +36,7 @@
                             ON tep.id = tenp.plan_id
                                 AND tenp.is_deleted = 0
         WHERE tp.is_deleted = 0
-          AND tenp.notice_id = 6;
+          AND tenp.notice_id = #{noticeId}
     </select>
     <select id="getAlreadyUploadDocList"
             resultType="top.continew.admin.system.model.vo.UploadedDocumentTypeVO">
@@ -51,5 +51,35 @@
         WHERE ted.examinee_id = #{userId}
           AND ted.notice_id = #{noticeId}
           AND ted.is_deleted = 0
+    </select>
+    <select id="inspectionGetNoticeList" resultType="top.continew.admin.exam.model.resp.ExamNoticeDetailResp">
+        SELECT ten.*,
+               tena.`status` AS apply_status,
+               tc.`name`     AS category_name,
+               GROUP_CONCAT(
+                       tp.project_code ORDER BY tp.project_code
+        SEPARATOR '、'
+               )             AS project_codes
+        FROM ted_exam_notice ten
+
+                 LEFT JOIN ted_category tc
+                           ON ten.category_id = tc.id
+                               AND tc.is_deleted = 0
+
+                 LEFT JOIN ted_project tp
+                           ON tc.id = tp.category_id
+                               AND tp.is_deleted = 0
+                               AND tp.project_level = ten.exam_level
+
+                 LEFT JOIN ted_examinee_notice_apply tena
+                           ON ten.id = tena.notice_id
+                               AND tena.is_deleted = 0
+            ${ew.customSqlSegment}
+        GROUP BY
+            ten.id,
+            tena.status,
+            tc.name
+        ORDER BY
+            ten.id DESC
     </select>
 </mapper>

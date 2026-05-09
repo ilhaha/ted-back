@@ -13,7 +13,7 @@ server:
 spring.datasource:
   type: com.zaxxer.hikari.HikariDataSource
   # 请务必提前创建好名为 continew_admin 的数据库，如果使用其他数据库名请注意同步修改 DB_NAME 配置
-  url: jdbc:p6spy:mysql://${DB_HOST:120.79.7.238}:${DB_PORT:3306}/${DB_NAME:ted_test}?serverTimezone=Asia/Shanghai&useSSL=true&useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&autoReconnect=true&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
+  url: jdbc:p6spy:mysql://${DB_HOST:120.79.7.238}:${DB_PORT:3306}/${DB_NAME:ted}?serverTimezone=Asia/Shanghai&useSSL=true&useUnicode=true&characterEncoding=utf8&rewriteBatchedStatements=true&autoReconnect=true&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true
   username: ${DB_USER:dev}
   password: ${DB_PWD:123456}
   driver-class-name: com.p6spy.engine.spy.P6SpyDriver
@@ -345,6 +345,34 @@ document:
   # 资料类型社保证明id
   social-security-id: 35
 
+# 检验人员非必要上传资料
+inspector:
+  optional-upload-docs:
+    - id: 41
+      typeName: MT证书
+      projectCode: MT
+
+    - id: 42
+      typeName: PT证书
+      projectCode: PT
+
+    - id: 43
+      typeName: RT证书
+      projectCode: RT
+
+    - id: 44
+      typeName: UT证书
+      projectCode: UT
+
+    - id: 45
+      typeName: 其他行业证书
+      projectCode: OUTER
+
+  # 不需要上传证书的类别ID（取证考试 一级）
+  no-upload-category-ids:
+    - 39
+    - 42
+
 # 有道路考试的八大类ID
 certificate:
   road-exam-type-id: 21
@@ -369,8 +397,11 @@ exam:
 education:
   no-verify-list:
     - 初中
-    - 中专
     - 高中
+    - 职高
+    - 技校
+    - 中专
+
 
 # 焊接分类id
 welding:

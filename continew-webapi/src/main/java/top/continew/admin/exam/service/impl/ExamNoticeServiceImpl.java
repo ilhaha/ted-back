@@ -30,10 +30,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import top.continew.admin.common.constant.ExamTypeConstant;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.config.ExamSpecialConfig;
+import top.continew.admin.config.InspectorConfig;
 import top.continew.admin.document.mapper.DocumentMapper;
 import top.continew.admin.document.mapper.ExamineeDocumentMapper;
 import top.continew.admin.document.model.dto.CategoryNoticeTreeDTO;
@@ -46,6 +48,7 @@ import top.continew.admin.exam.model.req.*;
 import top.continew.admin.exam.model.req.dto.ProjectApplyDTO;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
+import top.continew.admin.exam.service.LicenseHolderInfoService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.vo.UploadWhenUserInfoVO;
@@ -57,7 +60,10 @@ import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.exam.model.query.ExamNoticeQuery;
 import top.continew.admin.exam.service.ExamNoticeService;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -93,6 +99,12 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
     private final ExamineeNoticeApplyMapper examineeNoticeApplyMapper;
 
     private final ExamineeNoticeApplyRecordMapper examineeNoticeApplyRecordMapper;
+
+    private final InspectorConfig inspectorConfig;
+
+    private final LicenseHolderInfoService licenseHolderInfoService;
+
+    private final CategoryMapper categoryMapper;
 
     /**
      * 重写page
@@ -274,7 +286,17 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
      */
     @Override
     public PageResp<ExamNoticeResp> inspectionGetNoticeList(ExamNoticeQuery examNoticeQuery, PageQuery pageQuery) {
-        return this.page(examNoticeQuery, pageQuery);
+        QueryWrapper<ExamNoticeDO> queryWrapper = this.buildQueryWrapper(examNoticeQuery);
+        queryWrapper.eq("ten.status", NoticeStatusEnum.APPROVED.getValue())
+                .eq("ten.is_deleted", 0);
+        super.sort(queryWrapper, pageQuery);
+
+        IPage<ExamNoticeDetailResp> page = baseMapper.inspectionGetNoticeList(new Page<>(pageQuery.getPage(), pageQuery
+                .getSize()), queryWrapper);
+
+        PageResp<ExamNoticeResp> build = PageResp.build(page, super.getListClass());
+        build.getList().forEach(this::fill);
+        return build;
     }
 
     /**
@@ -469,9 +491,59 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
 
         Long noticeId = examNoticeDO.getId();
 
+        LocalDate applyDeadline = examNoticeDO.getApplyDeadline();
+
+        ValidationUtils.throwIf(
+                LocalDate.now().isAfter(applyDeadline),
+                "该考试通知已截止报名"
+        );
+
         List<ProjectApplyDTO> projectList = examApplyReq.getProjectList();
 
         ValidationUtils.throwIfEmpty(projectList, "未选择报考项目");
+
+        // 查询用户实名制信息
+        ExamIdcardDO examIdcardDO = examIdcardMapper.selectOne(
+                new LambdaQueryWrapper<ExamIdcardDO>()
+                        .eq(ExamIdcardDO::getIdCardNumber, userDO.getUsername())
+        );
+        ValidationUtils.throwIfNull(examNoticeDO, "未进行实名");
+        String idCardNumber = aesWithHMAC.verifyAndDecrypt(examIdcardDO.getIdCardNumber());
+        // 提取出生日期（18位身份证：第7-14位）
+        String birthStr = idCardNumber.substring(6, 14);
+
+        // 转 LocalDate
+        LocalDate birthDate = LocalDate.parse(
+                birthStr,
+                DateTimeFormatter.ofPattern("yyyyMMdd")
+        );
+
+        // 计算年龄
+        int age = Period.between(birthDate, LocalDate.now()).getYears();
+
+        // 项目ID列表
+        List<Long> projectIds = projectList.stream()
+                .map(ProjectApplyDTO::getProjectId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 查询项目信息
+        List<ProjectDO> projectDOList = projectMapper.selectList(
+                new LambdaQueryWrapper<ProjectDO>()
+                        .in(ProjectDO::getId, projectIds)
+        );
+
+        ValidationUtils.throwIfEmpty(projectDOList, "所选报考项目信息不存在");
+        for (ProjectDO projectDO : projectDOList) {
+            Integer examEndAge = projectDO.getExamEndAge();
+            ValidationUtils.throwIf(
+                    age > examEndAge,
+                    "当前年龄【" + age + "】岁，已超过【"
+                            + projectDO.getProjectCode()
+                            + "】允许报考年龄【"
+                            + examEndAge + "】岁"
+            );
+        }
 
         // 报名主表
         ExamineeNoticeApplyDO examineeNoticeApplyDO =
@@ -486,24 +558,54 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
                 "请先完善报名资料"
         );
 
+        // 校验资料上传的对不对
+        licenseHolderInfoService.checkLicenseCertificateUploaded(examIdcardDO,);
+
         List<ExamineeNoticeApplyRecordDO> applyRecordDOS =
                 projectList.stream().map(item -> {
 
                     Long projectId = item.getProjectId();
 
-                    // 防止重复报名
-                    ExamineeNoticeApplyRecordDO existsRecord =
-                            examineeNoticeApplyRecordMapper.selectOne(
+                    Integer examAttemptType = item.getExamAttemptType();
+
+                    // 初考只能报一次
+                    Long firstExamCount =
+                            examineeNoticeApplyRecordMapper.selectCount(
+                                    new LambdaQueryWrapper<ExamineeNoticeApplyRecordDO>()
+                                            .eq(ExamineeNoticeApplyRecordDO::getExamineeId, userId)
+                                            .eq(ExamineeNoticeApplyRecordDO::getProjectId, projectId)
+                                            .eq(
+                                                    ExamineeNoticeApplyRecordDO::getExamAttemptType,
+                                                    ExamAttemptTypeEnum.FIRST_EXAM.getValue()
+                                            )
+                            );
+
+                    ValidationUtils.throwIf(
+                            firstExamCount > 0
+                                    && ExamAttemptTypeEnum.FIRST_EXAM.getValue()
+                                    .equals(examAttemptType),
+                            "项目【" + item.getProjectCode() + "】初考已报名，请勿重复报名"
+                    );
+
+                    // 当前通知下不能重复报名
+                    Long currentNoticeCount =
+                            examineeNoticeApplyRecordMapper.selectCount(
                                     new LambdaQueryWrapper<ExamineeNoticeApplyRecordDO>()
                                             .eq(ExamineeNoticeApplyRecordDO::getExamineeId, userId)
                                             .eq(ExamineeNoticeApplyRecordDO::getNoticeId, noticeId)
                                             .eq(ExamineeNoticeApplyRecordDO::getProjectId, projectId)
+                                            .eq(
+                                                    ExamineeNoticeApplyRecordDO::getExamAttemptType,
+                                                    examAttemptType
+                                            )
                             );
 
-                    ValidationUtils.throwIfNotNull(
-                            existsRecord,
-                            "【" + item.getProjectCode() + "】已报名，请勿重复提交"
+                    ValidationUtils.throwIf(
+                            currentNoticeCount > 0,
+                            "已报名通知下的【" + item.getProjectCode() + "】，请勿重复提交"
                     );
+
+                    // TODO 补充补考逻辑
 
                     // 通知计划
                     ExamNoticePlanDO examNoticePlanDO =
@@ -517,6 +619,8 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
                             examNoticePlanDO,
                             "该报考通知未绑定【" + item.getProjectCode() + "】考试项目"
                     );
+
+
 
                     ExamineeNoticeApplyRecordDO recordDO =
                             new ExamineeNoticeApplyRecordDO();
@@ -612,6 +716,9 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
 
         ValidationUtils.throwIfNull(userDO, "未登录");
 
+        ExamNoticeDO examNoticeDO = baseMapper.selectById(noticeId);
+        ValidationUtils.throwIfNull(examNoticeDO, "报考通知不存在");
+
         // 查出通知对应的项目
         List<ProjectResp> projectByNoticeId = getProjectByNoticeId(noticeId);
 
@@ -623,43 +730,137 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
                 .map(ProjectResp::getId)
                 .toList();
 
-        // 需要上传的资料
-        Set<UploadedDocumentTypeVO> needUploadDocList =
-                projectMapper.getProjectBindingDocumentByIds(projectIds);
+        // 非必须上传资料（yml配置）
+        List<UploadedDocumentTypeVO> optionalUploadDocs =
+                inspectorConfig.getOptionalUploadDocs();
+        // 判断当前通知是否需要上传证书
+        boolean isNoUpload = isNoNeedUploadCertificate(examNoticeDO);
 
-        // 已上传的资料
+
+        // 非必须上传资料ID集合
+        Set<Long> optionalDocIds = optionalUploadDocs.stream()
+                .map(UploadedDocumentTypeVO::getId)
+                .collect(Collectors.toSet());
+
+        // 已上传资料
         Set<UploadedDocumentTypeVO> alreadyUploadDocList =
                 baseMapper.getAlreadyUploadDocList(userId, noticeId);
 
-        // 并集
+        /*
+         * =========================
+         * 处理必须上传资料
+         * =========================
+         */
+
+        // 需要上传的资料（过滤掉非必须）
+        Set<UploadedDocumentTypeVO> needUploadDocList =
+                projectMapper.getProjectBindingDocumentByIds(projectIds)
+                        .stream()
+                        .filter(item -> !optionalDocIds.contains(item.getId()))
+                        .collect(Collectors.toSet());
+
+        // 必须资料并集
         Map<Long, UploadedDocumentTypeVO> unionMap = new LinkedHashMap<>();
 
-        // 先放需要上传的
+        // 先放项目固定绑定的
         needUploadDocList.forEach(item ->
                 unionMap.put(item.getId(), item));
 
         // 再放已上传的（如果存在则覆盖）
-        alreadyUploadDocList.forEach(item ->
-                unionMap.put(item.getId(), item));
+        alreadyUploadDocList.stream()
+                .filter(item -> !optionalDocIds.contains(item.getId()))
+                .forEach(item -> unionMap.put(item.getId(), item));
 
         List<UploadedDocumentTypeVO> unionList =
                 new ArrayList<>(unionMap.values());
 
+        /*
+         * =========================
+         * 处理非必须上传资料
+         * =========================
+         */
+
+        // key=id
+        Map<Long, UploadedDocumentTypeVO> optionalMap =
+                optionalUploadDocs.stream()
+                        .collect(Collectors.toMap(
+                                UploadedDocumentTypeVO::getId,
+                                item -> item,
+                                (a, b) -> b,
+                                LinkedHashMap::new
+                        ));
+
+        // 如果用户上传过，则覆盖路径等信息
+        alreadyUploadDocList.stream()
+                .filter(item -> optionalDocIds.contains(item.getId()))
+                .forEach(item -> optionalMap.put(item.getId(), item));
+
+        List<UploadedDocumentTypeVO> optionalList =
+                new ArrayList<>(optionalMap.values());
+
+        /*
+         * =========================
+         * 返回
+         * =========================
+         */
+
         NoticeUploadInfoResp resp = new NoticeUploadInfoResp();
+
+        // 必须上传资料
         resp.setDocList(unionList);
+
+        // 非必须上传资料
+        resp.setOptionalDocList(isNoUpload ? Collections.emptyList() : optionalList);
+
         // 找出考生实名制信息
-        ExamIdcardDO examIdcardDO = examIdcardMapper.selectOne(new LambdaQueryWrapper<ExamIdcardDO>()
-                .eq(ExamIdcardDO::getIdCardNumber, userDO.getUsername()));
+        ExamIdcardDO examIdcardDO = examIdcardMapper.selectOne(
+                new LambdaQueryWrapper<ExamIdcardDO>()
+                        .eq(ExamIdcardDO::getIdCardNumber, userDO.getUsername())
+        );
+
         if (ObjectUtil.isNull(examIdcardDO)) {
             return resp;
         }
+
         resp.setIdCardPhotoFront(examIdcardDO.getIdCardPhotoFront());
         resp.setIdCardPhotoBack(examIdcardDO.getIdCardPhotoBack());
         resp.setEducation(examIdcardDO.getEducation());
         resp.setMajorType(examIdcardDO.getMajorType());
         resp.setFacePhoto(examIdcardDO.getFacePhoto());
-        resp.setIdNumber(aesWithHMAC.verifyAndDecrypt(examIdcardDO.getIdCardNumber()));
+        resp.setIdNumber(
+                aesWithHMAC.verifyAndDecrypt(examIdcardDO.getIdCardNumber())
+        );
+
+        // 找出这个考生是否对这个通知上传的资料信息
+        ExamineeNoticeApplyDO examineeNoticeApplyDO =
+                examineeNoticeApplyMapper.selectOne(
+                        new LambdaQueryWrapper<ExamineeNoticeApplyDO>()
+                                .eq(ExamineeNoticeApplyDO::getNoticeId, noticeId)
+                                .eq(ExamineeNoticeApplyDO::getExamineeId, userDO.getId())
+                );
+
+        if (ObjectUtil.isNull(examineeNoticeApplyDO)) {
+            return resp;
+        }
+
+        resp.setApplyStatus(examineeNoticeApplyDO.getStatus());
+        resp.setApplyReason(examineeNoticeApplyDO.getRemark());
+
         return resp;
+    }
+
+    /**
+     * 判断通知是否需要上传证书
+     *
+     * @param examNoticeDO
+     * @return
+     */
+    private boolean isNoNeedUploadCertificate(ExamNoticeDO examNoticeDO) {
+        // 不需要上传证书的类别
+        List<Long> noUploadCategoryIds = inspectorConfig.getNoUploadCategoryIds();
+        // 如果通知属于一级，且分类属于不需要上传证书的类别，不需要过滤和返回非必须资料
+        return noUploadCategoryIds.contains(examNoticeDO.getCategoryId())
+                && ProjectLevelEnum.LEVEL_ONE.getValue().equals(examNoticeDO.getExamLevel());
     }
 
     /**
@@ -704,20 +905,49 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
 
         ValidationUtils.throwIfNull(examIdcardDO, "实名信息不存在");
 
-        ExamIdcardDO updateExamIdCard = new ExamIdcardDO();
-
-        updateExamIdCard.setId(examIdcardDO.getId());
-        updateExamIdCard.setFacePhoto(req.getFacePhoto());
-        updateExamIdCard.setIdCardPhotoFront(req.getIdCardPhotoFront());
-        updateExamIdCard.setIdCardPhotoBack(req.getIdCardPhotoBack());
-
-        examIdcardMapper.updateById(updateExamIdCard);
 
         List<DocumentFileReq> docFileList = req.getDocFileList();
 
         if (ObjectUtil.isEmpty(docFileList)) {
             return Boolean.TRUE;
         }
+
+        // 判断当前通知是否需要上传证书
+        boolean isNoUpload = isNoNeedUploadCertificate(examNoticeDO);
+
+        if (!isNoUpload) {
+
+            // 非必须上传的证书列表
+            List<UploadedDocumentTypeVO> optionalUploadDocs =
+                    inspectorConfig.getOptionalUploadDocs();
+
+            // 当前上传的资料类型ID
+            Set<Long> uploadedTypeIds = docFileList.stream()
+                    .map(DocumentFileReq::getTypeId)
+                    .collect(Collectors.toSet());
+
+            // 过滤出当前上传了的证书资料
+            List<UploadedDocumentTypeVO> uploadedCertificateList =
+                    optionalUploadDocs.stream()
+                            .filter(item -> uploadedTypeIds.contains(item.getId()))
+                            .toList();
+            Long categoryId = examNoticeDO.getCategoryId();
+            // 判断是否是取证考试
+            Boolean isCertificateExam = categoryMapper.selectCount(new LambdaQueryWrapper<CategoryDO>()
+                    .eq(CategoryDO::getId, categoryId)
+                    .eq(CategoryDO::getExamType, ExamTypeConstant.CERTIFICATE_EXAM)) > 0;
+
+            // 根据实名校验是否存在持证信息
+            licenseHolderInfoService.checkLicenseCertificateUploaded(examIdcardDO, uploadedCertificateList, isCertificateExam);
+        }
+
+        ExamIdcardDO updateExamIdCard = new ExamIdcardDO();
+        updateExamIdCard.setId(examIdcardDO.getId());
+        updateExamIdCard.setFacePhoto(req.getFacePhoto());
+        updateExamIdCard.setIdCardPhotoFront(req.getIdCardPhotoFront());
+        updateExamIdCard.setIdCardPhotoBack(req.getIdCardPhotoBack());
+        examIdcardMapper.updateById(updateExamIdCard);
+
         // 先查出考生有没有上传过资料，如果有就先删掉之前的
         LambdaQueryWrapper<ExamineeDocumentDO> examineeDocumentDOLambdaQueryWrapper = new LambdaQueryWrapper<ExamineeDocumentDO>()
                 .eq(ExamineeDocumentDO::getExamineeId, userId)
@@ -773,6 +1003,39 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
             examineeNoticeApplyMapper.insert(examineeNoticeApplyDO);
         }
 
+        return Boolean.TRUE;
+    }
+
+
+    /**
+     * 撤销报名
+     *
+     * @param noticeId
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean cancelApply(Long noticeId) {
+        Long userId = TokenLocalThreadUtil.get().getUserId();
+
+        UserDO userDO = userMapper.selectById(userId);
+
+        ValidationUtils.throwIfNull(userDO, "未登录");
+
+        ExamineeNoticeApplyDO examineeNoticeApplyDO = examineeNoticeApplyMapper.selectOne(new LambdaQueryWrapper<ExamineeNoticeApplyDO>()
+                .eq(ExamineeNoticeApplyDO::getNoticeId, noticeId)
+                .eq(ExamineeNoticeApplyDO::getExamineeId, userId));
+        ValidationUtils.throwIfNull(examineeNoticeApplyDO, "您未报考该通知");
+
+        Long applyId = examineeNoticeApplyDO.getId();
+        ExamineeNoticeApplyDO update = new ExamineeNoticeApplyDO();
+        update.setId(applyId);
+        update.setStatus(ExamineeNoticeApplyStatusEnum.PENDING_APPLY.getValue());
+        update.setRemark("");
+        examineeNoticeApplyMapper.updateById(update);
+        // 删除报考项目
+        examineeNoticeApplyRecordMapper.delete(new LambdaQueryWrapper<ExamineeNoticeApplyRecordDO>()
+                .eq(ExamineeNoticeApplyRecordDO::getApplyId, applyId));
         return Boolean.TRUE;
     }
 

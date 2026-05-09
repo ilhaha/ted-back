@@ -16,6 +16,7 @@
 
 package top.continew.admin.exam.model.resp;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -67,6 +68,12 @@ public class ExamNoticeResp extends BaseResp {
      */
     @Schema(description = "状态（0待审核、1审核通过、2审核未通过）")
     private Integer status;
+
+    /**
+     * 考生报名状态
+     */
+    @Schema(description = "考生报名状态")
+    private Integer applyStatus;
 
     /**
      * 备注

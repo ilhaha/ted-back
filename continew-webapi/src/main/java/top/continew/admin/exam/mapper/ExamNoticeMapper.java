@@ -44,7 +44,10 @@ public interface ExamNoticeMapper extends BaseMapper<ExamNoticeDO> {
 
     List<CategoryNoticeTreeDTO> getCategoryNoticeTree();
 
-    List<ProjectResp> getProjectByNoticeId(Long noticeId);
+    List<ProjectResp> getProjectByNoticeId(@Param("noticeId") Long noticeId);
 
     Set<UploadedDocumentTypeVO> getAlreadyUploadDocList(@Param("userId") Long userId, @Param("noticeId") Long noticeId);
+
+    IPage<ExamNoticeDetailResp> inspectionGetNoticeList(@Param("page") Page<Object> objectPage,
+                                                        @Param(Constants.WRAPPER) QueryWrapper<ExamNoticeDO> queryWrapper);
 }

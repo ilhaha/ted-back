@@ -97,4 +97,10 @@ public interface ExamNoticeService extends BaseService<ExamNoticeResp, ExamNotic
      */
     Boolean uploadSubmit(NoticeUploadDocReq noticeUploadDocReq);
 
+    /**
+     * 撤销报名
+     * @param noticeId
+     * @return
+     */
+    Boolean cancelApply(Long noticeId);
 }

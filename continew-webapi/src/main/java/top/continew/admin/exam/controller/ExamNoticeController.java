@@ -59,6 +59,16 @@ import java.util.List;
 public class ExamNoticeController extends BaseController<ExamNoticeService, ExamNoticeResp, ExamNoticeDetailResp, ExamNoticeQuery, ExamNoticeReq> {
 
     /**
+     * 撤销报名
+     * @param noticeId
+     * @return
+     */
+    @PostMapping("/cancel/apply/{noticeId}")
+    public Boolean cancelApply(@PathVariable("noticeId") Long noticeId) {
+        return baseService.cancelApply(noticeId);
+    }
+
+    /**
      * 上传通知资料
      * @return
      */

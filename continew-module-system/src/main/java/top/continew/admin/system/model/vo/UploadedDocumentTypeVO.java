@@ -38,6 +38,11 @@ public class UploadedDocumentTypeVO implements Serializable {
     private String typeName;
 
     /**
+     * 项目代码
+     */
+    private String projectCode;
+
+    /**
      * 资料路径
      */
     private String docPath;

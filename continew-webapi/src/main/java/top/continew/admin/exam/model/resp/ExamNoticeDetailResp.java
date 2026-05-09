@@ -79,6 +79,13 @@ public class ExamNoticeDetailResp extends BaseDetailResp {
     private Integer status;
 
     /**
+     * 考生报名状态
+     */
+    @Schema(description = "考生报名状态")
+    @ExcelProperty(value = "考生报名状态")
+    private Integer applyStatus;
+
+    /**
      * 备注
      */
     @Schema(description = "备注")

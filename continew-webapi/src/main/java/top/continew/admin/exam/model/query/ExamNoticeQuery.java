@@ -69,6 +69,13 @@ public class ExamNoticeQuery implements Serializable {
     private Integer status;
 
     /**
+     * 报考状态
+     */
+    @Schema(description = "报考状态")
+    @Query(type = QueryType.EQ, columns = "tena.status")
+    private Integer applyStatus;
+
+    /**
      * 考试办理类型（0无，1取证考试、2换证考试、3免考换证）
      */
     @Schema(description = "考试办理类型（0无，1取证考试、2换证考试、3免考换证）")

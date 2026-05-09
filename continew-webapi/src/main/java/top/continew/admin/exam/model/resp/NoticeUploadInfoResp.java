@@ -44,7 +44,22 @@ public class NoticeUploadInfoResp implements Serializable {
     private String majorType;
 
     /**
-     * 上传资料列表(包括考生已上传、考生未上传)
+     * 报名状态
+     */
+    private Integer applyStatus;
+
+    /**
+     * 报名审核驳回原因
+     */
+    private String applyReason;
+
+    /**
+     * 项目必须上传资料列表(包括考生已上传、考生未上传)
      */
     private List<UploadedDocumentTypeVO> docList;
+
+    /**
+     * 项目非必须上传资料列表(包括考生已上传、考生未上传)
+     */
+    private List<UploadedDocumentTypeVO> optionalDocList;
 }
