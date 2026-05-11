@@ -22,15 +22,16 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import top.continew.admin.common.constant.ExamTypeConstant;
+import top.continew.admin.common.constant.RedisConstant;
 import top.continew.admin.common.constant.enums.*;
 import top.continew.admin.common.util.AESWithHMAC;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
@@ -47,11 +48,9 @@ import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.*;
 import top.continew.admin.exam.model.req.dto.ProjectApplyDTO;
 import top.continew.admin.exam.model.resp.*;
-import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.exam.service.LicenseHolderInfoService;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
-import top.continew.admin.system.model.vo.UploadWhenUserInfoVO;
 import top.continew.admin.system.model.vo.UploadedDocumentTypeVO;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.model.query.PageQuery;
@@ -60,6 +59,7 @@ import top.continew.starter.extension.crud.service.BaseServiceImpl;
 import top.continew.admin.exam.model.query.ExamNoticeQuery;
 import top.continew.admin.exam.service.ExamNoticeService;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -105,6 +105,8 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
     private final LicenseHolderInfoService licenseHolderInfoService;
 
     private final CategoryMapper categoryMapper;
+
+    private final RedisTemplate<String,Object> redisTemplate;
 
     /**
      * 重写page
@@ -559,7 +561,34 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
         );
 
         // 校验资料上传的对不对
-        licenseHolderInfoService.checkLicenseCertificateUploaded(examIdcardDO,);
+        // 判断当前通知是否需要上传证书
+        boolean isNoUpload = isNoNeedUploadCertificate(examNoticeDO);
+
+        if (!isNoUpload) {
+
+            // 非必须上传的证书列表
+            List<UploadedDocumentTypeVO> optionalUploadDocs =
+                    inspectorConfig.getOptionalUploadDocs();
+
+            // 查出该通知当前考生上传过的资料
+            Set<Long> uploadedTypeIds = documentMapper.getCandidateUploadDocType(userId, noticeId);
+
+            // 过滤出当前上传了的证书资料
+            List<UploadedDocumentTypeVO> uploadedCertificateList =
+                    filterUploadedCertificateList(
+                            optionalUploadDocs,
+                            uploadedTypeIds
+                    );
+
+            Long categoryId = examNoticeDO.getCategoryId();
+            // 判断是否是取证考试
+            Boolean isCertificateExam = categoryMapper.selectCount(new LambdaQueryWrapper<CategoryDO>()
+                    .eq(CategoryDO::getId, categoryId)
+                    .eq(CategoryDO::getExamType, ExamTypeConstant.CERTIFICATE_EXAM)) > 0;
+
+            // 根据实名校验是否存在持证信息
+            licenseHolderInfoService.checkLicenseCertificateUploaded(examIdcardDO, uploadedCertificateList, isCertificateExam, projectList);
+        }
 
         List<ExamineeNoticeApplyRecordDO> applyRecordDOS =
                 projectList.stream().map(item -> {
@@ -621,7 +650,6 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
                     );
 
 
-
                     ExamineeNoticeApplyRecordDO recordDO =
                             new ExamineeNoticeApplyRecordDO();
 
@@ -648,7 +676,14 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
 
         examineeNoticeApplyRecordMapper.insertBatch(applyRecordDOS);
 
-        // 修改报名状态
+        // 修改报名状态和报考序号
+        // Redis Key
+        String key = RedisConstant.EXAM_NOTICE_SORT + noticeId;
+
+        // 原子自增
+        Long sort = redisTemplate.opsForValue()
+                .increment(key);
+
         ExamineeNoticeApplyDO updateApply = new ExamineeNoticeApplyDO();
 
         updateApply.setId(examineeNoticeApplyDO.getId());
@@ -656,10 +691,22 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
         updateApply.setStatus(
                 ExamineeNoticeApplyStatusEnum.PENDING_REVIEW.getValue()
         );
+        updateApply.setSort(sort);
 
         examineeNoticeApplyMapper.updateById(updateApply);
 
+
         return Boolean.TRUE;
+    }
+
+    private List<UploadedDocumentTypeVO> filterUploadedCertificateList(
+            List<UploadedDocumentTypeVO> optionalUploadDocs,
+            Set<Long> uploadedTypeIds
+    ) {
+
+        return optionalUploadDocs.stream()
+                .filter(item -> uploadedTypeIds.contains(item.getId()))
+                .toList();
     }
 
     /**
@@ -822,11 +869,8 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
             return resp;
         }
 
-        resp.setIdCardPhotoFront(examIdcardDO.getIdCardPhotoFront());
-        resp.setIdCardPhotoBack(examIdcardDO.getIdCardPhotoBack());
         resp.setEducation(examIdcardDO.getEducation());
         resp.setMajorType(examIdcardDO.getMajorType());
-        resp.setFacePhoto(examIdcardDO.getFacePhoto());
         resp.setIdNumber(
                 aesWithHMAC.verifyAndDecrypt(examIdcardDO.getIdCardNumber())
         );
@@ -916,7 +960,6 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
         boolean isNoUpload = isNoNeedUploadCertificate(examNoticeDO);
 
         if (!isNoUpload) {
-
             // 非必须上传的证书列表
             List<UploadedDocumentTypeVO> optionalUploadDocs =
                     inspectorConfig.getOptionalUploadDocs();
@@ -938,7 +981,7 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
                     .eq(CategoryDO::getExamType, ExamTypeConstant.CERTIFICATE_EXAM)) > 0;
 
             // 根据实名校验是否存在持证信息
-            licenseHolderInfoService.checkLicenseCertificateUploaded(examIdcardDO, uploadedCertificateList, isCertificateExam);
+            licenseHolderInfoService.checkLicenseCertificateUploaded(examIdcardDO, uploadedCertificateList, isCertificateExam, Collections.emptyList());
         }
 
         ExamIdcardDO updateExamIdCard = new ExamIdcardDO();
@@ -1028,15 +1071,31 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
         ValidationUtils.throwIfNull(examineeNoticeApplyDO, "您未报考该通知");
 
         Long applyId = examineeNoticeApplyDO.getId();
+        String key = RedisConstant.EXAM_NOTICE_SORT + noticeId;
+        // 原子减1
+        Long sort = redisTemplate.opsForValue().decrement(key);
         ExamineeNoticeApplyDO update = new ExamineeNoticeApplyDO();
         update.setId(applyId);
         update.setStatus(ExamineeNoticeApplyStatusEnum.PENDING_APPLY.getValue());
         update.setRemark("");
+        update.setSort(sort);
         examineeNoticeApplyMapper.updateById(update);
         // 删除报考项目
         examineeNoticeApplyRecordMapper.delete(new LambdaQueryWrapper<ExamineeNoticeApplyRecordDO>()
                 .eq(ExamineeNoticeApplyRecordDO::getApplyId, applyId));
+
         return Boolean.TRUE;
+    }
+
+    /**
+     * 获取通知报名审核列表
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @Override
+    public PageResp<ExamNoticeResp> applyAuditPage(ExamNoticeQuery query, PageQuery pageQuery) {
+        return this.page(query,pageQuery);
     }
 
     /**

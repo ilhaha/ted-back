@@ -1,5 +1,6 @@
 package top.continew.admin.exam.model.resp;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -11,6 +12,7 @@ import top.continew.admin.common.model.resp.BaseDetailResp;
 
 import java.io.Serial;
 import java.time.*;
+import java.util.List;
 
 /**
  * 考生资料关系详情信息
@@ -25,6 +27,30 @@ public class ExamineeNoticeApplyDetailResp extends BaseDetailResp {
 
     @Serial
     private static final long serialVersionUID = 1L;
+
+    private String username;
+
+    private String nickname;
+    /**
+     * JSON字符串（数据库接收）
+     */
+    @JsonIgnore
+    private String projectExamListJson;
+
+    /**
+     * 报考序号
+     */
+    private Long sort;
+
+    /**
+     * 项目考试信息
+     */
+    private List<ProjectExamResp> projectExamList;
+
+    /**
+     * 考生报考情况
+     */
+    private List<NoticeExamProjectResp> noticeExamProjectList;
 
     /**
      * 考生ID

@@ -1,4 +1,29 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="top.continew.admin.exam.mapper.ExamineeNoticeApplyMapper">
+    <select id="page" resultType="top.continew.admin.exam.model.resp.ExamineeNoticeApplyDetailResp">
+        SELECT su.username,
+               su.nickname,
+               tena.`status`,
+               tena.sort,
+               JSON_ARRAYAGG(
+                       JSON_OBJECT(
+                               'projectId', tenar.project_id,
+                               'examAttemptType', tenar.exam_attempt_type
+                       )
+               ) AS project_exam_list_json
+        FROM ted_examinee_notice_apply tena
+                 LEFT JOIN sys_user su
+                           ON tena.examinee_id = su.id
+                 LEFT JOIN ted_examinee_notice_apply_record tenar
+                           ON tena.id = tenar.apply_id
+                               AND tenar.is_deleted = 0
+            ${ew.customSqlSegment}
+        GROUP BY
+            tena.id,
+            su.username,
+            su.nickname,
+            tena.`status`
+        ORDER BY tena.sort ASC
+    </select>
 </mapper>

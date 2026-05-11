@@ -11,11 +11,11 @@
                su.username,
                su.nickname,
                td.id as document_id
-            From ted_document as td
-        INNER JOIN ted_examinee_document as ed on td.id = ed.document_id
-        INNER JOIN sys_user as su on ed.examinee_id = su.id
-        WHERE td.is_deleted=0
-</select>
+        From ted_document as td
+                 INNER JOIN ted_examinee_document as ed on td.id = ed.document_id
+                 INNER JOIN sys_user as su on ed.examinee_id = su.id
+        WHERE td.is_deleted = 0
+    </select>
     <select id="getUserInfo" resultType="top.continew.admin.document.model.dto.UserDTO">
         SELECT su.id,
                su.username,
@@ -24,31 +24,50 @@
         From ted_document as td
                  INNER JOIN ted_examinee_document as ed on td.id = ed.document_id
                  INNER JOIN sys_user as su on ed.examinee_id = su.id
-        WHERE td.is_deleted=0 and td.id=#{id}
+        WHERE td.is_deleted = 0
+          and td.id = #{id}
     </select>
 
     <select id="getDocumentList" resultType="top.continew.admin.document.model.resp.DocumentCandidatesResp">
-        SELECT tdt.type_name,td.id,td.create_user,td.status,td.audit_remark,td.type_id,td.doc_path as documentUrl,td.update_time as ReviewTime,su.nickname as Reviewer
-            FROM ted_examinee_document as ed
-        LEFT JOIN ted_document as td on ed.document_id=td.id
-        LEFT JOIN ted_document_type as tdt on tdt.id=td.type_id
-        LEFT JOIN sys_user as su on td.update_user=su.id
-                ${ew.customSqlSegment}
+        SELECT tdt.type_name,
+               td.id,
+               td.create_user,
+               td.status,
+               td.audit_remark,
+               td.type_id,
+               td.doc_path    as documentUrl,
+               td.update_time as ReviewTime,
+               su.nickname    as Reviewer
+        FROM ted_examinee_document as ed
+                 LEFT JOIN ted_document as td on ed.document_id = td.id
+                 LEFT JOIN ted_document_type as tdt on tdt.id = td.type_id
+                 LEFT JOIN sys_user as su on td.update_user = su.id
+            ${ew.customSqlSegment}
     </select>
     <select id="selectId" resultType="java.lang.Long">
-        SELECT id FROM ted_document
-        WHERE create_user=#{certificateId}
-          AND type_id=#{typeId}
+        SELECT id
+        FROM ted_document
+        WHERE create_user = #{certificateId}
+          AND type_id = #{typeId}
           AND is_deleted = 0
+    </select>
+    <select id="getCandidateUploadDocType" resultType="java.lang.Long">
+        SELECT d.type_id
+        FROM ted_examinee_document ed
+                 JOIN ted_document d ON ed.document_id = d.id
+            AND d.is_deleted = 0
+        WHERE ed.examinee_id = #{userId}
+          AND ed.notice_id = #{noticeId}
+          AND ed.is_deleted = 0
     </select>
 
     <!-- 更新审核状态与备注 -->
     <update id="updateAuditStatus">
         UPDATE ted_document
-        SET
-            status = #{status},
+        SET status       = #{status},
             audit_remark = #{auditRemark},
-            update_user = #{updateUser}
-        WHERE id = #{id} and is_deleted = 0
+            update_user  = #{updateUser}
+        WHERE id = #{id}
+          and is_deleted = 0
     </update>
 </mapper>

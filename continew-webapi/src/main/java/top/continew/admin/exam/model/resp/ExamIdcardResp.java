@@ -16,11 +16,14 @@
 
 package top.continew.admin.exam.model.resp;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import top.continew.admin.common.model.resp.BaseResp;
+import top.continew.starter.security.crypto.annotation.FieldEncrypt;
 
 import java.io.Serial;
 import java.time.*;
@@ -75,6 +78,11 @@ public class ExamIdcardResp extends BaseResp {
     private String idCardNumber;
 
     /**
+     * 邮箱
+     */
+    private String email;
+
+    /**
      * 学历认证状态（0待审、1已认证、2认证未通过、3待认证）
      */
     @Schema(description = "学历认证状态（0待审、1已认证、2认证未通过、3待认证）")
@@ -127,6 +135,11 @@ public class ExamIdcardResp extends BaseResp {
      */
     @Schema(description = "身份证反面照片路径")
     private String idCardPhotoBack;
+
+    /**
+     * 人像照片路径
+     */
+    private String facePhoto;
 
     /**
      * 专业类型

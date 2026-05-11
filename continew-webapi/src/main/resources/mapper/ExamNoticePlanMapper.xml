@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="top.continew.admin.exam.mapper.ExamNoticePlanMapper">
+    <select id="selectNoticeExamProject" resultType="top.continew.admin.exam.model.resp.NoticeExamProjectResp">
+        SELECT tp.id AS project_id, tp.project_code
+        FROM ted_exam_notice_plan tenp
+                 JOIN ted_project tp
+                      ON tenp.project_id = tp.id
+                          AND tp.is_deleted = 0
+        WHERE tenp.notice_id = #{noticeId}
+          AND tenp.is_deleted = 0
+    </select>
 </mapper>

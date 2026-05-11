@@ -103,4 +103,12 @@ public interface ExamNoticeService extends BaseService<ExamNoticeResp, ExamNotic
      * @return
      */
     Boolean cancelApply(Long noticeId);
+
+    /**
+     * 获取通知报名审核列表
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    PageResp<ExamNoticeResp> applyAuditPage(ExamNoticeQuery query, PageQuery pageQuery);
 }

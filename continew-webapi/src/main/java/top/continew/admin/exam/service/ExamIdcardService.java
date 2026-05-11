@@ -69,4 +69,11 @@ public interface ExamIdcardService extends BaseService<ExamIdcardResp, ExamIdcar
      * @return
      */
     Boolean auditExamIdCard(AuditExamIdCardReq req);
+
+    /**
+     * 修改个人信息
+     * @param examIdcardReq
+     * @return
+     */
+    Boolean updateRealName(ExamIdcardReq examIdcardReq);
 }

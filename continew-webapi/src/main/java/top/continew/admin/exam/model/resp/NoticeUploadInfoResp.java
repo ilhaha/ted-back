@@ -23,20 +23,6 @@ public class NoticeUploadInfoResp implements Serializable {
      */
     private String education;
 
-    /**
-     * 身份证正面照片路径
-     */
-    private String idCardPhotoFront;
-
-    /**
-     * 身份证反面照片路径
-     */
-    private String idCardPhotoBack;
-
-    /**
-     * 人像照片路径
-     */
-    private String facePhoto;
 
     /**
      * 专业类型

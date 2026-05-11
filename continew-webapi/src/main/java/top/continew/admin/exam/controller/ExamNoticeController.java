@@ -23,8 +23,7 @@ import top.continew.admin.exam.model.query.ExamPlanQuery;
 import top.continew.admin.exam.model.req.ExamApplyReq;
 import top.continew.admin.exam.model.req.ExamNoticeAuditReq;
 import top.continew.admin.exam.model.req.NoticeUploadDocReq;
-import top.continew.admin.exam.model.resp.NoticeApplyInfoResp;
-import top.continew.admin.exam.model.resp.NoticeUploadInfoResp;
+import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.model.vo.OrgExamPlanVO;
 import top.continew.admin.system.model.vo.UploadWhenUserInfoVO;
 import top.continew.admin.system.model.vo.UploadedDocumentTypeVO;
@@ -38,8 +37,6 @@ import top.continew.starter.extension.crud.annotation.CrudRequestMapping;
 import top.continew.admin.common.controller.BaseController;
 import top.continew.admin.exam.model.query.ExamNoticeQuery;
 import top.continew.admin.exam.model.req.ExamNoticeReq;
-import top.continew.admin.exam.model.resp.ExamNoticeDetailResp;
-import top.continew.admin.exam.model.resp.ExamNoticeResp;
 import top.continew.admin.exam.service.ExamNoticeService;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
@@ -57,6 +54,18 @@ import java.util.List;
 @CrudRequestMapping(value = "/exam/examNotice", api = {Api.PAGE, Api.DETAIL, Api.ADD, Api.UPDATE, Api.DELETE,
     Api.EXPORT})
 public class ExamNoticeController extends BaseController<ExamNoticeService, ExamNoticeResp, ExamNoticeDetailResp, ExamNoticeQuery, ExamNoticeReq> {
+
+    /**
+     * 获取通知报名审核列表
+     * @param query
+     * @param pageQuery
+     * @return
+     */
+    @SaCheckPermission("noticeApply:audit:page")
+    @GetMapping("/apply/audit/page")
+    public PageResp<ExamNoticeResp> applyAuditPage(ExamNoticeQuery query, PageQuery pageQuery){
+        return baseService.applyAuditPage(query,pageQuery);
+    }
 
     /**
      * 撤销报名

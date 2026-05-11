@@ -45,6 +45,16 @@ import top.continew.admin.exam.service.ExamIdcardService;
 public class ExamIdcardController extends BaseController<ExamIdcardService, ExamIdcardResp, ExamIdcardDetailResp, ExamIdcardQuery, ExamIdcardReq> {
 
     /**
+     * 修改个人信息
+     * @param examIdcardReq
+     * @return
+     */
+    @PutMapping("/update/realName")
+    public Boolean updateRealName(@RequestBody ExamIdcardReq examIdcardReq) {
+        return baseService.updateRealName(examIdcardReq);
+    }
+
+    /**
      * 审核
      * 
      * @param

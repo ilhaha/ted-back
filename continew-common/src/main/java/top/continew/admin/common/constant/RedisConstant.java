@@ -28,6 +28,11 @@ public class RedisConstant {
     public static final Long MAXIMUM_NUMBER_OF_DAYS = 15L;
 
     /**
+     * 记录通知报考序号
+     */
+    public static final String EXAM_NOTICE_SORT = "exam:notice:";
+
+    /**
      * 生成准考证号序列号
      */
     public static final String EXAM_NUMBER_KEY = "exam:number:";

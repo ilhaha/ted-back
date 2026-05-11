@@ -1,10 +1,10 @@
 package top.continew.admin.exam.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -15,7 +15,7 @@ import top.continew.admin.common.constant.enums.EducationVerifyStatusEnum;
 import top.continew.admin.common.constant.enums.ProjectLevelEnum;
 import top.continew.admin.common.util.TokenLocalThreadUtil;
 import top.continew.admin.exam.model.entity.ExamIdcardDO;
-import top.continew.admin.system.model.entity.UserDO;
+import top.continew.admin.exam.model.req.dto.ProjectApplyDTO;
 import top.continew.admin.system.model.vo.UploadedDocumentTypeVO;
 import top.continew.starter.core.validation.ValidationUtils;
 import top.continew.starter.extension.crud.service.BaseServiceImpl;
@@ -47,11 +47,13 @@ public class LicenseHolderInfoServiceImpl extends BaseServiceImpl<LicenseHolderI
      *
      * @param examIdcardDO
      * @param uploadedDocumentTypes
+     * @param projectList
      */
     @Override
     public void checkLicenseCertificateUploaded(ExamIdcardDO examIdcardDO,
                                                 List<UploadedDocumentTypeVO> uploadedDocumentTypes,
-                                                Boolean isCertificateExam) {
+                                                Boolean isCertificateExam,
+                                                List<ProjectApplyDTO> projectList) {
 
         ValidationUtils.throwIfEmpty(uploadedDocumentTypes, "您未上传相关证书");
 
@@ -70,6 +72,26 @@ public class LicenseHolderInfoServiceImpl extends BaseServiceImpl<LicenseHolderI
                 .map(LicenseHolderInfoResp::getProjectCode)
                 .filter(StrUtil::isNotBlank)
                 .collect(Collectors.toSet());
+
+        // 如果是报名，还需要校验当前报考项目是否都已维护持证信息
+        if (CollUtil.isNotEmpty(projectList)) {
+
+            // 当前报考项目编码
+            Set<String> applyProjectCodes = projectList.stream()
+                    .map(ProjectApplyDTO::getProjectCode)
+                    .filter(StrUtil::isNotBlank)
+                    .collect(Collectors.toSet());
+
+            // 未维护持证信息的项目
+            Set<String> missingProjectCodes = applyProjectCodes.stream()
+                    .filter(code -> !holderProjectCodes.contains(code))
+                    .collect(Collectors.toSet());
+
+            ValidationUtils.throwIf(
+                    CollUtil.isNotEmpty(missingProjectCodes),
+                    "以下报考项目设置持证信息：" + String.join("、", missingProjectCodes)
+            );
+        }
 
         // 上传了证书，但没有配置持证信息
         Set<String> notSetHolderInfoCodes = new HashSet<>(uploadProjectCodes);

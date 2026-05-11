@@ -31,6 +31,7 @@ import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.document.model.entity.DocumentDO;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 资料核心存储 Mapper
@@ -80,4 +81,12 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
                           @Param("status") Integer status,
                           @Param("auditRemark") String auditRemark,
                           @Param("updateUser") Long updateUser);
+
+    /**
+     * 根据通知获取检验人员考生已上传过的资料id
+     *
+     * @param userId
+     * @return
+     */
+    Set<Long> getCandidateUploadDocType(@Param("userId") Long userId, @Param("noticeId") Long noticeId);
 }

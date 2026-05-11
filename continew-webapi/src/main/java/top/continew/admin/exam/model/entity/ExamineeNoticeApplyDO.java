@@ -37,6 +37,11 @@ public class ExamineeNoticeApplyDO extends BaseDO {
     private Integer status;
 
     /**
+     * 报考序号
+     */
+    private Long sort;
+
+    /**
      * 审核意见或退回原因
      */
     private String remark;

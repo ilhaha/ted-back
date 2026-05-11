@@ -29,6 +29,10 @@ public class ExamineeNoticeApplyResp extends BaseResp {
     @Schema(description = "考生ID")
     private Long examineeId;
 
+    private String username;
+
+    private String nickname;
+
     /**
      * 通知ID
      */
@@ -48,8 +52,19 @@ public class ExamineeNoticeApplyResp extends BaseResp {
     private String remark;
 
     /**
+     * 报考序号
+     */
+    private Long sort;
+
+    /**
      * 报考的具体项目
      */
     @Schema(description = "报考的具体项目")
     private List<ExamineeNoticeApplyRecordResp> noticeApplyRecordRespList;
+
+    /**
+     * 考生报考情况
+     */
+    private List<NoticeExamProjectResp> noticeExamProjectList;
+
 }

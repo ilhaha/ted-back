@@ -154,6 +154,8 @@ public class ExamIdcardServiceImpl extends BaseServiceImpl<ExamIdcardMapper, Exa
         ExamIdcardDO examIdcardDO = baseMapper.selectOne(new LambdaQueryWrapper<ExamIdcardDO>()
             .eq(ExamIdcardDO::getIdCardNumber, userDetailResp.getUsername()));
         BeanUtil.copyProperties(examIdcardDO, examIdcardResp);
+        examIdcardResp.setIdCardNumber(aesWithHMAC.verifyAndDecrypt(examIdcardDO.getIdCardNumber()));
+        examIdcardResp.setEmail(userDetailResp.getEmail());
         return examIdcardResp;
     }
 
@@ -206,5 +208,41 @@ public class ExamIdcardServiceImpl extends BaseServiceImpl<ExamIdcardMapper, Exa
             return examIdcardDO;
         }).toList();
         return baseMapper.updateBatchById(updateList);
+    }
+
+    /**
+     * 修改个人信息
+     * @param examIdcardReq
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean updateRealName(ExamIdcardReq examIdcardReq) {
+        UserDetailResp userDetailResp = userService.get(TokenLocalThreadUtil.get().getUserId());
+        ValidationUtils.throwIfNull(userDetailResp, "未登录");
+
+        //加密身份证号
+        String encryptedIdCardNumber = aesWithHMAC.encryptAndSign(examIdcardReq.getIdCardNumber());
+
+        ValidationUtils.throwIf(!userDetailResp.getUsername().equals(encryptedIdCardNumber), "上传的身份证照片与注册身份证号不匹配");
+
+        LambdaQueryWrapper<ExamIdcardDO> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ExamIdcardDO::getIdCardNumber, encryptedIdCardNumber);
+        ExamIdcardDO examIdcardDO = baseMapper.selectOne(queryWrapper);
+        ValidationUtils.throwIfNull(examIdcardDO, "该身份证的个人信息不存在");
+        // 修改邮箱
+        userService.update(new LambdaUpdateWrapper<UserDO>()
+                .eq(UserDO::getId, userDetailResp.getId())
+                .set(UserDO::getEmail, examIdcardReq.getEmail()));
+
+        examIdcardReq.setEducationVerifyStatus(educationConfig.getNoVerifyList().contains(examIdcardReq.getEducation())
+                ? EducationVerifyStatusEnum.PASSED.getValue()
+                : EducationVerifyStatusEnum.WAIT.getValue());
+
+        ExamIdcardDO update = new ExamIdcardDO();
+        BeanUtil.copyProperties(examIdcardReq, update);
+        update.setIdCardNumber(encryptedIdCardNumber);
+        update.setId(examIdcardDO.getId());
+        return super.updateById(update);
     }
 }

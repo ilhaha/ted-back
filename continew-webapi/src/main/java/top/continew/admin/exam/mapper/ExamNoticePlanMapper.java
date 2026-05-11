@@ -16,8 +16,12 @@
 
 package top.continew.admin.exam.mapper;
 
+import org.apache.ibatis.annotations.Param;
+import top.continew.admin.exam.model.resp.NoticeExamProjectResp;
 import top.continew.starter.data.mp.base.BaseMapper;
 import top.continew.admin.exam.model.entity.ExamNoticePlanDO;
+
+import java.util.List;
 
 /**
  * 考试通知与考试计划关联 Mapper
@@ -25,4 +29,6 @@ import top.continew.admin.exam.model.entity.ExamNoticePlanDO;
  * @author ilhaha
  * @since 2026/04/14 15:21
  */
-public interface ExamNoticePlanMapper extends BaseMapper<ExamNoticePlanDO> {}
+public interface ExamNoticePlanMapper extends BaseMapper<ExamNoticePlanDO> {
+    List<NoticeExamProjectResp> selectNoticeExamProject(@Param("noticeId") Long noticeId);
+}

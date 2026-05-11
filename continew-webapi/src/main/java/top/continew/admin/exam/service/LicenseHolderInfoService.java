@@ -1,6 +1,7 @@
 package top.continew.admin.exam.service;
 
 import top.continew.admin.exam.model.entity.ExamIdcardDO;
+import top.continew.admin.exam.model.req.dto.ProjectApplyDTO;
 import top.continew.admin.system.model.vo.UploadedDocumentTypeVO;
 import top.continew.starter.extension.crud.service.BaseService;
 import top.continew.admin.exam.model.query.LicenseHolderInfoQuery;
@@ -20,10 +21,12 @@ public interface LicenseHolderInfoService extends BaseService<LicenseHolderInfoR
 
     /**
      * 判断考生是否都上传了持证信息里面对应的证书
+     *
      * @param examIdcardDO
      * @param uploadedDocumentTypes
+     * @param projectList
      */
-    void checkLicenseCertificateUploaded(ExamIdcardDO examIdcardDO, List<UploadedDocumentTypeVO> uploadedDocumentTypes,Boolean isCertificateExam);
+    void checkLicenseCertificateUploaded(ExamIdcardDO examIdcardDO, List<UploadedDocumentTypeVO> uploadedDocumentTypes, Boolean isCertificateExam, List<ProjectApplyDTO> projectList);
 
     /**
      * 获取当前用户的持证信息
