@@ -23,24 +23,6 @@ public class NoticeUploadDocReq implements Serializable {
     private Long noticeId;
 
     /**
-     * 身份证正面
-     */
-    @NotBlank(message = "请上传身份证正面")
-    private String idCardPhotoFront;
-
-    /**
-     * 身份证反面
-     */
-    @NotBlank(message = "请上传身份证反面")
-    private String idCardPhotoBack;
-
-    /**
-     * 人脸照片
-     */
-    @NotBlank(message = "请上传人脸照片")
-    private String facePhoto;
-
-    /**
      * 资料文件列表
      */
     @Valid

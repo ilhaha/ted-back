@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 import top.continew.admin.document.model.dto.CategoryNoticeTreeDTO;
+import top.continew.admin.exam.model.dto.NoticePlanInfoDTO;
 import top.continew.admin.exam.model.resp.ExamNoticeDetailResp;
 import top.continew.admin.exam.model.resp.ProjectResp;
 import top.continew.admin.system.model.vo.UploadedDocumentTypeVO;
@@ -50,4 +51,6 @@ public interface ExamNoticeMapper extends BaseMapper<ExamNoticeDO> {
 
     IPage<ExamNoticeDetailResp> inspectionGetNoticeList(@Param("page") Page<Object> objectPage,
                                                         @Param(Constants.WRAPPER) QueryWrapper<ExamNoticeDO> queryWrapper);
+
+    List<NoticePlanInfoDTO> selectNoticePlanInfo(@Param("noticeIds") List<Long> noticeIds);
 }

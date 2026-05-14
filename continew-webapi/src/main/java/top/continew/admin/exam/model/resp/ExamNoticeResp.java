@@ -52,6 +52,18 @@ public class ExamNoticeResp extends BaseResp {
     private LocalDate applyDeadline;
 
     /**
+     * 报考驳回原因
+     */
+    @Schema(description = "报考驳回原因")
+    private String rejectReason;
+
+    /**
+     * 考试类型
+     */
+    @Schema(description = "考试类型")
+    private Integer examAttemptType;
+
+    /**
      * 所属类别
      */
     @Schema(description = "所属类别")

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import com.alibaba.excel.annotation.ExcelIgnoreUnannotated;
 import com.alibaba.excel.annotation.ExcelProperty;
 
+import org.hibernate.validator.constraints.Length;
 import top.continew.admin.common.model.resp.BaseDetailResp;
 
 import java.io.Serial;

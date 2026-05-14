@@ -65,6 +65,13 @@ public class ExamNoticeReq implements Serializable {
     private Long categoryId;
 
     /**
+     * 考试类型
+     */
+    @Schema(description = "考试类型")
+    @NotNull(message = "考试类型未选择")
+    private Integer examAttemptType;
+
+    /**
      * 考试等级 0-无 1一级 2 二级
      */
     @Schema(description = "考试等级  0-无 1一级 2 二级")

@@ -44,11 +44,14 @@ import top.continew.admin.document.model.entity.DocumentDO;
 import top.continew.admin.document.model.entity.ExamineeDocumentDO;
 import top.continew.admin.document.model.resp.CategoryNoticeTreeVO;
 import top.continew.admin.exam.mapper.*;
+import top.continew.admin.exam.model.dto.NoticePlanInfoDTO;
 import top.continew.admin.exam.model.entity.*;
 import top.continew.admin.exam.model.req.*;
 import top.continew.admin.exam.model.req.dto.ProjectApplyDTO;
 import top.continew.admin.exam.model.resp.*;
 import top.continew.admin.exam.service.LicenseHolderInfoService;
+import top.continew.admin.invigilate.mapper.PlanInvigilateMapper;
+import top.continew.admin.invigilate.model.entity.PlanInvigilateDO;
 import top.continew.admin.system.mapper.UserMapper;
 import top.continew.admin.system.model.entity.UserDO;
 import top.continew.admin.system.model.vo.UploadedDocumentTypeVO;
@@ -106,7 +109,11 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
 
     private final CategoryMapper categoryMapper;
 
-    private final RedisTemplate<String,Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    private final PlanClassroomMapper planClassroomMapper;
+
+    private final PlanInvigilateMapper planInvigilateMapper;
 
     /**
      * 重写page
@@ -268,15 +275,105 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean auditExamNotice(ExamNoticeAuditReq req) {
-        List<ExamNoticeDO> examNoticeDOS = baseMapper.selectByIds(req.getIds());
-        ValidationUtils.throwIfEmpty(examNoticeDOS, "所选审核数据不存在");
-        List<ExamNoticeDO> updateList = examNoticeDOS.stream().map(item -> {
-            ExamNoticeDO examNoticeDO = new ExamNoticeDO();
-            examNoticeDO.setId(item.getId());
-            examNoticeDO.setStatus(req.getStatus());
-            return examNoticeDO;
-        }).toList();
+
+        List<Long> noticeIds = req.getIds();
+
+        // 查询通知
+        List<ExamNoticeDO> noticeList = baseMapper.selectByIds(noticeIds);
+        ValidationUtils.throwIfEmpty(noticeList, "所选审核数据不存在");
+
+        // 批量更新状态
+        List<ExamNoticeDO> updateList = noticeList.stream()
+                .map(item -> {
+                    ExamNoticeDO update = new ExamNoticeDO();
+                    update.setId(item.getId());
+                    update.setStatus(req.getStatus());
+                    return update;
+                })
+                .toList();
+
+        // 给通知对应项目的考试计划添加默认监考员和考场（保证数据完整性）
+        List<NoticePlanInfoDTO> planInfos = baseMapper.selectNoticePlanInfo(noticeIds);
+
+        if (CollUtil.isNotEmpty(planInfos)) {
+
+            List<PlancalssroomDO> classroomList = new ArrayList<>();
+            List<PlanInvigilateDO> invigilateList = new ArrayList<>();
+
+            for (NoticePlanInfoDTO item : planInfos) {
+
+                Long planId = item.getPlanId();
+
+                // 理论考试
+                if (ProjectHasExamTypeEnum.YES.getValue().equals(item.getIsTheory())) {
+
+                    // 考场
+                    Long roomId = inspectorConfig.getTheory().getRoomId();
+                    classroomList.add(buildPlanClassroom(
+                            planId,
+                            inspectorConfig.getTheory().getRoomId()
+                    ));
+
+                    // 监考员
+                    invigilateList.add(buildPlanInvigilate(
+                            planId,
+                            inspectorConfig.getTheory().getInvigilatorId(),
+                            roomId
+                    ));
+                }
+
+                // 实操考试
+                if (ProjectHasExamTypeEnum.YES.getValue().equals(item.getIsOperation())) {
+
+                    // 考场
+                    Long roomId = inspectorConfig.getOper().getRoomId();
+                    classroomList.add(buildPlanClassroom(
+                            planId,
+                            roomId
+                    ));
+
+                    // 监考员
+                    invigilateList.add(buildPlanInvigilate(
+                            planId,
+                            inspectorConfig.getOper().getInvigilatorId(),
+                            roomId
+                    ));
+                }
+            }
+
+            // 批量插入
+            if (CollUtil.isNotEmpty(classroomList)) {
+                planClassroomMapper.insertBatch(classroomList);
+            }
+
+            if (CollUtil.isNotEmpty(invigilateList)) {
+                planInvigilateMapper.insertBatch(invigilateList);
+            }
+        }
+
         return baseMapper.updateBatchById(updateList);
+    }
+
+    /**
+     * 构建考场数据
+     */
+    private PlancalssroomDO buildPlanClassroom(Long planId, Long classroomId) {
+        PlancalssroomDO entity = new PlancalssroomDO();
+        entity.setPlanId(planId);
+        entity.setClassroomId(classroomId);
+        return entity;
+    }
+
+    /**
+     * 构建监考员数据
+     */
+    private PlanInvigilateDO buildPlanInvigilate(Long planId, Long invigilatorId,Long roomId) {
+        PlanInvigilateDO entity = new PlanInvigilateDO();
+        entity.setExamPlanId(planId);
+        entity.setInvigilatorId(invigilatorId);
+        entity.setClassroomId(roomId);
+        entity.setExamPassword(inspectorConfig.getDefaultPassword());
+        return entity;
     }
 
     /**
@@ -321,14 +418,18 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
 
         ValidationUtils.throwIfNull(examNoticeDO, "通知不存在");
 
+        List<ExamNoticePlanDO> examNoticePlanDOS = examNoticePlanMapper.selectList(new LambdaQueryWrapper<ExamNoticePlanDO>()
+                .eq(ExamNoticePlanDO::getNoticeId, noticeId));
+        ValidationUtils.throwIfEmpty(examNoticePlanDOS, "该通知未绑定考试项目");
+
+        List<Long> projectIds = examNoticePlanDOS.stream().map(ExamNoticePlanDO::getProjectId).toList();
+
         // 查询项目
         List<ProjectDO> projectDOS = projectMapper.selectList(
                 new LambdaQueryWrapper<ProjectDO>()
-                        .eq(ProjectDO::getCategoryId, examNoticeDO.getCategoryId())
-                        .eq(ProjectDO::getProjectLevel, examNoticeDO.getExamLevel())
+                        .in(ProjectDO::getId, projectIds)
         );
-
-        ValidationUtils.throwIfEmpty(projectDOS, "该通知未绑定考试项目");
+        ValidationUtils.throwIfEmpty(projectDOS, "该通知未绑定的考试项目不存在");
 
         NoticeApplyInfoResp resp = new NoticeApplyInfoResp();
 
@@ -560,6 +661,15 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
                 "请先完善报名资料"
         );
 
+        // 如果是驳回再重新报名，先删掉之前的报考项目
+        boolean isRest = ExamineeNoticeApplyStatusEnum.REVIEW_REJECTED.getValue().equals(examineeNoticeApplyDO.getStatus());
+        if (isRest) {
+            examineeNoticeApplyRecordMapper.delete(new LambdaQueryWrapper<ExamineeNoticeApplyRecordDO>()
+                    .eq(ExamineeNoticeApplyRecordDO::getExamineeId, userId)
+                    .eq(ExamineeNoticeApplyRecordDO::getNoticeId, noticeId)
+                    .eq(ExamineeNoticeApplyRecordDO::getApplyId,examineeNoticeApplyDO.getId()));
+        }
+
         // 校验资料上传的对不对
         // 判断当前通知是否需要上传证书
         boolean isNoUpload = isNoNeedUploadCertificate(examNoticeDO);
@@ -677,12 +787,6 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
         examineeNoticeApplyRecordMapper.insertBatch(applyRecordDOS);
 
         // 修改报名状态和报考序号
-        // Redis Key
-        String key = RedisConstant.EXAM_NOTICE_SORT + noticeId;
-
-        // 原子自增
-        Long sort = redisTemplate.opsForValue()
-                .increment(key);
 
         ExamineeNoticeApplyDO updateApply = new ExamineeNoticeApplyDO();
 
@@ -691,7 +795,16 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
         updateApply.setStatus(
                 ExamineeNoticeApplyStatusEnum.PENDING_REVIEW.getValue()
         );
-        updateApply.setSort(sort);
+        // 第一次报名才自增序号，重新报名是复用序号
+        if (!isRest) {
+            String key = RedisConstant.EXAM_NOTICE_SORT + noticeId;
+
+            // 原子自增
+            Long sort = redisTemplate.opsForValue()
+                    .increment(key);
+            updateApply.setSort(sort);
+        }
+
 
         examineeNoticeApplyMapper.updateById(updateApply);
 
@@ -984,13 +1097,6 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
             licenseHolderInfoService.checkLicenseCertificateUploaded(examIdcardDO, uploadedCertificateList, isCertificateExam, Collections.emptyList());
         }
 
-        ExamIdcardDO updateExamIdCard = new ExamIdcardDO();
-        updateExamIdCard.setId(examIdcardDO.getId());
-        updateExamIdCard.setFacePhoto(req.getFacePhoto());
-        updateExamIdCard.setIdCardPhotoFront(req.getIdCardPhotoFront());
-        updateExamIdCard.setIdCardPhotoBack(req.getIdCardPhotoBack());
-        examIdcardMapper.updateById(updateExamIdCard);
-
         // 先查出考生有没有上传过资料，如果有就先删掉之前的
         LambdaQueryWrapper<ExamineeDocumentDO> examineeDocumentDOLambdaQueryWrapper = new LambdaQueryWrapper<ExamineeDocumentDO>()
                 .eq(ExamineeDocumentDO::getExamineeId, userId)
@@ -1070,15 +1176,17 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
                 .eq(ExamineeNoticeApplyDO::getExamineeId, userId));
         ValidationUtils.throwIfNull(examineeNoticeApplyDO, "您未报考该通知");
 
+        Integer status = examineeNoticeApplyDO.getStatus();
+        ValidationUtils.throwIf(ExamineeNoticeApplyStatusEnum.REVIEW_APPROVED.getValue().equals(status), "报名申请已审核，无法撤销");
+
         Long applyId = examineeNoticeApplyDO.getId();
         String key = RedisConstant.EXAM_NOTICE_SORT + noticeId;
         // 原子减1
-        Long sort = redisTemplate.opsForValue().decrement(key);
+        redisTemplate.opsForValue().decrement(key);
         ExamineeNoticeApplyDO update = new ExamineeNoticeApplyDO();
         update.setId(applyId);
         update.setStatus(ExamineeNoticeApplyStatusEnum.PENDING_APPLY.getValue());
-        update.setRemark("");
-        update.setSort(sort);
+        update.setSort(0L);
         examineeNoticeApplyMapper.updateById(update);
         // 删除报考项目
         examineeNoticeApplyRecordMapper.delete(new LambdaQueryWrapper<ExamineeNoticeApplyRecordDO>()
@@ -1089,13 +1197,14 @@ public class ExamNoticeServiceImpl extends BaseServiceImpl<ExamNoticeMapper, Exa
 
     /**
      * 获取通知报名审核列表
+     *
      * @param query
      * @param pageQuery
      * @return
      */
     @Override
     public PageResp<ExamNoticeResp> applyAuditPage(ExamNoticeQuery query, PageQuery pageQuery) {
-        return this.page(query,pageQuery);
+        return this.page(query, pageQuery);
     }
 
     /**

@@ -40,7 +40,15 @@ public class UserTest {
 
     @Test
     public void test() {
-        System.out.println(aesWithHMAC.encryptAndSign("15135487998"));
+        System.out.println(aesWithHMAC.verifyAndDecrypt("5TcJK7qcT/3/2I9Cs3BHUg==:Dv5YgkpEMYVLQiehbMmeg5Ypa/HxuRC9E7SmUEyCwCU="));
+        System.out.println(aesWithHMAC.verifyAndDecrypt("FxpIgu6+GGYzyZXN/5rs2g==:T/+U2wk52mBrevXmzWLDjxlTuX/KcRTzLmRkRtRoJWs="));
+        System.out.println(aesWithHMAC.verifyAndDecrypt("U37OSdE6k4tEotYzVrmcQw==:XZb0QMq1f5x/YZfClNlsLGKo8yADeMwqZ7UuLe62JaE="));
+        System.out.println(aesWithHMAC.verifyAndDecrypt("8xEUUt0Fq6xJQlxfJsuDkQ==:W2GljR1b05o46/GLt9dGYnq5wTuwf2q/4i7sTueKshw="));
+
+        System.out.println(aesWithHMAC.verifyAndDecrypt("5TcJK7qcT/3/2I9Cs3BHUg==:Dv5YgkpEMYVLQiehbMmeg5Ypa/HxuRC9E7SmUEyCwCU="));
+        System.out.println(aesWithHMAC.verifyAndDecrypt("FxpIgu6+GGYzyZXN/5rs2g==:T/+U2wk52mBrevXmzWLDjxlTuX/KcRTzLmRkRtRoJWs="));
+        System.out.println(aesWithHMAC.verifyAndDecrypt("U37OSdE6k4tEotYzVrmcQw==:XZb0QMq1f5x/YZfClNlsLGKo8yADeMwqZ7UuLe62JaE="));
+        System.out.println(aesWithHMAC.verifyAndDecrypt("8xEUUt0Fq6xJQlxfJsuDkQ==:W2GljR1b05o46/GLt9dGYnq5wTuwf2q/4i7sTueKshw="));
     }
 
 }

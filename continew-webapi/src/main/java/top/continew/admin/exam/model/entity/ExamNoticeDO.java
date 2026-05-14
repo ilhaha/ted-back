@@ -16,6 +16,8 @@
 
 package top.continew.admin.exam.model.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -57,6 +59,12 @@ public class ExamNoticeDO extends BaseDO {
      * 考试等级 0-无 1一级 2 二级
      */
     private Integer examLevel;
+
+    /**
+     * 考试类型
+     */
+    private Integer examAttemptType;
+
 
     /**
      * 状态（0待审核、1审核通过、2审核未通过）

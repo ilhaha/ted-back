@@ -18,6 +18,12 @@ public class NoticeApplyInfoResp implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /**
+     * 考试类型
+     */
+    @Schema(description = "考试类型")
+    private Integer examAttemptType;
+
 
     /**
      * 标题

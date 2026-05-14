@@ -6,6 +6,9 @@
                su.nickname,
                tena.`status`,
                tena.sort,
+               tena.id,
+               tena.remark,
+               tena.notice_id,
                JSON_ARRAYAGG(
                        JSON_OBJECT(
                                'projectId', tenar.project_id,
@@ -26,4 +29,37 @@
             tena.`status`
         ORDER BY tena.sort ASC
     </select>
+    <select id="examineeNoticeApplyRecordMapper"
+            resultType="top.continew.admin.exam.model.resp.CandidateApplyProjectResp">
+        SELECT tp.project_code, tenar.exam_attempt_type, tenar.practical_type
+        FROM ted_examinee_notice_apply_record tenar
+                 LEFT JOIN ted_project tp
+                           ON tenar.project_id = tp.id
+                               AND tp.is_deleted = 0
+        WHERE tenar.apply_id = #{applyId}
+          AND tenar.is_deleted = 0
+    </select>
+    <select id="selectCandidateOfPlanAndRoom"
+            resultType="top.continew.admin.exam.model.dto.CandidateOfPlanAndRoomDTO">
+        SELECT tena.sort, tenar.plan_id, tenar.exam_attempt_type,tpc.classroom_id, tp.project_code, tep.start_time
+        FROM ted_examinee_notice_apply tena
+                 JOIN ted_examinee_notice_apply_record tenar
+                      ON tena.id = tenar.apply_id
+                          AND tenar.is_deleted = 0
+                 JOIN ted_plan_classroom tpc
+                      ON tenar.plan_id = tpc.plan_id
+                 JOIN ted_classroom tc
+                      ON tpc.classroom_id = tc.id
+                          AND tc.exam_type = 0
+                          AND tc.is_deleted = 0
+                 JOIN ted_project tp
+                      ON tenar.project_id = tp.id
+                          AND tp.is_deleted = 0
+                 JOIN ted_exam_plan tep
+                      ON tenar.plan_id = tep.id
+                          AND tep.is_deleted = 0
+        WHERE tena.id = #{applyId}
+          AND tena.is_deleted = 0
+    </select>
+
 </mapper>

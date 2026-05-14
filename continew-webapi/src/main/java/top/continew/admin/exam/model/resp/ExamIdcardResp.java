@@ -48,6 +48,12 @@ public class ExamIdcardResp extends BaseResp {
     private String realName;
 
     /**
+     * 电话
+     */
+    @Schema(description = "电话")
+    private String phone;
+
+    /**
      * 性别（男 女）
      */
     @Schema(description = "性别（男 女）")

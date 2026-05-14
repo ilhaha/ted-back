@@ -1,6 +1,8 @@
 package top.continew.admin.exam.service;
 
 import top.continew.admin.exam.model.query.ExamNoticeQuery;
+import top.continew.admin.exam.model.req.ExamineeNoticeApplyAuditReq;
+import top.continew.admin.exam.model.resp.CandidateApplyDetailResp;
 import top.continew.starter.extension.crud.model.query.PageQuery;
 import top.continew.starter.extension.crud.model.resp.PageResp;
 import top.continew.starter.extension.crud.service.BaseService;
@@ -24,4 +26,19 @@ public interface ExamineeNoticeApplyService extends BaseService<ExamineeNoticeAp
      * @return
      */
     PageResp<ExamineeNoticeApplyResp> getNoticeApplyCandidatePage(ExamineeNoticeApplyQuery query, PageQuery pageQuery);
+
+    /**
+     * 获取考生报考详情
+     * @param applyId
+     * @return
+     */
+    CandidateApplyDetailResp getCandidateApplyDetail(Integer applyId);
+
+    /**
+     * 审核
+     * @param applyAuditReq
+     * @return
+     */
+    Boolean audit(ExamineeNoticeApplyAuditReq applyAuditReq);
+
 }

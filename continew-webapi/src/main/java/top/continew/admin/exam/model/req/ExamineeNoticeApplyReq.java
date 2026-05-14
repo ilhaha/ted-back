@@ -51,4 +51,5 @@ public class ExamineeNoticeApplyReq implements Serializable {
     @Schema(description = "审核意见或退回原因")
     @Length(max = 255, message = "审核意见或退回原因长度不能超过 {max} 个字符")
     private String remark;
+
 }

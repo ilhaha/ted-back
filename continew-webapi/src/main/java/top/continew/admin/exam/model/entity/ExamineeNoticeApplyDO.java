@@ -1,9 +1,11 @@
 package top.continew.admin.exam.model.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 
+import org.hibernate.validator.constraints.Length;
 import top.continew.admin.common.model.entity.BaseDO;
 
 import java.io.Serial;
@@ -45,6 +47,7 @@ public class ExamineeNoticeApplyDO extends BaseDO {
      * 审核意见或退回原因
      */
     private String remark;
+
 
     /**
      * 删除标记(0未删,1已删)

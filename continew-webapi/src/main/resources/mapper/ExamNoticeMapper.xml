@@ -9,8 +9,11 @@
                  LEFT JOIN ted_category tc
                            ON ten.category_id = tc.id
                                AND tc.is_deleted = 0
+                 LEFT JOIN ted_exam_notice_plan tenp
+                           ON ten.id = tenp.notice_id
+                               AND tenp.is_deleted = 0
                  LEFT JOIN ted_project tp
-                           ON tc.id = tp.category_id
+                           ON tenp.project_id = tp.id
                                AND tp.is_deleted = 0
                                AND tp.project_level = ten.exam_level
             ${ew.customSqlSegment}
@@ -59,15 +62,20 @@
                GROUP_CONCAT(
                        tp.project_code ORDER BY tp.project_code
         SEPARATOR '、'
-               )             AS project_codes
+               )             AS project_codes,
+               tena.remark   AS reject_reason
         FROM ted_exam_notice ten
 
                  LEFT JOIN ted_category tc
                            ON ten.category_id = tc.id
                                AND tc.is_deleted = 0
 
+                 LEFT JOIN ted_exam_notice_plan tenp
+                           ON ten.id = tenp.notice_id
+                               AND tenp.is_deleted = 0
+
                  LEFT JOIN ted_project tp
-                           ON tc.id = tp.category_id
+                           ON tenp.project_id = tp.id
                                AND tp.is_deleted = 0
                                AND tp.project_level = ten.exam_level
 
@@ -78,8 +86,28 @@
         GROUP BY
             ten.id,
             tena.status,
-            tc.name
+            tc.name,
+            tena.remark
         ORDER BY
             ten.id DESC
+    </select>
+    <select id="selectNoticePlanInfo" resultType="top.continew.admin.exam.model.dto.NoticePlanInfoDTO">
+        SELECT
+        tenp.plan_id,
+        tp.is_theory,
+        tp.is_operation
+        FROM ted_exam_notice_plan tenp
+        JOIN ted_project tp
+        ON tenp.project_id = tp.id
+        AND tp.is_deleted = 0
+        WHERE tenp.notice_id IN
+        <foreach collection="noticeIds"
+                 item="noticeId"
+                 open="("
+                 separator=","
+                 close=")">
+            #{noticeId}
+        </foreach>
+        AND tenp.is_deleted = 0
     </select>
 </mapper>

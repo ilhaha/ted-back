@@ -345,8 +345,9 @@ document:
   # 资料类型社保证明id
   social-security-id: 35
 
-# 检验人员非必要上传资料
+# 检验人员相关配置
 inspector:
+  # 非必要上传资料
   optional-upload-docs:
     - id: 41
       typeName: MT证书
@@ -372,6 +373,24 @@ inspector:
   no-upload-category-ids:
     - 39
     - 42
+
+  # 默认监考员与考场
+  # 理论
+  theory:
+    invigilator-id: 713046832414042487
+    room-id: 109
+  # 实操
+  oper:
+    invigilator-id: 713046832414042488
+    room-id: 110
+  default-password: 123456
+
+  # 准考证生成规则
+  project-type-map:
+    MT: 1
+    PT: 2
+    UT: 3
+    RT: 4
 
 # 有道路考试的八大类ID
 certificate:
